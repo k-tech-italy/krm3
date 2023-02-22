@@ -4,6 +4,7 @@
 !*.example
 !.python-version
 !.bumpversion.cfg
+!.flake8
 
 *.sqlite3
 __pycache__

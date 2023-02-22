@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     # Project apps.
     'krm3',
+    'krm3.trasferte',
 
     # Third party apps.
 ]
@@ -92,6 +93,7 @@ DATABASES = {
     'default': env.db('DATABASE_URL'),
 }
 
+DATABASES['default']['OPTIONS'] = {'options': f'-c search_path=django'}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
