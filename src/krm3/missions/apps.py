@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class AppConfig(AppConfig):
-    name = 'krm3.trasferte'
+    name = 'krm3.missions'

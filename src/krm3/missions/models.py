@@ -1,7 +1,6 @@
 from django.db import models
-from django.db.models import UniqueConstraint
 
-from krm3.models import Project, City
+from krm3.models import City, Project
 
 
 class Mission(models.Model):
