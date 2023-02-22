@@ -1,0 +1,31 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="Content-Security-Policy"
+              content="script-src 'self' 'unsafe-inline' 'unsafe-eval'
+              https://www.google-analytics.com
+              https://www.googletagmanager.com">
+
+        <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}"/>
+        <title>
+            {% block head-title %}
+            {% endblock %}
+        </title>
+        {% block head %}
+        {% endblock %}
+    </head>
+    <body>
+        {% block body %}
+        {% endblock body %}
+
+        {% block footer %}
+        {% endblock footer %}
+    </body>
+
+    {% block js-frameworks %}
+    {% endblock js-frameworks %}
+</html>

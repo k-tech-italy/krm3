@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block body %}
+    {{ block.super }}
+
+    <h1>Cookie wfp-cbt-django demo</h1>
+
+    <p>
+        <a href="{% url 'admin:index' %}">Go to admin</a>
+    </p>
+{% endblock body %}
