@@ -1,5 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import UniqueConstraint
+
+User = get_user_model()
 
 
 class Client(models.Model):
@@ -39,3 +42,7 @@ class City(models.Model):
             UniqueConstraint(fields=('name', 'country'), name='unique_city_in_country'),
         )
         verbose_name_plural = 'cities'
+
+
+class Resource(models.Model):
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)

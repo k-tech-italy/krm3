@@ -1,0 +1,42 @@
+[run]
+branch = True
+source = src/krm3
+# partial_branches =
+# fail_under = 90
+omit =
+    .venv/*
+    */migrations/*
+    src/krm3/apps.py
+    src/krm3/config/wsgi.py
+    # Unused, might be removed
+    src/krm3/config/context_processors.py
+    src/krm3/web/loaders.py
+    src/krm3/web/templatetags/file_status.py
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    # Don't complain about missing debug-only code:
+    def __repr__
+    pass
+    if DEBUG
+    if SENTRY_ENABLED
+    if self\.debug
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+    except ImportError
+    # Don't complain if non-runnable code isn't run:
+    #if 0:
+    if __name__ == .__main__.:
+    except ValidationError
+    #except Exception
+    if settings.DEBUG:
+
+
+ignore_errors = True
+
+[html]
+directory = ./~build/coverage

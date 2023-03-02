@@ -5,6 +5,12 @@
 !.python-version
 !.bumpversion.cfg
 !.flake8
+!.isort.cfg
+!.pre-commit-config.yaml
+!.secrets.baseline
+!.coveragerc
+
+*.private.env.json
 
 *.sqlite3
 __pycache__

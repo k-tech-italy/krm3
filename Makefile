@@ -116,10 +116,12 @@ bump:   ## Bumps version
 	bumpversion --no-commit --allow-dirty $$PART
 	@grep "^version = " pyproject.toml
 
-.zap:
-	@rm -f *.db
-	@./manage.py migrate
-	@echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'noreply@k-tech.it', 'admin')" | python manage.py shell
+.init-db:
+	sh tools/dev/initdb.sh
+
+.zap: .init-db
+	./manage.py upgrade -vv
+	./manage.py demo setup
 
 .check-python-version:
 	@if [ "${PYTHON_VERSION}" = "" ]; then \
@@ -133,33 +135,6 @@ bump:   ## Bumps version
 			echo "DECLINE venv creation. Please ignore following error" ; \
 			exit 1 ; \
 		fi \
-	fi
-
-.build-venv: .check-python-version awslogin
-	@if [ "`poetry config virtualenvs.in-project`" = "true" ]; then \
-		pyenv which python ; \
-		poetry env use `pyenv which python` ; \
-		direnv allow \
-		poetry install ; \
-		poetry install ; \
-	else \
-		echo "Skipping venv creation as poetry config virtualenvs.in-project is not true"; \
-	fi
-
-.runonce: .build-venv
-	@echo "Try now with following:"
-	@echo "  cd `pwd`"
-	@echo "  make .zap"
-	@echo "  make run"
-	@echo "Login with admin/admin"
-	@touch .initialized
-
-runonce:  ## Initialize and run Django for the first time.
-	@if [ "${INITIALIZED}" = "1" ]; then \
-		echo "Already initialized" ; \
-	else \
-	  echo "Initializing" ; \
-	  $(MAKE) .runonce ; \
 	fi
 
 run:  ## Run a Django development webserver (assumes that `runonce` was previously run).
