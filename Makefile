@@ -102,10 +102,6 @@ fullclean:
 test:
 	pytest tests/
 
-awslogin:  guard-CODEARTIFACT_AWS_PROFILE  ## Logs in to AWS CodeArtifact.
-	poetry config repositories.wfpcbt "https://cbt-artifacts-${CODEARTIFACT_AWS_DOMAIN_OWNER}.d.codeartifact.${CODEARTIFACT_AWS_REGION}.amazonaws.com/pypi/${CODEARTIFACT_AWS_REPO_NAME}/simple/"
-	poetry config http-basic.wfpcbt aws `aws codeartifact get-authorization-token --profile ${CODEARTIFACT_AWS_PROFILE} --region ${CODEARTIFACT_AWS_REGION} --domain ${CODEARTIFACT_AWS_DOMAIN} --domain-owner ${CODEARTIFACT_AWS_DOMAIN_OWNER} --query authorizationToken --output text`
-
 bump:   ## Bumps version
 	@while :; do \
 		read -r -p "bumpversion [major/minor/patch]: " PART; \

@@ -5,11 +5,7 @@ ARG PIPENV_ARGS
 ARG VERSION
 ARG TEST
 
-ARG AWS_DOMAIN_OWNER
-ARG AWS_REGION
 ARG REPO_NAME
-ARG WFP_REPO_PASSWORD
-ARG AWS_TOKEN
 
 ENV CPLUS_INCLUDE_PATH /usr/include/libxml2/
 ENV C_INCLUDE_PATH /usr/include/libxml2/
@@ -52,14 +48,8 @@ WORKDIR /code
 
 RUN set -ex \
     ls -al /code \
-    && pip install -U pip poetry==1.1.13 \
+    && pip install -U pip poetry \
     && poetry config virtualenvs.create false \
-    && echo "AWS_DOMAIN_OWNER=${AWS_DOMAIN_OWNER}" \
-	&& poetry config repositories.wfpcbt "https://cbt-artifacts-${AWS_DOMAIN_OWNER}.d.codeartifact.${AWS_REGION}.amazonaws.com/pypi/${REPO_NAME}/simple/" \
-	&& echo "TOKEN=${AWS_TOKEN}" \
-	&& poetry config http-basic.wfpcbt aws ${AWS_TOKEN} \
-	&& poetry config repositories.wfp "https://worldfoodprogramme.pkgs.visualstudio.com/_packaging/WFPPythonPackages/pypi/simple/" \
-	&& poetry config http-basic.wfp WFPPythonPackages ${WFP_REPO_PASSWORD} \
     && poetry install --no-root --no-dev --no-interaction --no-ansi \
     && sha1sum poetry.lock > /CHECKSUM
 
@@ -69,5 +59,5 @@ RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/
 
-RUN groupadd -g 1024 -r wfp \
-    && useradd -m -g wfp krm3
+RUN groupadd -g 1024 -r ktech \
+    && useradd -m -g ktech krm3

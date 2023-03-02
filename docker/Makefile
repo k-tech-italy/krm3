@@ -10,8 +10,8 @@ endif
 VERSION=1.0.0
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
-CONTAINER_NAME=wfp-krm3
-DOCKER_IMAGE=wfp/krm3
+CONTAINER_NAME=kt-krm3
+DOCKER_IMAGE=kt/krm3
 DOCKER_IMAGE_NAME=${DOCKER_IMAGE}:${VERSION}
 DOCKER_IMAGE_FULLNAME=${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${VERSION}
 STACK_PROTOCOL?=https
@@ -41,11 +41,7 @@ help:
 build-base:  ## Builds the base image
 	cd .. && docker build \
 			${BUILD_OPTIONS} \
-			--build-arg AWS_DOMAIN_OWNER="${CODEARTIFACT_AWS_DOMAIN_OWNER}" \
-			--build-arg AWS_REGION="${CODEARTIFACT_AWS_REGION}" \
 			--build-arg REPO_NAME="${REPO_NAME}" \
-			--build-arg WFP_REPO_PASSWORD="${WFP_REPO_PASSWORD}" \
-			--build-arg AWS_TOKEN=$(shell aws codeartifact get-authorization-token --profile ${CODEARTIFACT_AWS_PROFILE} --region ${CODEARTIFACT_AWS_REGION} --domain ${CODEARTIFACT_AWS_DOMAIN} --domain-owner ${CODEARTIFACT_AWS_DOMAIN_OWNER} --query authorizationToken --output text) \
 			-t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE} \
 			-f docker/Dockerfile.base  .
 	#docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
@@ -60,14 +56,10 @@ build: ## Builds the image
 		-f docker/Dockerfile .
 	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
 
-ecrlogin:  ## Log in to docker
-	@if [ "${ECR_AWS_PROFILE}" != "" ]; then \
-		aws ecr get-login-password --profile ${ECR_AWS_PROFILE} --region ${ECR_AWS_REGION} | docker login --username AWS --password-stdin ${DOCKER_REGISTRY} ; \
-	else \
-		@echo ${DOCKER_SECRET} | echo docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin ; \
-    fi
+registrylogin:  ## Log in to docker
+	@echo ${DOCKER_SECRET} | echo docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin ; \
 
-release: ecrlogin  ## Release the image
+release: registrylogin  ## Release the image
 	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
 	docker push ${DOCKER_IMAGE_FULLNAME}
 	docker images | grep ${DOCKER_IMAGE}
