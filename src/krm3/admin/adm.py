@@ -1,13 +1,13 @@
 import logging
 
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import site
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
 import krm3
-from krm3.models import Country, City
+from krm3.models import City, Client, Country, Project, Resource
 
 site.site_title = 'KRM3'
 site.site_header = 'KRM3 admin console ' + krm3.__version__
@@ -28,6 +28,21 @@ class CountryAdmin(ModelAdmin):
 
 @admin.register(City)
 class CityAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(Resource)
+class ResourceAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(Client)
+class ClientAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(Project)
+class ProjectAdmin(ModelAdmin):
     pass
 
 

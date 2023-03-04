@@ -115,9 +115,18 @@ bump:   ## Bumps version
 .init-db:
 	sh tools/dev/initdb.sh
 
+.zap-migrations_:
+	@if [ "`find src -name "0*.py" | grep "/migrations/"`" != "" ]; then \
+       rm `find src -name "0*.py" | grep "/migrations/"` ; \
+    fi
+	@./manage.py makemigrations
+
 .zap: .init-db
 	./manage.py upgrade -vv
 	./manage.py demo setup
+
+.zap-migrations: .zap-migrations_ .zap  ## Destroys and recreate migrations
+
 
 .check-python-version:
 	@if [ "${PYTHON_VERSION}" = "" ]; then \
@@ -133,6 +142,25 @@ bump:   ## Bumps version
 		fi \
 	fi
 
+.dumpdata:
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.currency > tools/zapdata/demo/currencies.yaml
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.rate > tools/zapdata/demo/rates.yaml
+	@./manage.py dumpdata krm3 --natural-foreign --natural-primary --format yaml > tools/zapdata/krm3.yaml
+
+.loaddata:
+	@./manage.py loaddata tools/zapdata/demo/currencies.yaml
+	@./manage.py loaddata tools/zapdata/demo/rates.yaml
+	@./manage.py loaddata tools/zapdata/krm3.yaml
+
+
 run:  ## Run a Django development webserver (assumes that `runonce` was previously run).
 	npm run build
 	./manage.py runserver
+
+
+detect-secrets:  ## Scanning secrets or adding New Secrets to Baseline
+	@if [ ! -f ".secrets.baseline" ]; then \
+  		echo "Initialising secrets" ; \
+		detect-secrets scan > .secrets.baseline ; \
+	fi
+	@detect-secrets scan --baseline .secrets.baseline

@@ -42,9 +42,11 @@ INSTALLED_APPS = [
 
     # Project apps.
     'krm3',
+    'krm3.currencies',
     'krm3.missions',
 
     # Third party apps.
+    'mptt',
 ]
 
 MIDDLEWARE = [
@@ -148,3 +150,9 @@ SYSINFO = {
     },
     'masker': 'krm3.utils.sysinfo.masker',
 }
+
+CURRENCY_BASE = env('CURRENCY_BASE')
+CURRENCIES = env('CURRENCY_CHOICES')
+
+if oerai := env('OPEN_EXCHANGE_RATES_APP_ID'):
+    OPEN_EXCHANGE_RATES_APP_ID = oerai

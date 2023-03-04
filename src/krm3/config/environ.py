@@ -4,7 +4,7 @@ from pathlib import Path
 
 from environ import ImproperlyConfigured, environ, re
 
-from krm3.config import DEFAULTS
+from . import DEFAULTS
 
 logger = logging.getLogger(__name__)
 

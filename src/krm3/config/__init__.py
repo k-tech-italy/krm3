@@ -2,13 +2,12 @@
 #  :license: Commercial
 #  Unauthorized copying of this file, via any medium is strictly prohibited
 #  Written by Stefano Apostolico <s.apostolico@gmail.com>, October 2020
-import os
-import tempfile
+
 import uuid
-from environ import Env
 from pathlib import Path
 
-from django.utils.crypto import get_random_string
+from environ import Env
+
 
 def parse_emails(value):
     admins = value.split(',')
@@ -41,7 +40,7 @@ DEFAULTS = {
     'SENTRY_SECURITY_TOKEN': (str, ''),
     'SENTRY_SECURITY_TOKEN_HEADER': (str, 'X-Sentry-Token'),
 
-    'MEDIA_ROOT': (str, os.path.join(tempfile.gettempdir(), 'krm3', 'media')),
+    'MEDIA_ROOT': (str, str(Path(__file__).parent.parent.parent.parent / '~media')),
     'STATIC_ROOT': (str, str(Path(__file__).parent.parent / 'web/static')),
 
     'USE_X_FORWARDED_HOST': (bool, 'false'),
@@ -50,6 +49,13 @@ DEFAULTS = {
     'ADMIN_USERNAME': (str, ''),
     'ADMIN_PASSWORD': (str, ''),
     'ADMIN_EMAIL': (str, ''),
+
+    # django_money
+    'CURRENCY_CHOICES': (list, ['GBP', 'EUR', 'USD']),
+    'CURRENCY_BASE': (str, 'EUR'),
+    'OPEN_EXCHANGE_RATES_APP_ID': (str, ''),
+    'DECIMAL_DIGITS': (int, 2),
+    'CURRENCY_FORMAT': (str, '{:,.2f}'),
 }
 
 env = Env(**DEFAULTS)

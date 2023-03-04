@@ -1,16 +1,14 @@
-from django.conf import settings
+from pathlib import Path
+
+import djclick as click
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.validators import validate_email
 from django.db import IntegrityError
 
-
-import djclick as click
 from krm3.config.environ import env
-from krm3 import __version__
 from krm3.sentry import capture_exception
-from pathlib import Path
 
 User = get_user_model()
 
@@ -43,7 +41,7 @@ def configure_dirs(prompt, verbosity):
 @click.option('--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters')
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
-def command(ctx, prompt, migrate, static, verbosity, # noqa: C901
+def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
             traceback, admin_username, admin_email, admin_password,  **kwargs):
     """Perform any pending database migrations and upgrades."""
     try:
@@ -80,6 +78,9 @@ def command(ctx, prompt, migrate, static, verbosity, # noqa: C901
             except IntegrityError as e:
                 click.secho(f'Unable to create superuser: {e}', fg='yellow')
 
+        for z in ['currencies', 'rates', 'krm3']:
+            click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
+            call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
 
     except Exception as e:
         if traceback:

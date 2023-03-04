@@ -15,6 +15,7 @@ class Client(models.Model):
 class Project(models.Model):
     name = models.CharField(max_length=80, unique=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    notes = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return str(self.name)
