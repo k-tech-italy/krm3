@@ -1,0 +1,208 @@
+- model: currencies.currency
+  pk: AMD
+  fields:
+    title: Armenian dram
+    symbol: ֏
+    decimals: null
+    fractional_unit: Luma
+    base: 100
+- model: currencies.currency
+  pk: ANG
+  fields:
+    title: Netherlands Antillean guilder
+    symbol: ƒ
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: AUD
+  fields:
+    title: Australian dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: BND
+  fields:
+    title: Brunei dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Sen
+    base: 100
+- model: currencies.currency
+  pk: CHF
+  fields:
+    title: Swiss franc
+    symbol: Fr.
+    decimals: null
+    fractional_unit: Rappen
+    base: 100
+- model: currencies.currency
+  pk: DKK
+  fields:
+    title: Danish krone
+    symbol: kr
+    decimals: null
+    fractional_unit: Øre
+    base: 100
+- model: currencies.currency
+  pk: EUR
+  fields:
+    title: Euro
+    symbol: €
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: GBP
+  fields:
+    title: British pound
+    symbol: £
+    decimals: null
+    fractional_unit: Penny
+    base: 100
+- model: currencies.currency
+  pk: GGP
+  fields:
+    title: Guernsey pound
+    symbol: £
+    decimals: null
+    fractional_unit: Penny
+    base: 100
+- model: currencies.currency
+  pk: HKD
+  fields:
+    title: Hong Kong dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: ILS
+  fields:
+    title: Israeli new shekel
+    symbol: ₪
+    decimals: null
+    fractional_unit: Agora
+    base: 100
+- model: currencies.currency
+  pk: INR
+  fields:
+    title: Indian rupee
+    symbol: ₹
+    decimals: null
+    fractional_unit: Paisa
+    base: 100
+- model: currencies.currency
+  pk: JOD
+  fields:
+    title: Jordanian dinar
+    symbol: د.ا
+    decimals: null
+    fractional_unit: Piastre
+    base: 100
+- model: currencies.currency
+  pk: MAD
+  fields:
+    title: Moroccan dirham
+    symbol: د.م.
+    decimals: null
+    fractional_unit: Centime
+    base: 100
+- model: currencies.currency
+  pk: MRU
+  fields:
+    title: Mauritanian ouguiya
+    symbol: UM
+    decimals: null
+    fractional_unit: Khoums
+    base: 5
+- model: currencies.currency
+  pk: NZD
+  fields:
+    title: New Zealand dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: RUB
+  fields:
+    title: Russian ruble
+    symbol: ₽
+    decimals: null
+    fractional_unit: Kopek
+    base: 100
+- model: currencies.currency
+  pk: SGD
+  fields:
+    title: Singapore dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: SHP
+  fields:
+    title: Saint Helena pound
+    symbol: £
+    decimals: null
+    fractional_unit: Penny
+    base: 100
+- model: currencies.currency
+  pk: TRY
+  fields:
+    title: Turkish lira
+    symbol: ₺
+    decimals: null
+    fractional_unit: Kuruş
+    base: 100
+- model: currencies.currency
+  pk: USD
+  fields:
+    title: United States dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: XAF
+  fields:
+    title: Central African CFA franc
+    symbol: Fr
+    decimals: null
+    fractional_unit: Centime
+    base: 100
+- model: currencies.currency
+  pk: XCD
+  fields:
+    title: Eastern Caribbean dollar
+    symbol: $
+    decimals: null
+    fractional_unit: Cent
+    base: 100
+- model: currencies.currency
+  pk: XOF
+  fields:
+    title: West African CFA franc
+    symbol: Fr
+    decimals: null
+    fractional_unit: Centime
+    base: 100
+- model: currencies.currency
+  pk: XPF
+  fields:
+    title: CFP franc
+    symbol: ₣
+    decimals: null
+    fractional_unit: Centime
+    base: 100
+- model: currencies.currency
+  pk: ZAR
+  fields:
+    title: South African rand
+    symbol: R
+    decimals: null
+    fractional_unit: Cent
+    base: 100
