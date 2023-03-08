@@ -9,14 +9,46 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+import logging
 import os
 from pathlib import Path
 
+from django_regex.utils import RegexList
+
 from .environ import env
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+# SENTRY & RAVEN
+# need to copy in settings because we inject these values in the templates
+SENTRY_DSN = env('SENTRY_DSN')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    import krm3
+
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,  # Capture info and above as breadcrumbs
+        event_level=logging.ERROR  # Send errors as events
+    )
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(transaction_style='url'),
+            sentry_logging,
+        ],
+        release=krm3.__version__,
+        debug=env('SENTRY_DEBUG'),
+        environment=env('SENTRY_ENVIRONMENT'),
+        send_default_pii=True
+    )
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -47,6 +79,8 @@ INSTALLED_APPS = [
 
     # Third party apps.
     'mptt',
+    'social_django',
+    'crispy_forms',
 ]
 
 MIDDLEWARE = [
@@ -57,7 +91,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
+    'social_django.middleware.SocialAuthExceptionMiddleware',
     # Third party middlewares.
 ]
 
@@ -77,6 +111,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -151,8 +187,68 @@ SYSINFO = {
     'masker': 'krm3.utils.sysinfo.masker',
 }
 
+# Debug toolbar
+if ddt_key := env('DDT_KEY'):
+    try:
+        ignored = RegexList(('/api/.*',))
+
+        def show_ddt(request):
+            """Runtime check for showing debug toolbar."""
+            if not DEBUG:
+                return False
+            # use https://bewisse.com/modheader/ to set custom header
+            # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)
+            if request.user.is_authenticated:
+                if request.path in ignored:
+                    return False
+            return request.META.get('HTTP_DDT_KEY') == ddt_key
+
+        DEBUG_TOOLBAR_CONFIG = {
+            'SHOW_TOOLBAR_CALLBACK': show_ddt,
+            'JQUERY_URL': '',
+        }
+        DEBUG_TOOLBAR_PANELS = env('DDT_PANELS')
+
+        # Testing for debug_toolbar presence
+        import debug_toolbar  # noqa: F401
+
+        MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+        INSTALLED_APPS.append('debug_toolbar')
+        INTERNAL_IPS = ['127.0.0.1', 'localhost', '0.0.0.0', '*']
+        # CSP_REPORT_ONLY = True
+    except ImportError:
+        logger.info('Skipping debug toolbar')
+
+
 CURRENCY_BASE = env('CURRENCY_BASE')
 CURRENCIES = env('CURRENCY_CHOICES')
 
 if oerai := env('OPEN_EXCHANGE_RATES_APP_ID'):
     OPEN_EXCHANGE_RATES_APP_ID = oerai
+
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'krm3.config.pipeline.auth_allowed',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_by_email',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_STRATEGY = 'social_django.strategy.DjangoStrategy'
+SOCIAL_AUTH_STORAGE = 'social_django.models.DjangoStorage'
+SOCIAL_AUTH_ADMIN_USER_SEARCH_FIELDS = ['username', 'first_name', 'email']
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['k-tech.it']
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}

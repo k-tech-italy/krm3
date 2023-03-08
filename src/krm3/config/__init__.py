@@ -6,6 +6,7 @@
 import uuid
 from pathlib import Path
 
+from django.utils.crypto import get_random_string
 from environ import Env
 
 
@@ -56,6 +57,29 @@ DEFAULTS = {
     'OPEN_EXCHANGE_RATES_APP_ID': (str, ''),
     'DECIMAL_DIGITS': (int, 2),
     'CURRENCY_FORMAT': (str, '{:,.2f}'),
+
+    'SENTRY_DEBUG': (bool, False),
+    'SENTRY_ENVIRONMENT': (str, 'local'),
+
+    # Django debug toolbar
+    'DDT_KEY': (str, get_random_string(length=12)),
+    'DDT_PANELS': (
+        list,
+        [
+            'debug_toolbar.panels.timer.TimerPanel',
+            'debug_toolbar.panels.settings.SettingsPanel',
+            'debug_toolbar.panels.headers.HeadersPanel',
+            'debug_toolbar.panels.request.RequestPanel',
+            # 'debug_toolbar.panels.sql.SQLPanel',
+            'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+            'debug_toolbar.panels.templates.TemplatesPanel',
+            # 'debug_toolbar.panels.logging.LoggingPanel',
+            'debug_toolbar.panels.redirects.RedirectsPanel',
+        ]
+    ),
+
+    'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY': (str, '543837936941-6cvmpg79fc93jfq2fv3e4qvtuib3cq9n.apps.googleusercontent.com'),
+    'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': (str, ''),
 }
 
 env = Env(**DEFAULTS)
