@@ -73,24 +73,38 @@ release-all: release nexus-release
 full-release:  build-base build release  ## buils all and releases
 	@echo "Done"
 
-.run:
-	docker run \
+.certs:
+	@if [ ! -f "certs/server.crt" ]; then \
+		echo "It appears that the certificates are not present."; \
+		echo "Please run 'sudo ./gen-certs.sh $$USER' to soft link them from "; \
+		echo "/etc/ssl/certs/`hostname`[.crt|.key]"; \
+		echo ""; \
+		echo "NB:"; \
+		echo "1. it will prompt you to generate them first if they do not exists."; \
+		echo "2. You will be able to reuse with multiple projects this pattern."; \
+	fi
+
+
+
+.run: .certs
+	@docker run \
 			--rm \
 	 		--name=${CONTAINER_NAME} \
-			-p ${LOCAL_PORT} \
-			-p ${LOCAL_HTTPS_PORT} \
+			-p ${LOCAL_PORT}:8000 \
+			-p ${LOCAL_HTTPS_PORT}:8443 \
 			-e DJANGO_SETTINGS_MODULE="krm3.config.settings" \
-			-e KRM3_DEBUG="$KRM3_DEBUG}" \
-			-e KRM3_DATABASE_URL="$KRM3_DATABASE_URL" \
-			-e KRM3_DATABASE_APPS="$KRM3_DATABASE_APPS" \
-			-e KRM3_SECRET_KEY="$KRM3_SECRET_KEY" \
-			-e KRM3_ADMIN_EMAIL="$KRM3_ADMIN_EMAIL" \
-			-e KRM3_ADMIN_USERNAME="$KRM3_ADMIN_USERNAME" \
-			-e KRM3_ADMIN_PASSWORD="$KRM3_ADMIN_PASSWORD" \
+			-e KRM3_DEBUG="${KRM3_DEBUG}" \
+			-e KRM3_DATABASE_URL="${KRM3_DATABASE_URL}" \
+			-e KRM3_DATABASE_APPS="${KRM3_DATABASE_APPS}" \
+			-e KRM3_SECRET_KEY="${KRM3_SECRET_KEY}" \
+			-e KRM3_ADMIN_EMAIL="${KRM3_ADMIN_EMAIL}" \
+			-e KRM3_ADMIN_USERNAME="${KRM3_ADMIN_USERNAME}" \
+			-e KRM3_ADMIN_PASSWORD="${KRM3_ADMIN_PASSWORD}" \
 			-e KRM3_STATIC_ROOT="/tmp/static" \
 			-e KRM3_MEDIA_ROOT="/tmp/media" \
 			-e STACK_PROTOCOL=${STACK_PROTOCOL} \
 			-v "`pwd`/certs:/etc/certs:ro" \
+			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			${RUN_OPTIONS} \
 			${DOCKER_IMAGE_FULLNAME} \
 			${CMD}
@@ -98,8 +112,11 @@ full-release:  build-base build release  ## buils all and releases
 run: ## run docker container locally with http
 	STACK_PROTOCOL=http $(MAKE) .run
 
-runs: ## run docker container locally with https
-	$(MAKE) .run
+exec: ## Connects o the running container
+	@docker exec -it ${CONTAINER_NAME} /bin/bash
+
+run-stack: ## run docker container locally with all services and https
+	CMD=stack $(MAKE) .run
 
 shell: ## run shell container
 	@RUN_OPTIONS=-it CMD='/bin/bash' $(MAKE) .run

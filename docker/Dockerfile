@@ -3,19 +3,15 @@ ARG DOCKER_REGISTRY
 FROM ${DOCKER_REGISTRY}/kt/krm3/base:${BASE_IMAGE}
 
 ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
-	KRM3MEDIA_ROOT="/tmp/media" \
-    KRM3ADMIN_EMAIL="" \
-    KRM3ADMIN_PASSWORD="" \
-    KRM3ADMIN_USERNAME="" \
-    KRM3CELERY_BROKER="" \
-    KRM3DATABASE_URL="" \
-    KRM3MINIO_CONF_VALIDATION="" \
-    KRM3MINIO_ENDPOINT_URL="" \
-    KRM3MINIO_PORT="" \
-    KRM3MINIO_SECURE="" \
-    KRM3REDIS_CACHE_URL="" \
-    KRM3SECRET_KEY="" \
-    KRM3STATIC_ROOT="/tmp/static"
+	KRM3_MEDIA_ROOT="/tmp/media" \
+    KRM3_ADMIN_EMAIL="" \
+    KRM3_ADMIN_PASSWORD="" \
+    KRM3_ADMIN_USERNAME="" \
+    KRM3_CELERY_BROKER="" \
+    KRM3_DATABASE_URL="" \
+    KRM3_REDIS_CACHE_URL="" \
+    KRM3_SECRET_KEY="" \
+    KRM3_STATIC_ROOT="/tmp/static"
 
 EXPOSE 8000
 EXPOSE 8443
@@ -29,7 +25,7 @@ RUN pip install . --no-deps -vv \
 
 COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/etc/circus.conf /etc/circus.conf
-
+ADD tools/zapdata/demo tools/zapdata/demo
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["stack"]

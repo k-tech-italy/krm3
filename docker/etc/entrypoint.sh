@@ -1,24 +1,25 @@
 #!/bin/bash -e
 
-STATIC_ROOT=KRM3_STATIC_ROOT
-MEDIA_ROOT=KRM3_MEDIA_ROOT
-ADMIN_USERNAME=KRM3_ADMIN_USERNAME
-ADMIN_EMAIL=KRM3_ADMIN_EMAIL
-ADMIN_PASSWORD=KRM3_ADMIN_PASSWORD
-CELERY_BROKER_URL=KRM3_CELERY_BROKER_URL
+STATIC_ROOT=${KRM3_STATIC_ROOT}
+MEDIA_ROOT=${KRM3_MEDIA_ROOT}
+ADMIN_USERNAME=${KRM3_ADMIN_USERNAME}
+ADMIN_EMAIL=${KRM3_ADMIN_EMAIL}
+ADMIN_PASSWORD=${KRM3_ADMIN_PASSWORD}
+CELERY_BROKER_URL=${KRM3_CELERY_BROKER_URL}
 
 mkdir -p "/krm3/logs" "${STATIC_ROOT}" "${MEDIA_ROOT}"
 chown krm3 -R /krm3 "${STATIC_ROOT}" "${MEDIA_ROOT}"
 
 setup() {
   gosu krm3 django-admin upgrade -vv \
+          --static \
           --admin-username ${ADMIN_USERNAME:-admin} \
           --admin-email ${ADMIN_EMAIL} \
           --admin-password ${ADMIN_PASSWORD}
 }
 if [ "${STACK_PROTOCOL}" = "https" ]; then
       echo "setting up HTTPS"
-      STACK_PORT="8443,/etc/certs/cbtcsudan.crt,/etc/certs/cbtcsudan.key"
+      STACK_PORT="8443,/etc/certs/server.crt,/etc/certs/server.key"
 else
       echo "setting up HTTP"
       STACK_PORT=8000

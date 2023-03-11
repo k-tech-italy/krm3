@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster
+FROM python:3-slim-bullseye
 
 ARG BUILD_DATE
 ARG PIPENV_ARGS
@@ -31,6 +31,7 @@ RUN set -x \
         libzmq3-dev \
         pkg-config \
         python3-dev \
+        libpcre3-dev \
     " > /tmp/buildDeps \
     && apt-get update && apt-get install -y --no-install-suggests --no-install-recommends `cat /tmp/buildDeps` && rm -rf /var/lib/apt/lists/*
 
@@ -38,6 +39,7 @@ RUN set -x \
 RUN set -x \
     && runDeps=" \
         gosu \
+        libpcre3 \
         libxml2 \
     " \
     && apt-get update && apt-get install -y --no-install-suggests --no-install-recommends $runDeps && rm -rf /var/lib/apt/lists/*
