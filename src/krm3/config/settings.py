@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import logging
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django_regex.utils import RegexList
@@ -18,6 +19,8 @@ from django_regex.utils import RegexList
 from .environ import env
 
 logger = logging.getLogger(__name__)
+
+AUTH_USER_MODEL = 'core.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -73,14 +76,20 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Project apps.
+    'krm3.core',
     'krm3',
     'krm3.currencies',
     'krm3.missions',
 
     # Third party apps.
+    'rest_framework',
+    'djoser',
+    'corsheaders',
     'mptt',
     'social_django',
     'crispy_forms',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist'
 ]
 
 MIDDLEWARE = [
@@ -91,9 +100,22 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     # Third party middlewares.
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
+
+CORS_ORIGIN_WHITELIST = [
+     'http://localhost:3000',
+     'http://127.0.0.1:3000',
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 
 ROOT_URLCONF = 'krm3.config.urls'
@@ -226,6 +248,32 @@ CURRENCIES = env('CURRENCY_CHOICES')
 if oerai := env('OPEN_EXCHANGE_RATES_APP_ID'):
     OPEN_EXCHANGE_RATES_APP_ID = oerai
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+
+    ),
+}
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('JWT',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': [
+        'http://127.0.0.1:3000', 'http://127.0.0.1:3000/home', 'http://127.0.0.1:3000/login'
+    ],
+    'SERIALIZERS': {}
+}
+
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
@@ -250,5 +298,11 @@ SOCIAL_AUTH_STORAGE = 'social_django.models.DjangoStorage'
 SOCIAL_AUTH_ADMIN_USER_SEARCH_FIELDS = ['username', 'first_name', 'email']
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
 SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['k-tech.it']
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}

@@ -145,12 +145,14 @@ bump:   ## Bumps version
 .dumpdata:
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.currency > tools/zapdata/demo/currencies.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.rate > tools/zapdata/demo/rates.yaml
-	@./manage.py dumpdata krm3 --natural-foreign --natural-primary --format yaml > tools/zapdata/krm3.yaml
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary core  > tools/zapdata/demo/core.yaml
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary krm3  > tools/zapdata/demo/krm3.yaml
 
 .loaddata:
-	@./manage.py loaddata tools/zapdata/demo/currencies.yaml
-	@./manage.py loaddata tools/zapdata/demo/rates.yaml
-	@./manage.py loaddata tools/zapdata/krm3.yaml
+	@-./manage.py loaddata tools/zapdata/demo/currencies.yaml
+	@-./manage.py loaddata tools/zapdata/demo/rates.yaml
+	@-./manage.py loaddata tools/zapdata/demo/core.yaml
+	@-./manage.py loaddata tools/zapdata/demo/krm3.yaml
 
 
 run:  ## Run a Django development webserver (assumes that `runonce` was previously run).

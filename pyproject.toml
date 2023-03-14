@@ -20,11 +20,12 @@ django-mptt-admin = "^2.4.1"
 django-smart-admin = {version = "^2.6.0", extras = ["full"]}
 pyoxr = "^1.6"
 requests = "^2.28.2"
-social-auth-app-django = "^5.0.0"
 django-debug-toolbar = "^3.8.1"
 django-crispy-forms = "^2.0"
 pyyaml = "^6.0"
 circus = "^0.18.0"
+djoser = "^2.1.0"
+django-cors-headers = "^3.14.0"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"

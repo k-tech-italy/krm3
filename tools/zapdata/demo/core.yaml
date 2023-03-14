@@ -1,0 +1,18 @@
+- model: core.client
+  pk: 1
+  fields:
+    name: WFP
+- model: core.project
+  pk: 1
+  fields:
+    name: CBT
+    client: 1
+    notes: ''
+- model: core.country
+  pk: 1
+  fields:
+    name: Italy
+- model: core.country
+  pk: 2
+  fields:
+    name: United Kingdom

@@ -3,7 +3,7 @@ from django.db import models
 from mptt.models import MPTTModel, TreeForeignKey
 
 # from krm3.currencies.models import Currency
-from krm3.models import City, Project, Resource
+from krm3.core.models import City, Project, Resource
 
 
 class Mission(models.Model):

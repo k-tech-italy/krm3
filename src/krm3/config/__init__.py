@@ -47,9 +47,10 @@ DEFAULTS = {
     'USE_X_FORWARDED_HOST': (bool, 'false'),
     'USE_HTTPS': (bool, False),
 
-    'ADMIN_USERNAME': (str, ''),
-    'ADMIN_PASSWORD': (str, ''),
-    'ADMIN_EMAIL': (str, ''),
+    'ADMIN_FIRSTNAME': (str, 'admin'),
+    'ADMIN_LASTNAME': (str, 'admin'),
+    'ADMIN_PASSWORD': (str, 'admin'),
+    'ADMIN_EMAIL': (str, 'noreply@k-tech.it'),
 
     # django_money
     'CURRENCY_CHOICES': (list, ['GBP', 'EUR', 'USD']),

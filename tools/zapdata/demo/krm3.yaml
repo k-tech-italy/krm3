@@ -1,18 +1,1 @@
-- model: krm3.client
-  pk: 1
-  fields:
-    name: WFP
-- model: krm3.project
-  pk: 1
-  fields:
-    name: CBT
-    client: 1
-    notes: ''
-- model: krm3.country
-  pk: 1
-  fields:
-    name: Italy
-- model: krm3.country
-  pk: 2
-  fields:
-    name: United Kingdom
+[]
