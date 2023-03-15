@@ -47,6 +47,7 @@ DEFAULTS = {
     'USE_X_FORWARDED_HOST': (bool, 'false'),
     'USE_HTTPS': (bool, False),
 
+    'ADMIN_USERNAME': (str, 'admin'),
     'ADMIN_FIRSTNAME': (str, 'admin'),
     'ADMIN_LASTNAME': (str, 'admin'),
     'ADMIN_PASSWORD': (str, 'admin'),

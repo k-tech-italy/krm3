@@ -3,6 +3,7 @@ import logging
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import site
+from smart_admin.smart_auth.admin import UserAdmin
 
 import krm3
 from krm3.core.models import City, Client, Country, Project, Resource, User
@@ -15,9 +16,8 @@ site.enable_nav_sidebar = True
 logger = logging.getLogger(__name__)
 
 
-@admin.register(User)
-class CustomUserAdmin(ModelAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'last_login')  # Added last_login
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'last_login')  # Added last_login
 
 
 @admin.register(Country)
@@ -43,3 +43,7 @@ class ClientAdmin(ModelAdmin):
 @admin.register(Project)
 class ProjectAdmin(ModelAdmin):
     pass
+
+
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)

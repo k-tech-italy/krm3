@@ -18,12 +18,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+# see https://djoser.readthedocs.io/en/latest/getting_started.html
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
-    path('auth/', include('djoser.social.urls')),  # Needed for social authentication
+    path('api/v1/', include('djoser.urls')),
+    # path('', include('djoser.urls.authtoken')),
+    path('api/v1/', include('djoser.urls.jwt')),
+    path('api/v1/', include('djoser.social.urls')),  # Needed for social authentication
     path('oauth/', include('social_django.urls', namespace='social')),
+    # http://localhost:8000/oauth/complete/google-oauth2/
     path('', include('krm3.web.urls')),
 ]
 

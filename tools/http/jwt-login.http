@@ -1,0 +1,17 @@
+POST http://localhost:8000/api/v1/jwt/create/
+Accept: application/json
+Content-Type: application/json
+
+{"username":  "admin", "password":  "admin"}
+
+> {%
+    client.global.set("auth_token", response.body.access);
+    client.global.set("refresh_token", response.body.refresh);
+%}
+
+###
+POST http://localhost:8000/api/v1/jwt/verify/
+Accept: application/json
+
+{"token":"{{auth_token}}"}
+###

@@ -20,7 +20,7 @@ from .environ import env
 
 logger = logging.getLogger(__name__)
 
-AUTH_USER_MODEL = 'core.User'
+# AUTH_USER_MODEL = 'core.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -75,6 +75,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'adminfilters',
+    'admin_extra_buttons',
+
     # Project apps.
     'krm3.core',
     'krm3',
@@ -106,11 +109,15 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
 ]
 
 CORS_ORIGIN_WHITELIST = [
+     'http://localhost:8000',
+     'http://127.0.0.1:8000',
      'http://localhost:3000',
      'http://127.0.0.1:3000',
 ]

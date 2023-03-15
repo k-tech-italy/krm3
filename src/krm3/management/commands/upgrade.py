@@ -38,12 +38,13 @@ def configure_dirs(prompt, verbosity):
               help='Raise on exceptions')
 @click.option('-v', '--verbosity', count=True, default=0, help='Enables verbosity mode. Use -vv -vvv to increase')
 @click.option('--admin-email', '-ae', default=env.str('ADMIN_EMAIL'), help='Do not prompt for parameters')
-@click.option('--admin-firstname', '-au', default=env.str('ADMIN_FIRSTNAME'), help='Do not prompt for parameters')
+@click.option('--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters')
+@click.option('--admin-firstname', '-af', default=env.str('ADMIN_FIRSTNAME'), help='Do not prompt for parameters')
 @click.option('--admin-lastname', '-al', default=env.str('ADMIN_LASTNAME'), help='Do not prompt for parameters')
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
 def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
-            traceback, admin_firstname, admin_lastname, admin_email, admin_password,  **kwargs):
+            traceback, admin_username, admin_firstname, admin_lastname, admin_email, admin_password,  **kwargs):
     """Perform any pending database migrations and upgrades."""
     try:
 
@@ -74,7 +75,8 @@ def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
                 ctx.fail('You must provide a password')
             try:
                 user = User.objects.create_superuser(
-                    admin_email,
+                    admin_username,
+                    email=admin_email,
                     password=admin_password,
                     first_name=admin_firstname,
                     last_name=admin_lastname,
