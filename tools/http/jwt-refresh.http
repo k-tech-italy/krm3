@@ -1,7 +1,7 @@
 POST http://localhost:8000/jwt/refresh/
 Content-Type: application/json
 Accept: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjc4ODk0MTUxLCJqdGkiOiIwYTVhNGVkNjY4OWY0Nzc1YWI2MmRkMDM2ZTczNTFlZSIsInVzZXJfaWQiOjF9.4wZp5A7B-PTMlfg-AeYcoS31qNwkaAxw2S_r03ow1pc
+Authorization: Bearer {{auth_token}}
 
-{"refresh":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY3ODk4MDI1MSwianRpIjoiOWFjNDZkNDBjNGY5NDYyZGFhMmJlMTEyMzQ1ZjU5ZjEiLCJ1c2VyX2lkIjoxfQ.m_JGe2BTPddj2lETkq0AlQB7f_Fu273mLLpWDkVhRSs"}
+{"refresh":"{{refresh_token}}"}
 ###

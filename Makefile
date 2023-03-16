@@ -67,10 +67,10 @@ static:  ## build static assets
 
 develop:  ## configure development environment
 	git config branch.autosetuprebase always
-	@poetry install
+	@poetry install --sync
 	poetry run pre-commit install
 	poetry run pre-commit install --hook-type pre-push
-	npm install
+	# npm install  # TODO: Temporally disabled
 
 
 backup_file := ~$(shell date +%Y-%m-%d).json

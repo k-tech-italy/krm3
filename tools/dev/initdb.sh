@@ -1,6 +1,6 @@
 #!/bin/bash
 
-### ND: needspgpass to be setup
+### ND: needs pgpass to be setup
 DB_ENGINE=`python manage.py shell -c "from django.conf import settings; print(settings.DATABASES['default']['ENGINE'])"`
 DB_HOST=`python manage.py shell -c "from django.conf import settings; print(settings.DATABASES['default']['HOST'])"`
 DB_PORT=`python manage.py shell -c "from django.conf import settings; print(settings.DATABASES['default']['PORT'], end='')"`

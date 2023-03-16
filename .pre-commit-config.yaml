@@ -30,7 +30,7 @@ repos:
         stages: [commit]
 
   - repo: https://github.com/Yelp/detect-secrets
-    rev: 0.9.1
+    rev: v1.4.0
     hooks:
     -   id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
@@ -38,7 +38,7 @@ repos:
         stages: [push]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.4.0
     hooks:
       # See https://pre-commit.com/hooks.html for more hooks
       - id: check-ast
@@ -69,7 +69,7 @@ repos:
         stages: [commit]
 
   - repo: https://github.com/saxix/pch
-    rev: fc387f4
+    rev: '0.1'
     hooks:
       - id: check-version-release-match
         args:

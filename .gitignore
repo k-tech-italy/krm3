@@ -9,6 +9,7 @@
 !.pre-commit-config.yaml
 !.secrets.baseline
 !.coveragerc
+!.nvmrc
 
 *.private.env.json
 
