@@ -66,11 +66,11 @@ static:  ## build static assets
 	@echo $(shell /bin/ls -alu src/krm3/web/static/krm3/app.css)
 
 develop:  ## configure development environment
-	git config branch.autosetuprebase always
+	@git config branch.autosetuprebase always
 	@poetry install --sync
-	poetry run pre-commit install
-	poetry run pre-commit install --hook-type pre-push
-	# npm install  # TODO: Temporally disabled
+	@poetry run pre-commit install
+	@poetry run pre-commit install --hook-type pre-push
+	@npm install
 
 
 backup_file := ~$(shell date +%Y-%m-%d).json
