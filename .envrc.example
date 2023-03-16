@@ -19,3 +19,11 @@ layout_poetry() {
 }
 
 layout poetry
+
+nvmrc=~/.nvm/nvm.sh
+if [ -e $nvmrc ]; then
+  source $nvmrc
+  nvm use
+fi
+
+PATH_add node_modules/.bin
