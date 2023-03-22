@@ -82,7 +82,7 @@ DEFAULTS = {
 
     'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY': (str, '543837936941-6cvmpg79fc93jfq2fv3e4qvtuib3cq9n.apps.googleusercontent.com'),
     'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': (str, ''),
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': (list, ['http://127.0.0.1:3000/login'])
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': (list, ['http://localhost:3000/login', 'https://localhost:3000/login'])
 }
 
 env = Env(**DEFAULTS)
