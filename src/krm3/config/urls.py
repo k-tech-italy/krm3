@@ -18,6 +18,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from krm3.core.views import BlacklistRefreshView
+
 # see https://djoser.readthedocs.io/en/latest/getting_started.html
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +27,7 @@ urlpatterns = [
     # path('', include('djoser.urls.authtoken')),
     path('api/v1/', include('djoser.urls.jwt')),
     path('api/v1/', include('djoser.social.urls')),  # Needed for social authentication
+    path('api/v1/logout', BlacklistRefreshView.as_view(), name='jwtlogout'),
     path('oauth/', include('social_django.urls', namespace='social')),
     # http://localhost:8000/oauth/complete/google-oauth2/
     path('', include('krm3.web.urls')),
