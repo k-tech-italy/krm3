@@ -275,9 +275,7 @@ SIMPLE_JWT = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': [
-        'http://127.0.0.1:3000', 'http://127.0.0.1:3000/home', 'http://127.0.0.1:3000/login'
-    ],
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': env.list('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS'),
     'SERIALIZERS': {}
 }
 
