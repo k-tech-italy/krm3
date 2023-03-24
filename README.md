@@ -2,13 +2,13 @@
 
 1. Prerequisites
 
-   1. direnv and pyenv installed in your system. **Ensure shell hooks are installed before proceeding!**
-   1. Install python binaries with pyenv (see [Install python binaries and poetry](#Install python binaries and poetry) in _Details_ section)
-   1. Create an empty postgres database (eg. "krm3")
-   1. Copy .env.example and .envrc.example in equivalent .env and .envrc (which are NOT versioned as they may contain secrets)
-   1. Amend local .env (and .envrc as needed). Most importantly set the KRM3_DATABASE_URL pointing to you database
-   1. Run _direnv allow_ (needed each time you modify .envrc or you want to reload the .env)
-   1. cd && cd - && poetry install
+   1. direnv and pyenv installed in your system. **Ensure shell hooks are installed before proceeding!** _Alternatives are possible, see below._
+   1. Install python binaries with pyenv (see [Install python binaries and poetry](#Install python binaries and poetry) in _Details_ section).
+   1. Create an empty postgres database (eg. "krm3").
+   1. Copy .env.example and .envrc.example in equivalent .env and .envrc (which are NOT versioned as they may contain secrets).
+   1. Amend local .env (and .envrc as needed). Most importantly set the KRM3_DATABASE_URL pointing to you database.
+   1. Run `direnv allow` (needed each time you modify .envrc or you want to reload the .env).
+   1. `cd && cd - && poetry install`
 
 Now you should have a fully working environment
 
@@ -74,4 +74,37 @@ Installing the current project: krm3 (0.1.0)
 ~/PROJS/KT/krm3(develop)>curl -X POST http://127.0.0.1:8000/auth/users/ --data 'email=djoser@k-tech.it&first_name=gio&last_name=bronz&password=alpine12'
 {"first_name":"gio","last_name":"bronz","email":"djoser@k-tech.it","id":2}
 
+```
+
+
+# Alternatives
+Some alternatives for project setup.
+
+## Without pyenv
+You can use virtual env manually:
+
+```mkvirtualenv -p `which python3.11`  krm3```
+
+`workon krm3`
+
+Pay attention: Poetry will create a sub-virtualenv to avoid this check its configuration and set a couple of settings:
+````
+poetry config --list
+poetry config virtualenvs.create false
+poetry config virtualenvs.prefer-active-python true
+````
+
+## Without direnv
+You have to manually export all vars in .env before running `./manage.py` use the following command on linux and macos:
+
+`set -o allexport; source .env; set +o allexport`
+
+Tip: `npm start` is configured to do exactly this + `./manage.py runserver`. Easy peasy. 
+
+## Without psql
+Manually create a database `krm3` and inside it a schema named `django`. This can be done with pgadmin or similar tools.
+Then do what `make .zap` would do skipping init-db.
+```
+./manage.py upgrade -vv
+./manage.py demo setup
 ```
