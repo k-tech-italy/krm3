@@ -26,6 +26,9 @@ pyyaml = "^6.0"
 circus = "^0.18.0"
 djoser = "^2.1.0"
 django-cors-headers = "^3.14.0"
+django-filter = "^23.1"
+markdown = "^3.4.3"
+drf-spectacular = "^0.26.1"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"
