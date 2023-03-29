@@ -16,6 +16,8 @@ from pathlib import Path
 
 from django_regex.utils import RegexList
 
+import krm3
+
 from .environ import env
 
 logger = logging.getLogger(__name__)
@@ -33,8 +35,6 @@ if SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
-
-    import krm3
 
     sentry_logging = LoggingIntegration(
         level=logging.INFO,  # Capture info and above as breadcrumbs
@@ -81,11 +81,13 @@ INSTALLED_APPS = [
     # Project apps.
     'krm3.core',
     'krm3',
+    'krm3.api',
     'krm3.currencies',
     'krm3.missions',
 
     # Third party apps.
     'rest_framework',
+    'drf_spectacular',
     'djoser',
     'corsheaders',
     'mptt',
@@ -262,9 +264,20 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-
+        'rest_framework.authentication.SessionAuthentication',
     ),
+    # 'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'KRM3 API',
+    'DESCRIPTION': 'A K-Tech internal project',
+    'VERSION': krm3.__version__,
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    # OTHER SETTINGS
+}
+
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
@@ -295,6 +308,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
+    'krm3.config.pipeline.update_user_social_data',
 )
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
