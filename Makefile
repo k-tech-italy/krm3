@@ -166,3 +166,9 @@ detect-secrets:  ## Scanning secrets or adding New Secrets to Baseline
 		detect-secrets scan > .secrets.baseline ; \
 	fi
 	@detect-secrets scan --baseline .secrets.baseline
+
+schema:  # Generates the swagger file schema.yml
+	@./manage.py spectacular --color --file schema.yml
+
+schema-serve: schema  # Runs a docker container for serving the schema
+	@docker run --rm -p 8080:8080 -e SWAGGER_JSON=/schema.yml -v ${PWD}/schema.yml:/schema.yml swaggerapi/swagger-ui

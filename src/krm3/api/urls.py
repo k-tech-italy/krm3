@@ -1,8 +1,9 @@
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import SimpleRouter
 
-from .views.user import UserViewSet
+from krm3.core.api.urls import urlpatterns as core_urls
+from krm3.missions.api.urls import urlpatterns as missions_urls
 
-router = DefaultRouter()
-router.register('user', UserViewSet, basename='user')
+router = SimpleRouter()
+# router.register('user', UserViewSet, basename='user')
 
-urlpatterns = router.urls
+urlpatterns = router.urls + missions_urls + core_urls

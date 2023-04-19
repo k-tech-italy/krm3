@@ -81,9 +81,9 @@ INSTALLED_APPS = [
     # Project apps.
     'krm3.core',
     'krm3',
-    'krm3.api',
     'krm3.currencies',
     'krm3.missions',
+    'krm3.api',
 
     # Third party apps.
     'rest_framework',
@@ -266,7 +266,9 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
-    # 'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100
 }
 
 SPECTACULAR_SETTINGS = {

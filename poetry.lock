@@ -835,6 +835,17 @@ django = ">=3.0"
 pytz = "*"
 
 [[package]]
+name = "djangorestframework-camel-case"
+version = "1.4.2"
+description = "Camel case JSON support for Django REST framework."
+category = "main"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "djangorestframework-camel-case-1.4.2.tar.gz", hash = "sha256:cdae75846648abb6585c7470639a1d2fb064dc45f8e8b62aaa50be7f1a7a61f4"},
+]
+
+[[package]]
 name = "djangorestframework-simplejwt"
 version = "4.8.0"
 description = "A minimal JSON Web Token authentication plugin for Django REST Framework"
@@ -2167,4 +2178,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "821c6e090d34371f36d63c39601fb87821b1b39a7b9f22e2e0737fbc4d3d487a"
+content-hash = "ccec97526689ac86f5c5dc0576d8ffc3184cb24e8ac75e4a2d68d931b628e9ed"
