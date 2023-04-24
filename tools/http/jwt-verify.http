@@ -1,4 +1,4 @@
-POST http://localhost:8000/api/v1/jwt/verify/
+POST {{server_url}}/api/v1/jwt/verify/
 Accept: application/json
 Content-Type: application/json
 

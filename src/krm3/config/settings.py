@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'krm3.api',
 
     # Third party apps.
+    'django_extensions',
     'rest_framework',
     'drf_spectacular',
     'djoser',

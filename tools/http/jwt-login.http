@@ -4,7 +4,7 @@
 #  -H 'accept: application/json'
 #  -H 'Content-Type: application/json'
 #  -d '{"username":  "admin", "password":  "admin"}'
-POST http://localhost:8000/api/v1/jwt/create/
+POST {{server_url}}/api/v1/jwt/create/
 accept: application/json
 Content-Type: application/json
 
@@ -21,7 +21,7 @@ Content-Type: application/json
 %}
 
 ###
-POST http://localhost:8000/api/v1/jwt/verify/
+POST {{server_url}}/api/v1/jwt/verify/
 Accept: application/json
 
 {"token":"{{auth_token}}"}

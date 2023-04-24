@@ -30,7 +30,7 @@ urlpatterns = [
     path('api/v1/', include('djoser.urls.jwt')),
     path('api/v1/', include('djoser.social.urls')),  # Needed for social authentication
     # path('api/v1/jwt/logout/', BlacklistRefreshView.as_view(), name='jwtlogout'),
-    # path('oauth/', include('social_django.urls', namespace='social')),
+    path('oauth/', include('social_django.urls', namespace='social')),
     # http://localhost:8000/oauth/complete/google-oauth2/
     path('', include('krm3.web.urls')),
 

@@ -5,7 +5,7 @@
 ##  -H 'Authorization: JWT ey.....KQ'
 ##  -d '{"refresh":"<refresh_token>"}'
 
-POST http://localhost:8000/api/v1/jwt/refresh/
+POST {{server_url}}/api/v1/jwt/refresh/
 Content-Type: application/json
 Accept: application/json
 Authorization: Bearer {{auth_token}}

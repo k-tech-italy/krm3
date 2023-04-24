@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.utils.safestring import mark_safe
+from smart_admin.smart_auth.admin import UserAdmin
 
-from krm3.core.models import UserProfile
+from krm3.core.models import City, Client, Country, Project, Resource, UserProfile
 
 
 @admin.register(UserProfile)
@@ -17,3 +18,33 @@ class UserProfileAdmin(ModelAdmin):
             return ''
     avatar.short_description = 'Profile pic'
     avatar.allow_tags = True
+
+
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'last_login')  # Added last_login
+
+
+@admin.register(Country)
+class CountryAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(City)
+class CityAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(Resource)
+class ResourceAdmin(ModelAdmin):
+    list_display = ('first_name', 'last_name')
+    search_fields = ('first_name', 'last_name')
+
+
+@admin.register(Client)
+class ClientAdmin(ModelAdmin):
+    pass
+
+
+@admin.register(Project)
+class ProjectAdmin(ModelAdmin):
+    pass

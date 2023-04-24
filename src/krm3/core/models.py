@@ -100,6 +100,11 @@ class UserProfile(models.Model):
 
 class Resource(models.Model):
     profile = models.OneToOneField(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f'{self.first_name} {self.last_name}'
 
 
 @receiver(post_save, sender=User)
