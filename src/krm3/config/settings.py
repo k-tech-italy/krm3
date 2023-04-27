@@ -22,7 +22,7 @@ from .environ import env
 
 logger = logging.getLogger(__name__)
 
-# AUTH_USER_MODEL = 'core.User'
+AUTH_USER_MODEL = 'core.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -160,7 +160,8 @@ DATABASES = {
     'default': env.db('DATABASE_URL'),
 }
 
-DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django'}
+DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django,public'}
+# DATABASES['default']['ENGINE'] = 'krm3.utils.db.postgresql'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

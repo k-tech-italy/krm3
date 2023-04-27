@@ -1,18 +1,56 @@
+- model: core.user
+  fields:
+    password: pbkdf2_sha256$260000$L0FklUguellHfazIAKLHZX$2b4NmHksSwmqv8Gj6XiR3eqe1NjArZBU+w5JFfLJaLg=
+    last_login: 2023-04-25 07:46:10.519388+00:00
+    is_superuser: true
+    username: admin
+    first_name: admin
+    last_name: admin
+    email: noreply@k-tech.it
+    is_staff: true
+    is_active: true
+    date_joined: 2023-04-25 07:45:54.364103+00:00
+    groups: []
+    user_permissions: []
+- model: core.user
+  fields:
+    password: '!xtiKGLuvvf954o1Gpxah709ueQsF3iuqvRpUdRno'
+    last_login: 2023-04-25 07:55:16+00:00
+    is_superuser: false
+    username: g.bronzini
+    first_name: Giovanni
+    last_name: Bronzini
+    email: g.bronzini@k-tech.it
+    is_staff: true
+    is_active: true
+    date_joined: 2023-04-25 07:55:16+00:00
+    groups:
+    - - Administrator RO
+    user_permissions: []
 - model: core.client
-  pk: 1
   fields:
-    name: WFP
+    name: NASA
 - model: core.project
-  pk: 1
   fields:
-    name: CBT
-    client: 1
+    name: Moon Landing
+    client:
+    - NASA
     notes: ''
 - model: core.country
-  pk: 1
   fields:
     name: Italy
-- model: core.country
-  pk: 2
+- model: core.city
   fields:
-    name: United Kingdom
+    name: Rome
+    country:
+    - Italy
+- model: core.userprofile
+  fields:
+    user:
+    - admin
+    picture: ''
+- model: core.userprofile
+  fields:
+    user:
+    - g.bronzini
+    picture: ''

@@ -14,5 +14,5 @@ site.enable_nav_sidebar = True
 
 logger = logging.getLogger(__name__)
 
-admin.site.unregister(User)
+# admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)

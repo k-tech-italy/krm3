@@ -1,5 +1,9 @@
+# import pytest
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint
+from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
 # from krm3.currencies.models import Currency
@@ -17,6 +21,14 @@ class Mission(models.Model):
     def __str__(self):
         return f'{self.id} {self.from_date} -- {self.to_date}'
 
+    def clean(self):
+        if self.to_date < self.from_date:
+            raise ValidationError(_('to_date must be > from_date'))
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.clean()
+        super().save(force_insert, force_update, using, update_fields)
+
 
 class ExpenseCategory(MPTTModel):
     title = models.CharField(max_length=50)
@@ -28,6 +40,11 @@ class ExpenseCategory(MPTTModel):
 
     class Meta:
         verbose_name_plural = 'expense categories'
+        constraints = (
+            UniqueConstraint(
+                fields=('title', 'parent'),
+                name='unique_expense_category_title'),
+        )
 
 
 class PaymentCategory(MPTTModel):
@@ -40,6 +57,11 @@ class PaymentCategory(MPTTModel):
 
     class Meta:
         verbose_name_plural = 'payment categories'
+        constraints = (
+            UniqueConstraint(
+                fields=('title', 'parent'),
+                name='unique_payment_category_title'),
+        )
 
 
 class Reimbursement(models.Model):

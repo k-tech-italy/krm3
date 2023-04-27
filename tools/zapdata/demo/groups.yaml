@@ -1,0 +1,780 @@
+- model: auth.permission
+  fields:
+    name: Can add log entry
+    content_type:
+    - admin
+    - logentry
+    codename: add_logentry
+- model: auth.permission
+  fields:
+    name: Can change log entry
+    content_type:
+    - admin
+    - logentry
+    codename: change_logentry
+- model: auth.permission
+  fields:
+    name: Can delete log entry
+    content_type:
+    - admin
+    - logentry
+    codename: delete_logentry
+- model: auth.permission
+  fields:
+    name: Can view log entry
+    content_type:
+    - admin
+    - logentry
+    codename: view_logentry
+- model: auth.permission
+  fields:
+    name: Can add permission
+    content_type:
+    - auth
+    - permission
+    codename: add_permission
+- model: auth.permission
+  fields:
+    name: Can change permission
+    content_type:
+    - auth
+    - permission
+    codename: change_permission
+- model: auth.permission
+  fields:
+    name: Can delete permission
+    content_type:
+    - auth
+    - permission
+    codename: delete_permission
+- model: auth.permission
+  fields:
+    name: Can view permission
+    content_type:
+    - auth
+    - permission
+    codename: view_permission
+- model: auth.permission
+  fields:
+    name: Can add group
+    content_type:
+    - auth
+    - group
+    codename: add_group
+- model: auth.permission
+  fields:
+    name: Can change group
+    content_type:
+    - auth
+    - group
+    codename: change_group
+- model: auth.permission
+  fields:
+    name: Can delete group
+    content_type:
+    - auth
+    - group
+    codename: delete_group
+- model: auth.permission
+  fields:
+    name: Can view group
+    content_type:
+    - auth
+    - group
+    codename: view_group
+- model: auth.permission
+  fields:
+    name: Can add content type
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: add_contenttype
+- model: auth.permission
+  fields:
+    name: Can change content type
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: change_contenttype
+- model: auth.permission
+  fields:
+    name: Can delete content type
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: delete_contenttype
+- model: auth.permission
+  fields:
+    name: Can view content type
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: view_contenttype
+- model: auth.permission
+  fields:
+    name: Can add session
+    content_type:
+    - sessions
+    - session
+    codename: add_session
+- model: auth.permission
+  fields:
+    name: Can change session
+    content_type:
+    - sessions
+    - session
+    codename: change_session
+- model: auth.permission
+  fields:
+    name: Can delete session
+    content_type:
+    - sessions
+    - session
+    codename: delete_session
+- model: auth.permission
+  fields:
+    name: Can view session
+    content_type:
+    - sessions
+    - session
+    codename: view_session
+- model: auth.permission
+  fields:
+    name: Can add user
+    content_type:
+    - core
+    - user
+    codename: add_user
+- model: auth.permission
+  fields:
+    name: Can change user
+    content_type:
+    - core
+    - user
+    codename: change_user
+- model: auth.permission
+  fields:
+    name: Can delete user
+    content_type:
+    - core
+    - user
+    codename: delete_user
+- model: auth.permission
+  fields:
+    name: Can view user
+    content_type:
+    - core
+    - user
+    codename: view_user
+- model: auth.permission
+  fields:
+    name: Can add client
+    content_type:
+    - core
+    - client
+    codename: add_client
+- model: auth.permission
+  fields:
+    name: Can change client
+    content_type:
+    - core
+    - client
+    codename: change_client
+- model: auth.permission
+  fields:
+    name: Can delete client
+    content_type:
+    - core
+    - client
+    codename: delete_client
+- model: auth.permission
+  fields:
+    name: Can view client
+    content_type:
+    - core
+    - client
+    codename: view_client
+- model: auth.permission
+  fields:
+    name: Can add country
+    content_type:
+    - core
+    - country
+    codename: add_country
+- model: auth.permission
+  fields:
+    name: Can change country
+    content_type:
+    - core
+    - country
+    codename: change_country
+- model: auth.permission
+  fields:
+    name: Can delete country
+    content_type:
+    - core
+    - country
+    codename: delete_country
+- model: auth.permission
+  fields:
+    name: Can view country
+    content_type:
+    - core
+    - country
+    codename: view_country
+- model: auth.permission
+  fields:
+    name: Can add user profile
+    content_type:
+    - core
+    - userprofile
+    codename: add_userprofile
+- model: auth.permission
+  fields:
+    name: Can change user profile
+    content_type:
+    - core
+    - userprofile
+    codename: change_userprofile
+- model: auth.permission
+  fields:
+    name: Can delete user profile
+    content_type:
+    - core
+    - userprofile
+    codename: delete_userprofile
+- model: auth.permission
+  fields:
+    name: Can view user profile
+    content_type:
+    - core
+    - userprofile
+    codename: view_userprofile
+- model: auth.permission
+  fields:
+    name: Can add resource
+    content_type:
+    - core
+    - resource
+    codename: add_resource
+- model: auth.permission
+  fields:
+    name: Can change resource
+    content_type:
+    - core
+    - resource
+    codename: change_resource
+- model: auth.permission
+  fields:
+    name: Can delete resource
+    content_type:
+    - core
+    - resource
+    codename: delete_resource
+- model: auth.permission
+  fields:
+    name: Can view resource
+    content_type:
+    - core
+    - resource
+    codename: view_resource
+- model: auth.permission
+  fields:
+    name: Can add project
+    content_type:
+    - core
+    - project
+    codename: add_project
+- model: auth.permission
+  fields:
+    name: Can change project
+    content_type:
+    - core
+    - project
+    codename: change_project
+- model: auth.permission
+  fields:
+    name: Can delete project
+    content_type:
+    - core
+    - project
+    codename: delete_project
+- model: auth.permission
+  fields:
+    name: Can view project
+    content_type:
+    - core
+    - project
+    codename: view_project
+- model: auth.permission
+  fields:
+    name: Can add city
+    content_type:
+    - core
+    - city
+    codename: add_city
+- model: auth.permission
+  fields:
+    name: Can change city
+    content_type:
+    - core
+    - city
+    codename: change_city
+- model: auth.permission
+  fields:
+    name: Can delete city
+    content_type:
+    - core
+    - city
+    codename: delete_city
+- model: auth.permission
+  fields:
+    name: Can view city
+    content_type:
+    - core
+    - city
+    codename: view_city
+- model: auth.permission
+  fields:
+    name: Can add currency
+    content_type:
+    - currencies
+    - currency
+    codename: add_currency
+- model: auth.permission
+  fields:
+    name: Can change currency
+    content_type:
+    - currencies
+    - currency
+    codename: change_currency
+- model: auth.permission
+  fields:
+    name: Can delete currency
+    content_type:
+    - currencies
+    - currency
+    codename: delete_currency
+- model: auth.permission
+  fields:
+    name: Can view currency
+    content_type:
+    - currencies
+    - currency
+    codename: view_currency
+- model: auth.permission
+  fields:
+    name: Can add rate
+    content_type:
+    - currencies
+    - rate
+    codename: add_rate
+- model: auth.permission
+  fields:
+    name: Can change rate
+    content_type:
+    - currencies
+    - rate
+    codename: change_rate
+- model: auth.permission
+  fields:
+    name: Can delete rate
+    content_type:
+    - currencies
+    - rate
+    codename: delete_rate
+- model: auth.permission
+  fields:
+    name: Can view rate
+    content_type:
+    - currencies
+    - rate
+    codename: view_rate
+- model: auth.permission
+  fields:
+    name: Can add reimbursement
+    content_type:
+    - missions
+    - reimbursement
+    codename: add_reimbursement
+- model: auth.permission
+  fields:
+    name: Can change reimbursement
+    content_type:
+    - missions
+    - reimbursement
+    codename: change_reimbursement
+- model: auth.permission
+  fields:
+    name: Can delete reimbursement
+    content_type:
+    - missions
+    - reimbursement
+    codename: delete_reimbursement
+- model: auth.permission
+  fields:
+    name: Can view reimbursement
+    content_type:
+    - missions
+    - reimbursement
+    codename: view_reimbursement
+- model: auth.permission
+  fields:
+    name: Can add payment category
+    content_type:
+    - missions
+    - paymentcategory
+    codename: add_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can change payment category
+    content_type:
+    - missions
+    - paymentcategory
+    codename: change_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can delete payment category
+    content_type:
+    - missions
+    - paymentcategory
+    codename: delete_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can view payment category
+    content_type:
+    - missions
+    - paymentcategory
+    codename: view_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can add mission
+    content_type:
+    - missions
+    - mission
+    codename: add_mission
+- model: auth.permission
+  fields:
+    name: Can change mission
+    content_type:
+    - missions
+    - mission
+    codename: change_mission
+- model: auth.permission
+  fields:
+    name: Can delete mission
+    content_type:
+    - missions
+    - mission
+    codename: delete_mission
+- model: auth.permission
+  fields:
+    name: Can view mission
+    content_type:
+    - missions
+    - mission
+    codename: view_mission
+- model: auth.permission
+  fields:
+    name: Can add expense category
+    content_type:
+    - missions
+    - expensecategory
+    codename: add_expensecategory
+- model: auth.permission
+  fields:
+    name: Can change expense category
+    content_type:
+    - missions
+    - expensecategory
+    codename: change_expensecategory
+- model: auth.permission
+  fields:
+    name: Can delete expense category
+    content_type:
+    - missions
+    - expensecategory
+    codename: delete_expensecategory
+- model: auth.permission
+  fields:
+    name: Can view expense category
+    content_type:
+    - missions
+    - expensecategory
+    codename: view_expensecategory
+- model: auth.permission
+  fields:
+    name: Can add expense
+    content_type:
+    - missions
+    - expense
+    codename: add_expense
+- model: auth.permission
+  fields:
+    name: Can change expense
+    content_type:
+    - missions
+    - expense
+    codename: change_expense
+- model: auth.permission
+  fields:
+    name: Can delete expense
+    content_type:
+    - missions
+    - expense
+    codename: delete_expense
+- model: auth.permission
+  fields:
+    name: Can view expense
+    content_type:
+    - missions
+    - expense
+    codename: view_expense
+- model: auth.permission
+  fields:
+    name: Can add association
+    content_type:
+    - social_django
+    - association
+    codename: add_association
+- model: auth.permission
+  fields:
+    name: Can change association
+    content_type:
+    - social_django
+    - association
+    codename: change_association
+- model: auth.permission
+  fields:
+    name: Can delete association
+    content_type:
+    - social_django
+    - association
+    codename: delete_association
+- model: auth.permission
+  fields:
+    name: Can view association
+    content_type:
+    - social_django
+    - association
+    codename: view_association
+- model: auth.permission
+  fields:
+    name: Can add code
+    content_type:
+    - social_django
+    - code
+    codename: add_code
+- model: auth.permission
+  fields:
+    name: Can change code
+    content_type:
+    - social_django
+    - code
+    codename: change_code
+- model: auth.permission
+  fields:
+    name: Can delete code
+    content_type:
+    - social_django
+    - code
+    codename: delete_code
+- model: auth.permission
+  fields:
+    name: Can view code
+    content_type:
+    - social_django
+    - code
+    codename: view_code
+- model: auth.permission
+  fields:
+    name: Can add nonce
+    content_type:
+    - social_django
+    - nonce
+    codename: add_nonce
+- model: auth.permission
+  fields:
+    name: Can change nonce
+    content_type:
+    - social_django
+    - nonce
+    codename: change_nonce
+- model: auth.permission
+  fields:
+    name: Can delete nonce
+    content_type:
+    - social_django
+    - nonce
+    codename: delete_nonce
+- model: auth.permission
+  fields:
+    name: Can view nonce
+    content_type:
+    - social_django
+    - nonce
+    codename: view_nonce
+- model: auth.permission
+  fields:
+    name: Can add user social auth
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: add_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can change user social auth
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: change_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can delete user social auth
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: delete_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can view user social auth
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: view_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can add partial
+    content_type:
+    - social_django
+    - partial
+    codename: add_partial
+- model: auth.permission
+  fields:
+    name: Can change partial
+    content_type:
+    - social_django
+    - partial
+    codename: change_partial
+- model: auth.permission
+  fields:
+    name: Can delete partial
+    content_type:
+    - social_django
+    - partial
+    codename: delete_partial
+- model: auth.permission
+  fields:
+    name: Can view partial
+    content_type:
+    - social_django
+    - partial
+    codename: view_partial
+- model: auth.permission
+  fields:
+    name: Can add blacklisted token
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: add_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can change blacklisted token
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: change_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can delete blacklisted token
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: delete_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can view blacklisted token
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: view_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can add outstanding token
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: add_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can change outstanding token
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: change_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can delete outstanding token
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: delete_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can view outstanding token
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: view_outstandingtoken
+- model: auth.group
+  fields:
+    name: Administrator RO
+    permissions:
+    - - view_group
+      - auth
+      - group
+    - - view_permission
+      - auth
+      - permission
+    - - view_city
+      - core
+      - city
+    - - view_client
+      - core
+      - client
+    - - view_country
+      - core
+      - country
+    - - view_project
+      - core
+      - project
+    - - view_resource
+      - core
+      - resource
+    - - view_user
+      - core
+      - user
+    - - view_userprofile
+      - core
+      - userprofile
+    - - view_currency
+      - currencies
+      - currency
+    - - view_rate
+      - currencies
+      - rate
+    - - view_expense
+      - missions
+      - expense
+    - - view_expensecategory
+      - missions
+      - expensecategory
+    - - view_mission
+      - missions
+      - mission
+    - - view_paymentcategory
+      - missions
+      - paymentcategory
+    - - view_reimbursement
+      - missions
+      - reimbursement

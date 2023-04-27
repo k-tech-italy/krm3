@@ -99,7 +99,7 @@ You have to manually export all vars in .env before running `./manage.py` use th
 
 `set -o allexport; source .env; set +o allexport`
 
-Tip: `npm start` is configured to do exactly this + `./manage.py runserver`. Easy peasy. 
+Tip: `npm start` is configured to do exactly this + `./manage.py runserver`. Easy peasy.
 
 ## Without psql
 Manually create a database `krm3` and inside it a schema named `django`. This can be done with pgadmin or similar tools.
