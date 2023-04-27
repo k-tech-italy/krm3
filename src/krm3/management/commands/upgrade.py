@@ -74,19 +74,23 @@ def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
             if not admin_password:
                 ctx.fail('You must provide a password')
             try:
-                user = User.objects.create_superuser(
-                    admin_username,
-                    email=admin_email,
-                    password=admin_password,
-                    first_name=admin_firstname,
-                    last_name=admin_lastname,
-                )
-                if verbosity > 0:
-                    click.echo(f'Created superuser {user.email} ({user.first_name} {user.last_name})')
+                if User.objects.filter(email=admin_email).count() == 0:
+                    click.secho('Creating superuser', fg='green')
+                    user = User.objects.create_superuser(
+                        admin_username,
+                        email=admin_email,
+                        password=admin_password,
+                        first_name=admin_firstname,
+                        last_name=admin_lastname,
+                    )
+                    if verbosity > 0:
+                        click.echo(f'Created superuser {user.email} ({user.first_name} {user.last_name})')
+                else:
+                    click.secho(f'Skipping exiting superuser {admin_username} creation', fg='yellow')
             except IntegrityError as e:
                 click.secho(f'Unable to create superuser: {e}', fg='yellow')
 
-        for z in ['currencies', 'rates', 'krm3']:
+        for z in ['groups', 'currencies', 'rates', 'krm3', 'core']:
             click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
             call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
 

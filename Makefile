@@ -143,6 +143,7 @@ bump:   ## Bumps version
 	fi
 
 .dumpdata:
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary auth > tools/zapdata/demo/groups.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.currency > tools/zapdata/demo/currencies.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.rate > tools/zapdata/demo/rates.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary core  > tools/zapdata/demo/core.yaml
@@ -151,6 +152,7 @@ bump:   ## Bumps version
 .loaddata:
 	@-./manage.py loaddata tools/zapdata/demo/currencies.yaml
 	@-./manage.py loaddata tools/zapdata/demo/rates.yaml
+	@./manage.py loaddata tools/zapdata/demo/groups.yaml
 	@-./manage.py loaddata tools/zapdata/demo/core.yaml
 	@-./manage.py loaddata tools/zapdata/demo/krm3.yaml
 

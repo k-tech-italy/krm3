@@ -1,9 +1,8 @@
 import logging
+
 from sentry_sdk import capture_exception
-from django_sysinfo.utils import cleanse_setting, cleansed_substitute
+
 from krm3.utils.sysinfo_masker import NO_MATCH
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -25,5 +24,5 @@ def masker(key, value, config, request):
         if (masked_value := masker_class(key, value, config, request).run()) != NO_MATCH:
             return masked_value
     else:
-        cleansed = cleanse_setting(key, value, config, request)
+        cleansed = (key, value, config, request)
         return cleansed

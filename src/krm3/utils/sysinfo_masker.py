@@ -1,9 +1,8 @@
 import abc
 import re
-
-import sentry_sdk
 from urllib.parse import urlparse, urlunparse
 
+import sentry_sdk
 
 NO_MATCH = object()
 
@@ -53,4 +52,3 @@ class BaseUrlMasker(AbstractRegexMasker):
             sentry_sdk.capture_exception(e)
 
         return NO_MATCH
-
