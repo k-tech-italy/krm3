@@ -11,6 +11,8 @@ from krm3.core.models import City, Project, Resource
 
 
 class Mission(models.Model):
+    number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
+    title = models.CharField(max_length=50, null=True, blank=True)
     from_date = models.DateField()
     to_date = models.DateField()
 
@@ -19,7 +21,8 @@ class Mission(models.Model):
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
 
     def __str__(self):
-        return f'{self.id} {self.from_date} -- {self.to_date}'
+        title = self.title or self.city.name
+        return f'{self.resource}, {title}, {self.number}'
 
     def clean(self):
         if self.to_date < self.from_date:
@@ -35,8 +38,12 @@ class ExpenseCategory(MPTTModel):
     active = models.BooleanField(default=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
+    def __str__(self):
+        ancestors = self.get_ancestors(include_self=True)
+        return ':'.join([x.title for x in ancestors])
+
     class MPTTMeta:
-        order_insertion_by = ['name']
+        order_insertion_by = ['title']
 
     class Meta:
         verbose_name_plural = 'expense categories'
@@ -52,8 +59,12 @@ class PaymentCategory(MPTTModel):
     active = models.BooleanField(default=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
+    def __str__(self):
+        ancestors = self.get_ancestors(include_self=True)
+        return ':'.join([x.title for x in ancestors])
+
     class MPTTMeta:
-        order_insertion_by = ['name']
+        order_insertion_by = ['title']
 
     class Meta:
         verbose_name_plural = 'payment categories'
@@ -70,6 +81,7 @@ class Reimbursement(models.Model):
 
 
 class Expense(models.Model):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     day = models.DateField()
     amount_currency = models.DecimalField(max_digits=10, decimal_places=2, help_text='Amount in currency')
     amount_base = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
@@ -80,4 +92,9 @@ class Expense(models.Model):
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT)
     payment_type = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT)
     reimbursement = models.ForeignKey(Reimbursement, on_delete=models.SET_NULL, null=True, blank=True)
+
+    image = models.FileField()
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return f'{self.day}, {self.amount_currency} for {self.category}'

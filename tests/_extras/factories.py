@@ -1,9 +1,12 @@
+from datetime import date
+
 import factory
 from dateutil.relativedelta import relativedelta
 
 
 class CountryFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('country')
+
     # florida = factory.LazyAttribute(lambda x: faker.florida())
 
     class Meta:
@@ -42,7 +45,10 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
 
 class MissionFactory(factory.django.DjangoModelFactory):
-    from_date = factory.Faker('date_between')
+    number = factory.Sequence(lambda n: n + 1)
+    from_date = factory.Faker('date_between_dates',
+                              date_start=date.fromisoformat('2020-01-01'),
+                              date_end=date.fromisoformat('2020-10-01'))
     to_date = factory.LazyAttribute(
         lambda obj: obj.from_date + relativedelta(days=5)
     )

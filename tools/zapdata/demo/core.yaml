@@ -1,7 +1,7 @@
 - model: core.user
   fields:
     password: pbkdf2_sha256$260000$L0FklUguellHfazIAKLHZX$2b4NmHksSwmqv8Gj6XiR3eqe1NjArZBU+w5JFfLJaLg=
-    last_login: 2023-04-25 07:46:10.519388+00:00
+    last_login: 2023-05-14 18:04:14.168902+00:00
     is_superuser: true
     username: admin
     first_name: admin
@@ -54,3 +54,10 @@
     user:
     - g.bronzini
     picture: ''
+- model: core.resource
+  pk: 1
+  fields:
+    profile:
+    - g.bronzini
+    first_name: Giovanni
+    last_name: Bronzini
