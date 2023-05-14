@@ -1,8 +1,5 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
-# from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-# from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.signals import post_save
@@ -14,7 +11,7 @@ from natural_keys.models import NaturalKeyModel
 
 class UserManager(BaseUserManager):
 
-    def create_user(self, email,  password=None, **kwargs):
+    def create_user(self, email, password=None, **kwargs):
         if not email:
             raise ValueError('Users must have an email address')
         email = self.normalize_email(email)
@@ -23,7 +20,7 @@ class UserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, username, email,  password=None, **kwargs):
+    def create_superuser(self, username, email, password=None, **kwargs):
         kwargs.setdefault('is_active', True)
         kwargs.setdefault('is_staff', True)
         kwargs.setdefault('is_superuser', True)
@@ -37,31 +34,11 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-#     # email = models.EmailField(max_length=255, unique=True)
-#     # first_name = models.CharField(max_length=255)
-#     # last_name = models.CharField(max_length=255)
-#     # is_active = models.BooleanField(default=False)
-#     # is_staff = models.BooleanField(default=False)
-#
     objects = UserManager()
-
 
     @staticmethod
     def get_natural_key_fields():
         return ['username']
-
-#
-#     # USERNAME_FIELD = 'email'
-#     # REQUIRED_FIELDS = ['first_name', 'last_name']
-#
-#     # def get_full_name(self):
-#     #     return f'{self.first_name}{self.last_name}'
-#
-#     # def get_short_name(self):
-#     #     return self.first_name
-#
-#     # def __str__(self):
-#     #     return self.email
 
 
 class Client(NaturalKeyModel):
@@ -110,11 +87,16 @@ class UserProfile(NaturalKeyModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     picture = models.TextField()
 
+    def __str__(self):
+        return self.user.username
+
 
 class Resource(models.Model):
     profile = models.OneToOneField(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=50, help_text='Overwritten by profile.first_name if profile is provided',
+                                  blank=True)
+    last_name = models.CharField(max_length=50, help_text='Overwritten by profile.last_name if profile is provided',
+                                 blank=True)
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'

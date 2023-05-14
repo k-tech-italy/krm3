@@ -3,6 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.utils.safestring import mark_safe
 from smart_admin.smart_auth.admin import UserAdmin
 
+from krm3.core.forms import ResourceAdminForm
 from krm3.core.models import City, Client, Country, Project, Resource, UserProfile
 
 
@@ -38,6 +39,7 @@ class CityAdmin(ModelAdmin):
 class ResourceAdmin(ModelAdmin):
     list_display = ('first_name', 'last_name')
     search_fields = ('first_name', 'last_name')
+    form = ResourceAdminForm
 
 
 @admin.register(Client)
