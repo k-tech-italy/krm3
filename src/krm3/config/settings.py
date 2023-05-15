@@ -27,6 +27,8 @@ AUTH_USER_MODEL = 'core.User'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_ROOT = env('MEDIA_ROOT')
+
 
 # SENTRY & RAVEN
 # need to copy in settings because we inject these values in the templates

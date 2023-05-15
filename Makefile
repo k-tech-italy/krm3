@@ -121,9 +121,11 @@ bump:   ## Bumps version
     fi
 	@./manage.py makemigrations
 
-.zap: .init-db
+.upgrade:
 	./manage.py upgrade -vv
-	./manage.py demo setup
+
+
+.zap: .init-db .upgrade .loaddata
 
 .zap-migrations: .zap-migrations_ .zap  ## Destroys and recreate migrations
 
@@ -147,14 +149,18 @@ bump:   ## Bumps version
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.currency > tools/zapdata/demo/currencies.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary currencies.rate > tools/zapdata/demo/rates.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary core  > tools/zapdata/demo/core.yaml
+	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary missions  > tools/zapdata/demo/missions.yaml
 	@./manage.py dumpdata --format yaml --natural-foreign --natural-primary krm3  > tools/zapdata/demo/krm3.yaml
+	@cp -R ~media/* tools/zapdata/demo/media
 
 .loaddata:
 	@-./manage.py loaddata tools/zapdata/demo/currencies.yaml
 	@-./manage.py loaddata tools/zapdata/demo/rates.yaml
 	@./manage.py loaddata tools/zapdata/demo/groups.yaml
 	@-./manage.py loaddata tools/zapdata/demo/core.yaml
+	@-./manage.py loaddata tools/zapdata/demo/missions.yaml
 	@-./manage.py loaddata tools/zapdata/demo/krm3.yaml
+	@cp -R tools/zapdata/demo/media/* ~media
 
 
 run:  ## Run a Django development webserver (assumes that `runonce` was previously run).

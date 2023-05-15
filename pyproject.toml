@@ -32,6 +32,7 @@ pytest = "^7.3.1"
 pytest-param = "^0.1.1"
 parametrize = "^0.1.1"
 django-environ = "^0.10.0"
+opencv-python = "^4.7.0.72"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"

@@ -12,7 +12,7 @@ class MissionAdmin(ModelAdmin):
 
 
 @admin.register(PaymentCategory)
-class PaymentCategoryAdmin(ModelAdmin):
+class PaymentCategoryAdmin(MPTTModelAdmin):
     pass
 
 

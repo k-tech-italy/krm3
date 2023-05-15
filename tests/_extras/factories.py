@@ -2,6 +2,7 @@ from datetime import date
 
 import factory
 from dateutil.relativedelta import relativedelta
+from factory.fuzzy import FuzzyDecimal
 
 
 class CountryFactory(factory.django.DjangoModelFactory):
@@ -60,3 +61,14 @@ class MissionFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'missions.Mission'
+
+
+class ExpenseFactory(factory.django.DjangoModelFactory):
+    mission = factory.SubFactory(MissionFactory)
+    amount_currency = FuzzyDecimal(0.5, 170)
+    day = factory.LazyAttribute(
+        lambda obj: obj.mission.from_date
+    )
+
+    class Meta:
+        model = 'missions.Expense'

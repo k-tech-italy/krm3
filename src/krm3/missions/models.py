@@ -8,6 +8,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 # from krm3.currencies.models import Currency
 from krm3.core.models import City, Project, Resource
+from krm3.missions.media import mission_directory_path
 
 
 class Mission(models.Model):
@@ -88,12 +89,12 @@ class Expense(models.Model):
                                       help_text=f'Amount in {settings.CURRENCY_BASE}')
     amount_reimbursement = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                                help_text='Reimbursed amount')
-    detail = models.CharField(max_length=100)
+    detail = models.CharField(max_length=100, null=True, blank=True)
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT)
     payment_type = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT)
     reimbursement = models.ForeignKey(Reimbursement, on_delete=models.SET_NULL, null=True, blank=True)
 
-    image = models.FileField()
+    image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
 
     def __str__(self):
