@@ -23,7 +23,7 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 @admin.register(Expense)
 class ExpenseAdmin(ModelAdmin):
-    pass
+    change_form_template = 'admin/missions/expense_change_form.html'
 
 
 @admin.register(Reimbursement)
