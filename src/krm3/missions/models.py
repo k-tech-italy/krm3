@@ -95,6 +95,8 @@ class Expense(models.Model):
     reimbursement = models.ForeignKey(Reimbursement, on_delete=models.SET_NULL, null=True, blank=True)
 
     image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
+
+    rand_ref = models.CharField(max_length=10, null=True, blank=True, db_index=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
 
     def __str__(self):

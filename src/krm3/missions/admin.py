@@ -1,5 +1,8 @@
+from admin_extra_buttons.decorators import button
+from admin_extra_buttons.mixins import ExtraButtonsMixin, confirm_action
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.template.response import TemplateResponse
 from mptt.admin import MPTTModelAdmin
 
 from krm3.missions.forms import MissionAdminForm
@@ -22,8 +25,14 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.register(Expense)
-class ExpenseAdmin(ModelAdmin):
-    change_form_template = 'admin/missions/expense_change_form.html'
+class ExpenseAdmin(ExtraButtonsMixin, ModelAdmin):
+
+    @button(
+        html_attrs={'style': 'background-color:#DC6C6C;color:black'},
+        visible=lambda btn: bool(btn.original.id)
+    )
+    def view_qr(self, request, pk):
+        return TemplateResponse(request, context={'expense_id': pk}, template='admin/missions/expense_qr.html')
 
 
 @admin.register(Reimbursement)

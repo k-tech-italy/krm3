@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
@@ -15,3 +16,8 @@ class MissionAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MissionSerializer
     queryset = Mission.objects.all()
+
+    @action(methods=['post'], detail=True, permission_classes=[])
+    def upload_image(self, request, ref, *args, **kwargs):
+        """Upload the image to the mission."""
+        print(ref)
