@@ -1,15 +1,11 @@
-from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
-from krm3.missions.models import Mission
+from krm3.missions.models import Expense, Mission
 
-
-class MissionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mission
-        fields = '__all__'
+from .serializers.expense import ExpenseSerializer
+from .serializers.mission import MissionSerializer
 
 
 class MissionAPIViewSet(ModelViewSet):
@@ -17,7 +13,22 @@ class MissionAPIViewSet(ModelViewSet):
     serializer_class = MissionSerializer
     queryset = Mission.objects.all()
 
-    @action(methods=['post'], detail=True, permission_classes=[])
-    def upload_image(self, request, ref, *args, **kwargs):
+
+class ExpenseAPIViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExpenseSerializer
+    queryset = Expense.objects.all()
+
+    @action(
+        methods=['post'],
+        detail=True, permission_classes=[],
+        # parser_classes=(MultiPartParser, FormParser)
+    )
+    def upload_image(self, request, *args, **kwargs):
         """Upload the image to the mission."""
-        print(ref)
+        expense: Expense = self.get_object()
+        expense.image = request.FILES['image']
+        expense.save()
+
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)

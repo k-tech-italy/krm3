@@ -1,0 +1,42 @@
+### curl -X 'GET'
+##  'http://localhost:8000/api/v1/resource/'
+##  -H 'accept: application/json'
+##  -H 'Content-Type: application/json'
+##  -H 'Authorization: JWT ey.....KQ'
+
+POST {{server_url}}/api/v1/jwt/create/
+accept: application/json
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin"
+}
+
+
+
+> {%
+    client.global.set("auth_token", response.body.access);
+    client.global.set("refresh_token", response.body.refresh);
+%}
+
+###
+
+POST {{server_url}}/api/v1/expense/1/upload_image/
+#Content-Type: application/json
+Accept: application/json
+Authorization: JWT {{auth_token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="otp"
+Content-Type: text/plain
+
+546464
+--WebAppBoundary
+Content-Disposition: form-data; name="image"; filename="original.jpg"
+Content-Type: image/jpeg
+
+< /home/gigio/PROJS/KT/krm3/tests/unit/missions/examples/original.jpg
+--WebAppBoundary--
+###
