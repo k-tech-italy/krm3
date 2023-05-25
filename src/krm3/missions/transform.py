@@ -42,20 +42,40 @@ def find_dest(pts):
     return order_points(destination_corners)
 
 
+def troubleshooting(message, img):
+    cv2.imshow(message, img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
 def clean_image(filepath):
     img = cv2.imread(filepath)
 
     # Resize image to workable size
-    dim_limit = 1080
+    dim_limit = 1024
     max_dim = max(img.shape)
     if max_dim > dim_limit:
         resize_scale = dim_limit / max_dim
         img = cv2.resize(img, None, fx=resize_scale, fy=resize_scale)
     # Create a copy of resized original image for later use
     orig_img = img.copy()
+
+    troubleshooting('resized', orig_img)
+
+    # define the contrast and brightness value
+    # contrast = 2.  # Contrast control ( 0 to 127)
+    # brightness = 1.  # Brightness control (0-100)
+    #
+    # # img = cv2.equalizeHist(img)
+    # img = cv2.addWeighted(img, contrast, img, 0, brightness)
+    # troubleshooting("enhanced", img)
+
     # Repeated Closing operation to remove text from the document.
     kernel = np.ones((5, 5), np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel, iterations=3)
+
+    troubleshooting('morpho', img)
+
     # GrabCut
     mask = np.zeros(img.shape[:2], np.uint8)
     bgdModel = np.zeros((1, 65), np.float64)
@@ -64,6 +84,8 @@ def clean_image(filepath):
     cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
     img = img * mask2[:, :, np.newaxis]
+
+    troubleshooting('grabcut', img)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (11, 11), 0)
@@ -79,6 +101,7 @@ def clean_image(filepath):
     # Detecting Edges through Contour approximation.
     # Loop over the contours.
     if len(page) == 0:
+        troubleshooting('returning', orig_img)
         return orig_img
     for c in page:
         # Approximate the contour.
@@ -100,6 +123,7 @@ def clean_image(filepath):
     # Perspective transform using homography.
     final = cv2.warpPerspective(orig_img, M, (destination_corners[2][0], destination_corners[2][1]),
                                 flags=cv2.INTER_LINEAR)
+    troubleshooting('final', final)
 
     return final
     # cv2.imshow("Image", orig_img)
