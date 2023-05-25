@@ -1,5 +1,5 @@
 from admin_extra_buttons.decorators import button
-from admin_extra_buttons.mixins import ExtraButtonsMixin, confirm_action
+from admin_extra_buttons.mixins import ExtraButtonsMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.template.response import TemplateResponse
@@ -32,7 +32,11 @@ class ExpenseAdmin(ExtraButtonsMixin, ModelAdmin):
         visible=lambda btn: bool(btn.original.id)
     )
     def view_qr(self, request, pk):
-        return TemplateResponse(request, context={'expense_id': pk}, template='admin/missions/expense_qr.html')
+        expense = self.model.objects.get(pk=pk)
+        return TemplateResponse(
+            request,
+            context={'pk': pk, 'ref': f'{pk}-{expense.get_otp()}'},
+            template='admin/missions/expense/expense_qr.html')
 
 
 @admin.register(Reimbursement)
