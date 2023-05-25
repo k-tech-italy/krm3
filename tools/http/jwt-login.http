@@ -3,14 +3,14 @@
 #  'http://localhost:8000/api/v1/jwt/create/'
 #  -H 'accept: application/json'
 #  -H 'Content-Type: application/json'
-#  -d '{"username":  "admin", "password":  "admin"}'
+#  -d '{"username":  "...", "password":  "..."}'
 POST {{server_url}}/api/v1/jwt/create/
 accept: application/json
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "admin"
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
 }
 
 

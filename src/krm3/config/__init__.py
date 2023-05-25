@@ -85,7 +85,7 @@ DEFAULTS = {
     'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': (str, ''),
     'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': (list, ['http://localhost:3000/login', 'https://localhost:3000/login']),
 
-    'FERNET_KEY': (str, Fernet.generate_key())
+    'FERNET_KEY': (str, Fernet.generate_key().decode('utf-8'))
 }
 
 env = Env(**DEFAULTS)

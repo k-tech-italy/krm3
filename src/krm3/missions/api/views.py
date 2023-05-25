@@ -1,11 +1,12 @@
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.exceptions import APIException
+from rest_framework.viewsets import ModelViewSet
+
 from krm3.missions.models import Expense, Mission
 
-from .serializers.expense import ExpenseSerializer, ExpenseImageUploadSerializer
+from .serializers.expense import ExpenseImageUploadSerializer, ExpenseRetrieveSerializer, ExpenseSerializer
 from .serializers.mission import MissionSerializer
 
 
@@ -21,7 +22,14 @@ class ExpenseAPIViewSet(ModelViewSet):
     queryset = Expense.objects.all()
 
     @action(
-        methods=['post'],
+        detail=True,
+        serializer_class=ExpenseRetrieveSerializer
+    )
+    def otp(self, request, pk=None):
+        return super().retrieve(request, pk=pk)
+
+    @action(
+        methods=['patch'],
         detail=True,
         permission_classes=[],
         serializer_class=ExpenseImageUploadSerializer
@@ -37,10 +45,9 @@ class ExpenseAPIViewSet(ModelViewSet):
             self.perform_update(serializer)
             expense.image = serializer.validated_data['image']
             expense.save()
+            return Response(status=204)
         else:
-            raise APIException(code=400, detail='Invalid OTP')
+            raise serializers.ValidationError('OTP not matching')
 
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
-
-

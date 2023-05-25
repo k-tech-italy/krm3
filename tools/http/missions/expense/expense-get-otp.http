@@ -22,16 +22,9 @@ Content-Type: application/json
 
 ###
 
-PATCH {{server_url}}/api/v1/expense/1/
-#Content-Type: application/json
+GET {{server_url}}/api/v1/expense/1/otp/
+Content-Type: application/json
 Accept: application/json
 Authorization: JWT {{auth_token}}
-Content-Type: multipart/form-data; boundary=WebAppBoundary
 
---WebAppBoundary
-Content-Disposition: form-data; name="amount_currency"
-Content-Type: text/plain
-
-15.78
---WebAppBoundary--
 ###

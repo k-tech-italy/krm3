@@ -10,8 +10,8 @@ accept: application/json
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "admin"
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
 }
 
 
@@ -23,7 +23,18 @@ Content-Type: application/json
 
 ###
 
-POST {{server_url}}/api/v1/expense/1/upload_image/
+GET {{server_url}}/api/v1/expense/1/otp/
+Content-Type: application/json
+Accept: application/json
+Authorization: JWT {{auth_token}}
+
+> {%
+    client.global.set("otp", response.body.otp);
+%}
+
+###
+
+PATCH {{server_url}}/api/v1/expense/1/upload_image/
 #Content-Type: application/json
 Accept: application/json
 Authorization: JWT {{auth_token}}
@@ -33,11 +44,11 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 Content-Disposition: form-data; name="otp"
 Content-Type: text/plain
 
-BkbssoR_9WsjLzMoVWOR8U9sCBxXiwykf6THM10TKxjniBo158UsWE7Dq2bY18XQUGI_KHnMzFuHQGkHTltoes1FTPQB-WCo3gcIQP1jFH1oByjsE=
+{{otp}}
 --WebAppBoundary
 Content-Disposition: form-data; name="image"; filename="original.jpg"
 Content-Type: image/jpeg
 
-< /Users/gigio/PROJS/KT/krm3/tests/unit/missions/examples/original.jpg
+< ../../../../tests/unit/missions/examples/original.jpg
 --WebAppBoundary--
 ###

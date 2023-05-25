@@ -9,8 +9,8 @@ accept: application/json
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "admin"
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
 }
 
 
