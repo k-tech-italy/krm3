@@ -33,11 +33,11 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 Content-Disposition: form-data; name="otp"
 Content-Type: text/plain
 
-546464
+BkbssoR_9WsjLzMoVWOR8U9sCBxXiwykf6THM10TKxjniBo158UsWE7Dq2bY18XQUGI_KHnMzFuHQGkHTltoes1FTPQB-WCo3gcIQP1jFH1oByjsE=
 --WebAppBoundary
 Content-Disposition: form-data; name="image"; filename="original.jpg"
 Content-Type: image/jpeg
 
-< /home/gigio/PROJS/KT/krm3/tests/unit/missions/examples/original.jpg
+< /Users/gigio/PROJS/KT/krm3/tests/unit/missions/examples/original.jpg
 --WebAppBoundary--
 ###

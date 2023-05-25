@@ -1,4 +1,6 @@
 # import pytest
+import hashlib
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -81,6 +83,13 @@ class Reimbursement(models.Model):
     issue_date = models.DateField()
 
 
+class ExpenseManager(models.Manager):
+    def by_otp(self, otp: str):
+        ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
+        expense_id, mission_id, ts = ref.split('|')
+        return self.get(mission_id=mission_id, id=expense_id, modified_date=ts)
+
+
 class Expense(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     day = models.DateField()
@@ -98,6 +107,19 @@ class Expense(models.Model):
 
     rand_ref = models.CharField(max_length=10, null=True, blank=True, db_index=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
+
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    objects = ExpenseManager()
+
+    def get_otp(self):
+        return settings.FERNET_KEY.encrypt(f"{self.id}|{self.mission_id}|{self.modified_date}".encode()).decode('utf-8')[6:]
+
+    def check_otp(self, otp: str):
+        ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
+        expense_id, mission_id, ts = ref.split('|')
+        return f'{self.modified_date}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
     def __str__(self):
         return f'{self.day}, {self.amount_currency} for {self.category}'

@@ -32,6 +32,6 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 Content-Disposition: form-data; name="amount_currency"
 Content-Type: text/plain
 
-15.77
+15.78
 --WebAppBoundary--
 ###
