@@ -1,5 +1,6 @@
 import os
 
+import cv2
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from django.contrib import admin, messages
@@ -9,6 +10,7 @@ from mptt.admin import MPTTModelAdmin
 
 from krm3.missions.forms import MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.missions.transform import clean_image
 
 
 @admin.register(Mission)
@@ -45,24 +47,21 @@ class ExpenseAdmin(ExtraButtonsMixin, ModelAdmin):
         messages.success(request, f'Cleaned {count} files')
 
     # FIXME: does not work
-    # @button(
-    #     html_attrs={'style': 'background-color:#DC6C6C;color:black'},
-    #     visible=lambda btn: bool(btn.original.id and btn.original.image)
-    # )
-    # def clean_image(self, request, pk):
-    #     expense = self.model.objects.get(pk=pk)
-    #     cleaned = clean_image(expense.image.file.name)
-    #     cv2.imshow("Edged", cleaned)
-    #     cv2.waitKey(0)
-    #     cv2.destroyAllWindows()
-    #     try:
-    #         written = cv2.imwrite(expense.image.file.name, cleaned)
-    #         if written:
-    #             messages.success(request, "New image saved")
-    #         else:
-    #             messages.warning(request, "Could not save image")
-    #     except Exception as e:
-    #         messages.error(request, str(e))
+    @button(
+        html_attrs={'style': 'background-color:#DC6C6C;color:black'},
+        visible=lambda btn: bool(btn.original.id and btn.original.image)
+    )
+    def clean_image(self, request, pk):
+        expense = self.model.objects.get(pk=pk)
+        cleaned = clean_image(expense.image.file.name)
+        try:
+            written = cv2.imwrite(expense.image.file.name, cleaned)
+            if written:
+                messages.success(request, 'New image saved')
+            else:
+                messages.warning(request, 'Could not save image')
+        except Exception as e:
+            messages.error(request, str(e))
 
     @button(
         html_attrs={'style': 'background-color:#DC6C6C;color:black'},
