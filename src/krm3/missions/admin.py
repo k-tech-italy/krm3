@@ -3,6 +3,7 @@ import os
 import cv2
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.template.response import TemplateResponse
@@ -37,11 +38,12 @@ class ExpenseAdmin(ExtraButtonsMixin, ModelAdmin):
     def purge_obsolete_images(self, request):
         count = 0
         storage = Expense.image.field.storage
-        existing = list(Expense.objects.values_list('image', flat=True))
+        existing = set(Expense.objects.values_list('image', flat=True))
+        offset = len(settings.MEDIA_ROOT) + 1
         for root, dirs, files in os.walk(storage.location, topdown=False):
             for name in files:
                 fullname = root + '/' + name
-                if fullname not in existing:
+                if fullname[offset:] not in existing:
                     os.remove(fullname)
                     count += 1
         messages.success(request, f'Cleaned {count} files')
