@@ -3,6 +3,9 @@ import os
 import cv2
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
+from adminfilters.autocomplete import AutoCompleteFilter
+from adminfilters.dates import DateRangeFilter
+from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
@@ -15,8 +18,19 @@ from krm3.missions.transform import clean_image
 
 
 @admin.register(Mission)
-class MissionAdmin(ModelAdmin):
+class MissionAdmin(AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
+    autocomplete_fields = ['project']
+    search_fields = ['resource__first_name', 'resource__last_name', 'title', 'city', 'number']
+
+    list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city')
+    list_filter = (
+        'resource',
+        ('project', AutoCompleteFilter),
+        ('city', AutoCompleteFilter),
+        ('from_date', DateRangeFilter),
+        ('to_date', DateRangeFilter),
+    )
 
 
 @admin.register(PaymentCategory)
@@ -30,7 +44,27 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.register(Expense)
-class ExpenseAdmin(ExtraButtonsMixin, ModelAdmin):
+class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    list_display = ('mission', 'day', 'amount_currency', 'category')
+    list_filter = (
+        ('mission__resource', AutoCompleteFilter),
+        'mission__title',
+    )
+    fieldsets = [
+        (
+            None,
+            {
+                'fields': [
+                    ('mission', 'day'),
+                    ('amount_currency', 'amount_base', 'amount_reimbursement'),
+                    'detail',
+                    ('category', 'payment_type', 'reimbursement'),
+                    'image']
+            }
+        )
+    ]
+
+    autocomplete_fields = ['mission']
 
     @button(
         html_attrs={'style': 'background-color:#0CDC6C;color:black'}

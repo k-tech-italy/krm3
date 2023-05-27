@@ -72,7 +72,7 @@ class City(NaturalKeyModel):
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
 
     def __str__(self):
-        return str(self.name)
+        return f'{self.name} ({self.country.name})'
 
     class Meta:
         constraints = (

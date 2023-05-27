@@ -1,6 +1,3 @@
-# import pytest
-import hashlib
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -105,7 +102,6 @@ class Expense(models.Model):
 
     image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
 
-    rand_ref = models.CharField(max_length=10, null=True, blank=True, db_index=True)
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
 
     created_date = models.DateTimeField(auto_now_add=True)
@@ -114,7 +110,8 @@ class Expense(models.Model):
     objects = ExpenseManager()
 
     def get_otp(self):
-        return settings.FERNET_KEY.encrypt(f"{self.id}|{self.mission_id}|{self.modified_date}".encode()).decode('utf-8')[6:]
+        return settings.FERNET_KEY.encrypt(
+            f'{self.id}|{self.mission_id}|{self.modified_date}'.encode()).decode('utf-8')[6:]
 
     def check_otp(self, otp: str):
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()

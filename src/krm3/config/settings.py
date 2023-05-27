@@ -11,10 +11,10 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import logging
 import os
-from cryptography.fernet import Fernet
 from datetime import timedelta
 from pathlib import Path
 
+from cryptography.fernet import Fernet
 from django_regex.utils import RegexList
 
 import krm3
@@ -90,6 +90,8 @@ INSTALLED_APPS = [
 
     # Third party apps.
     'qr_code',
+    'adminactions',
+    'django_filters',
     'django_extensions',
     'rest_framework',
     'drf_spectacular',
@@ -103,7 +105,7 @@ INSTALLED_APPS = [
 ]
 
 try:
-    import djago_extensions as _
+    import djago_extensions as _  # noqa: F401
     INSTALLED_APPS.append('django_extensions')
 except ModuleNotFoundError:
     pass

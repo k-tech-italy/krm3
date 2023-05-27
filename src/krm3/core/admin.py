@@ -27,12 +27,12 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Country)
 class CountryAdmin(ModelAdmin):
-    pass
+    search_fields = ['name']
 
 
 @admin.register(City)
 class CityAdmin(ModelAdmin):
-    pass
+    search_fields = ['name', 'country__name']
 
 
 @admin.register(Resource)
@@ -49,4 +49,4 @@ class ClientAdmin(ModelAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(ModelAdmin):
-    pass
+    search_fields = ['name']

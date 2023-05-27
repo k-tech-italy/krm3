@@ -92,7 +92,10 @@ def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
 
         for z in ['groups', 'currencies', 'rates', 'krm3', 'core']:
             click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
-            call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
+            try:
+                call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
+            except Exception as e:
+                print(f'WARNING: {e}')
 
     except Exception as e:
         if traceback:
