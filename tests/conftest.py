@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from factory.fuzzy import FuzzyChoice
 
 
 def pytest_configure(config):
