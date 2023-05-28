@@ -21,10 +21,11 @@ from mptt.admin import MPTTModelAdmin
 from krm3.missions.forms import MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.transform import clean_image
+from krm3.utils.queryset import FilterByResourceMixin
 
 
 @admin.register(Mission)
-class MissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class MissionAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'city', 'number']
@@ -56,7 +57,9 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.register(Expense)
-class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    filter_by_resource_lookup = 'mission__resource'
+
     list_display = ('mission', 'day', 'amount_currency', 'category')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
@@ -92,7 +95,7 @@ class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     def response_add(self, request, obj, post_url_continue=None):
         ret = super().response_add(request, obj, post_url_continue)
-        if "_addanother" in request.POST:
+        if '_addanother' in request.POST:
             day = request.POST['day']
             mission = request.POST['mission']
             qs = '?mission_id=%s&day=%s' % (mission, day)
@@ -101,7 +104,7 @@ class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     def response_change(self, request, obj):
         ret = super().response_change(request, obj)
-        if "_addanother" in request.POST:
+        if '_addanother' in request.POST:
             day = request.POST['day']
             mission = request.POST['mission']
             qs = '?mission_id=%s&day=%s' % (mission, day)
