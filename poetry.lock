@@ -893,6 +893,18 @@ djet = ["djet (>=0.3.0,<0.4.0)"]
 webauthn = ["webauthn (<1.0)"]
 
 [[package]]
+name = "docutils"
+version = "0.20.1"
+description = "Docutils -- Python Documentation Utilities"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
+    {file = "docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b"},
+]
+
+[[package]]
 name = "drf-spectacular"
 version = "0.26.2"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
@@ -2463,4 +2475,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3548fdff003e2d3316d807f7dc7a457156929ddf3ae8a56caf49ea1a14c7cdad"
+content-hash = "85d37dc26013618fa485567896def0e9ae90f670b36b3bb201f3ce368d6d4723"

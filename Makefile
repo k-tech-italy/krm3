@@ -115,11 +115,11 @@ bump:   ## Bumps version
 .init-db:
 	sh tools/dev/initdb.sh
 
-.zap-migrations_:
-	@if [ "`find src -name "0*.py" | grep "/migrations/"`" != "" ]; then \
-       rm `find src -name "0*.py" | grep "/migrations/"` ; \
-    fi
-	@./manage.py makemigrations
+#.zap-migrations_:
+#	@if [ "`find src -name "0*.py" | grep "/migrations/"`" != "" ]; then \
+#       rm `find src -name "0*.py" | grep "/migrations/"` ; \
+#    fi
+#	@./manage.py makemigrations
 
 .upgrade:
 	./manage.py upgrade -vv

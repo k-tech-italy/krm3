@@ -16,6 +16,15 @@ def update_user_social_data(strategy, *args, **kwargs):
 
     user_profile, _ = UserProfile.objects.get_or_create(user=user)
 
+    modified = False
+
     if (url := response.get('picture')) and user_profile.picture != url:
         user_profile.picture = url
+        modified = True
+
+    if (profile := response.get('profile')) and user_profile.social_profile != profile:
+        user_profile.social_profile = profile
+        modified = True
+
+    if modified:
         user_profile.save()

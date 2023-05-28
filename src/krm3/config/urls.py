@@ -29,7 +29,9 @@ actions.add_to_site(site)
 
 # see https://djoser.readthedocs.io/en/latest/getting_started.html
 urlpatterns = [
+    path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('admin/', admin.site.urls),
+
     path('api/v1/', include('djoser.urls')),
     # # path('', include('djoser.urls.authtoken')),
     path('api/v1/', include('djoser.urls.jwt')),

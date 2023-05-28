@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krm3"
-version = "0.2.1"
+version = "0.2.2"
 description = "KRM3"
 authors = ["K-Tech team"]
 packages = [
@@ -34,6 +34,7 @@ django-environ = "^0.10.0"
 django-qr-code = "^3.1.1"
 cryptography = "^40.0.2"
 django-adminfilters = "^2.1.0"
+docutils = "^0.20.1"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"

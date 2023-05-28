@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from smart_admin.smart_auth.admin import UserAdmin
 
@@ -10,15 +11,23 @@ from krm3.utils.queryset import FilterByResourceMixin
 
 @admin.register(UserProfile)
 class UserProfileAdmin(ModelAdmin):
-    list_display = 'user', 'avatar'
+    list_display = 'user', 'avatar', 'profile'
 
     def avatar(self, obj):
-        from django.utils.html import escape
         if obj.picture:
             return mark_safe('<img src="%s" />' % escape(obj.picture))
         else:
             return ''
     avatar.short_description = 'Profile pic'
+    avatar.allow_tags = True
+
+    def profile(self, obj):
+
+        if obj.social_profile:
+            return mark_safe('<a href="%s">%s</a>' % (escape(obj.social_profile), escape(obj.social_profile)))
+        else:
+            return ''
+    avatar.short_description = 'Profile url'
     avatar.allow_tags = True
 
 
