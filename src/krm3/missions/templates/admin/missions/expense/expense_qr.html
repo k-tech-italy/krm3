@@ -1,10 +1,9 @@
-{% extends "admin/base.html" %}
+{% extends "admin/base_site.html" %}
 {% load qr_code static %}
 
-
-{% block stylesheet %}{% static "admin/css/nodark_base.css" %}{% endblock %}
-
 {% block content %}
+    {{ block.super }}
     {% qr_from_data ref size="M" %}
+    <br>
     <a href="{% url "admin:missions_expense_change" pk %}">Back to expense</a>
 {% endblock %}

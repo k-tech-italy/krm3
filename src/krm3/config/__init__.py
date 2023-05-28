@@ -20,10 +20,11 @@ def parse_emails(value):
 DEFAULTS = {
     'ADMINS': (parse_emails, ''),
     'TEST_USERS': (parse_emails, ''),
-    'ALLOWED_HOSTS': (list, ''),
+    'ALLOWED_HOSTS': (list, ['localhost', '127.0.0.1']),
     'DATABASE_URL': (str, 'psql://postgres:@127.0.0.1:5432/krm3_db'),
     'DEBUG': (bool, False),
     'DEV_FOOTER_INFO': (str, uuid.uuid4()),
+    'CV2_SHOW_IMAGES': (bool, False),
 
     'EMAIL_BACKEND': (str, 'django.core.mail.backends.smtp.EmailBackend'),
     'EMAIL_HOST': (str, 'smtp.gmail.com'),

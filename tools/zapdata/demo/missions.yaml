@@ -24,6 +24,19 @@
     - Harrogate
     - United Kingdom
     resource: 1
+- model: missions.mission
+  pk: 3
+  fields:
+    number: 2
+    title: HGT Apr 2023
+    from_date: 2023-04-01
+    to_date: 2023-04-30
+    project:
+    - HGT
+    city:
+    - Harrogate
+    - United Kingdom
+    resource: 1
 - model: missions.expensecategory
   pk: 1
   fields:

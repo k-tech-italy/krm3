@@ -343,3 +343,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['k-tech.it']
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
 
 FERNET_KEY = Fernet(env('FERNET_KEY'))
+
+# Shows CV2 intermediate processing images. For Local dev only
+CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')

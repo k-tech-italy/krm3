@@ -1,5 +1,1097 @@
 - model: auth.permission
   fields:
+    name: Can export log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_export_logentry
+- model: auth.permission
+  fields:
+    name: Can find_duplicates log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_find_duplicates_logentry
+- model: auth.permission
+  fields:
+    name: Can merge log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_merge_logentry
+- model: auth.permission
+  fields:
+    name: Can massupdate log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_massupdate_logentry
+- model: auth.permission
+  fields:
+    name: Can chart log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_chart_logentry
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_byrowsupdate_logentry
+- model: auth.permission
+  fields:
+    name: Can export permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_export_permission
+- model: auth.permission
+  fields:
+    name: Can find_duplicates permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_find_duplicates_permission
+- model: auth.permission
+  fields:
+    name: Can merge permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_merge_permission
+- model: auth.permission
+  fields:
+    name: Can massupdate permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_massupdate_permission
+- model: auth.permission
+  fields:
+    name: Can chart permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_chart_permission
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_byrowsupdate_permission
+- model: auth.permission
+  fields:
+    name: Can export group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_export_group
+- model: auth.permission
+  fields:
+    name: Can find_duplicates group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_find_duplicates_group
+- model: auth.permission
+  fields:
+    name: Can merge group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_merge_group
+- model: auth.permission
+  fields:
+    name: Can massupdate group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_massupdate_group
+- model: auth.permission
+  fields:
+    name: Can chart group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_chart_group
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_byrowsupdate_group
+- model: auth.permission
+  fields:
+    name: Can export content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_export_contenttype
+- model: auth.permission
+  fields:
+    name: Can find_duplicates content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_find_duplicates_contenttype
+- model: auth.permission
+  fields:
+    name: Can merge content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_merge_contenttype
+- model: auth.permission
+  fields:
+    name: Can massupdate content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_massupdate_contenttype
+- model: auth.permission
+  fields:
+    name: Can chart content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_chart_contenttype
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_byrowsupdate_contenttype
+- model: auth.permission
+  fields:
+    name: Can export session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_export_session
+- model: auth.permission
+  fields:
+    name: Can find_duplicates session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_find_duplicates_session
+- model: auth.permission
+  fields:
+    name: Can merge session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_merge_session
+- model: auth.permission
+  fields:
+    name: Can massupdate session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_massupdate_session
+- model: auth.permission
+  fields:
+    name: Can chart session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_chart_session
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_byrowsupdate_session
+- model: auth.permission
+  fields:
+    name: Can export user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_export_user
+- model: auth.permission
+  fields:
+    name: Can find_duplicates user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_find_duplicates_user
+- model: auth.permission
+  fields:
+    name: Can merge user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_merge_user
+- model: auth.permission
+  fields:
+    name: Can massupdate user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_massupdate_user
+- model: auth.permission
+  fields:
+    name: Can chart user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_chart_user
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_byrowsupdate_user
+- model: auth.permission
+  fields:
+    name: Can export client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_export_client
+- model: auth.permission
+  fields:
+    name: Can find_duplicates client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_find_duplicates_client
+- model: auth.permission
+  fields:
+    name: Can merge client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_merge_client
+- model: auth.permission
+  fields:
+    name: Can massupdate client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_massupdate_client
+- model: auth.permission
+  fields:
+    name: Can chart client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_chart_client
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_byrowsupdate_client
+- model: auth.permission
+  fields:
+    name: Can export project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_export_project
+- model: auth.permission
+  fields:
+    name: Can find_duplicates project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_find_duplicates_project
+- model: auth.permission
+  fields:
+    name: Can merge project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_merge_project
+- model: auth.permission
+  fields:
+    name: Can massupdate project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_massupdate_project
+- model: auth.permission
+  fields:
+    name: Can chart project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_chart_project
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_byrowsupdate_project
+- model: auth.permission
+  fields:
+    name: Can export country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_export_country
+- model: auth.permission
+  fields:
+    name: Can find_duplicates country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_find_duplicates_country
+- model: auth.permission
+  fields:
+    name: Can merge country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_merge_country
+- model: auth.permission
+  fields:
+    name: Can massupdate country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_massupdate_country
+- model: auth.permission
+  fields:
+    name: Can chart country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_chart_country
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_byrowsupdate_country
+- model: auth.permission
+  fields:
+    name: Can export city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_export_city
+- model: auth.permission
+  fields:
+    name: Can find_duplicates city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_find_duplicates_city
+- model: auth.permission
+  fields:
+    name: Can merge city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_merge_city
+- model: auth.permission
+  fields:
+    name: Can massupdate city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_massupdate_city
+- model: auth.permission
+  fields:
+    name: Can chart city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_chart_city
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_byrowsupdate_city
+- model: auth.permission
+  fields:
+    name: Can export user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_export_userprofile
+- model: auth.permission
+  fields:
+    name: Can find_duplicates user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_find_duplicates_userprofile
+- model: auth.permission
+  fields:
+    name: Can merge user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_merge_userprofile
+- model: auth.permission
+  fields:
+    name: Can massupdate user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_massupdate_userprofile
+- model: auth.permission
+  fields:
+    name: Can chart user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_chart_userprofile
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_byrowsupdate_userprofile
+- model: auth.permission
+  fields:
+    name: Can export resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_export_resource
+- model: auth.permission
+  fields:
+    name: Can find_duplicates resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_find_duplicates_resource
+- model: auth.permission
+  fields:
+    name: Can merge resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_merge_resource
+- model: auth.permission
+  fields:
+    name: Can massupdate resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_massupdate_resource
+- model: auth.permission
+  fields:
+    name: Can chart resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_chart_resource
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_byrowsupdate_resource
+- model: auth.permission
+  fields:
+    name: Can export currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_export_currency
+- model: auth.permission
+  fields:
+    name: Can find_duplicates currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_find_duplicates_currency
+- model: auth.permission
+  fields:
+    name: Can merge currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_merge_currency
+- model: auth.permission
+  fields:
+    name: Can massupdate currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_massupdate_currency
+- model: auth.permission
+  fields:
+    name: Can chart currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_chart_currency
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_byrowsupdate_currency
+- model: auth.permission
+  fields:
+    name: Can export rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_export_rate
+- model: auth.permission
+  fields:
+    name: Can find_duplicates rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_find_duplicates_rate
+- model: auth.permission
+  fields:
+    name: Can merge rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_merge_rate
+- model: auth.permission
+  fields:
+    name: Can massupdate rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_massupdate_rate
+- model: auth.permission
+  fields:
+    name: Can chart rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_chart_rate
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_byrowsupdate_rate
+- model: auth.permission
+  fields:
+    name: Can export mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_export_mission
+- model: auth.permission
+  fields:
+    name: Can find_duplicates mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_find_duplicates_mission
+- model: auth.permission
+  fields:
+    name: Can merge mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_merge_mission
+- model: auth.permission
+  fields:
+    name: Can massupdate mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_massupdate_mission
+- model: auth.permission
+  fields:
+    name: Can chart mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_chart_mission
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_byrowsupdate_mission
+- model: auth.permission
+  fields:
+    name: Can export expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_export_expensecategory
+- model: auth.permission
+  fields:
+    name: Can find_duplicates expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_find_duplicates_expensecategory
+- model: auth.permission
+  fields:
+    name: Can merge expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_merge_expensecategory
+- model: auth.permission
+  fields:
+    name: Can massupdate expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_massupdate_expensecategory
+- model: auth.permission
+  fields:
+    name: Can chart expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_chart_expensecategory
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_byrowsupdate_expensecategory
+- model: auth.permission
+  fields:
+    name: Can export payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_export_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can find_duplicates payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_find_duplicates_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can merge payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_merge_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can massupdate payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_massupdate_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can chart payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_chart_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_byrowsupdate_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can export reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_export_reimbursement
+- model: auth.permission
+  fields:
+    name: Can find_duplicates reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_find_duplicates_reimbursement
+- model: auth.permission
+  fields:
+    name: Can merge reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_merge_reimbursement
+- model: auth.permission
+  fields:
+    name: Can massupdate reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_massupdate_reimbursement
+- model: auth.permission
+  fields:
+    name: Can chart reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_chart_reimbursement
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_byrowsupdate_reimbursement
+- model: auth.permission
+  fields:
+    name: Can export expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_export_expense
+- model: auth.permission
+  fields:
+    name: Can find_duplicates expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_find_duplicates_expense
+- model: auth.permission
+  fields:
+    name: Can merge expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_merge_expense
+- model: auth.permission
+  fields:
+    name: Can massupdate expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_massupdate_expense
+- model: auth.permission
+  fields:
+    name: Can chart expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_chart_expense
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_byrowsupdate_expense
+- model: auth.permission
+  fields:
+    name: Can export user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_export_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can find_duplicates user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_find_duplicates_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can merge user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_merge_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can massupdate user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_massupdate_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can chart user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_chart_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_byrowsupdate_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can export nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_export_nonce
+- model: auth.permission
+  fields:
+    name: Can find_duplicates nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_find_duplicates_nonce
+- model: auth.permission
+  fields:
+    name: Can merge nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_merge_nonce
+- model: auth.permission
+  fields:
+    name: Can massupdate nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_massupdate_nonce
+- model: auth.permission
+  fields:
+    name: Can chart nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_chart_nonce
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_byrowsupdate_nonce
+- model: auth.permission
+  fields:
+    name: Can export association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_export_association
+- model: auth.permission
+  fields:
+    name: Can find_duplicates association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_find_duplicates_association
+- model: auth.permission
+  fields:
+    name: Can merge association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_merge_association
+- model: auth.permission
+  fields:
+    name: Can massupdate association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_massupdate_association
+- model: auth.permission
+  fields:
+    name: Can chart association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_chart_association
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_byrowsupdate_association
+- model: auth.permission
+  fields:
+    name: Can export code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_export_code
+- model: auth.permission
+  fields:
+    name: Can find_duplicates code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_find_duplicates_code
+- model: auth.permission
+  fields:
+    name: Can merge code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_merge_code
+- model: auth.permission
+  fields:
+    name: Can massupdate code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_massupdate_code
+- model: auth.permission
+  fields:
+    name: Can chart code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_chart_code
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_byrowsupdate_code
+- model: auth.permission
+  fields:
+    name: Can export partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_export_partial
+- model: auth.permission
+  fields:
+    name: Can find_duplicates partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_find_duplicates_partial
+- model: auth.permission
+  fields:
+    name: Can merge partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_merge_partial
+- model: auth.permission
+  fields:
+    name: Can massupdate partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_massupdate_partial
+- model: auth.permission
+  fields:
+    name: Can chart partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_chart_partial
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_byrowsupdate_partial
+- model: auth.permission
+  fields:
+    name: Can export outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_export_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can find_duplicates outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_find_duplicates_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can merge outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_merge_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can massupdate outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_massupdate_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can chart outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_chart_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_byrowsupdate_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can export blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_export_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can find_duplicates blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_find_duplicates_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can merge blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_merge_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can massupdate blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_massupdate_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can chart blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_chart_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can byrowsupdate blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_byrowsupdate_blacklistedtoken
+- model: auth.permission
+  fields:
     name: Can add log entry
     content_type:
     - admin

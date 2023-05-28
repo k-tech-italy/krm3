@@ -3,6 +3,7 @@
 # import the necessary packages
 import cv2
 import numpy as np
+from django.conf import settings
 
 
 def order_points(pts):
@@ -43,9 +44,10 @@ def find_dest(pts):
 
 
 def troubleshooting(message, img):
-    cv2.imshow(message, img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if settings.CV2_SHOW_IMAGES:
+        cv2.imshow(message, img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 def clean_image(filepath):

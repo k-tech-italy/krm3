@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 
 import cv2
 from admin_extra_buttons.decorators import button
@@ -9,7 +11,11 @@ from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
+from django.http.response import HttpResponseRedirect
+from django.shortcuts import redirect, reverse
 from django.template.response import TemplateResponse
+from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
 
 from krm3.missions.forms import MissionAdminForm
@@ -18,7 +24,7 @@ from krm3.missions.transform import clean_image
 
 
 @admin.register(Mission)
-class MissionAdmin(AdminFiltersMixin, ModelAdmin):
+class MissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'city', 'number']
@@ -31,6 +37,12 @@ class MissionAdmin(AdminFiltersMixin, ModelAdmin):
         ('from_date', DateRangeFilter),
         ('to_date', DateRangeFilter),
     )
+
+    @button()
+    def add_expense(self, request, pk):
+        mission = Mission.objects.get(pk=pk)
+        from_date = mission.from_date.strftime('%Y-%m-%d')
+        return redirect(reverse('admin:missions_expense_add') + f'?mission_id={pk}&day={from_date}')
 
 
 @admin.register(PaymentCategory)
@@ -66,6 +78,36 @@ class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     autocomplete_fields = ['mission']
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        if obj and (revert := request.GET.get('revert')):
+            shutil.copy(revert, obj.image.file.name)
+        return super().get_form(request, obj, change, **kwargs)
+
+    def get_changeform_initial_data(self, request):
+        ret = super().get_changeform_initial_data(request)
+        pk = ret.pop('mission_id', None)
+        if pk:
+            ret['mission'] = Mission.objects.get(pk=pk)
+        return ret
+
+    def response_add(self, request, obj, post_url_continue=None):
+        ret = super().response_add(request, obj, post_url_continue)
+        if "_addanother" in request.POST:
+            day = request.POST['day']
+            mission = request.POST['mission']
+            qs = '?mission_id=%s&day=%s' % (mission, day)
+            ret = HttpResponseRedirect(f'{ret.url}{qs}')
+        return ret
+
+    def response_change(self, request, obj):
+        ret = super().response_change(request, obj)
+        if "_addanother" in request.POST:
+            day = request.POST['day']
+            mission = request.POST['mission']
+            qs = '?mission_id=%s&day=%s' % (mission, day)
+            ret = HttpResponseRedirect(f'{ret.url}{qs}')
+        return ret
+
     @button(
         html_attrs={'style': 'background-color:#0CDC6C;color:black'}
     )
@@ -89,11 +131,17 @@ class ExpenseAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     def clean_image(self, request, pk):
         expense = self.model.objects.get(pk=pk)
+        pathname = Path(expense.image.file.name)
+        backup_path = pathname.parent.joinpath(pathname.stem + f'_{pk}{pathname.suffix}')
+        shutil.copy(pathname, backup_path)
         cleaned = clean_image(expense.image.file.name)
         try:
-            written = cv2.imwrite(expense.image.file.name, cleaned)
+            written = cv2.imwrite(str(pathname), cleaned)
             if written:
-                messages.success(request, 'New image saved')
+                url = reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode(
+                    {'revert': f'{backup_path}'})
+                messages.success(
+                    request, mark_safe(f'New image saved. <a href="{url}">click here to revert to previous image</a>'))
             else:
                 messages.warning(request, 'Could not save image')
         except Exception as e:
