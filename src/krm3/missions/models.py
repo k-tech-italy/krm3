@@ -25,7 +25,7 @@ class Mission(models.Model):
         return f'{self.resource}, {title}, {self.number}'
 
     def clean(self):
-        if self.to_date < self.from_date:
+        if self.to_date is not None and self.from_date is not None and self.to_date < self.from_date:
             raise ValidationError(_('to_date must be > from_date'))
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):

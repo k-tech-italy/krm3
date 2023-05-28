@@ -10,7 +10,7 @@ class MissionAdminForm(ModelForm):
     def clean(self):
         ret = super().clean()
 
-        if (from_date := self.cleaned_data['from_date']) and not self.cleaned_data['number']:
+        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data.get('number'):
             qs = Mission.objects.filter(from_date__year=from_date.year)
             if self.instance.id:
                 qs = qs.exclude(pk=self.instance.id)
