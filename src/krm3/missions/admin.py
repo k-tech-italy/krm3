@@ -11,6 +11,7 @@ from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
+from django.contrib.admin.sites import site
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import redirect, reverse
 from django.template.response import TemplateResponse
@@ -156,9 +157,13 @@ class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, 
     )
     def view_qr(self, request, pk):
         expense = self.model.objects.get(pk=pk)
+
         return TemplateResponse(
             request,
-            context={'pk': pk, 'ref': f'{pk}-{expense.get_otp()}'},
+
+            context={
+                'site_header': site.site_header,
+                'pk': pk, 'ref': f'{pk}-{expense.get_otp()}'},
             template='admin/missions/expense/expense_qr.html')
 
 

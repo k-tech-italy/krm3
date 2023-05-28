@@ -180,3 +180,7 @@ schema:  # Generates the swagger file schema.yml
 
 schema-serve: schema  # Runs a docker container for serving the schema
 	@docker run --rm -p 8080:8080 -e SWAGGER_JSON=/schema.yml -v ${PWD}/schema.yml:/schema.yml swaggerapi/swagger-ui
+
+outdated:  ## Generates .outdated.txt and .tree.txt files
+	@poetry show --tree > .tree.txt
+	@poetry show -o > .outdated.txt
