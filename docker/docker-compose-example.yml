@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+
+  krm3:
+    restart: unless-stopped
+    image: nexus.k-tech.it/kt/krm3:0.2.0
+    ports:
+      - "${KRM3_PORT}:8000"
+    environment:
+      KRM3_SECRET_KEY: "${KRM3_SECRET_KEY}"
+      KRM3_ALLOWED_HOSTS: "krm3.k-tech.it,"
+      KRM3_STATIC_ROOT: /data/static
+      KRM3_MEDIA_ROOT: /data/media
+      KRM3_LOGS_DIR: /data/logs
+      KRM3_EMAIL_USE_LOCALTIME: 1
+      KRM3_EMAIL_USE_TLS: 1
+      KRM3_EMAIL_SUBJECT_PREFIX: "[KT KRM3]"
+      KRM3_DATABASE_URL: "${KRM3_DATABASE_URL}"
+      KRM3_DEFAULT_TO_EMAILS: "k-tech@k-tech.it"
+      KRM3_DEFAULT_FROM_EMAIL: "\"K-Tech\" <k-tech@k-tech.it>"
+      KRM3_DEBUG_TOOLBAR_ENABLED: 0
+      KRM3_DEBUG: 0
+      KRM3_SENTRY_DSN: "${KRM3_SENTRY_DSN}"
+      KRM3_DDT_KEY: "${KRM3_DDT_KEY}"
+      KRM3_SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET: "${KRM3_SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET}"
+      KRM3_FERNET_KEY: "${KRM3_FERNET_KEY}"
+      DJANGO_SETTINGS_MODULE: krm3.config.settings
+    volumes:
+      - "${KRM3_DATA_DIR}:/data"
+    depends_on:
+      - postgres

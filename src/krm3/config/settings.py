@@ -92,7 +92,6 @@ INSTALLED_APPS = [
     'qr_code',
     'adminactions',
     'django_filters',
-    'django_extensions',
     'rest_framework',
     'drf_spectacular',
     'djoser',

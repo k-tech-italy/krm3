@@ -2,20 +2,18 @@
 
 STATIC_ROOT=${KRM3_STATIC_ROOT}
 MEDIA_ROOT=${KRM3_MEDIA_ROOT}
-ADMIN_USERNAME=${KRM3_ADMIN_USERNAME}
-ADMIN_EMAIL=${KRM3_ADMIN_EMAIL}
-ADMIN_PASSWORD=${KRM3_ADMIN_PASSWORD}
 CELERY_BROKER_URL=${KRM3_CELERY_BROKER_URL}
+STACK_PROTOCOL=${KRM3_STACK_PROTOCOL:-http}
 
 mkdir -p "/krm3/logs" "${STATIC_ROOT}" "${MEDIA_ROOT}"
-chown krm3 -R /krm3 "${STATIC_ROOT}" "${MEDIA_ROOT}"
+
 
 setup() {
-  gosu krm3 django-admin upgrade -vv \
+  django-admin upgrade -vv --no-input \
           --static \
-          --admin-username ${ADMIN_USERNAME:-admin} \
-          --admin-email ${ADMIN_EMAIL} \
-          --admin-password ${ADMIN_PASSWORD}
+          --admin-username ${KRM3_ADMIN_USERNAME:-admin} \
+          --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
+          --admin-password ${KRM3_ADMIN_PASSWORD:-admin}
 }
 if [ "${STACK_PROTOCOL}" = "https" ]; then
       echo "setting up HTTPS"
@@ -27,7 +25,7 @@ fi
 
 if [ "$*" = "run" ]; then
   setup
-  exec gosu krm3 uwsgi --${STACK_PROTOCOL} 0.0.0.0:${STACK_PORT} \
+  exec uwsgi --${STACK_PROTOCOL} 0.0.0.0:${STACK_PORT} \
     --static-map "/static=$KRM3_STATIC_ROOT" \
     --static-map "/media=$KRM3_MEDIA_ROOT" \
     --master \
@@ -39,14 +37,14 @@ elif [ "$*" = "worker" ]; then
   celery -A krm3.config.celery worker --loglevel=INFO  -n wk_%h
 elif [ "$*" = "stack" ]; then
   setup
-  export STACK_PROTOCOL
-  export STACK_PORT
-  exec gosu krm3 circusd /etc/circus.conf
+  export STACK_PROTOCOL=${STACK_PROTOCOL}
+  export STACK_PORT=${STACK_PORT}
+  exec circusd /etc/circus.conf
 elif [ "$*" = "dev" ]; then
   setup
-  exec gosu krm3 django-admin runserver 0.0.0.0:8000
+  exec django-admin runserver 0.0.0.0:8000
 elif [ "$*" = "flower" ]; then
-  exec gosu krm3 -A krm3.config.celery --broker=${CELERY_BROKER_URL} flower
+  exec -A krm3.config.celery --broker=${CELERY_BROKER_URL} flower
 elif [ "$*" = "beat" ]; then
   setup
   celery -A krm3.config.celery beat --loglevel=INFO

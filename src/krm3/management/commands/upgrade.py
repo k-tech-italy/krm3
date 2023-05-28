@@ -48,7 +48,7 @@ def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
     """Perform any pending database migrations and upgrades."""
     try:
 
-        extra = {'no_input': prompt,
+        extra = {'interactive': prompt,
                  'verbosity': verbosity - 1}
 
         configure_dirs(prompt, verbosity)

@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=1.0.0
+VERSION=0.2.1
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -39,7 +39,9 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 build-base:  ## Builds the base image
-	cd .. && docker build \
+	@poetry build --format sdist
+	@poetry export --without dev --without test --with image -f requirements.txt > ../dist/image-requirements.txt
+	@cd .. && docker build \
 			${BUILD_OPTIONS} \
 			--build-arg REPO_NAME="${REPO_NAME}" \
 			-t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE} \
@@ -50,6 +52,8 @@ build-base:  ## Builds the base image
 build: ## Builds the image
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
+		--progress plain \
+		--build-arg VERSION="${VERSION}" \
 		--build-arg BASE_IMAGE="${BASE}" \
 		--build-arg DOCKER_REGISTRY="${DOCKER_REGISTRY}" \
 		-t ${DOCKER_IMAGE_FULLNAME} \
@@ -127,3 +131,12 @@ test: ## run 'django-admin check --deploy' into container
 
 stack:  ## run containder with both web/celery services
 	RUN_OPTIONS=-it CMD='stack' $(MAKE) .run
+
+save:
+	@mkdir -p ../dist
+	@echo "Saving image ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz"
+	@docker save ${DOCKER_IMAGE_FULLNAME} | gzip > ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz
+	@echo "Now you can run:"
+	@echo "  scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp"
+	@echo "And on the server:"
+	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"

@@ -44,16 +44,27 @@ RUN set -x \
     " \
     && apt-get update && apt-get install -y --no-install-suggests --no-install-recommends $runDeps && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /code
-COPY poetry.lock pyproject.toml /code/
+RUN groupadd -g 1024 -r ktech \
+    && useradd -m -g ktech krm3
+
+RUN mkdir -p /code /krm3 /data && chown krm3:ktech /code && chown krm3:ktech /krm3 && chown krm3:ktech /data
+
+VOLUME /etc/certs
+COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY docker/etc/circus.conf /etc/circus.conf
+
+USER krm3
+
+COPY pyproject.toml dist/image-requirements.txt /code/
 WORKDIR /code
+
+USER root
 
 RUN set -ex \
     ls -al /code \
-    && pip install -U pip poetry==1.4.2 \
-    && poetry config virtualenvs.create false \
-    && poetry install --no-root --no-dev --no-interaction --no-ansi \
-    && sha1sum poetry.lock > /CHECKSUM
+    && pip install -U pip==23.1.2 \
+    && pip install -r image-requirements.txt \
+    && sha1sum image-requirements.txt > /CHECKSUM
 
 
 RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
@@ -61,5 +72,8 @@ RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/
 
-RUN groupadd -g 1024 -r ktech \
-    && useradd -m -g ktech krm3
+EXPOSE 8000
+EXPOSE 8443
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["stack"]

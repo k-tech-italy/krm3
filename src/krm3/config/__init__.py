@@ -30,7 +30,7 @@ DEFAULTS = {
     'EMAIL_HOST': (str, 'smtp.gmail.com'),
     'EMAIL_HOST_USER': (str, 'noreply@k-tech.it'),
     'EMAIL_HOST_PASSWORD': (str, ''),
-    'EMAIL_FROM_EMAIL': (str, ''),
+    'EMAIL_FROM_EMAIL': (str, 'noreply@k-tech.it'),
     'EMAIL_PORT': (int, 587),
     'EMAIL_SUBJECT_PREFIX': (str, '[krm3]'),
     'EMAIL_USE_LOCALTIME': (bool, False),
