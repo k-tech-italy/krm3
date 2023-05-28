@@ -28,11 +28,11 @@ from krm3.utils.queryset import FilterByResourceMixin
 class MissionAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
-    search_fields = ['resource__first_name', 'resource__last_name', 'title', 'city', 'number']
+    search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
     list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city')
     list_filter = (
-        'resource',
+        ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
         ('from_date', DateRangeFilter),
