@@ -2,7 +2,7 @@
 {% load render_table from django_tables2 %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
 {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
