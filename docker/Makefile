@@ -43,6 +43,7 @@ build-base:  ## Builds the base image
 	@poetry export --without dev --without test --with image -f requirements.txt > ../dist/image-requirements.txt
 	@cd .. && docker build \
 			${BUILD_OPTIONS} \
+			--platform linux/amd64 \
 			--build-arg REPO_NAME="${REPO_NAME}" \
 			-t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE} \
 			-f docker/Dockerfile.base  .
@@ -52,6 +53,7 @@ build-base:  ## Builds the base image
 build: ## Builds the image
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
+		--platform linux/amd64 \
 		--progress plain \
 		--build-arg VERSION="${VERSION}" \
 		--build-arg BASE_IMAGE="${BASE}" \
@@ -92,6 +94,7 @@ full-release:  build-base build release  ## buils all and releases
 
 .run: .certs
 	@docker run \
+            --platform linux/amd64 \
 			--rm \
 	 		--name=${CONTAINER_NAME} \
 			-p ${LOCAL_PORT}:8000 \
