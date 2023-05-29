@@ -50,14 +50,14 @@ class Client(NaturalKeyModel):
 
 class ProjectManager(NaturalKeyModelManager):
 
-    def owned(self, user):
+    def filter_acl(self, user):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
         """
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'core.manage_any_project', 'core.view_any_project'}):
-            return self
+            return self.all()
         return self.filter(mission__resource__profile__user=user)
 
 
@@ -70,6 +70,12 @@ class Project(NaturalKeyModel):
 
     def __str__(self):
         return str(self.name)
+
+    def is_accessible(self, user) -> bool:
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'core.manage_any_project', 'missions.view_any_project'}):
+            return True
+        return self.mission_set.filter(resource__profile__user=user).count() > 0
 
     class Meta:
         permissions = [

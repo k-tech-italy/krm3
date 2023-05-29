@@ -19,26 +19,28 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
 
-from krm3.missions.forms import MissionAdminForm
+from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.transform import clean_image
 from krm3.utils import button_styles
-from krm3.utils.queryset import OwnedMixin
+from krm3.utils.queryset import ACLMixin
 
 
 class ExpenseInline(admin.TabularInline):  # noqa: D101
+    form = ExpenseAdminForm
     model = Expense
-    extra = 0
+    extra = 3
+    exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_date', 'modified_date']
 
 
 @admin.register(Mission)
-class MissionAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
     inlines = [ExpenseInline]
-    list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city')
+    list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city', 'default_currency')
     list_filter = (
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
@@ -53,7 +55,7 @@ class MissionAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin)
             {
                 'fields': [
                     ('number', 'title'),
-                    ('from_date', 'to_date'),
+                    ('from_date', 'to_date', 'default_currency'),
                     ('project', 'city', 'resource'),
                 ]
             }
@@ -98,24 +100,28 @@ class PaymentCategoryAdmin(MPTTModelAdmin):
 
 @admin.register(ExpenseCategory)
 class ExpenseCategoryAdmin(MPTTModelAdmin):
-    pass
+    search_fields = ['title']
 
 
 @admin.register(Expense)
-class ExpenseAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
-
+class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    readonly_fields = ['amount_base']
+    form = ExpenseAdminForm
     list_display = ('mission', 'day', 'amount_currency', 'category')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         'mission__title',
+        ('category', AutoCompleteFilter),
     )
+    search_fields = ['amount_currency']
     fieldsets = [
         (
             None,
             {
                 'fields': [
                     ('mission', 'day'),
-                    ('amount_currency', 'amount_base', 'amount_reimbursement'),
+                    ('amount_currency', 'currency'),
+                    ('amount_base', 'amount_reimbursement'),
                     'detail',
                     ('category', 'payment_type', 'reimbursement'),
                     'image']
@@ -134,7 +140,7 @@ class ExpenseAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin)
         ret = super().get_changeform_initial_data(request)
         pk = ret.pop('mission_id', None)
         if pk:
-            ret['mission'] = Mission.objects.owned(request.user).get(pk=pk)
+            ret['mission'] = Mission.objects.filter_acl(request.user).get(pk=pk)
         return ret
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -214,7 +220,8 @@ class ExpenseAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin)
         visible=lambda btn: bool(btn.original.id)
     )
     def goto_mission(self, request, pk):
-        return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[pk]))
+        expense = self.model.objects.get(pk=pk)
+        return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
 
 
 @admin.register(Reimbursement)

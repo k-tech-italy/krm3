@@ -14,13 +14,13 @@
 #         return ret
 
 
-class OwnedMixin:
+class ACLMixin:
     """Restrict access to superuser, owner, or manager."""
     def get_queryset(self, request):
-        return self.model.objects.owned(request.user)
+        return self.model.objects.filter_acl(request.user)
 
-    def get_object(self, request, object_id, from_field=None):
-        ret = super().get_object(request, object_id, from_field)
-        if not ret.is_owner(request.user):
+    def get_object(self, request, *args, **kwargs):
+        ret = super().get_object(request, *args, **kwargs)
+        if not ret.is_accessible(request.user):
             raise self.model.DoesNotExist('Object does not exists or is unavailable')
         return ret

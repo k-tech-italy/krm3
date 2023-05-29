@@ -1,14 +1,19 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Max
 from django.forms import ModelForm
 
-from krm3.missions.models import Mission
+from krm3.currencies.models import Currency
+from krm3.missions.models import Expense, Mission
 
 
 class MissionAdminForm(ModelForm):
 
     def clean(self):
         ret = super().clean()
+
+        if not self.cleaned_data.get('default_currency'):
+            self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.CURRENCY_BASE)
 
         if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data.get('number'):
             qs = Mission.objects.filter(from_date__year=from_date.year)
@@ -25,4 +30,19 @@ class MissionAdminForm(ModelForm):
 
     class Meta:
         model = Mission
+        fields = '__all__'
+
+
+class ExpenseAdminForm(ModelForm):
+
+    def clean(self):
+        ret = super().clean()
+
+        if not self.cleaned_data.get('currency') and (mission := self.cleaned_data['mission']):
+            self.cleaned_data['currency'] = mission.default_currency
+
+        return ret
+
+    class Meta:
+        model = Expense
         fields = '__all__'

@@ -7,19 +7,20 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 # from krm3.currencies.models import Currency
 from krm3.core.models import City, Project, Resource
+from krm3.currencies.models import Currency
 from krm3.missions.media import mission_directory_path
 
 
 class MissionManager(models.Manager):
 
-    def owned(self, user):
+    def filter_acl(self, user):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
         """
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_mission', 'missions.view_any_mission'}):
-            return self
+            return self.all()
         return self.filter(resource__profile__user=user)
 
 
@@ -28,6 +29,9 @@ class Mission(models.Model):
     title = models.CharField(max_length=50, null=True, blank=True)
     from_date = models.DateField()
     to_date = models.DateField()
+
+    default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
+                                         help_text=f'Leave blank for dafault [{settings.CURRENCY_BASE}]')
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     city = models.ForeignKey(City, on_delete=models.PROTECT)
@@ -47,11 +51,11 @@ class Mission(models.Model):
         self.clean()
         super().save(force_insert, force_update, using, update_fields)
 
-    def is_owner(self, user):
+    def is_accessible(self, user) -> bool:
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_mission', 'missions.view_any_mission'}):
-            return self
-        return self.resource.profile and self.resource.profile.user == user
+            return True
+        return bool(self.resource.profile and self.resource.profile.user == user)
 
     class Meta:
         permissions = [
@@ -74,10 +78,6 @@ class ExpenseCategory(MPTTModel):
 
     class Meta:
         verbose_name_plural = 'expense categories'
-        permissions = [
-            ('view_any_expense', "Can view(only) everybody's expenses"),
-            ('manage_any_expense', "Can view, and manage everybody's expenses"),
-        ]
         constraints = (
             UniqueConstraint(
                 fields=('title', 'parent'),
@@ -118,27 +118,23 @@ class ExpenseManager(models.Manager):
         expense_id, mission_id, ts = ref.split('|')
         return self.get(mission_id=mission_id, id=expense_id, modified_date=ts)
 
-    def owned(self, user):
+    def filter_acl(self, user):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
         """
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
-            return self
+            return self.all()
         return self.filter(mission__resource__profile__user=user)
-
-    def is_owner(self, user):
-        if user.is_superuser or user.get_all_permissions().intersection(
-                {'missions.manage_any_expense', 'missions.view_any_expense'}):
-            return self
-        return self.resource.profile and self.resource.profile.user == user
 
 
 class Expense(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     day = models.DateField()
     amount_currency = models.DecimalField(max_digits=10, decimal_places=2, help_text='Amount in currency')
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
+                                 help_text='Leave blank to inherit from mission.default_currency')
     amount_base = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                       help_text=f'Amount in {settings.CURRENCY_BASE}')
     amount_reimbursement = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
@@ -157,11 +153,11 @@ class Expense(models.Model):
 
     objects = ExpenseManager()
 
-    def is_owner(self, user):
+    def is_accessible(self, user) -> bool:
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
-            return self
-        return self.mission.resource.profile and self.mission.resource.profile.user == user
+            return True
+        return bool(self.mission.resource.profile and self.mission.resource.profile.user == user)
 
     def get_otp(self):
         return settings.FERNET_KEY.encrypt(
@@ -174,3 +170,9 @@ class Expense(models.Model):
 
     def __str__(self):
         return f'{self.day}, {self.amount_currency} for {self.category}'
+
+    class Meta:
+        permissions = [
+            ('view_any_expense', "Can view(only) everybody's expenses"),
+            ('manage_any_expense', "Can view, and manage everybody's expenses"),
+        ]
