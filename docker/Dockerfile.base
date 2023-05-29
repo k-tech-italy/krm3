@@ -41,6 +41,7 @@ RUN set -x \
         gosu \
         libpcre3 \
         libxml2 \
+        mime-support \
     " \
     && apt-get update && apt-get install -y --no-install-suggests --no-install-recommends $runDeps && rm -rf /var/lib/apt/lists/*
 

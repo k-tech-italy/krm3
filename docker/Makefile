@@ -110,6 +110,7 @@ full-release:  build-base build release  ## buils all and releases
 			-e KRM3_STATIC_ROOT="/tmp/static" \
 			-e KRM3_MEDIA_ROOT="/tmp/media" \
 			-e STACK_PROTOCOL=${STACK_PROTOCOL} \
+			-e KRM3_ALLOWED_HOSTS=krm3.k-tech.it,krm3.local \
 			-v "`pwd`/certs:/etc/certs:ro" \
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			${RUN_OPTIONS} \
