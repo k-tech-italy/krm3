@@ -7,8 +7,7 @@
 {% endblock %}
 
 {% block content %}
-    {{ block.super }}
-    {% qr_from_data ref size="M" %}
+    <a href="{% url "admin:missions_expense_change" expense.id %}">Back to expense {{ expense }}</a>
     <br>
-    <a href="{% url "admin:missions_expense_change" pk %}">Back to expense</a>
+    {% qr_from_data ref size="M" %}
 {% endblock %}

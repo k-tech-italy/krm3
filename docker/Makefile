@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=0.2.3
+VERSION=0.3.0
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -65,14 +65,17 @@ build: ## Builds the image
 registrylogin:  ## Log in to docker
 	@echo ${DOCKER_SECRET} | echo docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin ; \
 
-release: registrylogin  ## Release the image
-	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
-	docker push ${DOCKER_IMAGE_FULLNAME}
-	docker images | grep ${DOCKER_IMAGE}
+release:  ## For now manual release until we fix nexus
+	scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp
 
-nexus-release:
-	docker tag ${DOCKER_IMAGE_FULLNAME} docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
-	docker push docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
+#release: registrylogin  ## Release the image
+#	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
+#	docker push ${DOCKER_IMAGE_FULLNAME}
+#	docker images | grep ${DOCKER_IMAGE}
+#
+#nexus-release:
+#	docker tag ${DOCKER_IMAGE_FULLNAME} docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
+#	docker push docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
 
 release-all: release nexus-release
 

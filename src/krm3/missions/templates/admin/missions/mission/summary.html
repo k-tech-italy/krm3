@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% load render_table from django_tables2 %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1><a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a></h1>
+
+    <p>Project: {{ mission.project }}</p>
+    <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
+    {% if mission.expense_set.count %}
+        {% render_table mission.expense_set.all %}
+    {% else %}
+        <li>No expenses for this mission.</li>
+    {% endif %}
+{% endblock %}

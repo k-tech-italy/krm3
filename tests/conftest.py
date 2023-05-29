@@ -11,6 +11,12 @@ def pytest_configure(config):
 
 
 @pytest.fixture()
+def regular_user(db):
+    from factories import UserFactory
+    return UserFactory()
+
+
+@pytest.fixture()
 def payment_types(db):
     results = []
     from krm3.missions.models import PaymentCategory

@@ -29,22 +29,29 @@ def configure_dirs(prompt, verbosity):
 
 @click.command()  # noqa: C901
 @click.option('--prompt/--no-input', default=True, is_flag=True,
-              help='Do not prompt for parameters')
+              help='Do not prompt for parameters', show_default=True)
+@click.option('--demo/--no-nodemo', default=False, is_flag=True,
+              help='Load demo data', show_default=True)
 @click.option('--migrate/--no-migrate', default=True, is_flag=True,
-              help='Run database migrations')
+              help='Run database migrations', show_default=True)
 @click.option('--static/--no-static', default=False, is_flag=True,
-              help='Collect static assets')
+              help='Collect static assets', show_default=True)
 @click.option('--traceback', '-tb', default=False, is_flag=True,
-              help='Raise on exceptions')
-@click.option('-v', '--verbosity', count=True, default=0, help='Enables verbosity mode. Use -vv -vvv to increase')
-@click.option('--admin-email', '-ae', default=env.str('ADMIN_EMAIL'), help='Do not prompt for parameters')
-@click.option('--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters')
-@click.option('--admin-firstname', '-af', default=env.str('ADMIN_FIRSTNAME'), help='Do not prompt for parameters')
-@click.option('--admin-lastname', '-al', default=env.str('ADMIN_LASTNAME'), help='Do not prompt for parameters')
+              help='Raise on exceptions', show_default=True)
+@click.option('-v', '--verbosity', count=True, default=0, help='Enables verbosity mode. Use -vv -vvv to increase',
+              show_default=True)
+@click.option('--admin-email', '-ae', default=env.str('ADMIN_EMAIL'), help='Do not prompt for parameters',
+              show_default=True)
+@click.option('--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters',
+              show_default=True)
+@click.option('--admin-firstname', '-af', default=env.str('ADMIN_FIRSTNAME'), help='Do not prompt for parameters',
+              show_default=True)
+@click.option('--admin-lastname', '-al', default=env.str('ADMIN_LASTNAME'), help='Do not prompt for parameters',
+              show_default=True)
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
-def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
-            traceback, admin_username, admin_firstname, admin_lastname, admin_email, admin_password,  **kwargs):
+def command(ctx, prompt, demo, migrate, static, verbosity,  # noqa: C901
+            traceback, admin_username, admin_firstname, admin_lastname, admin_email, admin_password, **kwargs):
     """Perform any pending database migrations and upgrades."""
     try:
 
@@ -90,12 +97,13 @@ def command(ctx, prompt, migrate, static, verbosity,  # noqa: C901
             except IntegrityError as e:
                 click.secho(f'Unable to create superuser: {e}', fg='yellow')
 
-        for z in ['groups', 'currencies', 'rates', 'krm3', 'core']:
-            click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
-            try:
-                call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
-            except Exception as e:
-                print(f'WARNING: {e}')
+        if demo:
+            for z in ['groups', 'currencies', 'rates', 'krm3', 'core']:
+                click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
+                try:
+                    call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
+                except Exception as e:
+                    print(f'WARNING: {e}')
 
     except Exception as e:
         if traceback:

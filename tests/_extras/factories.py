@@ -4,6 +4,16 @@ import factory
 from dateutil.relativedelta import relativedelta
 from factory.fuzzy import FuzzyDecimal
 
+from krm3.core.models import User
+
+
+class UserFactory(factory.django.DjangoModelFactory):
+    username = factory.Sequence(lambda n: 'User %02d' % n)
+    email = factory.Sequence(lambda n: 'u%02d@wfp.org' % n)
+
+    class Meta:
+        model = User
+
 
 class CountryFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('country')

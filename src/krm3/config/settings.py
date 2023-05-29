@@ -101,7 +101,8 @@ INSTALLED_APPS = [
     'social_django',
     'crispy_forms',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    'django_tables2'
 ]
 
 try:
@@ -158,6 +159,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
+                'django.template.context_processors.request'
             ],
         },
     },

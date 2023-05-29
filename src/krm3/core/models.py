@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from natural_keys.models import NaturalKeyModel
+from natural_keys.models import NaturalKeyModel, NaturalKeyModelManager
 
 # User = get_user_model()
 
@@ -48,13 +48,34 @@ class Client(NaturalKeyModel):
         return str(self.name)
 
 
+class ProjectManager(NaturalKeyModelManager):
+
+    def owned(self, user):
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'core.manage_any_project', 'core.view_any_project'}):
+            return self
+        return self.filter(mission__resource__profile__user=user)
+
+
 class Project(NaturalKeyModel):
     name = models.CharField(max_length=80, unique=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     notes = models.TextField(null=True, blank=True)
 
+    objects = ProjectManager()
+
     def __str__(self):
         return str(self.name)
+
+    class Meta:
+        permissions = [
+            ('view_any_project', "Can view(only) everybody's projects"),
+            ('manage_any_project', "Can view, and manage everybody's projects"),
+        ]
 
 
 class Country(NaturalKeyModel):

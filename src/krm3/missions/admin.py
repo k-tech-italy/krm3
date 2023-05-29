@@ -22,15 +22,22 @@ from mptt.admin import MPTTModelAdmin
 from krm3.missions.forms import MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.transform import clean_image
-from krm3.utils.queryset import FilterByResourceMixin
+from krm3.utils import button_styles
+from krm3.utils.queryset import OwnedMixin
+
+
+class ExpenseInline(admin.TabularInline):  # noqa: D101
+    model = Expense
+    extra = 0
 
 
 @admin.register(Mission)
-class MissionAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class MissionAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
+    inlines = [ExpenseInline]
     list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city')
     list_filter = (
         ('resource', AutoCompleteFilter),
@@ -40,11 +47,48 @@ class MissionAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, 
         ('to_date', DateRangeFilter),
     )
 
-    @button()
+    fieldsets = [
+        (
+            None,
+            {
+                'fields': [
+                    ('number', 'title'),
+                    ('from_date', 'to_date'),
+                    ('project', 'city', 'resource'),
+                ]
+            }
+        )
+    ]
+
+    @button(
+        html_attrs=button_styles.NORMAL,
+    )
     def add_expense(self, request, pk):
         mission = Mission.objects.get(pk=pk)
         from_date = mission.from_date.strftime('%Y-%m-%d')
         return redirect(reverse('admin:missions_expense_add') + f'?mission_id={pk}&day={from_date}')
+
+    @button(
+        html_attrs={'style': 'background-color:#00AC80;color:black'},
+    )
+    def overview(self, request, pk):
+        mission = self.get_object(request, pk)
+
+        return TemplateResponse(
+            request,
+            context={
+                'site_header': site.site_header,
+                'mission': mission
+            },
+            template='admin/missions/mission/summary.html')
+
+    @button(
+        html_attrs=button_styles.NORMAL,
+        visible=lambda btn: bool(btn.original.id)
+    )
+    def view_expenses(self, request, pk):
+        url = reverse('admin:missions_expense_changelist') + f'?mission_id={pk}'
+        return HttpResponseRedirect(url)
 
 
 @admin.register(PaymentCategory)
@@ -58,8 +102,7 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.register(Expense)
-class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
-    filter_by_resource_lookup = 'mission__resource'
+class ExpenseAdmin(OwnedMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     list_display = ('mission', 'day', 'amount_currency', 'category')
     list_filter = (
@@ -91,7 +134,7 @@ class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, 
         ret = super().get_changeform_initial_data(request)
         pk = ret.pop('mission_id', None)
         if pk:
-            ret['mission'] = Mission.objects.get(pk=pk)
+            ret['mission'] = Mission.objects.owned(request.user).get(pk=pk)
         return ret
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -130,7 +173,7 @@ class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, 
 
     # FIXME: does not work
     @button(
-        html_attrs={'style': 'background-color:#DC6C6C;color:black'},
+        html_attrs=button_styles.DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
     )
     def clean_image(self, request, pk):
@@ -152,19 +195,26 @@ class ExpenseAdmin(FilterByResourceMixin, ExtraButtonsMixin, AdminFiltersMixin, 
             messages.error(request, str(e))
 
     @button(
-        html_attrs={'style': 'background-color:#DC6C6C;color:black'},
+        html_attrs=button_styles.DANGEROUS,
         visible=lambda btn: bool(btn.original.id)
     )
     def view_qr(self, request, pk):
-        expense = self.model.objects.get(pk=pk)
+        expense = self.get_object(request, pk)
 
         return TemplateResponse(
             request,
 
             context={
                 'site_header': site.site_header,
-                'pk': pk, 'ref': f'{pk}-{expense.get_otp()}'},
+                'expense': expense, 'ref': f'{pk}-{expense.get_otp()}'},
             template='admin/missions/expense/expense_qr.html')
+
+    @button(
+        html_attrs=button_styles.NORMAL,
+        visible=lambda btn: bool(btn.original.id)
+    )
+    def goto_mission(self, request, pk):
+        return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[pk]))
 
 
 @admin.register(Reimbursement)

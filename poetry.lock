@@ -792,6 +792,24 @@ python-dateutil = "*"
 pytz = "*"
 
 [[package]]
+name = "django-tables2"
+version = "2.5.3"
+description = "Table/data-grid framework for Django"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "django-tables2-2.5.3.tar.gz", hash = "sha256:f6c1623aac188d29aae9cf6b4de3211c96c525e49890654bec3359c181600eb9"},
+    {file = "django_tables2-2.5.3-py2.py3-none-any.whl", hash = "sha256:e336fdf8899a8fab110550a40cad956064bd4054818e0b972c1893b3e2542168"},
+]
+
+[package.dependencies]
+Django = ">=3.2"
+
+[package.extras]
+tablib = ["tablib"]
+
+[[package]]
 name = "django-templated-mail"
 version = "1.1.1"
 description = "Send emails using Django template system."
@@ -2475,4 +2493,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "85d37dc26013618fa485567896def0e9ae90f670b36b3bb201f3ce368d6d4723"
+content-hash = "096997d5892767c7f289ee183dce8e2cf9207088a8961a94316d438931309803"

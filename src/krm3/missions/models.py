@@ -10,6 +10,19 @@ from krm3.core.models import City, Project, Resource
 from krm3.missions.media import mission_directory_path
 
 
+class MissionManager(models.Manager):
+
+    def owned(self, user):
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_mission', 'missions.view_any_mission'}):
+            return self
+        return self.filter(resource__profile__user=user)
+
+
 class Mission(models.Model):
     number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
     title = models.CharField(max_length=50, null=True, blank=True)
@@ -19,6 +32,8 @@ class Mission(models.Model):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     city = models.ForeignKey(City, on_delete=models.PROTECT)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
+
+    objects = MissionManager()
 
     def __str__(self):
         title = self.title or self.city.name
@@ -31,6 +46,18 @@ class Mission(models.Model):
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.clean()
         super().save(force_insert, force_update, using, update_fields)
+
+    def is_owner(self, user):
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_mission', 'missions.view_any_mission'}):
+            return self
+        return self.resource.profile and self.resource.profile.user == user
+
+    class Meta:
+        permissions = [
+            ('view_any_mission', "Can view(only) everybody's missions"),
+            ('manage_any_mission', "Can view, and manage everybody's missions"),
+        ]
 
 
 class ExpenseCategory(MPTTModel):
@@ -47,6 +74,10 @@ class ExpenseCategory(MPTTModel):
 
     class Meta:
         verbose_name_plural = 'expense categories'
+        permissions = [
+            ('view_any_expense', "Can view(only) everybody's expenses"),
+            ('manage_any_expense', "Can view, and manage everybody's expenses"),
+        ]
         constraints = (
             UniqueConstraint(
                 fields=('title', 'parent'),
@@ -82,9 +113,26 @@ class Reimbursement(models.Model):
 
 class ExpenseManager(models.Manager):
     def by_otp(self, otp: str):
+        """Retrieve the instance matching the provided otp."""
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
         expense_id, mission_id, ts = ref.split('|')
         return self.get(mission_id=mission_id, id=expense_id, modified_date=ts)
+
+    def owned(self, user):
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_expense', 'missions.view_any_expense'}):
+            return self
+        return self.filter(mission__resource__profile__user=user)
+
+    def is_owner(self, user):
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_expense', 'missions.view_any_expense'}):
+            return self
+        return self.resource.profile and self.resource.profile.user == user
 
 
 class Expense(models.Model):
@@ -108,6 +156,12 @@ class Expense(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
 
     objects = ExpenseManager()
+
+    def is_owner(self, user):
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_expense', 'missions.view_any_expense'}):
+            return self
+        return self.mission.resource.profile and self.mission.resource.profile.user == user
 
     def get_otp(self):
         return settings.FERNET_KEY.encrypt(

@@ -6,7 +6,7 @@ from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ResourceAdminForm
 from krm3.core.models import City, Client, Country, Project, Resource, UserProfile
-from krm3.utils.queryset import FilterByResourceMixin
+from krm3.utils.queryset import OwnedMixin
 
 
 @admin.register(UserProfile)
@@ -58,7 +58,6 @@ class ClientAdmin(ModelAdmin):
 
 
 @admin.register(Project)
-class ProjectAdmin(FilterByResourceMixin, ModelAdmin):
-    filter_by_resource_lookup = 'mission__resource_id'
+class ProjectAdmin(OwnedMixin, ModelAdmin):
 
     search_fields = ['name']
