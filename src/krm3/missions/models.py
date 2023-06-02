@@ -116,7 +116,7 @@ class ExpenseManager(models.Manager):
         """Retrieve the instance matching the provided otp."""
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
         expense_id, mission_id, ts = ref.split('|')
-        return self.get(mission_id=mission_id, id=expense_id, modified_date=ts)
+        return self.get(mission_id=mission_id, id=expense_id, modified_ts=ts)
 
     def filter_acl(self, user):
         """Return the queryset for the owned records.
@@ -148,8 +148,8 @@ class Expense(models.Model):
 
     # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
 
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_ts = models.DateTimeField(auto_now_add=True)
+    modified_ts = models.DateTimeField(auto_now=True)
 
     objects = ExpenseManager()
 
@@ -161,12 +161,12 @@ class Expense(models.Model):
 
     def get_otp(self):
         return settings.FERNET_KEY.encrypt(
-            f'{self.id}|{self.mission_id}|{self.modified_date}'.encode()).decode('utf-8')[6:]
+            f'{self.id}|{self.mission_id}|{self.modified_ts}'.encode()).decode('utf-8')[6:]
 
     def check_otp(self, otp: str):
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
         expense_id, mission_id, ts = ref.split('|')
-        return f'{self.modified_date}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
+        return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
     def __str__(self):
         return f'{self.day}, {self.amount_currency} for {self.category}'
