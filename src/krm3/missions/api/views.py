@@ -21,6 +21,19 @@ class ExpenseAPIViewSet(ModelViewSet):
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
 
+    # TODO: Should really be an eTag?
+    @action(
+        detail=True,
+        permission_classes=[]
+    )
+    def check_ts(self, request, pk):
+        """Check if the record has been modified.
+
+        Return 304 for not modified or 204 (no content) if modified"""
+        ms = request.GET['ms']
+        expense: Expense = self.get_object()
+        return Response(status=304 if expense.get_updated_millis() == int(ms) else 204)
+
     @action(
         detail=True,
         serializer_class=ExpenseRetrieveSerializer

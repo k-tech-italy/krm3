@@ -216,7 +216,6 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'site_header': site.site_header,
                 'expense': expense,
                 'ref': ref,
-                'millis': int(expense.modified_ts.timestamp() * 1000),
                 'debug': True
             },
             template='admin/missions/expense/expense_qr.html')

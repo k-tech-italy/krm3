@@ -153,6 +153,9 @@ class Expense(models.Model):
 
     objects = ExpenseManager()
 
+    def get_updated_millis(self):
+        return int(self.modified_ts.timestamp() * 1000)
+
     def is_accessible(self, user) -> bool:
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
