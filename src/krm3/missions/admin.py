@@ -18,6 +18,7 @@ from django.template.response import TemplateResponse
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
+from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
@@ -30,7 +31,7 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     form = ExpenseAdminForm
     model = Expense
     extra = 3
-    exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_date', 'modified_date']
+    exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_ts', 'modified_ts']
 
 
 @admin.register(Mission)
@@ -207,12 +208,17 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def view_qr(self, request, pk):
         expense = self.get_object(request, pk)
 
+        ref = rest_reverse('expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
+
         return TemplateResponse(
             request,
-
             context={
                 'site_header': site.site_header,
-                'expense': expense, 'ref': f'{pk}-{expense.get_otp()}'},
+                'expense': expense,
+                'ref': ref,
+                'millis': int(expense.modified_ts.timestamp() * 1000),
+                'debug': True
+            },
             template='admin/missions/expense/expense_qr.html')
 
     @button(
