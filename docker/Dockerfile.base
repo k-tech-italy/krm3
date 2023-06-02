@@ -69,6 +69,8 @@ RUN set -ex \
 
 
 RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
+    perl gnupg  \
+    libncursesw6 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/

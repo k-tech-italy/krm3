@@ -39,7 +39,7 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 build-base:  ## Builds the base image
-	@poetry build --format sdist
+	@#poetry build --format sdist
 	@poetry export --without dev --without test --with image -f requirements.txt > ../dist/image-requirements.txt
 	@cd .. && docker build \
 			${BUILD_OPTIONS} \
