@@ -1,7 +1,7 @@
 - model: core.user
   fields:
     password: pbkdf2_sha256$600000$IWlaA2kCGOcgQVVszEaoD3$/TITsgngAOGU+RA1q3nUDwKK1ZYVBqYgCWwWpMyIqAo=
-    last_login: 2023-05-27 15:45:29.304247+00:00
+    last_login: 2023-05-29 09:10:47.762195+00:00
     is_superuser: true
     username: admin
     first_name: admin
@@ -25,7 +25,7 @@
     is_active: true
     date_joined: 2023-04-25 07:55:16+00:00
     groups:
-    - - Administrator RO
+    - - Missions Administrator
     user_permissions: []
 - model: core.client
   fields:
@@ -47,6 +47,12 @@
     name: CBT
     client:
     - WFP
+    notes: ''
+- model: core.project
+  fields:
+    name: Pino
+    client:
+    - KT
     notes: ''
 - model: core.project
   fields:
@@ -75,11 +81,13 @@
     user:
     - admin
     picture: ''
+    social_profile: null
 - model: core.userprofile
   fields:
     user:
     - g.bronzini
     picture: ''
+    social_profile: null
 - model: core.resource
   pk: 1
   fields:
@@ -87,3 +95,15 @@
     - g.bronzini
     first_name: Giovanni
     last_name: Bronzini
+- model: core.resource
+  pk: 2
+  fields:
+    profile: null
+    first_name: Paolino
+    last_name: Paperino
+- model: core.resource
+  pk: 3
+  fields:
+    profile: null
+    first_name: Giuseppe
+    last_name: Galli

@@ -11,15 +11,16 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import logging
 import os
-from datetime import timedelta
 from pathlib import Path
 
-from cryptography.fernet import Fernet
 from django_regex.utils import RegexList
 
 import krm3
 
 from .environ import env
+from .security import *  # noqa: F401,F403
+from .sentry import *  # noqa: F401,F403
+from .social import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
 
@@ -30,45 +31,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_ROOT = env('MEDIA_ROOT')
 
-
-# SENTRY & RAVEN
-# need to copy in settings because we inject these values in the templates
-SENTRY_DSN = env('SENTRY_DSN')
-if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
-
-    sentry_logging = LoggingIntegration(
-        level=logging.INFO,  # Capture info and above as breadcrumbs
-        event_level=logging.ERROR  # Send errors as events
-    )
-
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(transaction_style='url'),
-            sentry_logging,
-        ],
-        release=krm3.__version__,
-        debug=env('SENTRY_DEBUG'),
-        environment=env('SENTRY_ENVIRONMENT'),
-        send_default_pii=True
-    )
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
-
-ALLOWED_HOSTS = env('ALLOWED_HOSTS')
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -106,7 +70,7 @@ INSTALLED_APPS = [
 ]
 
 try:
-    import djago_extensions as _  # noqa: F401
+    import django_extensions as _  # noqa: F401
     INSTALLED_APPS.append('django_extensions')
 except ModuleNotFoundError:
     pass
@@ -124,23 +88,6 @@ MIDDLEWARE = [
     'django.contrib.admindocs.middleware.XViewMiddleware',
     # Third party middlewares.
 ]
-
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
-
-CORS_ORIGIN_WHITELIST = [
-     'http://localhost:8000',
-     'http://127.0.0.1:8000',
-     'http://localhost:3000',
-     'http://127.0.0.1:3000',
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
 
 ROOT_URLCONF = 'krm3.config.urls'
 
@@ -262,7 +209,6 @@ if ddt_key := env('DDT_KEY'):
 
         MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
         INSTALLED_APPS.append('debug_toolbar')
-        INTERNAL_IPS = ['127.0.0.1', 'localhost', '0.0.0.0', '*']
         # CSP_REPORT_ONLY = True
     except ImportError:
         logger.info('Skipping debug toolbar')
@@ -297,55 +243,15 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
-SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ('JWT',),
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-}
-
-DJOSER = {
-    'LOGIN_FIELD': 'email',
-    'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': env.list('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS'),
-    'SERIALIZERS': {}
-}
-
-SOCIAL_AUTH_JSONFIELD_ENABLED = True
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
-SOCIAL_AUTH_PIPELINE = (
-    'social_core.pipeline.social_auth.social_details',
-    'social_core.pipeline.social_auth.social_uid',
-    'social_core.pipeline.social_auth.social_user',
-    'krm3.config.pipeline.auth_allowed',
-    'social_core.pipeline.user.get_username',
-    'social_core.pipeline.social_auth.associate_by_email',
-    'social_core.pipeline.user.create_user',
-    'social_core.pipeline.social_auth.associate_user',
-    'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
-    'krm3.config.pipeline.update_user_social_data',
-)
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_STRATEGY = 'social_django.strategy.DjangoStrategy'
-SOCIAL_AUTH_STORAGE = 'social_django.models.DjangoStorage'
-SOCIAL_AUTH_ADMIN_USER_SEARCH_FIELDS = ['username', 'first_name', 'email']
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-    'openid'
-]
-SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
-SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['k-tech.it']
-SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
 
-FERNET_KEY = Fernet(env('FERNET_KEY'))
 
 # Shows CV2 intermediate processing images. For Local dev only
 CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')
+
+# add other settings sets

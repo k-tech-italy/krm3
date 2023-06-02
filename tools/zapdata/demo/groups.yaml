@@ -1818,6 +1818,244 @@
     - token_blacklist
     - outstandingtoken
     codename: view_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can bulkupdate log entry (adminactions)
+    content_type:
+    - admin
+    - logentry
+    codename: adminactions_bulkupdate_logentry
+- model: auth.permission
+  fields:
+    name: Can bulkupdate permission (adminactions)
+    content_type:
+    - auth
+    - permission
+    codename: adminactions_bulkupdate_permission
+- model: auth.permission
+  fields:
+    name: Can bulkupdate group (adminactions)
+    content_type:
+    - auth
+    - group
+    codename: adminactions_bulkupdate_group
+- model: auth.permission
+  fields:
+    name: Can bulkupdate content type (adminactions)
+    content_type:
+    - contenttypes
+    - contenttype
+    codename: adminactions_bulkupdate_contenttype
+- model: auth.permission
+  fields:
+    name: Can bulkupdate session (adminactions)
+    content_type:
+    - sessions
+    - session
+    codename: adminactions_bulkupdate_session
+- model: auth.permission
+  fields:
+    name: Can bulkupdate user (adminactions)
+    content_type:
+    - core
+    - user
+    codename: adminactions_bulkupdate_user
+- model: auth.permission
+  fields:
+    name: Can bulkupdate client (adminactions)
+    content_type:
+    - core
+    - client
+    codename: adminactions_bulkupdate_client
+- model: auth.permission
+  fields:
+    name: Can bulkupdate project (adminactions)
+    content_type:
+    - core
+    - project
+    codename: adminactions_bulkupdate_project
+- model: auth.permission
+  fields:
+    name: Can bulkupdate country (adminactions)
+    content_type:
+    - core
+    - country
+    codename: adminactions_bulkupdate_country
+- model: auth.permission
+  fields:
+    name: Can bulkupdate city (adminactions)
+    content_type:
+    - core
+    - city
+    codename: adminactions_bulkupdate_city
+- model: auth.permission
+  fields:
+    name: Can bulkupdate user profile (adminactions)
+    content_type:
+    - core
+    - userprofile
+    codename: adminactions_bulkupdate_userprofile
+- model: auth.permission
+  fields:
+    name: Can bulkupdate resource (adminactions)
+    content_type:
+    - core
+    - resource
+    codename: adminactions_bulkupdate_resource
+- model: auth.permission
+  fields:
+    name: Can bulkupdate currency (adminactions)
+    content_type:
+    - currencies
+    - currency
+    codename: adminactions_bulkupdate_currency
+- model: auth.permission
+  fields:
+    name: Can bulkupdate rate (adminactions)
+    content_type:
+    - currencies
+    - rate
+    codename: adminactions_bulkupdate_rate
+- model: auth.permission
+  fields:
+    name: Can bulkupdate mission (adminactions)
+    content_type:
+    - missions
+    - mission
+    codename: adminactions_bulkupdate_mission
+- model: auth.permission
+  fields:
+    name: Can bulkupdate expense category (adminactions)
+    content_type:
+    - missions
+    - expensecategory
+    codename: adminactions_bulkupdate_expensecategory
+- model: auth.permission
+  fields:
+    name: Can bulkupdate payment category (adminactions)
+    content_type:
+    - missions
+    - paymentcategory
+    codename: adminactions_bulkupdate_paymentcategory
+- model: auth.permission
+  fields:
+    name: Can bulkupdate reimbursement (adminactions)
+    content_type:
+    - missions
+    - reimbursement
+    codename: adminactions_bulkupdate_reimbursement
+- model: auth.permission
+  fields:
+    name: Can bulkupdate expense (adminactions)
+    content_type:
+    - missions
+    - expense
+    codename: adminactions_bulkupdate_expense
+- model: auth.permission
+  fields:
+    name: Can bulkupdate user social auth (adminactions)
+    content_type:
+    - social_django
+    - usersocialauth
+    codename: adminactions_bulkupdate_usersocialauth
+- model: auth.permission
+  fields:
+    name: Can bulkupdate nonce (adminactions)
+    content_type:
+    - social_django
+    - nonce
+    codename: adminactions_bulkupdate_nonce
+- model: auth.permission
+  fields:
+    name: Can bulkupdate association (adminactions)
+    content_type:
+    - social_django
+    - association
+    codename: adminactions_bulkupdate_association
+- model: auth.permission
+  fields:
+    name: Can bulkupdate code (adminactions)
+    content_type:
+    - social_django
+    - code
+    codename: adminactions_bulkupdate_code
+- model: auth.permission
+  fields:
+    name: Can bulkupdate partial (adminactions)
+    content_type:
+    - social_django
+    - partial
+    codename: adminactions_bulkupdate_partial
+- model: auth.permission
+  fields:
+    name: Can bulkupdate outstanding token (adminactions)
+    content_type:
+    - token_blacklist
+    - outstandingtoken
+    codename: adminactions_bulkupdate_outstandingtoken
+- model: auth.permission
+  fields:
+    name: Can bulkupdate blacklisted token (adminactions)
+    content_type:
+    - token_blacklist
+    - blacklistedtoken
+    codename: adminactions_bulkupdate_blacklistedtoken
+- model: auth.permission
+  fields:
+    name: Can view(only) everybody's projects
+    content_type:
+    - core
+    - project
+    codename: view_any_project
+- model: auth.permission
+  fields:
+    name: Can view, and manage everybody's projects
+    content_type:
+    - core
+    - project
+    codename: manage_any_project
+- model: auth.permission
+  fields:
+    name: Can view(only) everybody's missions
+    content_type:
+    - missions
+    - mission
+    codename: view_any_mission
+- model: auth.permission
+  fields:
+    name: Can view, and manage everybody's missions
+    content_type:
+    - missions
+    - mission
+    codename: manage_any_mission
+- model: auth.permission
+  fields:
+    name: Can view(only) everybody's expenses
+    content_type:
+    - missions
+    - expensecategory
+    codename: view_any_expense
+- model: auth.permission
+  fields:
+    name: Can view, and manage everybody's expenses
+    content_type:
+    - missions
+    - expensecategory
+    codename: manage_any_expense
+- model: auth.permission
+  fields:
+    name: Can view(only) everybody's expenses
+    content_type:
+    - missions
+    - expense
+    codename: view_any_expense
+- model: auth.permission
+  fields:
+    name: Can view, and manage everybody's expenses
+    content_type:
+    - missions
+    - expense
+    codename: manage_any_expense
 - model: auth.group
   fields:
     name: Administrator RO
@@ -1867,6 +2105,113 @@
     - - view_paymentcategory
       - missions
       - paymentcategory
+    - - view_reimbursement
+      - missions
+      - reimbursement
+- model: auth.group
+  fields:
+    name: Missions User
+    permissions:
+    - - view_city
+      - core
+      - city
+    - - view_country
+      - core
+      - country
+    - - view_project
+      - core
+      - project
+    - - add_expense
+      - missions
+      - expense
+    - - change_expense
+      - missions
+      - expense
+    - - delete_expense
+      - missions
+      - expense
+    - - view_expense
+      - missions
+      - expense
+    - - view_expensecategory
+      - missions
+      - expensecategory
+    - - view_mission
+      - missions
+      - mission
+    - - view_paymentcategory
+      - missions
+      - paymentcategory
+    - - view_reimbursement
+      - missions
+      - reimbursement
+- model: auth.group
+  fields:
+    name: Missions Administrator
+    permissions:
+    - - add_project
+      - core
+      - project
+    - - change_project
+      - core
+      - project
+    - - delete_project
+      - core
+      - project
+    - - manage_any_project
+      - core
+      - project
+    - - view_project
+      - core
+      - project
+    - - add_expense
+      - missions
+      - expense
+    - - change_expense
+      - missions
+      - expense
+    - - delete_expense
+      - missions
+      - expense
+    - - view_expense
+      - missions
+      - expense
+    - - add_mission
+      - missions
+      - mission
+    - - change_mission
+      - missions
+      - mission
+    - - delete_mission
+      - missions
+      - mission
+    - - manage_any_mission
+      - missions
+      - mission
+    - - view_mission
+      - missions
+      - mission
+    - - add_paymentcategory
+      - missions
+      - paymentcategory
+    - - change_paymentcategory
+      - missions
+      - paymentcategory
+    - - delete_paymentcategory
+      - missions
+      - paymentcategory
+    - - view_paymentcategory
+      - missions
+      - paymentcategory
+    - - add_reimbursement
+      - missions
+      - reimbursement
+    - - change_reimbursement
+      - missions
+      - reimbursement
+    - - delete_reimbursement
+      - missions
+      - reimbursement
     - - view_reimbursement
       - missions
       - reimbursement

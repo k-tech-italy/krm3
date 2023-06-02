@@ -5,6 +5,7 @@
     title: null
     from_date: 2022-05-15
     to_date: 2025-05-15
+    default_currency: GBP
     project:
     - Moon Landing
     city:
@@ -14,12 +15,13 @@
 - model: missions.mission
   pk: 2
   fields:
-    number: 1
+    number: 24
     title: HGT
-    from_date: 2023-05-01
+    from_date: 2023-04-01
     to_date: 2023-05-31
+    default_currency: GBP
     project:
-    - CBT
+    - HGT
     city:
     - Harrogate
     - United Kingdom
@@ -28,15 +30,44 @@
   pk: 3
   fields:
     number: 2
-    title: HGT Apr 2023
-    from_date: 2023-04-01
-    to_date: 2023-04-30
+    title: null
+    from_date: 2022-05-01
+    to_date: 2022-05-31
+    default_currency: GBP
     project:
-    - HGT
+    - Moon Landing
     city:
-    - Harrogate
-    - United Kingdom
-    resource: 1
+    - Rome
+    - Italy
+    resource: 3
+- model: missions.mission
+  pk: 4
+  fields:
+    number: 1
+    title: null
+    from_date: 2010-05-28
+    to_date: 2050-05-28
+    default_currency: GBP
+    project:
+    - Pino
+    city:
+    - Rome
+    - Italy
+    resource: 3
+- model: missions.mission
+  pk: 7
+  fields:
+    number: 25
+    title: null
+    from_date: 2023-05-29
+    to_date: 2023-05-29
+    default_currency: EUR
+    project:
+    - Moon Landing
+    city:
+    - Rome
+    - Italy
+    resource: 2
 - model: missions.expensecategory
   pk: 1
   fields:
@@ -45,7 +76,7 @@
     parent: null
     lft: 1
     rght: 6
-    tree_id: 1
+    tree_id: 2
     level: 0
 - model: missions.expensecategory
   pk: 2
@@ -55,7 +86,7 @@
     parent: 1
     lft: 2
     rght: 3
-    tree_id: 1
+    tree_id: 2
     level: 1
 - model: missions.expensecategory
   pk: 3
@@ -65,7 +96,7 @@
     parent: 1
     lft: 4
     rght: 5
-    tree_id: 1
+    tree_id: 2
     level: 1
 - model: missions.expensecategory
   pk: 4
@@ -75,7 +106,7 @@
     parent: null
     lft: 1
     rght: 6
-    tree_id: 2
+    tree_id: 3
     level: 0
 - model: missions.expensecategory
   pk: 5
@@ -85,7 +116,7 @@
     parent: 4
     lft: 4
     rght: 5
-    tree_id: 2
+    tree_id: 3
     level: 1
 - model: missions.expensecategory
   pk: 6
@@ -95,7 +126,47 @@
     parent: 4
     lft: 2
     rght: 3
-    tree_id: 2
+    tree_id: 3
+    level: 1
+- model: missions.expensecategory
+  pk: 7
+  fields:
+    title: Varie
+    active: true
+    parent: null
+    lft: 1
+    rght: 8
+    tree_id: 1
+    level: 0
+- model: missions.expensecategory
+  pk: 8
+  fields:
+    title: Fuel
+    active: true
+    parent: 7
+    lft: 2
+    rght: 3
+    tree_id: 1
+    level: 1
+- model: missions.expensecategory
+  pk: 9
+  fields:
+    title: Rappresentanza
+    active: true
+    parent: 7
+    lft: 4
+    rght: 5
+    tree_id: 1
+    level: 1
+- model: missions.expensecategory
+  pk: 10
+  fields:
+    title: Telefonia
+    active: true
+    parent: 7
+    lft: 6
+    rght: 7
+    tree_id: 1
     level: 1
 - model: missions.paymentcategory
   pk: 5
@@ -163,6 +234,7 @@
     mission: 1
     day: 2023-05-15
     amount_currency: '15.00'
+    currency: GBP
     amount_base: null
     amount_reimbursement: null
     detail: null
@@ -170,29 +242,31 @@
     payment_type: 7
     reimbursement: null
     image: missions/expenses/R1/M1/original.jpg
-    created_date: 2023-05-15 13:10:43+00:00
-    modified_date: 2023-05-26 16:10:07.258997+00:00
+    created_ts: 2023-05-15 13:10:43+00:00
+    modified_ts: 2023-05-26 16:10:07.258997+00:00
 - model: missions.expense
   pk: 2
   fields:
     mission: 1
     day: 2023-05-25
     amount_currency: '435.00'
+    currency: GBP
     amount_base: null
     amount_reimbursement: null
     detail: null
     category: 2
     payment_type: 6
     reimbursement: null
-    image: missions/expenses/R1/M1/DSC_0008.JPG
-    created_date: 2023-05-25 16:32:36.785618+00:00
-    modified_date: 2023-05-25 16:34:09.668394+00:00
+    image: missions/expenses/R1/M1/DSC_0007.JPG
+    created_ts: 2023-05-25 16:32:36.785618+00:00
+    modified_ts: 2023-05-29 07:34:16.437436+00:00
 - model: missions.expense
   pk: 3
   fields:
     mission: 1
     day: 2023-05-25
     amount_currency: '23.00'
+    currency: GBP
     amount_base: null
     amount_reimbursement: null
     detail: null
@@ -200,5 +274,245 @@
     payment_type: 6
     reimbursement: null
     image: missions/expenses/R1/M1/DSC_0004_xUtfj2M.JPG
-    created_date: 2023-05-25 16:33:14.639606+00:00
-    modified_date: 2023-05-26 17:57:39.711531+00:00
+    created_ts: 2023-05-25 16:33:14.639606+00:00
+    modified_ts: 2023-05-26 17:57:39.711531+00:00
+- model: missions.expense
+  pk: 4
+  fields:
+    mission: 2
+    day: 2023-04-03
+    amount_currency: '48.69'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 13:46:04.988097+00:00
+    modified_ts: 2023-05-29 13:46:04.988134+00:00
+- model: missions.expense
+  pk: 5
+  fields:
+    mission: 2
+    day: 2023-04-09
+    amount_currency: '40.07'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 13:46:56.015219+00:00
+    modified_ts: 2023-05-29 13:48:30.531924+00:00
+- model: missions.expense
+  pk: 6
+  fields:
+    mission: 2
+    day: 2023-04-18
+    amount_currency: '39.16'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 13:48:21.448675+00:00
+    modified_ts: 2023-05-29 13:48:21.448711+00:00
+- model: missions.expense
+  pk: 10
+  fields:
+    mission: 2
+    day: 2023-04-05
+    amount_currency: '49.11'
+    currency: EUR
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 14:10:26.766110+00:00
+    modified_ts: 2023-05-29 14:10:26.766150+00:00
+- model: missions.expense
+  pk: 14
+  fields:
+    mission: 2
+    day: 2023-04-28
+    amount_currency: '48.20'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 18:58:19.538385+00:00
+    modified_ts: 2023-05-29 18:58:19.538410+00:00
+- model: missions.expense
+  pk: 15
+  fields:
+    mission: 2
+    day: 2023-04-07
+    amount_currency: '118.60'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:10:48.839496+00:00
+    modified_ts: 2023-05-29 19:10:48.839521+00:00
+- model: missions.expense
+  pk: 16
+  fields:
+    mission: 2
+    day: 2023-04-27
+    amount_currency: '115.20'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:10:48.840909+00:00
+    modified_ts: 2023-05-29 19:10:48.840930+00:00
+- model: missions.expense
+  pk: 17
+  fields:
+    mission: 2
+    day: 2023-04-01
+    amount_currency: '40.14'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: 29/3/23
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:10:48.841892+00:00
+    modified_ts: 2023-05-29 19:10:48.841918+00:00
+- model: missions.expense
+  pk: 18
+  fields:
+    mission: 2
+    day: 2023-04-23
+    amount_currency: '203.20'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 9
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:13:14.141832+00:00
+    modified_ts: 2023-05-29 19:13:14.141855+00:00
+- model: missions.expense
+  pk: 19
+  fields:
+    mission: 2
+    day: 2023-05-04
+    amount_currency: '396.50'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: Riparaz. auto
+    category: 7
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:13:14.148175+00:00
+    modified_ts: 2023-05-29 19:13:14.148200+00:00
+- model: missions.expense
+  pk: 20
+  fields:
+    mission: 2
+    day: 2023-04-03
+    amount_currency: '249.10'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: Riparaz. auto
+    category: 7
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:13:14.154250+00:00
+    modified_ts: 2023-05-29 19:13:14.154283+00:00
+- model: missions.expense
+  pk: 21
+  fields:
+    mission: 2
+    day: 2023-05-01
+    amount_currency: '946.50'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: Assicuraz. auto
+    category: 7
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:14:58.912594+00:00
+    modified_ts: 2023-05-29 19:14:58.912618+00:00
+- model: missions.expense
+  pk: 22
+  fields:
+    mission: 2
+    day: 2023-05-28
+    amount_currency: '103.50'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 8
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:14:58.913734+00:00
+    modified_ts: 2023-05-29 19:14:58.913755+00:00
+- model: missions.expense
+  pk: 23
+  fields:
+    mission: 2
+    day: 2023-04-28
+    amount_currency: '10.00'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 10
+    payment_type: 9
+    reimbursement: null
+    image: ''
+    created_ts: 2023-05-29 19:14:58.914653+00:00
+    modified_ts: 2023-05-29 19:14:58.914674+00:00
+- model: missions.expense
+  pk: 24
+  fields:
+    mission: 2
+    day: 2023-05-28
+    amount_currency: '10.54'
+    currency: GBP
+    amount_base: null
+    amount_reimbursement: null
+    detail: null
+    category: 10
+    payment_type: 9
+    reimbursement: null
+    image: missions/expenses/R1/M2/1685640833037_bbj64mM.jpg
+    created_ts: 2023-05-29 19:15:19.100265+00:00
+    modified_ts: 2023-06-01 17:41:18.834393+00:00
