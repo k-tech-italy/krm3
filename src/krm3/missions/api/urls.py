@@ -3,7 +3,7 @@ from rest_framework.routers import SimpleRouter
 from .views import ExpenseAPIViewSet, MissionAPIViewSet
 
 router = SimpleRouter()
-router.register('mission', MissionAPIViewSet, basename='api-missions-mission')
-router.register('expense', ExpenseAPIViewSet, basename='api-missions-expense')
+router.register('mission', MissionAPIViewSet)
+router.register('expense', ExpenseAPIViewSet)
 
 urlpatterns = router.urls
