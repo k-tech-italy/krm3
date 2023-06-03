@@ -30,6 +30,7 @@ AUTH_USER_MODEL = 'core.User'
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_ROOT = env('MEDIA_ROOT')
+MEDIA_URL = env('MEDIA_URL')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')

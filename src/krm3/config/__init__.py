@@ -41,6 +41,7 @@ DEFAULTS = dict(
     SENTRY_ENVIRONMENT=(str, 'local'),
 
     MEDIA_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~media')),
+    MEDIA_URL=(str, '/media/'),
     STATIC_ROOT=(str, str(Path(__file__).parent.parent / 'web/static')),
 
     # # Security
