@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'djoser',
-    'corsheaders',
+    # 'corsheaders',
     'mptt',
     'social_django',
     'crispy_forms',
@@ -83,7 +83,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    # 'corsheaders.middleware.CorsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'django.contrib.admindocs.middleware.XViewMiddleware',
     # Third party middlewares.

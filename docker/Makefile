@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=0.3.1
+VERSION=0.4.1
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -65,8 +65,15 @@ build: ## Builds the image
 registrylogin:  ## Log in to docker
 	@echo ${DOCKER_SECRET} | echo docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin ; \
 
+save:
+	@mkdir -p ../dist
+	@echo "Saving image ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz"
+	@docker save ${DOCKER_IMAGE_FULLNAME} | gzip > ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz
+
 release:  ## For now manual release until we fix nexus
-	scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp
+	@scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp
+	@echo "Now you can run on  the server:"
+	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"
 
 #release: registrylogin  ## Release the image
 #	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
@@ -79,7 +86,7 @@ release:  ## For now manual release until we fix nexus
 
 release-all: release nexus-release
 
-full-release:  build-base build release  ## buils all and releases
+full-release:  build-base build save release  ## buils all and releases
 	@echo "Done"
 
 .certs:
@@ -102,18 +109,7 @@ full-release:  build-base build release  ## buils all and releases
 	 		--name=${CONTAINER_NAME} \
 			-p ${LOCAL_PORT}:8000 \
 			-p ${LOCAL_HTTPS_PORT}:8443 \
-			-e DJANGO_SETTINGS_MODULE="krm3.config.settings" \
-			-e KRM3_DEBUG="${KRM3_DEBUG}" \
-			-e KRM3_DATABASE_URL="${KRM3_DATABASE_URL}" \
-			-e KRM3_DATABASE_APPS="${KRM3_DATABASE_APPS}" \
-			-e KRM3_SECRET_KEY="${KRM3_SECRET_KEY}" \
-			-e KRM3_ADMIN_EMAIL="${KRM3_ADMIN_EMAIL}" \
-			-e KRM3_ADMIN_USERNAME="${KRM3_ADMIN_USERNAME}" \
-			-e KRM3_ADMIN_PASSWORD="${KRM3_ADMIN_PASSWORD}" \
-			-e KRM3_STATIC_ROOT="/tmp/static" \
-			-e KRM3_MEDIA_ROOT="/tmp/media" \
-			-e STACK_PROTOCOL=${STACK_PROTOCOL} \
-			-e KRM3_ALLOWED_HOSTS=krm3.k-tech.it,krm3.local \
+			--env-file ../.env \
 			-v "`pwd`/certs:/etc/certs:ro" \
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			${RUN_OPTIONS} \
@@ -138,12 +134,3 @@ test: ## run 'django-admin check --deploy' into container
 
 stack:  ## run containder with both web/celery services
 	RUN_OPTIONS=-it CMD='stack' $(MAKE) .run
-
-save:
-	@mkdir -p ../dist
-	@echo "Saving image ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz"
-	@docker save ${DOCKER_IMAGE_FULLNAME} | gzip > ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz
-	@echo "Now you can run:"
-	@echo "  scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp"
-	@echo "And on the server:"
-	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"

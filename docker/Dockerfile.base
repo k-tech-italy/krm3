@@ -41,7 +41,6 @@ RUN set -x \
         gosu \
         libpcre3 \
         libxml2 \
-        mime-support \
     " \
     && apt-get update && apt-get install -y --no-install-suggests --no-install-recommends $runDeps && rm -rf /var/lib/apt/lists/*
 
@@ -53,6 +52,7 @@ RUN mkdir -p /code /krm3 /data && chown krm3:ktech /code && chown krm3:ktech /kr
 VOLUME /etc/certs
 COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/etc/circus.conf /etc/circus.conf
+
 
 USER krm3
 
@@ -69,11 +69,13 @@ RUN set -ex \
 
 
 RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
-    perl gnupg  \
+    gnupg  \
     libncursesw6 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/
+
+COPY docker/etc/mime.types /etc/mime.types
 
 EXPOSE 8000
 EXPOSE 8443
