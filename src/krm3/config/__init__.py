@@ -31,7 +31,7 @@ DEFAULTS = dict(
     EMAIL_SUBJECT_PREFIX=(str, '[krm3]'),
     EMAIL_USE_LOCALTIME=(bool, False),
     EMAIL_USE_TLS=(bool, True),
-    EMAIL_USE_SSL=(bool, False),
+    EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 30),
 
     SENTRY_DSN=(str, ''),
@@ -57,7 +57,7 @@ DEFAULTS = dict(
     SECURE_HSTS_SECONDS=(int, 0),
     SECURE_HSTS_PRELOAD=(bool, False),
     SECURE_PROXY_SSL_HEADER=(list, []),  # Set to "HTTP_X_FORWARDED_PROTO,https" behind SSL terminator
-    SECURE_SSL_REDIRECT=(bool, True),
+    SECURE_SSL_REDIRECT=(bool, False),
     USE_X_FORWARDED_HOST=(bool, 'false'),
 
     ADMIN_USERNAME=(str, 'admin'),

@@ -50,6 +50,18 @@ def troubleshooting(message, img):
         cv2.destroyAllWindows()
 
 
+def rotate_90(filepath, direction: str):
+    """Turn image by 90 degrees.
+
+    direction must be one of 'left', 'right'
+    """
+    direction = cv2.ROTATE_90_CLOCKWISE if direction == 'right' else cv2.ROTATE_90_COUNTERCLOCKWISE
+    img = cv2.imread(filepath)
+
+    rotated_image = cv2.rotate(img, direction)
+    return cv2.imwrite(filepath, rotated_image)
+
+
 def clean_image(filepath):
     img = cv2.imread(filepath)
 
