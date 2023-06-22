@@ -22,7 +22,7 @@ from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
-from krm3.missions.transform import clean_image
+from krm3.missions.transform import clean_image, rotate_90
 from krm3.utils import button_styles
 from krm3.utils.queryset import ACLMixin
 
@@ -227,6 +227,38 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def goto_mission(self, request, pk):
         expense = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
+
+    @button(
+        html_attrs=button_styles.DANGEROUS,
+        visible=lambda btn: bool(btn.original.id and btn.original.image)
+    )
+    def rotate_left(self, request, pk):
+        self._rotate_by_90(pk, request, 'left')
+
+    @button(
+        html_attrs=button_styles.DANGEROUS,
+        visible=lambda btn: bool(btn.original.id and btn.original.image)
+    )
+    def rotate_right(self, request, pk):
+        self._rotate_by_90(pk, request, 'right')
+
+    def _rotate_by_90(self, pk, request, direction: str):
+        expense = self.model.objects.get(pk=pk)
+        pathname = Path(expense.image.file.name)
+        backup_path = pathname.parent.joinpath(pathname.stem + f'_{pk}{pathname.suffix}')
+        shutil.copy(pathname, backup_path)
+        try:
+            turned = rotate_90(expense.image.file.name, direction)
+            if turned:
+                url = reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode(
+                    {'revert': f'{backup_path}'})
+                messages.success(
+                    request,
+                    mark_safe(f'Image was turned. <a href="{url}">click here to revert to previous image</a>'))
+            else:
+                messages.warning(request, 'Could not be turned')
+        except Exception as e:
+            messages.error(request, str(e))
 
 
 @admin.register(Reimbursement)
