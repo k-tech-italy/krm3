@@ -36,18 +36,26 @@ MEDIA_URL = env('MEDIA_URL')
 DEBUG = env('DEBUG')
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # 'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.admindocs',
+    'django.contrib.sites',
 
+    'django_sysinfo',
+    'adminactions',
     'adminfilters',
     'admin_extra_buttons',
+    'smart_admin.apps.SmartTemplateConfig',
+    'smart_admin.apps.SmartLogsConfig',
+    'smart_admin.apps.SmartAuthConfig',
+    'smart_admin.apps.SmartConfig',
 
     # Project apps.
+    'krm3.config.admin_extras.apps.AdminConfig',
     'krm3.core',
     'krm3',
     'krm3.currencies',
@@ -56,7 +64,6 @@ INSTALLED_APPS = [
 
     # Third party apps.
     'qr_code',
-    'adminactions',
     'django_filters',
     'rest_framework',
     'drf_spectacular',
@@ -69,6 +76,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_tables2'
 ]
+
+SITE_ID = 1
 
 try:
     import django_extensions as _  # noqa: F401

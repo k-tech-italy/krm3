@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib import admin
-from django.contrib.admin.sites import site
+from django.contrib.admin import site
 
 import krm3
 from krm3.core.admin import CustomUserAdmin
@@ -14,5 +14,5 @@ site.enable_nav_sidebar = True
 
 logger = logging.getLogger(__name__)
 
-# admin.site.unregister(User)
+admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)

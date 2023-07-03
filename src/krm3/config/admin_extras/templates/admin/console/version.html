@@ -1,0 +1,26 @@
+{% extends "smart_admin/console.html" %}{% load static i18n %}
+{% block left %}
+    <div class="console module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+        <div class="changelist-form-container">
+            <table>
+                <tr><th colspan="2">Deploy</th></tr>
+                <tr><th>Date</th><td>{{ deploy.date }}</td></tr>
+                <tr><th>Job url</th><td><a href="{{ docker.ci_job_url }}">{{ docker.ci_job_url }}</a></td></tr>
+                <tr><th colspan="2">&nbsp;</th></tr>
+
+                <tr><th colspan="2">Bob</th></tr>
+                <tr><th>Version</th><td>{{ project.version }}</td></tr>
+                <tr><th>Build Date</th><td>{{ project.build_date }}</td></tr>
+                <tr><th>Poetry Checksum</th><td>{{ poetry.checksum }}</td></tr>
+                <tr><th colspan="2">&nbsp;</th></tr>
+
+                <tr><th colspan="2">Docker</th></tr>
+                <tr><th>Tag</th><td>{{ docker.version }}</td></tr>
+                <tr><th>Build Date</th><td>{{ docker.build_date }}</td></tr>
+                <tr><th>Build Id</th><td>{{ docker.ci_build_id }}</td></tr>
+                <tr><th>Commit</th><td>{{ docker.ci_commit_short_sha }}</td></tr>
+                <tr><th>Job url</th><td><a href="{{ docker.ci_job_url }}">{{ docker.ci_job_url }}</a></td></tr>
+            </table>
+        </div>
+    </div>
+{% endblock left %}

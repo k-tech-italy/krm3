@@ -1,0 +1,75 @@
+{% extends "smart_admin/console.html" %}{% load static i18n %}
+{% block left %}
+    <div class="console module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+        <div class="changelist-form-container">
+            <table>
+                {% for section, data in status.items %}
+                    <tr>
+                        <td><h1>{{ section }}</h1></td>
+                    </tr>
+                    {% if data %}
+                    <tr>
+                        <td>
+                            <table>
+                                {% for key, value in data.items %}
+                                    <tr>
+                                        <th style="width: 100px;">{{ key }}</th>
+                                        <td>
+                                            {% if value %}
+                                                {% if value.items %}
+                                                    <table>
+                                                        {% for ikey, ivalue in value.items %}
+                                                            <tr>
+                                                                <th>{{ ikey }}</th>
+                                                                <td>{{ ivalue }}</td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </table>
+                                                {% else %}
+                                                    {% for info in value %}
+                                                        <ul>
+                                                            <li>{{ info }}</li>
+                                                        </ul>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% else %}
+                                                No info available.
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td>No data available.</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+            <form method="POST" id="celeryForm">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <p class="errornote">
+                        {% if form.total_error_count == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+                    </p>
+                    {{ form.non_field_errors }}
+                {% endif %}
+                <table>
+                    {% for field in form %}
+                        <tr>
+                            <td><h1>{{ field.label }}</h1></td>
+                        </tr>
+                        <tr>
+                            <td>{{ field }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <div class="submit-row">
+                    <input type="submit" value="Execute">
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock left %}

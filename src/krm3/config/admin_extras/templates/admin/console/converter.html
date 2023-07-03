@@ -1,0 +1,12 @@
+{% extends "smart_admin/console.html" %}{% load static i18n %}
+{% block content %}
+    {% if results %}
+        {{ results|safe }}
+    <hr>
+    {% endif %}
+    <form href="#" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Submit">
+    </form>
+{% endblock content %}

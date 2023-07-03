@@ -1,0 +1,26 @@
+{% extends "smart_admin/console.html" %}{% load static i18n %}
+{% block left %}
+    <div class="console module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+        <div class="changelist-form-container">
+            <table>
+                {% for section,data in results.items %}
+                    <tr>
+                        <td><h1>{{ section }}</h1></td>
+                    </tr>
+                    <tr>
+                    <td>
+                    <table>
+                        {% for k,v in data.items %}
+                            <tr>
+                                <th style="width: 100px;">{{ k }}</th>
+                                <td>{{ v }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                    </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+{% endblock left %}

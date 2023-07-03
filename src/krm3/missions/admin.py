@@ -20,6 +20,7 @@ from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
 from rest_framework.reverse import reverse as rest_reverse
 
+from krm3.currencies.models import Rate
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.transform import clean_image, rotate_90
@@ -104,11 +105,23 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
     search_fields = ['title']
 
 
+@admin.action(description='Get the rates for the dates')
+def get_rates(modeladmin, request, queryset):
+    rates_dict = {}
+    expenses = queryset.filter(amount_base__isnull=True)
+    ret = expenses.count()
+    for expense in expenses.all():
+        rate = rates_dict.setdefault(expense.day, Rate.for_date(expense.day))
+        expense.amount_base = rate.convert(expense.amount_currency, from_currency=expense.currency)
+        expense.save()
+    messages.success(request, f'Converted {ret} amounts')
+
+
 @admin.register(Expense)
 class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
-    list_display = ('mission', 'day', 'amount_currency', 'category')
+    list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         'mission__title',
@@ -129,6 +142,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             }
         )
     ]
+    actions = [get_rates]
 
     autocomplete_fields = ['mission']
 
@@ -163,6 +177,16 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return ret
 
     @button(
+        html_attrs=button_styles.NORMAL,
+        visible=lambda button: button.request.GET.get('mission_id') is not None
+    )
+    def capture(self, request):
+        expenses = Expense.objects.filter(mission_id=request.GET.get('mission_id'))
+        if expenses.count():
+            expense = expenses.first()
+            return HttpResponseRedirect(reverse('admin:missions_expense_change', args=[expense.mission_id]))
+
+    @button(
         html_attrs={'style': 'background-color:#0CDC6C;color:black'}
     )
     def purge_obsolete_images(self, request):
@@ -178,7 +202,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     count += 1
         messages.success(request, f'Cleaned {count} files')
 
-    # FIXME: does not work
+    # FIXME: does not work ?
     @button(
         html_attrs=button_styles.DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
