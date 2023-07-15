@@ -49,6 +49,7 @@ django-extensions = "^3.2.1"
 pdbpp = "^0.10.3"
 ruff = "^0.0.265"
 opencv-python = "^4.7.0.72"
+typing-extensions = "<4.7"
 
 [tool.poetry.group.test.dependencies]
 pytest-django = "^4.5.2"
