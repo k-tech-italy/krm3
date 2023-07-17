@@ -36,3 +36,22 @@ class ExpenseRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['otp']
+
+
+class ExportExpenseSerializer(serializers.ModelSerializer):
+
+    def __init__(self, instance=None, *args, **kwargs):
+        exclude = kwargs.pop('exclude', None)
+        super().__init__(instance, *args, **kwargs)
+
+        if exclude is not None:
+            for field_name in exclude:
+                self.fields.pop(field_name)
+
+    class Meta:
+        model = Expense
+        # fields = []
+        fields = '__all__'
+        # fields = ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail', 'category',
+        #           'payment_type', 'reimbursement', 'created_ts', 'modified_ts']
+        depth = 2

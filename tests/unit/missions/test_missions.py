@@ -9,8 +9,6 @@ from django.core.exceptions import ValidationError
 
 from krm3.missions.transform import clean_image
 
-# from krm3.missions.models import Mission
-
 
 @pytest.mark.parametrize(
     'from_date, to_date, expectation',

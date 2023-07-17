@@ -7,3 +7,10 @@ class MissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mission
         fields = '__all__'
+
+
+class ExportMissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mission
+        fields = '__all__'
+        depth = 3

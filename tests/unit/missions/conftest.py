@@ -3,7 +3,13 @@ from factory.fuzzy import FuzzyChoice
 
 
 @pytest.fixture()
-def mission(db):
+def euro_currency(db):
+    from factories import CurrencyFactory
+    return CurrencyFactory(iso3='EUR', title='Euro', symbol='€')
+
+
+@pytest.fixture()
+def mission(euro_currency):
     from factories import MissionFactory
     return MissionFactory()
 

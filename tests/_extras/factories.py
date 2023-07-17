@@ -32,6 +32,16 @@ class CityFactory(factory.django.DjangoModelFactory):
         model = 'core.City'
 
 
+class CurrencyFactory(factory.django.DjangoModelFactory):
+    iso3 = factory.Sequence(lambda n: str(n + 1))
+    title = factory.Sequence(lambda n: str(n + 1))
+    symbol = factory.Sequence(lambda n: str(n + 1))
+    base = 100
+
+    class Meta:
+        model = 'currencies.Currency'
+
+
 class ResourceFactory(factory.django.DjangoModelFactory):
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
@@ -68,6 +78,7 @@ class MissionFactory(factory.django.DjangoModelFactory):
     # country = factory.SubFactory(CountryFactory)
     city = factory.SubFactory(CityFactory)
     resource = factory.SubFactory(ResourceFactory)
+    default_currency = factory.SubFactory(CurrencyFactory)
 
     class Meta:
         model = 'missions.Mission'

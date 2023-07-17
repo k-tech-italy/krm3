@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+
+{% block container %}
+    {% block content %}
+        <pre>{{ data }}</pre>
+
+<br>
+        <a href="{% url 'admin:missions_mission_changelist'%}">Back to missions</a>
+    {% endblock %}
+{% endblock %}

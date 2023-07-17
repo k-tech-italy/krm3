@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from pathlib import Path
@@ -12,7 +13,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import site
-from django.http.response import HttpResponseRedirect
+from django.http.response import FileResponse, HttpResponseRedirect
 from django.shortcuts import redirect, reverse
 from django.template.response import TemplateResponse
 from django.utils.http import urlencode
@@ -21,10 +22,12 @@ from mptt.admin import MPTTModelAdmin
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Rate
-from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm
+from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
+from krm3.missions.impexp.export import MissionExporter
+from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.transform import clean_image, rotate_90
-from krm3.utils import button_styles
+from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
 
 
@@ -35,10 +38,18 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_ts', 'modified_ts']
 
 
+@admin.action(description='Export selected missions')
+def export(modeladmin, request, queryset):
+    pathname = MissionExporter(queryset).export()
+    response = FileResponse(open(pathname, 'rb'))
+    return response
+
+
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project']
+    actions = [export]
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
     inlines = [ExpenseInline]
@@ -65,15 +76,36 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     ]
 
     @button(
-        html_attrs=button_styles.NORMAL,
+        html_attrs=NORMAL,
     )
     def add_expense(self, request, pk):
         mission = Mission.objects.get(pk=pk)
         from_date = mission.from_date.strftime('%Y-%m-%d')
         return redirect(reverse('admin:missions_expense_add') + f'?mission_id={pk}&day={from_date}')
 
+    @button(html_attrs=NORMAL)
+    def import_missions(self, request):  # noqa: D102
+        if request.method == 'POST':
+            form = MissionsImportForm(request.POST, request.FILES)
+            if form.is_valid():
+                target = MissionImporter(request.FILES['file']).store()
+                data = MissionImporter.get_data(target)
+
+                data = json.dumps(data, indent=4)
+
+                return TemplateResponse(
+                    request,
+                    context={'data': data}, template='admin/missions/mission/import_missions_check.html'
+                )
+        else:
+            form = MissionsImportForm()
+            return TemplateResponse(
+                request,
+                context={'form': form}, template='admin/missions/mission/import_missions.html'
+            )
+
     @button(
-        html_attrs={'style': 'background-color:#00AC80;color:black'},
+        html_attrs=NORMAL,
     )
     def overview(self, request, pk):
         mission = self.get_object(request, pk)
@@ -87,7 +119,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             template='admin/missions/mission/summary.html')
 
     @button(
-        html_attrs=button_styles.NORMAL,
+        html_attrs=NORMAL,
         visible=lambda btn: bool(btn.original.id)
     )
     def view_expenses(self, request, pk):
@@ -124,8 +156,9 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
-        'mission__title',
+        ('mission', AutoCompleteFilter),
         ('category', AutoCompleteFilter),
+        'mission__number',
     )
     search_fields = ['amount_currency']
     fieldsets = [
@@ -144,7 +177,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     ]
     actions = [get_rates]
 
-    autocomplete_fields = ['mission']
+    autocomplete_fields = ['mission', 'missions__title']
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         if obj and (revert := request.GET.get('revert')):
@@ -177,7 +210,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return ret
 
     @button(
-        html_attrs=button_styles.NORMAL,
+        html_attrs=NORMAL,
         visible=lambda button: button.request.GET.get('mission_id') is not None
     )
     def capture(self, request):
@@ -204,7 +237,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     # FIXME: does not work ?
     @button(
-        html_attrs=button_styles.DANGEROUS,
+        html_attrs=DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
     )
     def clean_image(self, request, pk):
@@ -226,7 +259,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             messages.error(request, str(e))
 
     @button(
-        html_attrs=button_styles.DANGEROUS,
+        html_attrs=DANGEROUS,
         visible=lambda btn: bool(btn.original.id)
     )
     def view_qr(self, request, pk):
@@ -245,7 +278,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             template='admin/missions/expense/expense_qr.html')
 
     @button(
-        html_attrs=button_styles.NORMAL,
+        html_attrs=NORMAL,
         visible=lambda btn: bool(btn.original.id)
     )
     def goto_mission(self, request, pk):
@@ -253,14 +286,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
 
     @button(
-        html_attrs=button_styles.DANGEROUS,
+        html_attrs=DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
     )
     def rotate_left(self, request, pk):
         self._rotate_by_90(pk, request, 'left')
 
     @button(
-        html_attrs=button_styles.DANGEROUS,
+        html_attrs=DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
     )
     def rotate_right(self, request, pk):
