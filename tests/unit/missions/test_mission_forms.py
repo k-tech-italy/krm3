@@ -1,7 +1,7 @@
 from krm3.missions.forms import MissionAdminForm
 
 
-def test_auto_mission_number(db):
+def test_auto_mission_number(euro_currency):
     from factories import MissionFactory
     mission = MissionFactory()
     base = {
@@ -13,7 +13,7 @@ def test_auto_mission_number(db):
     }
     form = MissionAdminForm(base)
     assert form.is_valid()
-    assert form.cleaned_data['number'] == 2, 'Should have assigned 2 to 2nd mission in year'
+    assert form.cleaned_data['number'] == mission.number + 1, 'Should have assigned 2 to 2nd mission in year'
 
     form = MissionAdminForm(base | {
         'from_date': '2000-01-01',

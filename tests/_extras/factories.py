@@ -90,6 +90,7 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
     day = factory.LazyAttribute(
         lambda obj: obj.mission.from_date
     )
+    currency = factory.SubFactory(CurrencyFactory)
 
     class Meta:
         model = 'missions.Expense'
