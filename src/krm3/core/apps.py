@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class AppConfig(AppConfig):
-    name = 'krm3.currencies'
+    name = 'krm3.core'
 
     def ready(self):
         super().ready()

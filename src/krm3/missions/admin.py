@@ -53,7 +53,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
     inlines = [ExpenseInline]
-    list_display = ('number', 'resource', 'project', 'title', 'from_date', 'to_date', 'city', 'default_currency')
+    list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date', 'city', 'default_currency')
     list_filter = (
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
@@ -67,7 +67,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             None,
             {
                 'fields': [
-                    ('number', 'title'),
+                    ('number', 'year', 'title'),
                     ('from_date', 'to_date', 'default_currency'),
                     ('project', 'city', 'resource'),
                 ]

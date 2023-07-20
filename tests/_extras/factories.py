@@ -79,9 +79,24 @@ class MissionFactory(factory.django.DjangoModelFactory):
     city = factory.SubFactory(CityFactory)
     resource = factory.SubFactory(ResourceFactory)
     default_currency = factory.SubFactory(CurrencyFactory)
+    year = factory.LazyAttribute(lambda obj: obj.from_date.year)
 
     class Meta:
         model = 'missions.Mission'
+
+
+class ExpenseCategoryFactory(factory.django.DjangoModelFactory):
+    title = factory.Sequence(lambda n: n + 1)
+
+    class Meta:
+        model = 'missions.ExpenseCategory'
+
+
+class PaymentCategoryFactory(factory.django.DjangoModelFactory):
+    title = factory.Sequence(lambda n: n + 1)
+
+    class Meta:
+        model = 'missions.PaymentCategory'
 
 
 class ExpenseFactory(factory.django.DjangoModelFactory):
@@ -91,6 +106,8 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
         lambda obj: obj.mission.from_date
     )
     currency = factory.SubFactory(CurrencyFactory)
+    category = factory.SubFactory(ExpenseCategoryFactory)
+    payment_type = factory.SubFactory(PaymentCategoryFactory)
 
     class Meta:
         model = 'missions.Expense'

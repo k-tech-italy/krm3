@@ -29,6 +29,7 @@ class Mission(models.Model):
     title = models.CharField(max_length=50, null=True, blank=True)
     from_date = models.DateField()
     to_date = models.DateField()
+    year = models.PositiveIntegerField(blank=True, help_text="Leave blank for defaulting to from_date's year")
 
     default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
                                          help_text=f'Leave blank for dafault [{settings.CURRENCY_BASE}]')

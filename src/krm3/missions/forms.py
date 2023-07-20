@@ -16,8 +16,11 @@ class MissionAdminForm(ModelForm):
         if not self.cleaned_data.get('default_currency'):
             self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.CURRENCY_BASE)
 
+        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
+            self.cleaned_data['year'] = from_date.year
+
         if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data.get('number'):
-            qs = Mission.objects.filter(from_date__year=from_date.year)
+            qs = Mission.objects.filter(from_date__year=self.cleaned_data['year'])
             if self.instance.id:
                 qs = qs.exclude(pk=self.instance.id)
             number = qs.aggregate(Max('number'))['number__max'] or 0

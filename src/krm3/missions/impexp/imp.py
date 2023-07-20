@@ -4,9 +4,11 @@ import zipfile
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from pydantic_core._pydantic_core import ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 
 from krm3.core.models import City, Client, Country, Project
 from krm3.currencies.models import Currency
+from krm3.missions.models import ExpenseCategory, PaymentCategory, Mission
 
 
 class MissionImporter:
@@ -36,14 +38,23 @@ class MissionImporter:
             data = json.loads(zip_ref.read('data.json'))
         check_existing(Client, data, 'clients', ['name'])
         check_existing(Country, data, 'countries', ['name'])
-        check_existing(Project, data, 'projects', ['name', 'notes'])
+        check_existing(Project, data, 'projects', ['name', ('client__name', 'clients')], amend=['notes'])
         check_existing(City, data, 'cities', ['name', ('country__name', 'countries')])
-        check_existing(Currency, data, 'currencies', ['name', 'title', 'symbol', 'base'])
+        check_existing(Currency, data, 'currencies', ['title'],
+                       amend=['symbol', 'base', 'fractional_unit', 'decimals'], pkname='iso3')
+        check_existing(ExpenseCategory, data, 'categories', ['title'], amend=['active'], tree=True)
+        check_existing(PaymentCategory, data, 'payment_types', ['title'], amend=['active'], tree=True)
+        check_existing(Mission, data, 'missions', ['number', 'year'],
+                       amend=['title', ('from_date', lambda o: o.from_date.strftime('%Y-%m-%d')),
+                              ('to_date', lambda o: o.to_date.strftime('%Y-%m-%d')),
+                              ('default_currency', lambda o: o.default_currency.iso3),
+                              ('project__name', 'projects'), ('city__name', 'cities'),
+                              ('resource__first_name', 'resources'), ('resource__last_name', 'resources')])
 
         return data
 
 
-def check_existing(cls, data, entry_name, fields, pkname='id'):
+def check_existing(cls, data, entry_name, fields, amend=[], pkname='id', tree=False):
     for pk, instance in data[entry_name].items():
         try:
             lookup = {}
@@ -55,7 +66,20 @@ def check_existing(cls, data, entry_name, fields, pkname='id'):
                 else:
                     lookup[f] = instance[f]
             obj = cls.objects.get(**lookup)
-            instance['__check__'] = 'EXISTS'
+            if tree:
+                if str(obj) != instance['tree']:
+                    raise ValidationError(f'Hierarchy mismatch for instance {instance}')
+            for toamend in amend:
+                if isinstance(toamend, (list, tuple)):  # we assume is a function returning the json repr
+                    toamend, fx = toamend
+                    value = fx(obj)
+                else:
+                    value = getattr(obj, toamend)
+                if instance[toamend] != value:
+                    instance['__check__'] = 'AMEND'
+                    break
+            else:
+                instance['__check__'] = 'EXISTS'
             instance[pkname] = getattr(obj, pkname)
-        except Client.DoesNotExists:
+        except ObjectDoesNotExist:
             instance['__check__'] = 'ADD'
