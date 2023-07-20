@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from django.conf import settings
 
-from krm3.core.models import Project, City, Client, Country, Resource
+from krm3.core.models import City, Client, Country, Project, Resource
 from krm3.currencies.models import Currency
 from krm3.missions.api.serializers.expense import ExpenseSerializer
 from krm3.missions.api.serializers.mission import MissionSerializer
@@ -52,70 +52,71 @@ class MissionExporter:
 
                 for expense in mission.expense_set.all():
                     serializer = ExpenseSerializer(expense, exclude=['mission'], depth=0)
-                    _add_data(data, 'expenses', expense.id, serializer.data)
+                    expense_data = _add_data(data, 'expenses', expense.id, serializer.data)
                     _add_data(data, 'currencies', expense.currency_id, Currency)
                     category = _add_data(data, 'categories', expense.category_id, ExpenseCategory)
                     category['tree'] = str(expense.category)
                     payment_type = _add_data(data, 'payment_types', expense.payment_type_id, PaymentCategory)
                     payment_type['tree'] = str(expense.payment_type)
 
+                    # copy image
+                    if expense_data['image']:
+                        realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL)-1:]
+                        shutil.copy(realpath, f'{tempdir}/images')
+                        expense_data['image'] = expense_data['image'][images_prefix_offset:]
 
-            for k, mission in data['missions'].items():
-                # reference project
-                if (id := mission['project']['id']) not in data['projects']:
-                    if (client_id := mission['project']['client']['id']) not in data['clients']:
-                        data['clients'][client_id] = mission['project']['client']
-                        mission['project']['client'] = client_id
-                    data['projects'][id] = mission['project']
-                    mission['project'] = id
 
-                # reference city
-                if (id := mission['city']['id']) not in data['cities']:
-                    if (country_id := mission['city']['country']['id']) not in data['countries']:
-                        data['countries'][country_id] = mission['city']['country']
-                        mission['city']['country'] = country_id
-                    data['cities'][id] = mission['city']
-                    mission['city'] = id
-
-                # reference resource
-                if (id := mission['resource']['id']) not in data['resources']:
-                    if mission['resource']['profile'] and mission['resource']['profile']['user']:
-                        del mission['resource']['profile']['user']
-                    data['resources'][id] = mission['resource']
-                    mission['resource'] = id
-
-                # reference currency
-                if (iso3 := mission['default_currency']['iso3']) not in data['currencies']:
-                    data['currencies'][iso3] = mission['default_currency']
-                    mission['default_currency'] = iso3
-
-            for k, expense in data['expenses'].items():
-                # reference currency
-                if (iso3 := expense['currency']['iso3']) not in data['currencies']:
-                    data['currencies'][iso3] = expense['currency']
-                expense['currency'] = iso3
-
-                # reference category
-                if (id := expense['category']['id']) not in data['categories']:
-                    data['categories'][id] = expense['category']
-                    tree = str(ExpenseCategory.objects.get(id=id))
-                    del data['categories'][id]['parent']
-                    data['categories'][id]['tree'] = tree
-                expense['category'] = id
-
-                # reference payment_type
-                if (id := expense['payment_type']['id']) not in data['payment_types']:
-                    data['payment_types'][id] = expense['payment_type']
-                    tree = str(PaymentCategory.objects.get(id=id))
-                    del data['payment_types'][id]['parent']
-                    data['payment_types'][id]['tree'] = tree
-                expense['payment_type'] = id
-
-                # copy image
-                if expense['image']:
-                    realpath = settings.MEDIA_ROOT + expense['image'][len(settings.MEDIA_URL)-1:]
-                    shutil.copy(realpath, f'{tempdir}/images')
-                    expense['image'] = expense['image'][images_prefix_offset:]
+            # for k, mission in data['missions'].items():
+            #     # reference project
+            #     if (id := mission['project']['id']) not in data['projects']:
+            #         if (client_id := mission['project']['client']['id']) not in data['clients']:
+            #             data['clients'][client_id] = mission['project']['client']
+            #             mission['project']['client'] = client_id
+            #         data['projects'][id] = mission['project']
+            #         mission['project'] = id
+            #
+            #     # reference city
+            #     if (id := mission['city']['id']) not in data['cities']:
+            #         if (country_id := mission['city']['country']['id']) not in data['countries']:
+            #             data['countries'][country_id] = mission['city']['country']
+            #             mission['city']['country'] = country_id
+            #         data['cities'][id] = mission['city']
+            #         mission['city'] = id
+            #
+            #     # reference resource
+            #     if (id := mission['resource']['id']) not in data['resources']:
+            #         if mission['resource']['profile'] and mission['resource']['profile']['user']:
+            #             del mission['resource']['profile']['user']
+            #         data['resources'][id] = mission['resource']
+            #         mission['resource'] = id
+            #
+            #     # reference currency
+            #     if (iso3 := mission['default_currency']['iso3']) not in data['currencies']:
+            #         data['currencies'][iso3] = mission['default_currency']
+            #         mission['default_currency'] = iso3
+            #
+            # for k, expense in data['expenses'].items():
+            #     # reference currency
+            #     if (iso3 := expense['currency']['iso3']) not in data['currencies']:
+            #         data['currencies'][iso3] = expense['currency']
+            #     expense['currency'] = iso3
+            #
+            #     # reference category
+            #     if (id := expense['category']['id']) not in data['categories']:
+            #         data['categories'][id] = expense['category']
+            #         tree = str(ExpenseCategory.objects.get(id=id))
+            #         del data['categories'][id]['parent']
+            #         data['categories'][id]['tree'] = tree
+            #     expense['category'] = id
+            #
+            #     # reference payment_type
+            #     if (id := expense['payment_type']['id']) not in data['payment_types']:
+            #         data['payment_types'][id] = expense['payment_type']
+            #         tree = str(PaymentCategory.objects.get(id=id))
+            #         del data['payment_types'][id]['parent']
+            #         data['payment_types'][id]['tree'] = tree
+            #     expense['payment_type'] = id
+            #
 
             with open(f'{tempdir}/data.json', 'w') as fo:
                 fo.write(json.dumps(data))

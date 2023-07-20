@@ -52,7 +52,7 @@ DEFAULTS = dict(
     ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
 
     CSRF_COOKIE_SAMESITE=(str, 'strict'),
-    SESSION_COOKIE_SAMESITE=(str, 'strict'),
+    SESSION_COOKIE_SAMESITE=(str, 'lax'),
 
     SECURE_HSTS_SECONDS=(int, 0),
     SECURE_HSTS_PRELOAD=(bool, False),

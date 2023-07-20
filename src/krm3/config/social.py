@@ -5,6 +5,14 @@ from django.shortcuts import redirect
 
 from .environ import env as _env
 
+SOCIAL_MIDDLEWARES = ['social_django.middleware.SocialAuthExceptionMiddleware']
+
+
+SOCIAL_TEMPLATE_PROCESSORS = [
+    'social_django.context_processors.backends',
+    'social_django.context_processors.login_redirect',
+]
+
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
@@ -21,18 +29,23 @@ DJOSER = {
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
+AUTHENTICATION_BACKENDS = [
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.google.GoogleOAuth',
+]
+
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.social_user',
-    'krm3.config.social.auth_allowed',
+    # 'krm3.config.social.auth_allowed',
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.social_auth.associate_by_email',
     'social_core.pipeline.user.create_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
-    'krm3.config.social.update_user_social_data',
+    # 'krm3.config.social.update_user_social_data',
 )
 
 SOCIAL_AUTH_STRATEGY = 'social_django.strategy.DjangoStrategy'
@@ -48,6 +61,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
 SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['k-tech.it']
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
+SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ['state']
 
 
 def auth_allowed(backend, details, response, request, *args, **kwargs):

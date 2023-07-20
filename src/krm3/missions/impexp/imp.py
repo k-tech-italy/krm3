@@ -2,13 +2,13 @@ import json
 import tempfile
 import zipfile
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from pydantic_core._pydantic_core import ValidationError
-from django.core.exceptions import ObjectDoesNotExist
 
 from krm3.core.models import City, Client, Country, Project
 from krm3.currencies.models import Currency
-from krm3.missions.models import ExpenseCategory, PaymentCategory, Mission
+from krm3.missions.models import ExpenseCategory, Mission, PaymentCategory
 
 
 class MissionImporter:

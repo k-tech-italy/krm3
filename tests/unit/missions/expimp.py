@@ -1,15 +1,14 @@
 import json
 
-from factories import ExpenseFactory, PaymentCategoryFactory, ExpenseCategoryFactory
+from factories import ExpenseCategoryFactory, ExpenseFactory, PaymentCategoryFactory
 
 
 def prepare():
-    from krm3.missions.models import Mission, Expense
-    from krm3.core.models import City, Project, Resource, Country
-    from krm3.currencies.models import Currency
-
+    # from krm3.core.models import City, Country, Project, Resource
+    # from krm3.currencies.models import Currency
     from krm3.missions.impexp.export import MissionExporter
     from krm3.missions.impexp.imp import MissionImporter
+    from krm3.missions.models import Expense, Mission
     assert Mission.objects.count() == 0
 
     original_mission = ExpenseFactory().mission
@@ -42,11 +41,10 @@ def prepare():
 
 
 def test_mission_full_expimp(db):
-    from krm3.missions.models import Mission, Expense
-    from krm3.core.models import City, Project, Resource, Country
+    from krm3.core.models import City, Country, Project, Resource
     from krm3.currencies.models import Currency
-
     from krm3.missions.impexp.imp import MissionImporter
+    from krm3.missions.models import Expense, Mission
 
     data, pathname = prepare()
     data_str = json.dumps(data)

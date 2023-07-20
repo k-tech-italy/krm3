@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.serializers import ModelSerializer
 
-from krm3.core.models import UserProfile, Project, Client, City, Country, Resource
+from krm3.core.models import City, Client, Country, Project, Resource, UserProfile
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 User = get_user_model()

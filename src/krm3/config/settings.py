@@ -94,7 +94,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'corsheaders.middleware.CorsMiddleware',
-    'social_django.middleware.SocialAuthExceptionMiddleware',
+    ] + SOCIAL_MIDDLEWARES + [  # noqa: F405
     'django.contrib.admindocs.middleware.XViewMiddleware',
     # Third party middlewares.
 ]
@@ -114,8 +114,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'social_django.context_processors.backends',
-                'social_django.context_processors.login_redirect',
+            ] + SOCIAL_TEMPLATE_PROCESSORS + [  # noqa: F405
                 'django.template.context_processors.request'
             ],
         },
@@ -253,10 +252,9 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
-AUTHENTICATION_BACKENDS = (
-    'social_core.backends.google.GoogleOAuth2',
+AUTHENTICATION_BACKENDS += [  # noqa: F405
     'django.contrib.auth.backends.ModelBackend',
-)
+]
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
