@@ -68,3 +68,9 @@ class ExpenseRetrieveSerializer(serializers.ModelSerializer):
 #         # fields = ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail', 'category',
 #         #           'payment_type', 'reimbursement', 'created_ts', 'modified_ts']
 #         depth = 2
+
+class ExpenseNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expense
+        fields = '__all__'
+        depth = 2

@@ -33,7 +33,7 @@ def prepare():
     assert len(data['expenses']) == 3
 
     data_str = json.dumps(data)
-    assert data_str.count('EXISTS') == 17
+    assert data_str.count('EXISTS') == 18
     assert data_str.count('ADD') == 0
     assert data_str.count('AMEND') == 0
 

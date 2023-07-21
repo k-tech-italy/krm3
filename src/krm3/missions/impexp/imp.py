@@ -8,7 +8,7 @@ from pydantic_core._pydantic_core import ValidationError
 
 from krm3.core.models import City, Client, Country, Project
 from krm3.currencies.models import Currency
-from krm3.missions.models import ExpenseCategory, Mission, PaymentCategory
+from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory
 
 
 class MissionImporter:
@@ -34,8 +34,16 @@ class MissionImporter:
 
     @staticmethod
     def get_data(pathname):
+        def make_pk_as_int(data):
+            """Convert pk to int when needed."""
+            for f in ['clients', 'countries', 'projects', 'cities', 'resources',
+                      'categories', 'payment_types', 'missions', 'expenses']:
+                new_data = {int(k): v for k, v in data[f].items()}
+                data[f] = new_data
+
         with zipfile.ZipFile(pathname) as zip_ref:
             data = json.loads(zip_ref.read('data.json'))
+            make_pk_as_int(data)
         check_existing(Client, data, 'clients', ['name'])
         check_existing(Country, data, 'countries', ['name'])
         check_existing(Project, data, 'projects', ['name', ('client__name', 'clients')], amend=['notes'])
@@ -47,14 +55,27 @@ class MissionImporter:
         check_existing(Mission, data, 'missions', ['number', 'year'],
                        amend=['title', ('from_date', lambda o: o.from_date.strftime('%Y-%m-%d')),
                               ('to_date', lambda o: o.to_date.strftime('%Y-%m-%d')),
-                              ('default_currency', lambda o: o.default_currency.iso3),
-                              ('project__name', 'projects'), ('city__name', 'cities'),
-                              ('resource__first_name', 'resources'), ('resource__last_name', 'resources')])
+                              ('default_currency', lambda o: o.default_currency.iso3)])
+        check_existing(Expense, data, 'expenses',
+                       ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail',
+                        'created_ts', 'modified_ts', 'currency', 'category', 'payment_type', 'reimbursement']
+                       # TODO: calculate image checksum
+                      )
 
         return data
 
 
 def check_existing(cls, data, entry_name, fields, amend=[], pkname='id', tree=False):
+    """Check if target record exists.
+
+    It will update with the id if the record exists.
+    If the amend list is not empty it will try to flag the inbound data as EXISTS/ADD.
+
+    data: is the index (dict) of the data being loaded
+    entry_name: is the key in the data to look for
+    fields: are the lookup fields
+    amend: list of fields to match to determine EXISTS/AMEND
+    """
     for pk, instance in data[entry_name].items():
         try:
             lookup = {}
@@ -62,9 +83,10 @@ def check_existing(cls, data, entry_name, fields, amend=[], pkname='id', tree=Fa
                 if isinstance(f, (list, tuple)):
                     f, data_lookup_name = f
                     model_name, field_name = f.split('__')
-                    lookup[f] = data[data_lookup_name][str(instance[model_name])][field_name]
+                    lookup[f] = data[data_lookup_name][instance[model_name]][field_name]
                 else:
                     lookup[f] = instance[f]
+            # Fetch target record based on lookups
             obj = cls.objects.get(**lookup)
             if tree:
                 if str(obj) != instance['tree']:
@@ -80,6 +102,7 @@ def check_existing(cls, data, entry_name, fields, amend=[], pkname='id', tree=Fa
                     break
             else:
                 instance['__check__'] = 'EXISTS'
+            # assign the target pk in the data[entry_name]
             instance[pkname] = getattr(obj, pkname)
         except ObjectDoesNotExist:
             instance['__check__'] = 'ADD'

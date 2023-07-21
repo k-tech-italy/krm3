@@ -8,3 +8,10 @@ class MissionSerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = Mission
         fields = '__all__'
+
+
+class MissionNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mission
+        fields = '__all__'
+        depth = 2

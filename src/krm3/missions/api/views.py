@@ -6,19 +6,20 @@ from rest_framework.viewsets import ModelViewSet
 
 from krm3.missions.models import Expense, Mission
 
-from .serializers.expense import ExpenseImageUploadSerializer, ExpenseRetrieveSerializer, ExpenseSerializer
-from .serializers.mission import MissionSerializer
+from .serializers.expense import (ExpenseImageUploadSerializer, ExpenseNestedSerializer,
+                                  ExpenseRetrieveSerializer, ExpenseSerializer,)
+from .serializers.mission import MissionNestedSerializer, MissionSerializer
 
 
 class MissionAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = MissionSerializer
+    serializer_class = MissionNestedSerializer
     queryset = Mission.objects.all()
 
 
 class ExpenseAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = ExpenseSerializer
+    serializer_class = ExpenseNestedSerializer
     queryset = Expense.objects.all()
 
     # TODO: Should really be an eTag?
