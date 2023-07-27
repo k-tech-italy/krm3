@@ -21,7 +21,7 @@ from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
 from rest_framework.reverse import reverse as rest_reverse
 
-from krm3.currencies.models import Rate
+from krm3.currencies.models import Rate, Currency
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -29,6 +29,7 @@ from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCateg
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
+import django_tables2 as tables
 
 
 class ExpenseInline(admin.TabularInline):  # noqa: D101
@@ -36,6 +37,11 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     model = Expense
     extra = 3
     exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_ts', 'modified_ts']
+
+    def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+         if db_field.name == "currency":
+                 kwargs["queryset"] = Currency.objects.actives()
+         return super(ExpenseInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.action(description='Export selected missions')
@@ -45,10 +51,34 @@ def export(modeladmin, request, queryset):
     return response
 
 
+class ExpenseTable(tables.Table):
+    attachment = tables.Column(empty_values=())
+
+    def render_id(self, value):
+        url = reverse('admin:missions_expense_change', args=[value])
+        return mark_safe(f'<a href="{url}">{value}</a>')
+
+    def render_image(self, value):
+        file_type = value.name.split('.')[-1]
+        # url = reverse('admin:missions_expense_change', args=[value])
+        return mark_safe(f'<a href="{value.url}">{file_type}</a>')
+
+    def render_attachment(self, record):
+        if record.image:
+            return self.render_image(record.image)
+        else:
+            url = reverse('admin:missions_expense_changelist')
+            return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')
+
+    class Meta:
+        model = Expense
+        exclude = ("mission", "created_ts", "modified_ts", 'image')
+
+
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
-    autocomplete_fields = ['project']
+    autocomplete_fields = ['project', 'city', 'resource']
     actions = [export]
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
@@ -74,6 +104,11 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             }
         )
     ]
+
+    def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+         if db_field.name == "default_currency":
+                 kwargs["queryset"] = Currency.objects.actives()
+         return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
     @button(
         html_attrs=NORMAL,
@@ -110,11 +145,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def overview(self, request, pk):
         mission = self.get_object(request, pk)
 
+        expenses = ExpenseTable(mission.expense_set.all())
+
         return TemplateResponse(
             request,
             context={
                 'site_header': site.site_header,
-                'mission': mission
+                'mission': mission,
+                'expenses': expenses
             },
             template='admin/missions/mission/summary.html')
 
@@ -179,6 +217,11 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     autocomplete_fields = ['mission', 'missions__title']
 
+    def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+         if db_field.name == "currency":
+                 kwargs["queryset"] = Currency.objects.actives()
+         return super(ExpenseAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_form(self, request, obj=None, change=False, **kwargs):
         if obj and (revert := request.GET.get('revert')):
             shutil.copy(revert, obj.image.file.name)
@@ -214,10 +257,9 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         visible=lambda button: button.request.GET.get('mission_id') is not None
     )
     def capture(self, request):
-        expenses = Expense.objects.filter(mission_id=request.GET.get('mission_id'))
-        if expenses.count():
-            expense = expenses.first()
-            return HttpResponseRedirect(reverse('admin:missions_expense_change', args=[expense.mission_id]))
+        expenses = Expense.objects.filter(mission_id=request.GET.get('mission_id'), image__isnull=True).values_list('id', list=True)
+        if expenses:
+            return HttpResponseRedirect(reverse('admin:missions_expense_change', args=[expenses[0]], kwargs={}))
 
     @button(
         html_attrs={'style': 'background-color:#0CDC6C;color:black'}

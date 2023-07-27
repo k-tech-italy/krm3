@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mission',
             name='default_currency',
-            field=models.ForeignKey(blank=True, help_text='Leave blank for dafault [EUR]', on_delete=django.db.models.deletion.PROTECT, to='currencies.currency'),
+            field=models.ForeignKey(blank=True, help_text='Leave blank for default [EUR]', on_delete=django.db.models.deletion.PROTECT, to='currencies.currency'),
         ),
     ]

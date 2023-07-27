@@ -9,9 +9,10 @@ from mptt.models import MPTTModel, TreeForeignKey
 from krm3.core.models import City, Project, Resource
 from krm3.currencies.models import Currency
 from krm3.missions.media import mission_directory_path
+from krm3.utils.queryset import ActiveManagerMixin
 
 
-class MissionManager(models.Manager):
+class MissionManager(ActiveManagerMixin, models.Manager):
 
     def filter_acl(self, user):
         """Return the queryset for the owned records.
@@ -112,7 +113,7 @@ class Reimbursement(models.Model):
     issue_date = models.DateField()
 
 
-class ExpenseManager(models.Manager):
+class ExpenseManager(ActiveManagerMixin, models.Manager):
     def by_otp(self, otp: str):
         """Retrieve the instance matching the provided otp."""
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()

@@ -8,8 +8,9 @@ from krm3.currencies.models import Currency, Rate
 
 @admin.register(Currency)
 class CurrencyAdmin(ModelAdmin):
-    list_display = ('iso3', 'symbol', 'title')
+    list_display = ('iso3', 'symbol', 'title', 'active')
     search_fields = ('iso3', 'title')
+    list_filter = ('active', )
 
 
 @admin.register(Rate)

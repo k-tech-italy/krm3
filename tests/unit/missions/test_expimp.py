@@ -66,4 +66,4 @@ def test_mission_full_expimp(db):
 
     data = MissionImporter.get_data(pathname)
 
-    print(1)
+    data['clients'].values()

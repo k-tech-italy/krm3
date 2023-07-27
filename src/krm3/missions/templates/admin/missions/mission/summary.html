@@ -9,10 +9,10 @@
 {% block content %}
     <h1><a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a></h1>
 
-    <p>Project: {{ mission.project }}</p>
+    <p>Project: <a href="{% url 'admin:core_project_change' mission.project_id %}">{{ mission.project }}</a></p>
     <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
-    {% if mission.expense_set.count %}
-        {% render_table mission.expense_set.all %}
+    {% if expenses %}
+        {% render_table expenses %}
     {% else %}
         <li>No expenses for this mission.</li>
     {% endif %}

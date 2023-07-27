@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 
 from ...utils.currencies import rounding
+from ...utils.queryset import ActiveQuerySet
 
 
 class Currency(models.Model):
@@ -13,9 +14,12 @@ class Currency(models.Model):
     iso3 = models.CharField(max_length=3, primary_key=True)
     fractional_unit = models.CharField(max_length=20)
     base = models.PositiveIntegerField()
+    active = models.BooleanField(default=False)
+
+    objects = ActiveQuerySet.as_manager()
 
     def __str__(self):
-        return f'{self.iso3} {self.symbol} {self.title}'
+        return f'{self.iso3} {self.symbol}'
 
     class Meta:
         verbose_name_plural = 'currencies'

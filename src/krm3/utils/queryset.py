@@ -1,3 +1,4 @@
+from django.db import models
 #
 # def filter_for_resource(request, queryset, lookup='resource'):
 #     if not request.user.is_superuser:
@@ -24,3 +25,13 @@ class ACLMixin:
         if not ret.is_accessible(request.user):
             raise self.model.DoesNotExist('Object does not exists or is unavailable')
         return ret
+
+
+class ActiveQuerySet(models.QuerySet):
+    def actives(self):
+        return self.filter(active=True)
+
+
+class ActiveManagerMixin:
+    def active(self):
+        return self.get_queryset().filter(active=True)

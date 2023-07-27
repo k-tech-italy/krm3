@@ -74,7 +74,8 @@ INSTALLED_APPS = [
     'crispy_forms',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'django_tables2'
+    'django_tables2',
+    'constance'
 ]
 
 SITE_ID = 1
@@ -262,4 +263,10 @@ LOGIN_REDIRECT_URL = '/'
 # Shows CV2 intermediate processing images. For Local dev only
 CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')
 
+# Constance
+CONSTANCE_CONFIG = {
+    'COUNTRY_GROUPS': ('A, B, C', 'The country grouping list (comma-separated values)'),
+}
+
 # add other settings sets
+
