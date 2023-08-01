@@ -3,6 +3,7 @@
   fields:
     number: 1
     title: null
+    year: 2022
     from_date: 2022-05-15
     to_date: 2025-05-15
     default_currency: GBP
@@ -17,6 +18,7 @@
   fields:
     number: 24
     title: HGT
+    year: 2023
     from_date: 2023-04-01
     to_date: 2023-05-31
     default_currency: GBP
@@ -31,6 +33,7 @@
   fields:
     number: 2
     title: null
+    year: 2022
     from_date: 2022-05-01
     to_date: 2022-05-31
     default_currency: GBP
@@ -45,6 +48,7 @@
   fields:
     number: 1
     title: null
+    year: 2010
     from_date: 2010-05-28
     to_date: 2050-05-28
     default_currency: GBP
@@ -58,6 +62,7 @@
   pk: 7
   fields:
     number: 25
+    year: 2023
     title: null
     from_date: 2023-05-29
     to_date: 2023-05-29

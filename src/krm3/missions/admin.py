@@ -1,9 +1,11 @@
+import decimal
 import json
 import os
 import shutil
 from pathlib import Path
 
 import cv2
+import django_tables2 as tables
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
@@ -21,7 +23,7 @@ from django.utils.safestring import mark_safe
 from mptt.admin import MPTTModelAdmin
 from rest_framework.reverse import reverse as rest_reverse
 
-from krm3.currencies.models import Rate, Currency
+from krm3.currencies.models import Currency
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -29,7 +31,7 @@ from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCateg
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
-import django_tables2 as tables
+from krm3.utils.rates import update_rates
 
 
 class ExpenseInline(admin.TabularInline):  # noqa: D101
@@ -39,9 +41,9 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_ts', 'modified_ts']
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
-         if db_field.name == "currency":
-                 kwargs["queryset"] = Currency.objects.actives()
-         return super(ExpenseInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == 'currency':
+            kwargs['queryset'] = Currency.objects.actives()
+        return super(ExpenseInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.action(description='Export selected missions')
@@ -72,7 +74,7 @@ class ExpenseTable(tables.Table):
 
     class Meta:
         model = Expense
-        exclude = ("mission", "created_ts", "modified_ts", 'image')
+        exclude = ('mission', 'created_ts', 'modified_ts', 'image')
 
 
 @admin.register(Mission)
@@ -83,7 +85,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
 
     inlines = [ExpenseInline]
-    list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date', 'city', 'default_currency')
+    list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date',
+                    'default_currency', 'city')
     list_filter = (
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
@@ -106,9 +109,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     ]
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
-         if db_field.name == "default_currency":
-                 kwargs["queryset"] = Currency.objects.actives()
-         return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == 'default_currency':
+            kwargs['queryset'] = Currency.objects.actives()
+        return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
     @button(
         html_attrs=NORMAL,
@@ -145,14 +148,25 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def overview(self, request, pk):
         mission = self.get_object(request, pk)
 
-        expenses = ExpenseTable(mission.expense_set.all())
+        qs = mission.expense_set.all()
+        update_rates(qs)
+
+        expenses = ExpenseTable(qs)
+
+        summary = {'Spese risorsa': decimal.Decimal(0.0), 'Rimborsate': decimal.Decimal(0.0)}
+        for expense in qs:
+            summary['Spese risorsa'] += expense.amount_base or decimal.Decimal(0.0)
+            summary['Rimborsate'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+        summary['Da rimborsare'] = summary['Spese risorsa'] - summary['Rimborsate']
 
         return TemplateResponse(
             request,
             context={
                 'site_header': site.site_header,
                 'mission': mission,
-                'expenses': expenses
+                'expenses': expenses,
+                'summary': summary,
+                'base': settings.CURRENCY_BASE
             },
             template='admin/missions/mission/summary.html')
 
@@ -167,23 +181,22 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(PaymentCategory)
 class PaymentCategoryAdmin(MPTTModelAdmin):
-    pass
+    search_fields = ['title']
+    autocomplete_fields = ['parent']
 
 
 @admin.register(ExpenseCategory)
 class ExpenseCategoryAdmin(MPTTModelAdmin):
     search_fields = ['title']
+    autocomplete_fields = ['parent']
 
 
 @admin.action(description='Get the rates for the dates')
 def get_rates(modeladmin, request, queryset):
-    rates_dict = {}
     expenses = queryset.filter(amount_base__isnull=True)
     ret = expenses.count()
-    for expense in expenses.all():
-        rate = rates_dict.setdefault(expense.day, Rate.for_date(expense.day))
-        expense.amount_base = rate.convert(expense.amount_currency, from_currency=expense.currency)
-        expense.save()
+    qs = expenses.all()
+    update_rates(qs)
     messages.success(request, f'Converted {ret} amounts')
 
 
@@ -191,6 +204,7 @@ def get_rates(modeladmin, request, queryset):
 class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
+    autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type']
     list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
@@ -215,12 +229,10 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     ]
     actions = [get_rates]
 
-    autocomplete_fields = ['mission', 'missions__title']
-
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
-         if db_field.name == "currency":
-                 kwargs["queryset"] = Currency.objects.actives()
-         return super(ExpenseAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == 'currency':
+            kwargs['queryset'] = Currency.objects.actives()
+        return super(ExpenseAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         if obj and (revert := request.GET.get('revert')):
@@ -257,7 +269,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         visible=lambda button: button.request.GET.get('mission_id') is not None
     )
     def capture(self, request):
-        expenses = Expense.objects.filter(mission_id=request.GET.get('mission_id'), image__isnull=True).values_list('id', list=True)
+        expenses = Expense.objects.filter(
+            mission_id=request.GET.get('mission_id'), image__isnull=True).values_list('id', list=True)
         if expenses:
             return HttpResponseRedirect(reverse('admin:missions_expense_change', args=[expenses[0]], kwargs={}))
 

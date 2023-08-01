@@ -54,10 +54,10 @@ class ResourceAdmin(ModelAdmin):
 
 @admin.register(Client)
 class ClientAdmin(ModelAdmin):
-    pass
+    search_fields = ['name']
 
 
 @admin.register(Project)
 class ProjectAdmin(ACLMixin, ModelAdmin):
-
     search_fields = ['name']
+    autocomplete_fields = ['client']
