@@ -20,6 +20,8 @@ def _add_data(data, param, id, data1):
             data1 = data1.default_serializer(data1, depth=0).data
         data[param][id] = data1
         return data1
+    else:
+        return id
 
 
 class MissionExporter:
@@ -45,10 +47,10 @@ class MissionExporter:
 
                 _add_data(data, 'currencies', mission.default_currency_id, Currency)
                 project = _add_data(data, 'projects', mission.project_id, Project)
-                client = _add_data(data, 'clients', project['client'], Client)
+                client = _add_data(data, 'clients', project['client'], Client)  # noqa: F841
                 city = _add_data(data, 'cities', mission.city_id, City)
-                country = _add_data(data, 'countries', city['country'], Country)
-                resource = _add_data(data, 'resources', mission.resource_id, Resource)
+                country = _add_data(data, 'countries', city['country'], Country)  # noqa: F841
+                resource = _add_data(data, 'resources', mission.resource_id, Resource)  # noqa: F841
 
                 for expense in mission.expense_set.all():
                     serializer = ExpenseSerializer(expense, exclude=['mission'], depth=0)
@@ -64,7 +66,6 @@ class MissionExporter:
                         realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL)-1:]
                         shutil.copy(realpath, f'{tempdir}/images')
                         expense_data['image'] = expense_data['image'][images_prefix_offset:]
-
 
             # for k, mission in data['missions'].items():
             #     # reference project
