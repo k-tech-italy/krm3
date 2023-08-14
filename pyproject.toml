@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krm3"
-version = "0.8.5"
+version = "0.8.6"
 description = "KRM3"
 authors = ["K-Tech team"]
 packages = [

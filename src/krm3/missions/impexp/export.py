@@ -21,7 +21,7 @@ def _add_data(data, param, id, data1):
         data[param][id] = data1
         return data1
     else:
-        return id
+        return data[param][id]
 
 
 class MissionExporter:
