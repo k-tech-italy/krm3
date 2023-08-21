@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from .environ import env as _env
+from krm3.config.environ import env as _env
 
 SOCIAL_MIDDLEWARES = ['social_django.middleware.SocialAuthExceptionMiddleware']
 

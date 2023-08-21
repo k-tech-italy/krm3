@@ -18,9 +18,11 @@ from django_regex.utils import RegexList
 import krm3
 
 from .environ import env
-from .security import *  # noqa: F401,F403
-from .sentry import *  # noqa: F401,F403
-from .social import *  # noqa: F401,F403
+from krm3.config.fragments.security import *  # noqa: F401,F403
+from krm3.config.fragments.sentry import *  # noqa: F401,F403
+from krm3.config.fragments.social import *  # noqa: F401,F403
+from .fragments.smartadmin import *   # noqa: F401,F403
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +51,7 @@ INSTALLED_APPS = [
     'adminactions',
     'adminfilters',
     'admin_extra_buttons',
-    'smart_admin.apps.SmartTemplateConfig',
-    'smart_admin.apps.SmartLogsConfig',
-    'smart_admin.apps.SmartAuthConfig',
-    'smart_admin.apps.SmartConfig',
+] + SMART_ADMIN_APPS + [
 
     # Project apps.
     'krm3.config.admin_extras.apps.AdminConfig',
@@ -269,4 +268,3 @@ CONSTANCE_CONFIG = {
 }
 
 # add other settings sets
-

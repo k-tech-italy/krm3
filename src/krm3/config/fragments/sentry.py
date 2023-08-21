@@ -1,6 +1,6 @@
 import logging
 
-from .environ import env as _env
+from krm3.config.environ import env as _env
 
 # SENTRY & RAVEN
 # need to copy in settings because we inject these values in the templates
