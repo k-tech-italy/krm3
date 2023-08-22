@@ -4,10 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from krm3.missions.models import Expense, Mission
+from krm3.missions.models import Expense, Mission, ExpenseCategory, PaymentCategory
 
 from .serializers.expense import (ExpenseImageUploadSerializer, ExpenseNestedSerializer,
-                                  ExpenseRetrieveSerializer, ExpenseSerializer,)
+                                  ExpenseRetrieveSerializer, ExpenseSerializer, ExpenseCategorySerializer,
+                                  PaymentCategorySerializer, )
 from .serializers.mission import MissionNestedSerializer, MissionSerializer
 
 
@@ -65,3 +66,15 @@ class ExpenseAPIViewSet(ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
+
+
+class ExpenseCategoryAPIViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExpenseCategorySerializer
+    queryset = ExpenseCategory.objects.all()
+
+
+class PaymentCategoryAPIViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PaymentCategorySerializer
+    queryset = PaymentCategory.objects.all()
