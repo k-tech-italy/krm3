@@ -26,7 +26,8 @@ class RateAPIViewSet(ModelViewSet):
 
         """
         to_cur = settings.CURRENCY_BASE
-        converted = Rate.for_date(pk).convert(from_value=amount, from_currency=from_cur, to_currency=to_cur)
+        converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(from_value=amount, from_currency=from_cur,
+                                                                          to_currency=to_cur)
         return Response(status=200, data=converted)
 
     @action(
@@ -39,5 +40,6 @@ class RateAPIViewSet(ModelViewSet):
 
 
         """
-        converted = Rate.for_date(pk).convert(from_value=amount, from_currency=from_cur, to_currency=to_cur)
+        converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(from_value=amount, from_currency=from_cur,
+                                                                          to_currency=to_cur)
         return Response(status=200, data=converted)

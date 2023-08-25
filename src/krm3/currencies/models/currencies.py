@@ -38,7 +38,7 @@ class Rate(models.Model):
         if include is None:
             include = []
 
-        missing = set(settings.CURRENCIES) | set(include) - set(self.rates.keys())
+        missing = (set(settings.CURRENCIES) | set(include)) - set(self.rates.keys())
 
         if force:
             missing = set(settings.CURRENCIES) | set(include) | set(self.rates.keys())
