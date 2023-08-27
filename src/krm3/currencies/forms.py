@@ -2,12 +2,11 @@ import json
 
 from django import forms
 from django.contrib import messages
-from django.forms import HiddenInput
+from django.core.exceptions import ValidationError
+from django.forms import FileField, HiddenInput
 
 from krm3.config.environ import env
 from krm3.currencies.models import Currency
-from django.forms import FileField
-from django.core.exceptions import ValidationError
 
 # CURRENCY_CHOICES = [c for c in env('CURRENCY_CHOICES') if c != settings.CURRENCY_BASE]
 
@@ -52,7 +51,7 @@ class RatesImportForm(forms.Form):
                 raise ValidationError('Can only accept .json files')
             try:
                 json.loads(file.read())
-            except Exception as e:
+            except Exception:
                 raise ValidationError('Does not appear to be a valid .json file')
             file.seek(0)
         return ret

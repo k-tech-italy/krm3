@@ -1,16 +1,12 @@
-import json
-
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin, confirm_action
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.template.response import TemplateResponse
 
 from krm3.currencies.forms import RatesImportForm
 from krm3.currencies.impexp import RateImporter
 from krm3.currencies.models import Currency, Rate
-from krm3.missions.impexp.imp import MissionImporter
-from django.template.response import TemplateResponse
-
 from krm3.styles.buttons import NORMAL
 
 

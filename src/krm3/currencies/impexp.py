@@ -1,14 +1,9 @@
 import decimal
 import json
-import tempfile
-from copy import deepcopy
 from operator import itemgetter
-from pathlib import Path
-from datetime import datetime
 
-from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import InMemoryUploadedFile
 import django_tables2 as tables
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from krm3.currencies.models import Rate
 
