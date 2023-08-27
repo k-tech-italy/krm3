@@ -1,3 +1,5 @@
+from django.http import HttpResponseRedirect
+from django.shortcuts import reverse
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -6,6 +8,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory
 
+from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (ExpenseCategorySerializer, ExpenseImageUploadSerializer,
                                   ExpenseNestedSerializer, ExpenseRetrieveSerializer, PaymentCategorySerializer,)
 from .serializers.mission import MissionNestedSerializer
@@ -59,7 +62,15 @@ class ExpenseAPIViewSet(ModelViewSet):
             self.perform_update(serializer)
             expense.image = serializer.validated_data['image']
             expense.save()
-            return Response(status=204)
+
+            if next := request.session.pop(EXPENSE_UPLOAD_IMAGES, []):
+                next, others = next[0], next[1:] if len(next) > 1 else []
+                if others:
+                    request.session[EXPENSE_UPLOAD_IMAGES] = others
+                url = f"{reverse('admin:missions_expense_changelist')}{next}/view_qr/"
+                return HttpResponseRedirect(reverse(url))
+            else:
+                return Response(status=204)
         else:
             raise serializers.ValidationError('OTP not matching')
 

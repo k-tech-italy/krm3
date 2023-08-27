@@ -29,6 +29,7 @@ from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImpo
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
@@ -275,8 +276,11 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         expenses = Expense.objects.filter(mission_id=mission_id, image='').values_list('id', flat=True)
         if expenses:
-            url = f"{reverse('admin:missions_expense_changelist')}{expenses[0]}/" \
-                  f"view_qr/?next={','.join(map(str,expenses[1:]))}"
+            expenses = list(map(str, expenses))
+            next, others = expenses[0], expenses[1:] if len(expenses) > 1 else []
+            if others:
+                request.session[EXPENSE_UPLOAD_IMAGES] = others
+            url = f"{reverse('admin:missions_expense_changelist')}{next}/view_qr/"
             return HttpResponseRedirect(url)
         else:
             messages.info(request, 'There are no images left to capture')
@@ -326,6 +330,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     def view_qr(self, request, pk):
         expense = self.get_object(request, pk)
+
+        request.session[EXPENSE_UPLOAD_IMAGES] = []
 
         ref = rest_reverse('expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
 

@@ -761,6 +761,24 @@ files = [
 django-mptt = "*"
 
 [[package]]
+name = "django-picklefield"
+version = "3.1"
+description = "Pickled object field for Django"
+category = "main"
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "django-picklefield-3.1.tar.gz", hash = "sha256:c786cbeda78d6def2b43bff4840d19787809c8909f7ad683961703060398d356"},
+    {file = "django_picklefield-3.1-py3-none-any.whl", hash = "sha256:d77c504df7311e8ec14e8b779f10ca6fec74de6c7f8e2c136e1ef60cf955125d"},
+]
+
+[package.dependencies]
+Django = ">=3.2"
+
+[package.extras]
+tests = ["tox"]
+
+[[package]]
 name = "django-qr-code"
 version = "3.1.1"
 description = "An application that provides tools for displaying QR codes on your Django site."
@@ -2611,4 +2629,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b946ee4aea850a1bc7c210de56460701c1cb38c1f1584052b3f2ecbb5ba4c0e5"
+content-hash = "1db069c67fcbdf8e46630afc8ee465b26b4e3cf101025d42144ff2c1297f50e2"

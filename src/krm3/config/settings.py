@@ -16,6 +16,7 @@ from pathlib import Path
 from django_regex.utils import RegexList
 
 import krm3
+from krm3.config.fragments.constance import *  # noqa: F401,F403
 from krm3.config.fragments.security import *  # noqa: F401,F403
 from krm3.config.fragments.sentry import *  # noqa: F401,F403
 from krm3.config.fragments.social import *  # noqa: F401,F403
@@ -260,10 +261,3 @@ LOGIN_REDIRECT_URL = '/'
 
 # Shows CV2 intermediate processing images. For Local dev only
 CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')
-
-# Constance
-CONSTANCE_CONFIG = {
-    'COUNTRY_GROUPS': ('A, B, C', 'The country grouping list (comma-separated values)'),
-}
-
-# add other settings sets
