@@ -16,13 +16,12 @@ from pathlib import Path
 from django_regex.utils import RegexList
 
 import krm3
-
-from .environ import env
 from krm3.config.fragments.security import *  # noqa: F401,F403
 from krm3.config.fragments.sentry import *  # noqa: F401,F403
 from krm3.config.fragments.social import *  # noqa: F401,F403
-from .fragments.smartadmin import *   # noqa: F401,F403
 
+from .environ import env
+from .fragments.smartadmin import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ INSTALLED_APPS = [
     'adminactions',
     'adminfilters',
     'admin_extra_buttons',
-] + SMART_ADMIN_APPS + [
+] + SMART_ADMIN_APPS + [  # noqa: F405 we import it from smartadmin fragment
 
     # Project apps.
     'krm3.config.admin_extras.apps.AdminConfig',
