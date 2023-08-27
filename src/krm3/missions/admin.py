@@ -1,6 +1,7 @@
 import decimal
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -269,10 +270,16 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         visible=lambda button: button.request.GET.get('mission_id') is not None
     )
     def capture(self, request):
-        expenses = Expense.objects.filter(
-            mission_id=request.GET.get('mission_id'), image__isnull=True).values_list('id', list=True)
+        changelist_fitlers = re.match(r'mission_id=(?P<mission_id>\d+)', request.GET.get('_changelist_filters'))
+        mission_id = changelist_fitlers.groupdict().get('mission_id')
+
+        expenses = Expense.objects.filter(mission_id=mission_id, image='').values_list('id', flat=True)
         if expenses:
-            return HttpResponseRedirect(reverse('admin:missions_expense_change', args=[expenses[0]], kwargs={}))
+            url = f"{reverse('admin:missions_expense_changelist')}{expenses[0]}/" \
+                  f"view_qr/?next={','.join(map(str,expenses[1:]))}"
+            return HttpResponseRedirect(url)
+        else:
+            messages.info(request, 'There are no images left to capture')
 
     @button(
         html_attrs={'style': 'background-color:#0CDC6C;color:black'}
