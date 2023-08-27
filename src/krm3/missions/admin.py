@@ -205,7 +205,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type']
-    list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'image')
+    list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'payment_type', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         ('mission', AutoCompleteFilter),
