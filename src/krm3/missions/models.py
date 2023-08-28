@@ -132,7 +132,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
 
 
 class Expense(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+    mission = models.ForeignKey(Mission, related_name='expenses', on_delete=models.CASCADE)
     day = models.DateField()
     amount_currency = models.DecimalField(max_digits=10, decimal_places=2, help_text='Amount in currency')
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,

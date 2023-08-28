@@ -150,7 +150,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def overview(self, request, pk):
         mission = self.get_object(request, pk)
 
-        qs = mission.expense_set.all()
+        qs = mission.expenses.all()
         update_rates(qs)
 
         expenses = ExpenseTable(qs)

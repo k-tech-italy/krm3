@@ -52,7 +52,7 @@ class MissionExporter:
                 country = _add_data(data, 'countries', city['country'], Country)  # noqa: F841
                 resource = _add_data(data, 'resources', mission.resource_id, Resource)  # noqa: F841
 
-                for expense in mission.expense_set.all():
+                for expense in mission.expenses.all():
                     serializer = ExpenseSerializer(expense, exclude=['mission'], depth=0)
                     expense_data = _add_data(data, 'expenses', expense.id, serializer.data)
                     _add_data(data, 'currencies', expense.currency_id, Currency)

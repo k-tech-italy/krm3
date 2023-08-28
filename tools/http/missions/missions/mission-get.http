@@ -1,0 +1,30 @@
+### curl -X 'GET'
+##  'http://localhost:8000/api/v1/resource/'
+##  -H 'accept: application/json'
+##  -H 'Content-Type: application/json'
+##  -H 'Authorization: JWT ey.....KQ'
+
+POST {{server_url}}/api/v1/jwt/create/
+accept: application/json
+Content-Type: application/json
+
+{
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
+}
+
+
+
+> {%
+    client.global.set("auth_token", response.body.access);
+    client.global.set("refresh_token", response.body.refresh);
+%}
+
+###
+
+GET {{server_url}}/api/v1/mission/2/
+Content-Type: application/json
+Accept: application/json
+Authorization: JWT {{auth_token}}
+
+###
