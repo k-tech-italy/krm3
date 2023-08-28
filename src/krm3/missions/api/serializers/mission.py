@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-from krm3.missions.api.serializers.expense import ExpenseSerializer
-from krm3.missions.models import Mission
+from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 
@@ -11,12 +10,38 @@ class MissionSerializer(metaclass=ModelDefaultSerializerMetaclass):
         fields = '__all__'
 
 
+class MissionPaymentCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentCategory
+        fields = ['id', '__str__', 'active']
+
+
+class MissionDocumentTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentType
+        fields = ['id', 'title', 'active']
+
+
+class MissionExpenseCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseCategory
+        fields = ['id', '__str__', 'active']
+
+
+class MissionExpenseSerializer(serializers.ModelSerializer):
+    category = MissionExpenseCategorySerializer()
+    document_type = MissionDocumentTypeSerializer()
+    payment_type = MissionPaymentCategorySerializer()
+
+    class Meta:
+        model = Expense
+        exclude = ['mission']
+
+
 class MissionNestedSerializer(serializers.ModelSerializer):
-    expenses = ExpenseSerializer(many=True, read_only=True)
+    expenses = MissionExpenseSerializer(many=True, read_only=True)
 
     class Meta:
         model = Mission
-        fields = ['number', 'title', 'from_date', 'to_date', 'year', 'default_currency', 'project', 'city', 'resource',
-                  'expenses']
-        # fields = '__all__'
+        fields = '__all__'
         depth = 2
