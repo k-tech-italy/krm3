@@ -2,7 +2,7 @@ from cryptography.fernet import InvalidToken
 from django.conf import settings
 from rest_framework import serializers
 
-from krm3.missions.models import Expense, ExpenseCategory, PaymentCategory
+from krm3.missions.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 
@@ -36,6 +36,12 @@ class ExpenseCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
 class PaymentCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = PaymentCategory
+        fields = '__all__'
+
+
+class DocumentTypeSerializer(metaclass=ModelDefaultSerializerMetaclass):
+    class Meta:
+        model = DocumentType
         fields = '__all__'
 
 

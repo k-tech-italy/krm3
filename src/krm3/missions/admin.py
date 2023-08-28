@@ -28,7 +28,7 @@ from krm3.currencies.models import Currency
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
-from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
@@ -179,6 +179,12 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def view_expenses(self, request, pk):
         url = reverse('admin:missions_expense_changelist') + f'?mission_id={pk}'
         return HttpResponseRedirect(url)
+
+
+@admin.register(DocumentType)
+class DocumentTypeAdmin(ModelAdmin):
+    list_display = ['title', 'active', 'default']
+    search_fields = ['title']
 
 
 @admin.register(PaymentCategory)

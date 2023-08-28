@@ -6,7 +6,7 @@ from django.db import migrations, models
 def forward(apps, schema_editor):
     DocumentType = apps.get_model('missions', 'DocumentType')
     DocumentType.objects.create(title='Nessun documento')
-    DocumentType.objects.create(title='Scontrino')
+    DocumentType.objects.create(title='Scontrino', default=True)
     DocumentType.objects.create(title='Fattura')
     DocumentType.objects.create(title='Ricevuta')
 

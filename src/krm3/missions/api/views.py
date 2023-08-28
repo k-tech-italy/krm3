@@ -6,10 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory
+from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from ..session import EXPENSE_UPLOAD_IMAGES
-from .serializers.expense import (ExpenseCategorySerializer, ExpenseImageUploadSerializer,
+from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseImageUploadSerializer,
                                   ExpenseNestedSerializer, ExpenseRetrieveSerializer, PaymentCategorySerializer,)
 from .serializers.mission import MissionNestedSerializer
 
@@ -88,3 +88,9 @@ class PaymentCategoryAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
+
+
+class DocumentTypeAPIViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DocumentTypeSerializer
+    queryset = DocumentType.objects.filter(active=True)
