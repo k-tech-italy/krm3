@@ -66,6 +66,18 @@ class Mission(models.Model):
         ]
 
 
+class DocumentType(models.Model):
+    title = models.CharField(max_length=50)
+    active = models.BooleanField(default=True)
+    default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['title']
+
+
 class ExpenseCategory(MPTTModel):
     title = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
@@ -143,6 +155,7 @@ class Expense(models.Model):
                                                help_text='Reimbursed amount')
     detail = models.CharField(max_length=100, null=True, blank=True)
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT)
+    document_type = models.ForeignKey(DocumentType, on_delete=models.PROTECT)
     payment_type = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT)
     reimbursement = models.ForeignKey(Reimbursement, on_delete=models.SET_NULL, null=True, blank=True)
 

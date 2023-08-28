@@ -183,12 +183,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(PaymentCategory)
 class PaymentCategoryAdmin(MPTTModelAdmin):
+    list_display = ['title', 'active']
     search_fields = ['title']
     autocomplete_fields = ['parent']
 
 
 @admin.register(ExpenseCategory)
 class ExpenseCategoryAdmin(MPTTModelAdmin):
+    list_display = ['title', 'active']
     search_fields = ['title']
     autocomplete_fields = ['parent']
 
@@ -207,7 +209,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type']
-    list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'payment_type', 'image')
+    list_display = ('mission', 'day', 'amount_currency', 'currency', 'amount_base', 'category', 'document_type',
+                    'payment_type', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         ('mission', AutoCompleteFilter),
