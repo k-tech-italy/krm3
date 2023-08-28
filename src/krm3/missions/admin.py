@@ -331,6 +331,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def view_qr(self, request, pk):
         expense = self.get_object(request, pk)
 
+        # FIXME: This cannot work as the mobile uploading the client is not authenticated so no same session!
         request.session[EXPENSE_UPLOAD_IMAGES] = []
 
         ref = rest_reverse('expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
