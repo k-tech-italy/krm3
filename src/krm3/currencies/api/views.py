@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from ..models import Rate
-from .serializers import RateSerializer
+from ..models import Currency, Rate
+from .serializers import CurrencySerializer, RateSerializer
 
 
 class RateAPIViewSet(ModelViewSet):
@@ -43,3 +43,9 @@ class RateAPIViewSet(ModelViewSet):
         converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(from_value=amount, from_currency=from_cur,
                                                                           to_currency=to_cur)
         return Response(status=200, data=converted)
+
+
+class CurrencyAPIViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CurrencySerializer
+    queryset = Currency.objects.filter(active=True)

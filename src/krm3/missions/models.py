@@ -148,8 +148,6 @@ class Expense(models.Model):
 
     image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
 
-    # currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-
     created_ts = models.DateTimeField(auto_now_add=True)
     modified_ts = models.DateTimeField(auto_now=True)
 
