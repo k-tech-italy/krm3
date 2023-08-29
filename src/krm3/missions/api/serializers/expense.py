@@ -28,15 +28,16 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
 
 
 class ExpenseCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
+
     class Meta:
         model = ExpenseCategory
-        fields = '__all__'
+        fields = ['id', '__str__', 'title', 'active', 'parent']
 
 
 class PaymentCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = PaymentCategory
-        fields = '__all__'
+        fields = ['id', '__str__', 'title', 'active', 'parent']
 
 
 class DocumentTypeSerializer(metaclass=ModelDefaultSerializerMetaclass):

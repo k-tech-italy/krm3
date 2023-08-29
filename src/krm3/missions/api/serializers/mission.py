@@ -13,7 +13,7 @@ class MissionSerializer(metaclass=ModelDefaultSerializerMetaclass):
 class MissionPaymentCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentCategory
-        fields = ['id', '__str__', 'active']
+        fields = ['id', 'title', '__str__', 'active', 'parent']
 
 
 class MissionDocumentTypeSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class MissionDocumentTypeSerializer(serializers.ModelSerializer):
 class MissionExpenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ExpenseCategory
-        fields = ['id', '__str__', 'active']
+        fields = ['id', 'title', '__str__', 'active', 'parent']
 
 
 class MissionExpenseSerializer(serializers.ModelSerializer):
