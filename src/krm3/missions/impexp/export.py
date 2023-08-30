@@ -7,7 +7,7 @@ from django.conf import settings
 
 from krm3.core.models import City, Client, Country, Project, Resource
 from krm3.currencies.models import Currency
-from krm3.missions.api.serializers.expense import ExpenseSerializer
+from krm3.missions.api.serializers.expense import ExpenseExportSerializer
 from krm3.missions.api.serializers.mission import MissionSerializer
 from krm3.missions.media import EXPENSES_IMAGE_PREFIX
 from krm3.missions.models import ExpenseCategory, Mission, PaymentCategory
@@ -53,7 +53,7 @@ class MissionExporter:
                 resource = _add_data(data, 'resources', mission.resource_id, Resource)  # noqa: F841
 
                 for expense in mission.expenses.all():
-                    serializer = ExpenseSerializer(expense, exclude=['mission'], depth=0)
+                    serializer = ExpenseExportSerializer(expense)
                     expense_data = _add_data(data, 'expenses', expense.id, serializer.data)
                     _add_data(data, 'currencies', expense.currency_id, Currency)
                     category = _add_data(data, 'categories', expense.category_id, ExpenseCategory)

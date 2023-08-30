@@ -67,7 +67,7 @@ class Mission(models.Model):
 
 
 class DocumentType(models.Model):
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=50, unique=True)
     active = models.BooleanField(default=True)
     default = models.BooleanField(default=False)
 

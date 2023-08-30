@@ -58,9 +58,10 @@ class MissionImporter:
                               ('default_currency', lambda o: o.default_currency.iso3)])
         check_existing(Expense, data, 'expenses',
                        ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail',
-                        'created_ts', 'modified_ts', 'currency', 'category', 'payment_type', 'reimbursement']
+                        'created_ts', 'modified_ts', 'currency', 'category', 'payment_type', 'document_type',
+                        'reimbursement']
                        # TODO: calculate image checksum
-                      )
+                       )
 
         return data
 

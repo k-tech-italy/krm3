@@ -15,9 +15,10 @@ def mission(euro_currency):
 
 
 @pytest.fixture()
-def expense(categories, payment_types):
+def expense(categories, payment_types, document_types):
     from factories import ExpenseFactory
     return ExpenseFactory(
         category=FuzzyChoice(categories),
         payment_type=FuzzyChoice(payment_types),
+        document_type=FuzzyChoice(document_types),
     )

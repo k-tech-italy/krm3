@@ -1,8 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import mixins
-from rest_framework.serializers import ModelSerializer
 
-from krm3.core.models import City, Client, Country, Project, UserProfile
+from krm3.core.models import City, Client, Country, Project
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 User = get_user_model()
@@ -31,12 +30,6 @@ class ProjectSerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = Project
         fields = '__all__'
-
-
-class ProfileSerializer(ModelSerializer):
-    class Meta:
-        model = UserProfile
-        fields = ('picture',)
 
 
 class CitySerializer(metaclass=ModelDefaultSerializerMetaclass):

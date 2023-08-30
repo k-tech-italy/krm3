@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krm3"
-version = "0.8.12"
+version = "0.9.0"
 description = "KRM3"
 authors = ["K-Tech team"]
 packages = [
@@ -27,8 +27,6 @@ markdown = "^3.4.3"
 drf-spectacular = "^0.26.1"
 djangorestframework-camel-case = "^1.4.2"
 natural-keys = "^2.0.0"
-pytest = "^7.3.1"
-pytest-param = "^0.1.1"
 parametrize = "^0.1.1"
 django-environ = "^0.10.0"
 django-qr-code = "^3.1.1"
@@ -54,6 +52,7 @@ opencv-python = "^4.7.0.72"
 typing-extensions = "<4.7"
 
 [tool.poetry.group.test.dependencies]
+pytest-param = "^0.1.1"
 pytest-django = "^4.5.2"
 pytest-cov = "^4.0.0"
 pytest-race = "^0.2.0"

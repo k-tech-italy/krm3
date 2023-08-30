@@ -1,6 +1,6 @@
 import json
 
-from factories import ExpenseCategoryFactory, ExpenseFactory, PaymentCategoryFactory
+from factories import DocumentTypeFactory, ExpenseCategoryFactory, ExpenseFactory, PaymentCategoryFactory
 
 
 def prepare():
@@ -16,7 +16,9 @@ def prepare():
 
     payment_type = PaymentCategoryFactory(parent=expense.payment_type)
     category = ExpenseCategoryFactory(parent=expense.category)
-    ExpenseFactory(mission=original_mission, payment_type=payment_type, category=category)
+    document_type = DocumentTypeFactory()
+    ExpenseFactory(mission=original_mission, payment_type=payment_type, category=category,
+                   document_type=document_type)
     assert Mission.objects.count() == 1
     assert Expense.objects.count() == 3
 
@@ -47,7 +49,8 @@ def test_mission_full_expimp(db):
     from krm3.missions.models import Expense, Mission
 
     data, pathname = prepare()
-    data_str = json.dumps(data)
+    # check it is json parseable
+    json.dumps(data)
 
     Expense.objects.all().delete()
     Mission.objects.all().delete()

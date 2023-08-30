@@ -99,6 +99,13 @@ class PaymentCategoryFactory(factory.django.DjangoModelFactory):
         model = 'missions.PaymentCategory'
 
 
+class DocumentTypeFactory(factory.django.DjangoModelFactory):
+    title = factory.Sequence(lambda n: f'DT {n + 1}')
+
+    class Meta:
+        model = 'missions.DocumentType'
+
+
 class ExpenseFactory(factory.django.DjangoModelFactory):
     mission = factory.SubFactory(MissionFactory)
     amount_currency = FuzzyDecimal(0.5, 170)
@@ -108,6 +115,7 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
     currency = factory.SubFactory(CurrencyFactory)
     category = factory.SubFactory(ExpenseCategoryFactory)
     payment_type = factory.SubFactory(PaymentCategoryFactory)
+    document_type = factory.SubFactory(DocumentTypeFactory)
 
     class Meta:
         model = 'missions.Expense'

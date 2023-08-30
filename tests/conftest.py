@@ -30,6 +30,17 @@ def payment_types(db):
 
 
 @pytest.fixture()
+def document_types(db):
+    results = []
+    from krm3.missions.models import DocumentType
+    results.append(DocumentType.objects.get_or_create(title='Scontrino', default=True)[0])
+    results.append(DocumentType.objects.get_or_create(title='Fattura')[0])
+    results.append(DocumentType.objects.get_or_create(title='Altro')[0])
+    results.append(DocumentType.objects.get_or_create(title='Disabled', active=False)[0])
+    return results
+
+
+@pytest.fixture()
 def categories(db):
     results = []
     from krm3.missions.models import ExpenseCategory
@@ -67,6 +78,6 @@ def project(db):
 
 
 @pytest.fixture()
-def client(db):
+def krm3client(db):
     from factories import ClientFactory
     return ClientFactory()

@@ -51,6 +51,14 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
         read_only_fields = ['amount_base']
 
 
+class ExpenseExportSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Expense
+        fields = '__all__'
+        read_only_fields = ['amount_base']
+
+
 class ExpenseRetrieveSerializer(serializers.ModelSerializer):
     otp = serializers.SerializerMethodField()
 
