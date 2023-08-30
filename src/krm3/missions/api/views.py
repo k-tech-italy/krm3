@@ -1,16 +1,16 @@
 from django.http import HttpResponseRedirect
 from django.shortcuts import reverse
-from rest_framework import serializers
+from rest_framework import mixins, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseImageUploadSerializer,
-                                  ExpenseNestedSerializer, ExpenseRetrieveSerializer, PaymentCategorySerializer,)
+                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,)
 from .serializers.mission import MissionNestedSerializer
 
 
@@ -22,7 +22,7 @@ class MissionAPIViewSet(ModelViewSet):
 
 class ExpenseAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = ExpenseNestedSerializer
+    serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
 
     # TODO: Should really be an eTag?
@@ -78,19 +78,30 @@ class ExpenseAPIViewSet(ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
 
-class ExpenseCategoryAPIViewSet(ModelViewSet):
+class ExpenseCategoryAPIViewSet(
+        mixins.RetrieveModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
+# http_method_names = ['GET']
 
-class PaymentCategoryAPIViewSet(ModelViewSet):
+
+class PaymentCategoryAPIViewSet(
+        mixins.RetrieveModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
-class DocumentTypeAPIViewSet(ModelViewSet):
+class DocumentTypeAPIViewSet(
+        mixins.RetrieveModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)

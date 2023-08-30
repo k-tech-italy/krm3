@@ -7,7 +7,7 @@ router.register('blacklist', BlacklistRefreshAPIViewSet, basename='api-refreshto
 router.register('resource', ResourceAPIViewSet, basename='api-resources')
 router.register('city', CityAPIViewSet, basename='api-city')
 router.register('project', ProjectAPIViewSet, basename='api-project')
-
+# router.register('user', UserAPIViewSet, basename='user')
 
 urlpatterns = [
 ]

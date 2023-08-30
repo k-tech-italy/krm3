@@ -1,16 +1,20 @@
 from typing import Optional
 
 from django.conf import settings
+from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet
 
 from ..models import Currency, Rate
 from .serializers import CurrencySerializer, RateSerializer
 
 
-class RateAPIViewSet(ModelViewSet):
+class RateAPIViewSet(
+        mixins.RetrieveModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = RateSerializer
     queryset = Rate.objects.all()
@@ -45,7 +49,10 @@ class RateAPIViewSet(ModelViewSet):
         return Response(status=200, data=converted)
 
 
-class CurrencyAPIViewSet(ModelViewSet):
+class CurrencyAPIViewSet(
+        mixins.RetrieveModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CurrencySerializer
     queryset = Currency.objects.filter(active=True)

@@ -21,12 +21,6 @@ class ExpenseImageUploadSerializer(serializers.ModelSerializer):
         fields = ['otp', 'image']
 
 
-class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
-    class Meta:
-        model = Expense
-        fields = '__all__'
-
-
 class ExpenseCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
 
     class Meta:
@@ -44,6 +38,17 @@ class DocumentTypeSerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = DocumentType
         fields = '__all__'
+
+
+class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
+    category = ExpenseCategorySerializer()
+    document_type = DocumentTypeSerializer()
+    payment_type = PaymentCategorySerializer()
+
+    class Meta:
+        model = Expense
+        fields = '__all__'
+        read_only_fields = ['amount_base']
 
 
 class ExpenseRetrieveSerializer(serializers.ModelSerializer):
