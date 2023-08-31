@@ -23,6 +23,7 @@ from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify
 from mptt.admin import MPTTModelAdmin
 from rest_framework.reverse import reverse as rest_reverse
 
@@ -202,7 +203,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'mission': mission,
                 'expenses': expenses,
                 'summary': summary,
-                'base': settings.CURRENCY_BASE
+                'base': settings.CURRENCY_BASE,
+                'filename': format_html(f'{slugify(str(mission))}.pdf')
             },
             template='admin/missions/mission/summary.html')
 

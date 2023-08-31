@@ -1,13 +1,27 @@
 {% extends "admin/base_site.html" %}
 {% load render_table from django_tables2 %}
 
+{% block extrahead %}
+    {{ block.super }}
+    <script>
+    function printWithSpecialFileName(){
+        var tempTitle = document.title;
+        document.title = "{{filename}}";
+        window.print();
+        document.title = tempTitle;
+    }
+    </script>
+
+{% endblock %}
+
 {% block branding %}
 <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
 {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
 {% block content %}
-    <h1><a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a></h1>
+    <h1><a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
+
 
     <p>Project: <a href="{% url 'admin:core_project_change' mission.project_id %}">{{ mission.project }}</a></p>
     <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
