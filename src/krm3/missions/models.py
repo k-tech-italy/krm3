@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -102,6 +104,7 @@ class ExpenseCategory(MPTTModel):
 class PaymentCategory(MPTTModel):
     title = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
+    personal_expense = models.BooleanField(default=False)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
     def __str__(self):
@@ -122,7 +125,11 @@ class PaymentCategory(MPTTModel):
 
 class Reimbursement(models.Model):
     title = models.CharField(max_length=50)
-    issue_date = models.DateField()
+    issue_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        data = datetime.strftime(self.issue_date, '%Y-%m-%d')
+        return f'{self.title} {data}'
 
 
 class ExpenseManager(ActiveManagerMixin, models.Manager):

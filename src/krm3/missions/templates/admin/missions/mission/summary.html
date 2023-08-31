@@ -11,6 +11,7 @@
 
     <p>Project: <a href="{% url 'admin:core_project_change' mission.project_id %}">{{ mission.project }}</a></p>
     <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
+    <p>Mission currency: {{ mission.default_currency.iso3 }}</p>
     <p>Summaries</p>
     <ul>
     {% for key, value in summary.items %}

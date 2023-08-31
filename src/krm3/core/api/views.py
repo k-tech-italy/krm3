@@ -37,7 +37,7 @@ class UserAPIViewSet(
         mixins.RetrieveModelMixin,
         mixins.ListModelMixin,
         GenericViewSet):
-    from krm3.core.api.user_serializer import UserSerializer
+    from krm3.core.api.serializers import UserSerializer
 
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
