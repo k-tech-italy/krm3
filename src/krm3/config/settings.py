@@ -14,14 +14,14 @@ import os
 from pathlib import Path
 
 import krm3
-from krm3.config.fragments.constance import *  # noqa: F401,F403
-from krm3.config.fragments.ddt import *  # noqa: F401,F403
-from krm3.config.fragments.security import *  # noqa: F401,F403
-from krm3.config.fragments.sentry import *  # noqa: F401,F403
-from krm3.config.fragments.social import *  # noqa: F401,F403
 
 from .environ import env
+from .fragments.constance import *  # noqa: F401,F403
+from .fragments.ddt import *  # noqa: F401,F403
+from .fragments.security import *  # noqa: F401,F403
+from .fragments.sentry import *  # noqa: F401,F403
 from .fragments.smartadmin import *  # noqa: F401,F403
+from .fragments.social import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
 

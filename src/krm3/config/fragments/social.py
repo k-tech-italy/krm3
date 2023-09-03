@@ -1,3 +1,7 @@
+"""Debug toolbar settings fragments.
+
+Add SOCIAL_MIDDLEWARES to settings.MIDDLEWARES
+"""
 from datetime import timedelta
 
 from django.contrib import messages

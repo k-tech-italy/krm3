@@ -1,9 +1,13 @@
-# Debug toolbar
+"""Debug toolbar settings fragments.
+
+Add DDT_MIDDLEWARES to settings.MIDDLEWARES
+Add DDT_APPS to settings.INSTALLED_APPS
+"""
 import logging as _logging
 
 from django_regex.utils import RegexList as _RegexList
 
-from krm3.config.environ import env as _env
+from ..environ import env as _env
 
 if ddt_key := _env('DDT_KEY'):
     logger = _logging.getLogger(__name__)
@@ -32,6 +36,7 @@ if ddt_key := _env('DDT_KEY'):
 
         DDT_MIDDLEWARES = ['debug_toolbar.middleware.DebugToolbarMiddleware']
         DDT_APPS = ['debug_toolbar']
+        INTERNAL_IPS = _env('INTERNAL_IPS')
         # CSP_REPORT_ONLY = True
     except ImportError:
         logger.info('Skipping debug toolbar')

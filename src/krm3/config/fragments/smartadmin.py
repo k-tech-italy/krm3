@@ -1,3 +1,4 @@
+# Add this to settings.INSTALLED_APPS
 SMART_ADMIN_APPS = [
     'smart_admin.apps.SmartTemplateConfig',
     'smart_admin.apps.SmartLogsConfig',
