@@ -43,7 +43,7 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     form = ExpenseAdminForm
     model = Expense
     extra = 3
-    exclude = ['amount_base', 'amount_reimbursement', 'reimbursement', 'created_ts', 'modified_ts']
+    exclude = ['amount_base', 'amount_reimbursement', 'created_ts', 'modified_ts']
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         if db_field.name == 'currency':

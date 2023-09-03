@@ -1,4 +1,4 @@
-import logging
+import logging as _logging
 
 from krm3.config.environ import env as _env
 
@@ -13,8 +13,8 @@ if SENTRY_DSN:
     import krm3
 
     sentry_logging = LoggingIntegration(
-        level=logging.INFO,  # Capture info and above as breadcrumbs
-        event_level=logging.ERROR  # Send errors as events
+        level=_logging.INFO,  # Capture info and above as breadcrumbs
+        event_level=_logging.ERROR  # Send errors as events
     )
 
     sentry_sdk.init(
