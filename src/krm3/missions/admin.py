@@ -307,7 +307,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type']
     list_display = ('mission', 'day', 'colored_amount_currency',  'colored_amount_base', 'colored_amount_reimbursement',
-                    'category', 'document_type', 'payment_type', 'link_to_reimbursement', 'image')
+                    'category', 'document_type', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         ('mission', AutoCompleteFilter),
@@ -324,7 +324,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     ('amount_currency', 'currency'),
                     ('amount_base', 'amount_reimbursement'),
                     'detail',
-                    ('category', 'payment_type', 'reimbursement'),
+                    ('category', 'payment_type', 'document_type', 'reimbursement'),
                     'image']
             }
         )
