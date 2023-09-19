@@ -19,14 +19,14 @@ class MissionAdminForm(ModelForm):
         if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
             self.cleaned_data['year'] = from_date.year
 
-        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data.get('number'):
+        if (from_date := self.cleaned_data.get('from_date')) and self.cleaned_data.get('number', None) is None:
             qs = Mission.objects.filter(from_date__year=self.cleaned_data['year'])
             if self.instance.id:
                 qs = qs.exclude(pk=self.instance.id)
             number = qs.aggregate(Max('number'))['number__max'] or 0
             self.cleaned_data['number'] = number + 1
         else:
-            if not self.cleaned_data['number']:
+            if self.cleaned_data.get('number', None) is None:
                 self.add_error('number', ValidationError('Number requires from_Date to be autocalculated',
                                                          code='invalid'))
 
