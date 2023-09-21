@@ -7,4 +7,6 @@ class AppConfig(AppConfig):
     def ready(self):
         super().ready()
 
+        import krm3.patching  # noqa
+
         from .api import serializers  # noqa

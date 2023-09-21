@@ -3,15 +3,14 @@ import json
 import os
 import re
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 import cv2
-import django_tables2 as tables
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.dates import DateRangeFilter
+from adminfilters.filters import NumberFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin, messages
@@ -33,6 +32,7 @@ from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
+from krm3.missions.tables import MissionExpenseTable, ReimbursementExpenseTable
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
@@ -58,64 +58,12 @@ def export(modeladmin, request, queryset):
     return response
 
 
-class ExpenseTable(tables.Table):
-    attachment = tables.Column(empty_values=())
-
-    def render_amount_currency(self, record):
-
-        if record.payment_type.personal_expense:
-            value = f'<span style="color: blue;">{record.amount_currency} {record.currency.iso3}</span>'
-        else:
-            value = f'{record.amount_currency} {record.currency.iso3}'
-        return mark_safe(value)
-
-    def render_amount_base(self, value):
-        if value and value < decimal.Decimal(0):
-            return mark_safe('<span style="color: red;">%s</span>' % value)
-        return value
-
-    def render_amount_reimbursement(self, value):
-        if value and value < decimal.Decimal(0):
-            return mark_safe('<span style="color: red;">%s</span>' % value)
-        return value
-
-    def render_day(self, value):
-        return datetime.strftime(value, '%Y-%m-%d')
-
-    def render_id(self, value):
-        url = reverse('admin:missions_expense_change', args=[value])
-        return mark_safe(f'<a href="{url}">{value}</a>')
-
-    def render_image(self, value):
-        file_type = value.name.split('.')[-1]
-        # url = reverse('admin:missions_expense_change', args=[value])
-        return mark_safe(f'<a href="{value.url}">{file_type}</a>')
-
-    def render_attachment(self, record):
-        if record.image:
-            return self.render_image(record.image)
-        else:
-            url = reverse('admin:missions_expense_changelist')
-            return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')
-
-    def render_reimbursement(self, record):
-        if record.reimbursement:
-            url = reverse('admin:missions_reimbursement_change', args=[record.reimbursement.id])
-            return mark_safe(f'<a href="{url}">{record.reimbursement}</a>')
-        else:
-            return '--'
-
-    class Meta:
-        model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'image', 'currency')
-
-
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']
     actions = [export]
-    search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name', 'number']
+    search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name']
 
     inlines = [ExpenseInline]
     list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date',
@@ -126,6 +74,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('city', AutoCompleteFilter),
         ('from_date', DateRangeFilter),
         ('to_date', DateRangeFilter),
+        ('number', NumberFilter),
     )
 
     fieldsets = [
@@ -184,7 +133,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         qs = mission.expenses.all()
         update_rates(qs)
 
-        expenses = ExpenseTable(qs, order_by=['day'])
+        expenses = MissionExpenseTable(qs, order_by=['day'])
 
         summary = {
             'Spese trasferta': decimal.Decimal(0.0),
@@ -305,16 +254,18 @@ def create_reimbursement(modeladmin, request, queryset):
 class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
-    autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type']
+    autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type', 'reimbursement']
     list_display = ('mission', 'day', 'colored_amount_currency',  'colored_amount_base', 'colored_amount_reimbursement',
                     'category', 'document_type', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
-        ('mission', AutoCompleteFilter),
+        ('mission__number', NumberFilter),
+        ('mission__year', NumberFilter),
         ('category', AutoCompleteFilter),
-        'mission__number',
+        ('reimbursement', AutoCompleteFilter),
+        ('reimbursement', admin.EmptyFieldListFilter),
     )
-    search_fields = ['amount_currency']
+    search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
         (
             None,
@@ -527,5 +478,34 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 
 @admin.register(Reimbursement)
-class ReimbursementAdmin(ModelAdmin):
+class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
     inlines = [ExpenseInline]
+    search_fields = ['title', 'issue_date']
+
+    @button(
+        html_attrs=NORMAL,
+    )
+    def overview(self, request, pk):
+        reimbursement = self.get_object(request, pk)
+
+        qs = reimbursement.expenses.all()
+
+        expenses = ReimbursementExpenseTable(qs, order_by=['day'])
+
+        summary = {
+            'Totale rimborso': decimal.Decimal(0.0),
+        }
+        for expense in qs:
+            summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+
+        return TemplateResponse(
+            request,
+            context={
+                'site_header': site.site_header,
+                'reimbursement': reimbursement,
+                'expenses': expenses,
+                'summary': summary,
+                'base': settings.CURRENCY_BASE,
+                'filename': format_html(f'{slugify(str(reimbursement))}.pdf')
+            },
+            template='admin/missions/reimbursement/summary.html')

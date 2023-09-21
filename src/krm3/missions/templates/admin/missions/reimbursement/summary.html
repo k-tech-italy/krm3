@@ -20,12 +20,8 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Mission: <a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
+    <h1>Reimbursement: <a href="{% url "admin:missions_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
 
-
-    <p>Project: <a href="{% url 'admin:core_project_change' mission.project_id %}">{{ mission.project }}</a></p>
-    <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
-    <p>Mission currency: {{ mission.default_currency.iso3 }}</p>
     <p>Summaries</p>
     <ul>
     {% for key, value in summary.items %}
@@ -35,6 +31,6 @@
     {% if expenses %}
         {% render_table expenses %}
     {% else %}
-        <li>No expenses for this mission.</li>
+        <li>No expenses for this reimbursement.</li>
     {% endif %}
 {% endblock %}

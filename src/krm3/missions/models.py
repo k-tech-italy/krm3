@@ -164,7 +164,8 @@ class Expense(models.Model):
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT)
     document_type = models.ForeignKey(DocumentType, on_delete=models.PROTECT)
     payment_type = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT)
-    reimbursement = models.ForeignKey(Reimbursement, on_delete=models.SET_NULL, null=True, blank=True)
+    reimbursement = models.ForeignKey(Reimbursement, related_name='expenses',
+                                      on_delete=models.SET_NULL, null=True, blank=True)
 
     image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
 
