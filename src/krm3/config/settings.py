@@ -50,6 +50,7 @@ INSTALLED_APPS = (
             'django_sysinfo',
             'adminactions',
             'adminfilters',
+            'rangefilter',
             'admin_extra_buttons',
         ] +
         SMART_ADMIN_APPS +  # noqa: F405

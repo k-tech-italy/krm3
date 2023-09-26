@@ -24,6 +24,7 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from mptt.admin import MPTTModelAdmin
+from rangefilter.filters import DateTimeRangeFilter
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
@@ -257,14 +258,16 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type', 'reimbursement']
     list_display = ('mission', 'day', 'colored_amount_currency',  'colored_amount_base', 'colored_amount_reimbursement',
-                    'category', 'document_type', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
+                    'category', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         ('mission__number', NumberFilter),
         ('mission__year', NumberFilter),
         ('category', AutoCompleteFilter),
+        ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
         ('reimbursement', admin.EmptyFieldListFilter),
+        ('day', DateTimeRangeFilter)
     )
     search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
@@ -290,7 +293,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             cell_html = '%s'
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % f'{obj.amount_currency} {obj.currency.iso3}')
-    colored_amount_currency.short_description = 'Amount currency'
+    colored_amount_currency.short_description = 'Amt. currency'
+    colored_amount_currency.admin_order_field = 'amount_currency'
 
     def colored_amount_reimbursement(self, obj):
         if value := obj.amount_reimbursement and obj.amount_reimbursement < decimal.Decimal(0):
@@ -301,7 +305,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % value)
-    colored_amount_reimbursement.short_description = 'Amount reimbursement'
+    colored_amount_reimbursement.short_description = 'Amt. reimbursement'
+    colored_amount_reimbursement.admin_order_field = 'amount_reimbursement'
 
     def colored_amount_base(self, obj):
         if obj.amount_base and obj.amount_base < decimal.Decimal(0):
@@ -310,7 +315,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             cell_html = '%s'
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % obj.amount_base)
-    colored_amount_base.short_description = 'Amount base'
+    colored_amount_base.short_description = 'Amt. base'
+    colored_amount_base.admin_order_field = 'amount_base'
 
     def link_to_reimbursement(self, obj):
         if obj.reimbursement:
