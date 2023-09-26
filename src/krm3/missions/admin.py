@@ -75,6 +75,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('from_date', DateRangeFilter),
         ('to_date', DateRangeFilter),
         ('number', NumberFilter),
+        'year',
     )
 
     fieldsets = [
@@ -292,8 +293,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     colored_amount_currency.short_description = 'Amount currency'
 
     def colored_amount_reimbursement(self, obj):
-        value = obj.amount_base
-        if obj.amount_reimbursement and obj.amount_reimbursement < decimal.Decimal(0):
+        if value := obj.amount_reimbursement and obj.amount_reimbursement < decimal.Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
             value *= decimal.Decimal(-1)
         else:
@@ -304,7 +304,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     colored_amount_reimbursement.short_description = 'Amount reimbursement'
 
     def colored_amount_base(self, obj):
-        if obj.amount_base < decimal.Decimal(0):
+        if obj.amount_base and obj.amount_base < decimal.Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
         else:
             cell_html = '%s'
