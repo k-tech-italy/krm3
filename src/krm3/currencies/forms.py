@@ -8,7 +8,7 @@ from django.forms import FileField, HiddenInput
 from krm3.config.environ import env
 from krm3.currencies.models import Currency
 
-# CURRENCY_CHOICES = [c for c in env('CURRENCY_CHOICES') if c != settings.CURRENCY_BASE]
+# CURRENCY_CHOICES = [c for c in env('CURRENCY_CHOICES') if c != settings.BASE_CURRENCY]
 
 CURRENCY_CHOICES = env('CURRENCY_CHOICES')
 

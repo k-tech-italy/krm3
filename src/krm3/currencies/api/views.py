@@ -29,7 +29,7 @@ class RateAPIViewSet(
 
 
         """
-        to_cur = settings.CURRENCY_BASE
+        to_cur = settings.BASE_CURRENCY
         converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(from_value=amount, from_currency=from_cur,
                                                                           to_currency=to_cur)
         return Response(status=200, data=converted)

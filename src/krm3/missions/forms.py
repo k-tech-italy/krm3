@@ -14,7 +14,7 @@ class MissionAdminForm(ModelForm):
         ret = super().clean()
 
         if not self.cleaned_data.get('default_currency'):
-            self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.CURRENCY_BASE)
+            self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.BASE_CURRENCY)
 
         if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
             self.cleaned_data['year'] = from_date.year

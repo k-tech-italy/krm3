@@ -192,7 +192,7 @@ SYSINFO = {
     'masker': 'krm3.utils.sysinfo.masker',
 }
 
-CURRENCY_BASE = env('CURRENCY_BASE')
+BASE_CURRENCY = env('BASE_CURRENCY')
 CURRENCIES = env('CURRENCY_CHOICES')
 
 if oerai := env('OPEN_EXCHANGE_RATES_APP_ID'):

@@ -70,7 +70,7 @@ DEFAULTS = dict(
 
     # django_money
     CURRENCY_CHOICES=(list, ['GBP', 'EUR', 'USD']),
-    CURRENCY_BASE=(str, 'EUR'),
+    BASE_CURRENCY=(str, 'EUR'),
     OPEN_EXCHANGE_RATES_APP_ID=(str, ''),
     DECIMAL_DIGITS=(int, 2),
     CURRENCY_FORMAT=(str, '{:,.2f}'),

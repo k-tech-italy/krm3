@@ -154,7 +154,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'mission': mission,
                 'expenses': expenses,
                 'summary': summary,
-                'base': settings.CURRENCY_BASE,
+                'base': settings.BASE_CURRENCY,
                 'filename': format_html(f'{slugify(str(mission))}.pdf')
             },
             template='admin/missions/mission/summary.html')
@@ -511,7 +511,7 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
                 'reimbursement': reimbursement,
                 'expenses': expenses,
                 'summary': summary,
-                'base': settings.CURRENCY_BASE,
+                'base': settings.BASE_CURRENCY,
                 'filename': format_html(f'{slugify(str(reimbursement))}.pdf')
             },
             template='admin/missions/reimbursement/summary.html')

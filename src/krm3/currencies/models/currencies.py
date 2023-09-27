@@ -59,19 +59,21 @@ class Rate(models.Model):
         self.ensure_rates(force=force, include=include)
         return {k: v for k, v in self.rates.items() if k in settings.CURRENCIES}
 
-    def convert(self, from_value, from_currency: str, to_currency: str = settings.CURRENCY_BASE, force=False):
+    def convert(self, from_value, from_currency: str, to_currency: str = None, force=False):
         """Converts a value from a specific currency to another.
-        If target currency is not specified it will be using settings.CURRENCY_BASE"""
+        If target currency is not specified it will be using settings.BASE_CURRENCY"""
         if isinstance(from_currency, Currency):
             from_currency = from_currency.iso3
         if isinstance(to_currency, Currency):
             to_currency = to_currency.iso3
+        if to_currency is None:
+            to_currency = settings.BASE_CURRENCY
         self.ensure_rates(force=force, include=[from_currency, to_currency])
         return rounding(to_currency, float(from_value) / self.rates[from_currency] * self.rates[to_currency])
 
     def to_base(self, from_value, from_currency: str, force=False):
         """Converts a value from a specific currency to base currency"""
-        return self.convert(from_value, from_currency, settings.CURRENCY_BASE, force)
+        return self.convert(from_value, from_currency, settings.BASE_CURRENCY, force)
 
     @staticmethod
     def for_date(date: datetime.date, include=None):

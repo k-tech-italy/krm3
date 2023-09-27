@@ -35,7 +35,7 @@ class Mission(models.Model):
     year = models.PositiveIntegerField(blank=True, help_text="Leave blank for defaulting to from_date's year")
 
     default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
-                                         help_text=f'Leave blank for dafault [{settings.CURRENCY_BASE}]')
+                                         help_text=f'Leave blank for dafault [{settings.BASE_CURRENCY}]')
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     city = models.ForeignKey(City, on_delete=models.PROTECT)
@@ -157,7 +157,7 @@ class Expense(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
                                  help_text='Leave blank to inherit from mission.default_currency')
     amount_base = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
-                                      help_text=f'Amount in {settings.CURRENCY_BASE}')
+                                      help_text=f'Amount in {settings.BASE_CURRENCY}')
     amount_reimbursement = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                                help_text='Reimbursed amount')
     detail = models.CharField(max_length=100, null=True, blank=True)
