@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
 
-from krm3.config.environ import env as _env
+from ..environ import env as _env
 
 SECRET_KEY = _env('SECRET_KEY')
 

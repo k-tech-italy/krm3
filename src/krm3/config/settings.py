@@ -82,14 +82,14 @@ INSTALLED_APPS = (
         ]
 )
 
-SITE_ID = 1
-
 try:
     import django_extensions as _  # noqa: F401
-
     INSTALLED_APPS.append('django_extensions')
 except ModuleNotFoundError:
     pass
+
+SITE_ID = 1
+
 
 MIDDLEWARE = [
                  'django.middleware.security.SecurityMiddleware',

@@ -44,11 +44,14 @@ DEFAULTS = dict(
     MEDIA_URL=(str, '/media/'),
     STATIC_ROOT=(str, str(Path(__file__).parent.parent / 'web/static')),
 
-    # # Security
-    SECRET_KEY=(str, '--'),
 
     ADMINS=(parse_emails, ''),
     TEST_USERS=(parse_emails, ''),
+
+    # # Security
+    SECRET_KEY=(str, '--'),
+    FERNET_KEY=(str, Fernet.generate_key().decode('utf-8')),
+    INTERNAL_IPS=(list, ['127.0.0.1', 'localhost']),
     ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
 
     CSRF_COOKIE_SAMESITE=(str, 'strict'),
@@ -59,14 +62,13 @@ DEFAULTS = dict(
     SECURE_PROXY_SSL_HEADER=(list, []),  # Set to "HTTP_X_FORWARDED_PROTO,https" behind SSL terminator
     SECURE_SSL_REDIRECT=(bool, False),
     USE_X_FORWARDED_HOST=(bool, 'false'),
+    USE_HTTPS=(bool, False),
 
     ADMIN_USERNAME=(str, 'admin'),
     ADMIN_FIRSTNAME=(str, 'admin'),
     ADMIN_LASTNAME=(str, 'admin'),
     ADMIN_PASSWORD=(str, 'admin'),
     ADMIN_EMAIL=(str, 'noreply@k-tech.it'),
-
-    INTERNAL_IPS=(list, ['127.0.0.1', 'localhost']),
 
     # django_money
     CURRENCY_CHOICES=(list, ['GBP', 'EUR', 'USD']),
@@ -75,7 +77,7 @@ DEFAULTS = dict(
     DECIMAL_DIGITS=(int, 2),
     CURRENCY_FORMAT=(str, '{:,.2f}'),
 
-    # Django debug toolbar
+    # # Django debug toolbar
     DDT_KEY=(str, get_random_string(length=12)),
     DDT_PANELS=(
         list,
@@ -95,7 +97,6 @@ DEFAULTS = dict(
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, '543837936941-6cvmpg79fc93jfq2fv3e4qvtuib3cq9n.apps.googleusercontent.com'),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
     SOCIAL_AUTH_ALLOWED_REDIRECT_URIS=(list, ['http://localhost:3000/login', 'https://localhost:3000/login']),
-
-    FERNET_KEY=(str, Fernet.generate_key().decode('utf-8')),
+    SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS=(list, ['k-tech.it']),
 
 )

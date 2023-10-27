@@ -451,6 +451,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
 
     @button(
+        html_attrs=NORMAL,
+        visible=lambda btn: bool(btn.original.id) and btn.original.reimbursement_id is not None
+    )
+    def goto_reimbursement(self, request, pk):
+        expense = self.model.objects.get(pk=pk)
+        return HttpResponseRedirect(reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
+
+    @button(
         html_attrs=DANGEROUS,
         visible=lambda btn: bool(btn.original.id and btn.original.image)
     )
@@ -500,9 +508,13 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
 
         summary = {
             'Totale rimborso': decimal.Decimal(0.0),
+        } | {
+            expense.category.get_root(): decimal.Decimal(0.0)
+            for expense in qs
         }
         for expense in qs:
             summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+            summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)
 
         return TemplateResponse(
             request,
