@@ -24,7 +24,7 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from mptt.admin import MPTTModelAdmin
-from rangefilter.filters import DateTimeRangeFilter
+from rangefilter.filters import DateTimeRangeFilter, NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
@@ -263,6 +263,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('mission__resource', AutoCompleteFilter),
         ('mission__number', NumberFilter),
         ('mission__year', NumberFilter),
+        ('amount_currency', NumericRangeFilterBuilder()),
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
