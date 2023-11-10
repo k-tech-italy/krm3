@@ -1,4 +1,4 @@
-FROM python:3-slim-bullseye
+FROM python:3.11-slim-bullseye
 
 ARG BUILD_DATE
 ARG PIPENV_ARGS
@@ -63,7 +63,7 @@ USER root
 
 RUN set -ex \
     ls -al /code \
-    && pip install -U pip==23.1.2 \
+    && pip install -U pip==23.2.1 \
     && pip install -r image-requirements.txt \
     && sha1sum image-requirements.txt > /CHECKSUM
 

@@ -190,12 +190,16 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.action(description='Get the rates for the dates')
-def get_rates(modeladmin, request, queryset):
+def get_rates(modeladmin, request, queryset, silent=False):
     expenses = queryset.filter(amount_base__isnull=True)
     ret = expenses.count()
     qs = expenses.all()
     update_rates(qs)
-    messages.success(request, f'Converted {ret} amounts')
+    msg = f'Converted {ret} amounts'
+    if silent:
+        return msg
+    else:
+        messages.success(request, msg)
 
 
 @admin.action(description='Create reimbursement ')
@@ -208,6 +212,7 @@ def create_reimbursement(modeladmin, request, queryset):
         messages.info(request, 'No expenses needing reimbursement found')
         return
 
+    msg = get_rates(modeladmin, request, queryset, silent=True)
     reimbursement = Reimbursement.objects.create(title=str(qs.first().mission))
     counters = {
         'filled': 0,
@@ -241,14 +246,16 @@ def create_reimbursement(modeladmin, request, queryset):
                     counters['a_noi'] += 1
         expense.save()
 
+    rurl = reverse('admin:missions_reimbursement_change', args=[reimbursement.id])
     messages.success(
         request,
-        f'Out of {qs.count()} selected, we assigned {count}'
-        f' to new reimbursement {reimbursement} ({reimbursement.id}).'
-        f" pers. con imm.={counters['p_i']}, "
-        f" pers. senza imm.={counters['p_noi']}, "
-        f" az. con imm.={counters['a_i']}, "
-        f" az. senza imm.={counters['a_noi']}, "
+        mark_safe(
+            msg + f' Out of {qs.count()} selected, we assigned {count}'
+            f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
+            f" pers. con imm.={counters['p_i']}, "
+            f" pers. senza imm.={counters['p_noi']}, "
+            f" az. con imm.={counters['a_i']}, "
+            f" az. senza imm.={counters['a_noi']}, ")
     )
 
 
