@@ -2263,6 +2263,26 @@ requests = ">=2.0.0"
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
+name = "responses"
+version = "0.24.0"
+description = "A utility library for mocking out the `requests` Python library."
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "responses-0.24.0-py3-none-any.whl", hash = "sha256:060be153c270c06fa4d22c1ef8865fdef43902eb595204deeef736cddb62d353"},
+    {file = "responses-0.24.0.tar.gz", hash = "sha256:3df82f7d4dcd3e5f61498181aadb4381f291da25c7506c47fe8cb68ce29203e7"},
+]
+
+[package.dependencies]
+pyyaml = "*"
+requests = ">=2.30.0,<3.0"
+urllib3 = ">=1.25.10,<3.0"
+
+[package.extras]
+tests = ["coverage (>=6.0.0)", "flake8", "mypy", "pytest (>=7.0.0)", "pytest-asyncio", "pytest-cov", "pytest-httpserver", "tomli", "tomli-w", "types-PyYAML", "types-requests"]
+
+[[package]]
 name = "rpds-py"
 version = "0.10.6"
 description = "Python bindings to Rust's persistent data structures (rpds)"
@@ -2807,4 +2827,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3ccbd835b15fd26704ef7cd21fa369a8d66fc06aba45f6300e41ca5e5a9be1dc"
+content-hash = "61efbe16ef1f308b711663c712beae644a0b9275151277dbf73d7a3c8c4f4376"

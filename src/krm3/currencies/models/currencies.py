@@ -21,6 +21,9 @@ class Currency(models.Model):
     def __str__(self):
         return f'{self.iso3} {self.symbol}'
 
+    def is_base(self):
+        return self.iso3 == settings.BASE_CURRENCY
+
     class Meta:
         verbose_name_plural = 'currencies'
         ordering = ('iso3', )
@@ -47,8 +50,8 @@ class Rate(models.Model):
             client = get_client()
             ret = client.get_historical(
                 self.day.strftime('%Y-%m-%d'),
-                symbols=list(missing))
-            self.rates = ret['rates']
+                symbols=sorted(list(missing)))
+            self.rates |= {k: v for k, v in ret['rates'].items() if k == 'USD' or k in missing}
             self.save()
 
     def get_rates(self, force=False, include=None):
@@ -71,15 +74,15 @@ class Rate(models.Model):
         self.ensure_rates(force=force, include=[from_currency, to_currency])
         return rounding(to_currency, float(from_value) / self.rates[from_currency] * self.rates[to_currency])
 
-    def to_base(self, from_value, from_currency: str, force=False):
-        """Converts a value from a specific currency to base currency"""
-        return self.convert(from_value, from_currency, settings.BASE_CURRENCY, force)
+    # def to_base(self, from_value, from_currency: str, force=False):
+    #     """Converts a value from a specific currency to base currency"""
+    #     return self.convert(from_value, from_currency, settings.BASE_CURRENCY, force)
 
     @staticmethod
-    def for_date(date: datetime.date, include=None):
+    def for_date(date: datetime.date, force=False, include=None):
         """Constructor-like method returning a Rate instance for the specific date."""
         if include is None:
             include = []
         rate, _ = Rate.objects.get_or_create(day=date)
-        rate.ensure_rates(include=include)
+        rate.ensure_rates(force=force, include=include)
         return rate

@@ -25,7 +25,7 @@ class CountryFactory(factory.django.DjangoModelFactory):
 
 
 class CityFactory(factory.django.DjangoModelFactory):
-    name = factory.Faker('city')
+    name = factory.Sequence(lambda n: f'Country {n + 1}')
     country = factory.SubFactory(CountryFactory)
 
     class Meta:
@@ -119,3 +119,20 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'missions.Expense'
+
+
+class RateFactory(factory.django.DjangoModelFactory):
+    day = factory.Faker(
+        'date_between_dates',
+        date_start=date(2020, 1, 1),
+        date_end=date(2022, 12, 31),
+    )
+
+    class Meta:
+        model = 'currencies.Rate'
+
+
+class ReimbursementFactory(factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = 'missions.Reimbursement'

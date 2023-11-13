@@ -4,36 +4,55 @@
 {% block extrahead %}
     {{ block.super }}
     <script>
-    function printWithSpecialFileName(){
-        var tempTitle = document.title;
-        document.title = "{{filename}}";
-        window.print();
-        document.title = tempTitle;
-    }
+        function printWithSpecialFileName() {
+            var tempTitle = document.title;
+            document.title = "{{filename}}";
+            window.print();
+            document.title = tempTitle;
+        }
     </script>
 
 {% endblock %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
-{% include "admin/color_theme_toggle.html" %}
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
+    {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
 {% block content %}
-    <h1>Reimbursement: <a href="{% url "admin:missions_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
+    <h1>Reimbursement: <a
+            href="{% url "admin:missions_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a
+            onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
 
-    <ul>
-        <li>Amount Currency blue: personal expense</li>
-        <li>Amount Base red: negative amount</li>
-        <li>Amount Reimbursement red: negative amount</li>
-    </ul>
+    <table>
+        <tr>
+            <td>
+                <p>Summaries</p>
+                <ul>
+                    {% for key, value in summary.items %}
+                        <li>{{ key }}: {{ value|floatformat:"2g"}} {{ base }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <td>
+                <p>Missions</p>
+                <ul>
+                    {% for mission in missions %}
+                        <li>{{ mission }}: {{ mission.expense_count }} expenses</li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <td>
+                <p>Legend</p>
+                <ul>
+                    <li>Amount Currency blue: personal expense</li>
+                    <li>Amount Base red: negative amount</li>
+                    <li>Amount Reimbursement red: negative amount</li>
+                </ul>
+            </td>
+        </tr>
+    </table>
 
-    <p>Summaries</p>
-    <ul>
-    {% for key, value in summary.items %}
-      <li>{{key}}: {{value|floatformat:"2g"}} {{ base }}</li>
-    {% endfor %}
-    </ul>
     {% if expenses %}
         {% render_table expenses %}
     {% else %}

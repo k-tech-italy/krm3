@@ -2,12 +2,40 @@ import sys
 from pathlib import Path
 
 import pytest
+import responses
+from django.utils.http import urlencode
 
 
 def pytest_configure(config):
     here = Path(__file__).parent
     # root = here.parent.parent
     sys.path.insert(0, str(here / '_extras'))
+
+
+@pytest.fixture(autouse=True)
+def dummy_currencies(settings):
+    settings.CURRENCIES = ['GBP', 'EUR', 'USD']
+    settings.OPEN_EXCHANGE_RATES_APP_ID = 'abc'
+    settings.BASE_CURRENCY = 'EUR'
+
+
+@pytest.fixture()
+def mock_rate_provider(settings, db):
+    def fx(day, requested, retrieved):
+        responses.add(
+            responses.GET,
+            f'https://openexchangerates.org/api/historical/{day:%Y-%m-%d}.json?' +
+            urlencode({'app_id': settings.OPEN_EXCHANGE_RATES_APP_ID, 'symbols': requested}),
+            json={
+                'disclaimer': 'Usage subject to terms: https://openexchangerates.org/terms',
+                'license': 'https://openexchangerates.org/license',
+                'timestamp': 1582588799,
+                'base': 'USD',
+                'rates': retrieved
+            },
+            status=200
+        )
+    return fx
 
 
 @pytest.fixture()

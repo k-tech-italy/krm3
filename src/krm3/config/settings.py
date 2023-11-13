@@ -54,9 +54,7 @@ INSTALLED_APPS = (
             'admin_extra_buttons',
         ] +
         SMART_ADMIN_APPS +  # noqa: F405
-        DDT_APPS +  # noqa: F405
-        [  # noqa: F405 we import it from smartadmin fragment
-
+        DDT_APPS + [  # noqa: F405 we import it from smartadmin fragment
             # Project apps.
             'krm3.config.admin_extras.apps.AdminConfig',
             'krm3.core',

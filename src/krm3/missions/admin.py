@@ -28,6 +28,7 @@ from rangefilter.filters import DateTimeRangeFilter, NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
+from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -45,6 +46,10 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     model = Expense
     extra = 3
     exclude = ['amount_base', 'amount_reimbursement', 'created_ts', 'modified_ts']
+    autocomplete_fields = ['mission', 'category', 'currency', 'document_type', 'payment_type', 'reimbursement']
+
+    def get_queryset(self, request):
+        return Expense.objects.prefetch_related('category').all()
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         if db_field.name == 'currency':
@@ -68,7 +73,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     inlines = [ExpenseInline]
     list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date',
-                    'default_currency', 'city')
+                    'default_currency', 'city', 'expense_num')
     list_filter = (
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
@@ -91,6 +96,13 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             }
         )
     ]
+
+    def get_queryset(self, request):
+        return Mission.objects.prefetch_related('expenses').all()
+
+    def expense_num(self, obj: Reimbursement):
+        return obj.expense_count
+    expense_num.short_description = 'Num expenses'
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         if db_field.name == 'default_currency':
@@ -203,60 +215,54 @@ def get_rates(modeladmin, request, queryset, silent=False):
 
 
 @admin.action(description='Create reimbursement ')
-def create_reimbursement(modeladmin, request, queryset):
-    qs = queryset
-    expenses = queryset.filter(reimbursement__isnull=True)
-    count = expenses.count()
+def create_reimbursement(modeladmin, request, expenses):
 
-    if count == 0:
-        messages.info(request, 'No expenses needing reimbursement found')
-        return
-
-    msg = get_rates(modeladmin, request, queryset, silent=True)
-    reimbursement = Reimbursement.objects.create(title=str(qs.first().mission))
-    counters = {
-        'filled': 0,
-        'p_i': 0,
-        'p_noi': 0,
-        'a_i': 0,
-        'a_noi': 0,
-    }
-    for expense in expenses.all():
-        expense.reimbursement = reimbursement
-
-        if expense.amount_reimbursement is None:
-            counters['filled'] += 1
+    if expenses.filter(reimbursement__isnull=False).exists():
+        raise AlreadyReimbursed('Please select only expenses not already reimbursed.')
+    try:
+        msg = get_rates(modeladmin, request, expenses, silent=True)
+        reimbursement = Reimbursement.objects.create(title=str(expenses.first().mission))
+        counters = {
+            'filled': 0,
+            'p_i': 0,
+            'p_noi': 0,
+            'a_i': 0,
+            'a_noi': 0,
+        }
+        for expense in expenses.all():
+            expense.calculate_reimbursement(force=False, save=False)
 
             # Personale
             if expense.payment_type.personal_expense:
                 # con immagine
                 if expense.image:
-                    expense.amount_reimbursement = expense.amount_base
                     counters['p_i'] += 1
                 else:
-                    expense.amount_reimbursement = 0
                     counters['p_noi'] += 1
             # Aziendale
             else:
                 if expense.image:
-                    expense.amount_reimbursement = 0
                     counters['a_i'] += 1
                 else:
-                    expense.amount_reimbursement = decimal.Decimal(-1) * expense.amount_base
                     counters['a_noi'] += 1
-        expense.save()
 
-    rurl = reverse('admin:missions_reimbursement_change', args=[reimbursement.id])
-    messages.success(
-        request,
-        mark_safe(
-            msg + f' Out of {qs.count()} selected, we assigned {count}'
-            f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
-            f" pers. con imm.={counters['p_i']}, "
-            f" pers. senza imm.={counters['p_noi']}, "
-            f" az. con imm.={counters['a_i']}, "
-            f" az. senza imm.={counters['a_noi']}, ")
-    )
+            counters['filled'] += 1
+            expense.reimbursement = reimbursement
+            expense.save()
+
+        rurl = reverse('admin:missions_reimbursement_change', args=[reimbursement.id])
+        messages.success(
+            request,
+            mark_safe(
+                msg + f' Assigned {expenses.count()}'
+                f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
+                f" pers. con imm.={counters['p_i']}, "
+                f" pers. senza imm.={counters['p_noi']}, "
+                f" az. con imm.={counters['a_i']}, "
+                f" az. senza imm.={counters['a_noi']}")
+        )
+    except Exception as e:
+        messages.error(request, str(e))
 
 
 @admin.register(Expense)
@@ -293,6 +299,9 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         )
     ]
     actions = [get_rates, create_reimbursement]
+
+    def get_queryset(self, request):
+        return Expense.objects.filter_acl(request.user)
 
     def colored_amount_currency(self, obj):
         if obj.payment_type.personal_expense:
@@ -501,8 +510,21 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
+    list_display = ['title', 'issue_date', 'expense_num']
     inlines = [ExpenseInline]
     search_fields = ['title', 'issue_date']
+
+    def get_queryset(self, request):
+        return Reimbursement.objects.prefetch_related('expenses').all()
+
+    def get_object(self, request, object_id, from_field=None):
+        queryset = self.get_queryset(request)
+        # Custom logic to retrieve the object
+        return queryset.get(pk=object_id)
+
+    def expense_num(self, obj: Reimbursement):
+        return obj.expense_count
+    expense_num.short_description = 'Num expenses'
 
     @button(
         html_attrs=NORMAL,
@@ -514,6 +536,8 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
 
         expenses = ReimbursementExpenseTable(qs, order_by=['day'])
 
+        # categories = ExpenseCategory.objects.values_list('id', 'parent_id')
+
         summary = {
             'Totale rimborso': decimal.Decimal(0.0),
         } | {
@@ -524,11 +548,14 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
             summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
             summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)
 
+        missions = set([x.mission for x in qs])
+
         return TemplateResponse(
             request,
             context={
                 'site_header': site.site_header,
                 'reimbursement': reimbursement,
+                'missions': missions,
                 'expenses': expenses,
                 'summary': summary,
                 'base': settings.BASE_CURRENCY,

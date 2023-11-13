@@ -1,0 +1,11 @@
+responses:
+- response:
+    auto_calculate_content_length: false
+    body: "{\n  \"disclaimer\": \"Usage subject to terms: https://openexchangerates.org/terms\"\
+      ,\n  \"license\": \"https://openexchangerates.org/license\",\n  \"timestamp\"\
+      : 1668988798,\n  \"base\": \"USD\",\n  \"rates\": {\n    \"EUR\": 0.967972,\n\
+      \    \"GBP\": 0.841386,\n    \"USD\": 1\n  }\n}"
+    content_type: text/plain
+    method: GET
+    status: 200
+    url: https://openexchangerates.org/api/historical/2022-11-20.json?app_id=abc&symbols=EUR%2CGBP%2CUSD

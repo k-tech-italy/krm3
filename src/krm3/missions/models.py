@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -9,7 +10,8 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 # from krm3.currencies.models import Currency
 from krm3.core.models import City, Project, Resource
-from krm3.currencies.models import Currency
+from krm3.currencies.models import Currency, Rate
+from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
 from krm3.utils.queryset import ActiveManagerMixin
 
@@ -42,6 +44,10 @@ class Mission(models.Model):
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
 
     objects = MissionManager()
+
+    @property
+    def expense_count(self):
+        return self.expenses.count()
 
     def __str__(self):
         title = self.title or self.city.name
@@ -127,6 +133,10 @@ class Reimbursement(models.Model):
     title = models.CharField(max_length=50)
     issue_date = models.DateField(auto_now_add=True)
 
+    @property
+    def expense_count(self):
+        return self.expenses.count()
+
     def __str__(self):
         data = datetime.strftime(self.issue_date, '%Y-%m-%d')
         return f'{self.title} {data}'
@@ -147,7 +157,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
             return self.all()
-        return self.filter(mission__resource__profile__user=user)
+        return self.filter(mission__resource__profile__user_id=user.id)
 
 
 class Expense(models.Model):
@@ -191,6 +201,41 @@ class Expense(models.Model):
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
         expense_id, mission_id, ts = ref.split('|')
         return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
+
+    def calculate_base(self, force_rates=False, force_reset=False, save=True):
+        """(Re)calculate the base amount."""
+        if force_reset or self.amount_base is None:
+            # we need to recalculate it
+            if self.currency.is_base():
+                self.amount_base = self.amount_currency
+            else:
+                self.amount_base = Rate.for_date(
+                    self.day, force=force_rates).convert(self.amount_currency, self.currency)
+            if save:
+                self.save()
+        return self.amount_base
+
+    def calculate_reimbursement(self, force=False, save=True):
+        if self.reimbursement and not force:
+            raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
+        if force or self.amount_reimbursement is None:
+            self.calculate_base(save=False)
+            # Personale
+            if self.payment_type.personal_expense:
+                # con immagine
+                if self.image:
+                    self.amount_reimbursement = self.amount_base
+                else:
+                    self.amount_reimbursement = 0
+            # Aziendale
+            else:
+                if self.image:
+                    self.amount_reimbursement = 0
+                else:
+                    self.amount_reimbursement = Decimal(-1) * Decimal(self.amount_base)
+            if save:
+                self.save()
+        return self.amount_reimbursement
 
     def __str__(self):
         return f'{self.day}, {self.amount_currency} for {self.category}'

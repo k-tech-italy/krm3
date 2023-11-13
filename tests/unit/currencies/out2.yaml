@@ -1,0 +1,11 @@
+responses:
+- response:
+    auto_calculate_content_length: false
+    body: "{\n  \"error\": true,\n  \"status\": 400,\n  \"message\": \"not_available\"\
+      ,\n  \"description\": \"Historical rates for the requested date are not available\
+      \ - please try a different date, or contact support@openexchangerates.org.\"\
+      \n}"
+    content_type: text/plain
+    method: GET
+    status: 400
+    url: https://openexchangerates.org/api/historical/2023-11-20.json?app_id=abc&symbols=EUR%2CGBP%2CUSD
