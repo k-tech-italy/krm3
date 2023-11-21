@@ -6,6 +6,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from natural_keys.models import NaturalKeyModel, NaturalKeyModelManager
 
+from krm3.currencies.models import Currency
+
 # User = get_user_model()
 
 
@@ -86,6 +88,7 @@ class Project(NaturalKeyModel):
 
 class Country(NaturalKeyModel):
     name = models.CharField(max_length=80, unique=True)
+    default_currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return str(self.name)

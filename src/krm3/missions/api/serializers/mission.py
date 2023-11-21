@@ -1,3 +1,4 @@
+from django.db.models import Max
 from rest_framework import serializers
 
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
@@ -45,3 +46,31 @@ class MissionNestedSerializer(serializers.ModelSerializer):
         model = Mission
         fields = '__all__'
         depth = 2
+
+
+class MissionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mission
+        fields = (
+            'title',
+            'number',
+            'from_date',
+            'to_date',
+            'year',
+            'default_currency',
+            'project',
+            'city',
+            'resource',
+        )
+
+    def create(self, validated_data):
+        number = validated_data.get(
+            'number', None
+        )  # TODO from city ID to country default_currencies
+
+        if number is None:
+            last_number = Mission.objects.aggregate(Max('number'))['number__max']
+            new_number = 1 if last_number is None else last_number + 1
+            validated_data['number'] = new_number
+
+        return super().create(validated_data)

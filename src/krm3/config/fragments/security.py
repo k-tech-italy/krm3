@@ -32,3 +32,21 @@ CORS_ORIGIN_WHITELIST.extend([f'{_proto}://{x}:3000' for x in ALLOWED_HOSTS])
 CORS_ALLOW_CREDENTIALS = True
 
 FERNET_KEY = Fernet(_env('FERNET_KEY'))
+
+if _env('DEBUG'):
+    AUTH_PASSWORD_VALIDATORS = []
+else:
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+    ]

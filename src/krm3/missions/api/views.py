@@ -12,13 +12,29 @@ from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer,
                                   ExpenseCreateSerializer, ExpenseImageUploadSerializer,
                                   ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,)
-from .serializers.mission import MissionNestedSerializer
+from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
 
 
 class MissionAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MissionNestedSerializer
     queryset = Mission.objects.all()
+
+    def get_queryset(self):
+        queryset = self.queryset
+        resource_id = self.request.query_params.get('resource_id', None)
+        is_staff = self.request.query_params.get('is_staff', None)
+
+        if is_staff == 'false':
+            queryset = queryset.filter(resource__id=resource_id)
+
+        return queryset
+
+    def get_serializer_class(self):
+        """Change serializer to MissionCreateSerializer for object creation."""
+        if self.request.method in ['POST', 'PATCH']:
+            return MissionCreateSerializer
+        return super().get_serializer_class()
 
 
 class ExpenseAPIViewSet(ModelViewSet):
@@ -28,15 +44,12 @@ class ExpenseAPIViewSet(ModelViewSet):
 
     def get_serializer_class(self):
         """Change serializer to ExpenseCreateSerializer for object creation."""
-        if self.request.method in ['POST']:
+        if self.request.method in ['POST', 'PATCH']:
             return ExpenseCreateSerializer
         return super().get_serializer_class()
 
     # TODO: Should really be an eTag?
-    @action(
-        detail=True,
-        permission_classes=[]
-    )
+    @action(detail=True, permission_classes=[])
     def check_ts(self, request, pk):
         """Check if the record has been modified.
 
@@ -45,10 +58,7 @@ class ExpenseAPIViewSet(ModelViewSet):
         expense: Expense = self.get_object()
         return Response(status=304 if expense.get_updated_millis() == int(ms) else 204)
 
-    @action(
-        detail=True,
-        serializer_class=ExpenseRetrieveSerializer
-    )
+    @action(detail=True, serializer_class=ExpenseRetrieveSerializer)
     def otp(self, request, pk=None):
         return super().retrieve(request, pk=pk)
 
@@ -86,29 +96,27 @@ class ExpenseAPIViewSet(ModelViewSet):
 
 
 class ExpenseCategoryAPIViewSet(
-        mixins.RetrieveModelMixin,
-        mixins.ListModelMixin,
-        GenericViewSet):
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
+
 
 # http_method_names = ['GET']
 
 
 class PaymentCategoryAPIViewSet(
-        mixins.RetrieveModelMixin,
-        mixins.ListModelMixin,
-        GenericViewSet):
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
 class DocumentTypeAPIViewSet(
-        mixins.RetrieveModelMixin,
-        mixins.ListModelMixin,
-        GenericViewSet):
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)

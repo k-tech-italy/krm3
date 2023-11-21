@@ -16,7 +16,7 @@ class ResourceSerializer(metaclass=ModelDefaultSerializerMetaclass):
 class ProfileSerializer(ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ('picture',)
+        fields = '__all__'
 
 
 class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
@@ -25,5 +25,16 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name',
-                  'is_superuser', 'is_staff', 'is_active', 'last_login', 'resource', 'profile')
+        fields = (
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_superuser',
+            'is_staff',
+            'is_active',
+            'last_login',
+            'resource',
+            'profile',
+        )

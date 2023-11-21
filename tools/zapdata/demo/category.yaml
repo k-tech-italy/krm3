@@ -1,0 +1,160 @@
+- model: missions.expensecategory
+  pk: 1
+  fields:
+    title: Viaggi
+    active: true
+    parent: null
+    lft: 1
+    rght: 6
+    tree_id: 2
+    level: 0
+- model: missions.expensecategory
+  pk: 2
+  fields:
+    title: Taxi
+    active: true
+    parent: 1
+    lft: 2
+    rght: 3
+    tree_id: 2
+    level: 1
+- model: missions.expensecategory
+  pk: 3
+  fields:
+    title: Train
+    active: true
+    parent: 1
+    lft: 4
+    rght: 5
+    tree_id: 2
+    level: 1
+- model: missions.expensecategory
+  pk: 4
+  fields:
+    title: Vitto
+    active: true
+    parent: null
+    lft: 1
+    rght: 6
+    tree_id: 3
+    level: 0
+- model: missions.expensecategory
+  pk: 5
+  fields:
+    title: Pranzo
+    active: true
+    parent: 4
+    lft: 4
+    rght: 5
+    tree_id: 3
+    level: 1
+- model: missions.expensecategory
+  pk: 6
+  fields:
+    title: Cena
+    active: true
+    parent: 4
+    lft: 2
+    rght: 3
+    tree_id: 3
+    level: 1
+- model: missions.expensecategory
+  pk: 7
+  fields:
+    title: Varie
+    active: true
+    parent: null
+    lft: 1
+    rght: 8
+    tree_id: 1
+    level: 0
+- model: missions.expensecategory
+  pk: 8
+  fields:
+    title: Fuel
+    active: true
+    parent: 7
+    lft: 2
+    rght: 3
+    tree_id: 1
+    level: 1
+- model: missions.expensecategory
+  pk: 9
+  fields:
+    title: Rappresentanza
+    active: true
+    parent: 7
+    lft: 4
+    rght: 5
+    tree_id: 1
+    level: 1
+- model: missions.expensecategory
+  pk: 10
+  fields:
+    title: Telefonia
+    active: true
+    parent: 7
+    lft: 6
+    rght: 7
+    tree_id: 1
+    level: 1
+- model: missions.paymentcategory
+  pk: 5
+  fields:
+    title: Azienda
+    active: true
+    parent: null
+    lft: 1
+    rght: 6
+    tree_id: 3
+    level: 0
+- model: missions.paymentcategory
+  pk: 6
+  fields:
+    title: Anticipo
+    active: true
+    parent: 5
+    lft: 2
+    rght: 3
+    tree_id: 3
+    level: 1
+- model: missions.paymentcategory
+  pk: 7
+  fields:
+    title: CCA
+    active: true
+    parent: 5
+    lft: 4
+    rght: 5
+    tree_id: 3
+    level: 1
+- model: missions.paymentcategory
+  pk: 8
+  fields:
+    title: Personale
+    active: true
+    parent: null
+    lft: 1
+    rght: 6
+    tree_id: 6
+    level: 0
+- model: missions.paymentcategory
+  pk: 9
+  fields:
+    title: CCP
+    active: true
+    parent: 8
+    lft: 4
+    rght: 5
+    tree_id: 6
+    level: 1
+- model: missions.paymentcategory
+  pk: 10
+  fields:
+    title: Cash
+    active: true
+    parent: 8
+    lft: 2
+    rght: 3
+    tree_id: 6
+    level: 1

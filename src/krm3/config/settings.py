@@ -69,7 +69,7 @@ INSTALLED_APPS = (
             'rest_framework',
             'drf_spectacular',
             'djoser',
-            # 'corsheaders',
+            'corsheaders',
             'mptt',
             'social_django',
             'crispy_forms',
@@ -92,16 +92,18 @@ SITE_ID = 1
 MIDDLEWARE = [
                  'django.middleware.security.SecurityMiddleware',
                  'django.contrib.sessions.middleware.SessionMiddleware',
+                 'corsheaders.middleware.CorsMiddleware',
                  'django.middleware.common.CommonMiddleware',
                  'django.middleware.csrf.CsrfViewMiddleware',
                  'django.contrib.auth.middleware.AuthenticationMiddleware',
                  'django.contrib.messages.middleware.MessageMiddleware',
                  'django.middleware.clickjacking.XFrameOptionsMiddleware',
-                 # 'corsheaders.middleware.CorsMiddleware',
              ] + SOCIAL_MIDDLEWARES + DDT_MIDDLEWARES + [  # noqa: F405
                  'django.contrib.admindocs.middleware.XViewMiddleware',
                  # Third party middlewares.
              ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'krm3.config.urls'
 
@@ -140,23 +142,6 @@ DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django,public'}
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
-if DEBUG:
-    AUTH_PASSWORD_VALIDATORS = []
-else:
-    AUTH_PASSWORD_VALIDATORS = [
-        {
-            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-        },
-    ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
