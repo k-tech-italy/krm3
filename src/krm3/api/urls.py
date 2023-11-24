@@ -1,9 +1,12 @@
+from django.urls import include, path
 from rest_framework.routers import SimpleRouter
-
-from krm3.core.api.urls import urlpatterns as core_urls
-from krm3.currencies.api.urls import urlpatterns as currency_urls
-from krm3.missions.api.urls import urlpatterns as missions_urls
 
 router = SimpleRouter()
 
-urlpatterns = router.urls + missions_urls + core_urls + currency_urls
+urlpatterns = [
+    path('missions/', include(('krm3.missions.api.urls', 'missions'))),
+    path('core/', include(('krm3.core.api.urls', 'core'))),
+    path('currencies/', include(('krm3.currencies.api.urls', 'currencies'))),
+]
+
+urlpatterns += router.urls

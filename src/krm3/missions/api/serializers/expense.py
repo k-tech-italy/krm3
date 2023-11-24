@@ -37,13 +37,24 @@ class PaymentCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
 class DocumentTypeSerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = DocumentType
-        fields = '__all__'
+        fields = ['id', '__str__', 'title', 'active', 'default']
 
 
 class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
     category = ExpenseCategorySerializer()
     document_type = DocumentTypeSerializer()
     payment_type = PaymentCategorySerializer()
+
+    def create(self, validated_data):
+        category = validated_data.pop('category')
+        document_type = validated_data.pop('document_type')
+        payment_type = validated_data.pop('payment_type')
+        validated_data |= {
+            'category_id': category['id'],
+            'documenttype_id': document_type['id'],
+            'paymenttype_id': payment_type['id'],
+        }
+        return super().create(validated_data)
 
     class Meta:
         model = Expense
