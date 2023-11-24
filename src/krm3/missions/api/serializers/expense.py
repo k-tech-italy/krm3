@@ -45,21 +45,32 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
     document_type = DocumentTypeSerializer()
     payment_type = PaymentCategorySerializer()
 
-    def create(self, validated_data):
-        category = validated_data.pop('category')
-        document_type = validated_data.pop('document_type')
-        payment_type = validated_data.pop('payment_type')
-        validated_data |= {
-            'category_id': category['id'],
-            'documenttype_id': document_type['id'],
-            'paymenttype_id': payment_type['id'],
-        }
-        return super().create(validated_data)
-
     class Meta:
         model = Expense
         fields = '__all__'
         read_only_fields = ['amount_base']
+
+
+class ExpenseCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Expense
+        fields = (
+            'mission',
+            'day',
+            'amount_currency',
+            'currency',
+            'amount_base',
+            'amount_reimbursement',
+            'detail',
+            'category',
+            'document_type',
+            'payment_type',
+            'reimbursement',
+            'image',
+            'created_ts',
+            'modified_ts'
+        )
 
 
 class ExpenseExportSerializer(serializers.ModelSerializer):

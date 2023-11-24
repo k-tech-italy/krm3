@@ -1,8 +1,9 @@
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
-from krm3.missions.api.serializers.expense import ExpenseSerializer
-from krm3.missions.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
+from krm3.currencies.models import Currency
+from krm3.missions.api.serializers.expense import ExpenseCreateSerializer
+from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 
 BASE_JSON = {
     'mission': 1,
@@ -34,20 +35,47 @@ BASE_JSON = {
 
 def test_api_create_mission(expense, admin_user):
     assert Expense.objects.count() == 1
-    num_payment_categories = PaymentCategory.objects.count()
-    num_doc_type = DocumentType.objects.count()
-    num_Expense_category = ExpenseCategory.objects.count()
 
-    expense.id = None
-    expense.detail = 'copy'
-    exp = ExpenseSerializer(expense)
+    fks = {
+        'category': ExpenseCategory,
+        'document_type': DocumentType,
+        'payment_type': PaymentCategory,
+        'currency': Currency,
+        'mission': Mission,
+        'reimbursement': Reimbursement
+    }
+
+    counters = {fk: cls.objects.count() for fk, cls in fks.items()}
+
+    expdata = dict(ExpenseCreateSerializer(expense).data)
+    expdata['detail'] = 'copy'
+
+    serializer = ExpenseCreateSerializer(data=expdata)
+    validated = serializer.is_valid(raise_exception=False)
+    assert validated is True
+
     client = APIClient()
     client.force_authenticate(user=admin_user)
     url = reverse('missions:expense-list')
-    response = client.post(url, data=exp.data, format='json')
+    response = client.post(url, data=expdata, format='json')
 
-    assert response
+    assert response.status_code == 201
+    response_data = dict(response.data)
+    response_data.pop('created_ts')
+    response_data.pop('modified_ts')
+    assert response_data == {
+        'mission': expense.mission_id,
+        'day': expense.day.strftime('%Y-%m-%d'),
+        'amount_currency': str(expense.amount_currency),
+        'currency': expense.currency_id,
+        'amount_base': None,
+        'amount_reimbursement': None,
+        'detail': 'copy',
+        'category': expense.category_id,
+        'document_type': expense.document_type_id,
+        'payment_type': expense.payment_type_id,
+        'reimbursement': expdata['reimbursement'],
+        'image': expdata['image']
+    }
     assert Expense.objects.count() == 2
-    assert num_payment_categories == PaymentCategory.objects.count()
-    assert num_doc_type == DocumentType.objects.count()
-    assert num_Expense_category == ExpenseCategory.objects.count()
+    assert counters == {fk: cls.objects.count() for fk, cls in fks.items()}

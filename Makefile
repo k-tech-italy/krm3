@@ -191,7 +191,7 @@ schema-serve: schema  # Runs a docker container for serving the schema
 
 outdated:  ## Generates .outdated.txt and .tree.txt files
 	@poetry show --tree > .tree.txt
-	@poetry show -o > .outdated.txt
+	@poetry show -o -T -l > .outdated.txt
 
 requirements-run:  # generates the .requirements-run.txt
 	@poetry export --only=main -o .requirements-run.txt

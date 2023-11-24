@@ -9,7 +9,8 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from ..session import EXPENSE_UPLOAD_IMAGES
-from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseImageUploadSerializer,
+from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer,
+                                  ExpenseCreateSerializer, ExpenseImageUploadSerializer,
                                   ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,)
 from .serializers.mission import MissionNestedSerializer
 
@@ -24,6 +25,12 @@ class ExpenseAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
+
+    def get_serializer_class(self):
+        """Change serializer to ExpenseCreateSerializer for object creation."""
+        if self.request.method in ['POST']:
+            return ExpenseCreateSerializer
+        return super().get_serializer_class()
 
     # TODO: Should really be an eTag?
     @action(
