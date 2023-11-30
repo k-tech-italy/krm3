@@ -55,6 +55,45 @@
 
     {% if expenses %}
         {% render_table expenses %}
+
+        <table>
+            <tr>
+                <td>
+                    <table>
+                        <tr>
+                            <th>Category</th>
+                            <th>{{ base }}</th>
+                            <th>Reimbursed</th>
+                        </tr>
+                        {% for category, sums in categories.items %}
+                            <tr>
+                                <td>{{ category }}</td>
+                                <td>{{ sums.0 }}</td>
+                                <td>{{ sums.1 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+                <td>
+                    <table>
+                        <tr>
+                            <th>Paid by</th>
+                            <th>{{ base }}</th>
+                            <th>Reimbursed</th>
+                        </tr>
+                        {% for payment, sums in payments.items %}
+                            <tr>
+                                <td>{{ payment }}</td>
+                                <td>{{ sums.0 }}</td>
+                                <td>{{ sums.1 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+
     {% else %}
         <li>No expenses for this reimbursement.</li>
     {% endif %}

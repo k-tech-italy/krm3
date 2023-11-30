@@ -2,6 +2,7 @@ import decimal
 from datetime import datetime
 
 import django_tables2 as tables
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -50,6 +51,11 @@ class ExpenseTableMixin:
 
 
 class MissionExpenseTable(ExpenseTableMixin, tables.Table):
+    def render_image(self, record):
+        if record.image:
+            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')
+        else:
+            return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')
 
     def render_reimbursement(self, record):
         if record.reimbursement:
@@ -60,10 +66,15 @@ class MissionExpenseTable(ExpenseTableMixin, tables.Table):
 
     class Meta:
         model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'image', 'currency')
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
 
 
 class ReimbursementExpenseTable(ExpenseTableMixin, tables.Table):
+    def render_image(self, record):
+        if record.image:
+            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')
+        else:
+            return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')
 
     def render_mission(self, record):
         if record.mission:
@@ -74,4 +85,4 @@ class ReimbursementExpenseTable(ExpenseTableMixin, tables.Table):
 
     class Meta:
         model = Expense
-        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'image', 'currency')
+        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')

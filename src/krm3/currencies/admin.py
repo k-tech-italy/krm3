@@ -22,7 +22,7 @@ class RateAdmin(ExtraButtonsMixin, ModelAdmin):
     list_display = ['day', 'rates']
     list_filter = ('day',)
 
-    @button(html_attrs={'style': 'background-color:#DC6C6C;color:black'})
+    @button(html_attrs={'style': NORMAL})
     def refresh(self, request, pk):
         def _action(req):
             rate = Rate.objects.get(pk=pk)

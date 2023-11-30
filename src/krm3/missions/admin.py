@@ -46,7 +46,7 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
     model = Expense
     extra = 3
     exclude = ['amount_base', 'amount_reimbursement', 'created_ts', 'modified_ts']
-    autocomplete_fields = ['mission', 'category', 'currency', 'document_type', 'payment_type', 'reimbursement']
+    autocomplete_fields = ['mission', 'category', 'currency', 'payment_type', 'reimbursement']
 
     def get_queryset(self, request):
         return Expense.objects.prefetch_related('category').all()
@@ -111,6 +111,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     @button(
         html_attrs=NORMAL,
+        visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original))
+    )
+    def view_linked_reimbursements(self, request, pk):
+        rids = map(str, Reimbursement.objects.filter(expenses__mission_id=pk).values_list('id', flat=True))
+        return redirect(reverse('admin:missions_reimbursement_changelist') + f"?id__in={','.join(rids)}")
+
+    @button(
+        html_attrs=NORMAL,
     )
     def add_expense(self, request, pk):
         mission = Mission.objects.get(pk=pk)
@@ -153,6 +161,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             'Spese trasferta': decimal.Decimal(0.0),
             'Anticipato': decimal.Decimal(0.0),
             'Da rimborsare': decimal.Decimal(0.0)}
+
         for expense in qs:
             summary['Spese trasferta'] += expense.amount_base or decimal.Decimal(0.0)
             summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False\
@@ -269,7 +278,7 @@ def create_reimbursement(modeladmin, request, expenses):
 class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
-    autocomplete_fields = ['mission', 'missions__title', 'currency', 'category', 'payment_type', 'reimbursement']
+    autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
     list_display = ('mission', 'day', 'colored_amount_currency',  'colored_amount_base', 'colored_amount_reimbursement',
                     'category', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
     list_filter = (
@@ -509,10 +518,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 
 @admin.register(Reimbursement)
-class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
-    list_display = ['title', 'issue_date', 'expense_num']
+class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
+    list_display = ['title', 'issue_date', 'expense_num', 'resource']
     inlines = [ExpenseInline]
     search_fields = ['title', 'issue_date']
+    list_filter = (
+        ('resource', AutoCompleteFilter),
+        ('issue_date', DateRangeFilter),
+    )
 
     def get_queryset(self, request):
         return Reimbursement.objects.prefetch_related('expenses').all()
@@ -528,6 +541,14 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
 
     @button(
         html_attrs=NORMAL,
+        visible=lambda btn: bool(Mission.objects.filter(expenses__reimbursement_id=btn.original.id))
+    )
+    def view_linked_missions(self, request, pk):
+        rids = map(str, Mission.objects.filter(expenses__reimbursement_id=pk).values_list('id', flat=True))
+        return redirect(reverse('admin:missions_mission_changelist') + f"?id__in={','.join(rids)}")
+
+    @button(
+        html_attrs=NORMAL,
     )
     def overview(self, request, pk):
         reimbursement = self.get_object(request, pk)
@@ -537,6 +558,9 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
         expenses = ReimbursementExpenseTable(qs, order_by=['day'])
 
         # categories = ExpenseCategory.objects.values_list('id', 'parent_id')
+
+        bypayment = {pc: [decimal.Decimal(0)] * 2 for pc in PaymentCategory.objects.root_nodes()}
+        byexpcategory = {pc: [decimal.Decimal(0)] * 2 for pc in ExpenseCategory.objects.root_nodes()}
 
         summary = {
             'Totale rimborso': decimal.Decimal(0.0),
@@ -548,6 +572,12 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
             summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
             summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)
 
+            bypayment[expense.payment_type.get_root()][0] += expense.amount_base
+            bypayment[expense.payment_type.get_root()][1] += expense.amount_reimbursement
+
+            byexpcategory[expense.category.get_root()][0] += expense.amount_base
+            byexpcategory[expense.category.get_root()][1] += expense.amount_reimbursement
+
         missions = set([x.mission for x in qs])
 
         return TemplateResponse(
@@ -558,6 +588,8 @@ class ReimbursementAdmin(ExtraButtonsMixin, ModelAdmin):
                 'missions': missions,
                 'expenses': expenses,
                 'summary': summary,
+                'payments': bypayment,
+                'categories': byexpcategory,
                 'base': settings.BASE_CURRENCY,
                 'filename': format_html(f'{slugify(str(reimbursement))}.pdf')
             },
