@@ -230,7 +230,8 @@ def create_reimbursement(modeladmin, request, expenses):
         raise AlreadyReimbursed('Please select only expenses not already reimbursed.')
     try:
         msg = get_rates(modeladmin, request, expenses, silent=True)
-        reimbursement = Reimbursement.objects.create(title=str(expenses.first().mission))
+        reimbursement = Reimbursement.objects.create(title=str(expenses.first().mission),
+                                                     resource=expenses.first().mission.resource)
         counters = {
             'filled': 0,
             'p_i': 0,
