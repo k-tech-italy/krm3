@@ -30,7 +30,7 @@
                 <p>Summaries</p>
                 <ul>
                     {% for key, value in summary.items %}
-                        <li>{{ key }}: {{ value|floatformat:"2g"}} {{ base }}</li>
+                        <li>{{ key }}: {{ value|floatformat:"2g" }} {{ base }}</li>
                     {% endfor %}
                 </ul>
             </td>
@@ -45,7 +45,6 @@
             <td>
                 <p>Legend</p>
                 <ul>
-                    <li>Amount Currency blue: personal expense</li>
                     <li>Amount Base red: negative amount</li>
                     <li>Amount Reimbursement red: negative amount</li>
                 </ul>
@@ -66,7 +65,7 @@
                             <th>Reimbursed</th>
                         </tr>
                         {% for category, sums in categories.items %}
-                            <tr>
+                            <tr style="text-align: right">
                                 <td>{{ category }}</td>
                                 <td>{{ sums.0 }}</td>
                                 <td>{{ sums.1 }}</td>
@@ -82,7 +81,7 @@
                             <th>Reimbursed</th>
                         </tr>
                         {% for payment, sums in payments.items %}
-                            <tr>
+                            <tr style="text-align: right">
                                 <td>{{ payment }}</td>
                                 <td>{{ sums.0 }}</td>
                                 <td>{{ sums.1 }}</td>

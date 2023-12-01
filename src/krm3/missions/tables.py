@@ -2,6 +2,7 @@ import decimal
 from datetime import datetime
 
 import django_tables2 as tables
+from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -14,16 +15,15 @@ class ExpenseTableMixin:
 
     def render_amount_currency(self, record):
 
-        if record.payment_type.personal_expense:
-            value = f'<span style="color: blue;">{record.amount_currency} {record.currency.iso3}</span>'
-        else:
-            value = f'{record.amount_currency} {record.currency.iso3}'
+        value = f'{record.amount_currency} {record.currency.iso3}'
         return mark_safe(value)
 
     def render_amount_base(self, value):
-        if value and value < decimal.Decimal(0):
-            return mark_safe('<span style="color: red;">%s</span>' % value)
-        return value
+        if value:
+            if value < decimal.Decimal(0):
+                value = f'{value} {settings.BASE_CURRENCY}'
+                return mark_safe('<span style="color: red;">%s</span>' % value)
+        return f'{value} {settings.BASE_CURRENCY}'
 
     def render_amount_reimbursement(self, value):
         if value and value < decimal.Decimal(0):

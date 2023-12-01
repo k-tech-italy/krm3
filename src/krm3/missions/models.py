@@ -37,7 +37,7 @@ class Mission(models.Model):
     year = models.PositiveIntegerField(blank=True, help_text="Leave blank for defaulting to from_date's year")
 
     default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
-                                         help_text=f'Leave blank for dafault [{settings.BASE_CURRENCY}]')
+                                         help_text=f'Leave blank for default [{settings.BASE_CURRENCY}]')
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     city = models.ForeignKey(City, on_delete=models.PROTECT)
@@ -71,6 +71,9 @@ class Mission(models.Model):
         permissions = [
             ('view_any_mission', "Can view(only) everybody's missions"),
             ('manage_any_mission', "Can view, and manage everybody's missions"),
+        ]
+        constraints = [
+            UniqueConstraint(fields=('number', 'year'), name='unique_mission_number_year')
         ]
 
 
