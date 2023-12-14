@@ -65,7 +65,7 @@ class Mission(models.Model):
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_mission', 'missions.view_any_mission'}):
             return True
-        return bool(self.resource.profile and self.resource.profile.user == user)
+        return bool(self.resource and self.resource.user == user)
 
     class Meta:
         permissions = [
@@ -195,7 +195,7 @@ class Expense(models.Model):
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
             return True
-        return bool(self.mission.resource.profile and self.mission.resource.profile.user == user)
+        return bool(self.mission.resource and self.mission.resource.user == user)
 
     def get_otp(self):
         return settings.FERNET_KEY.encrypt(

@@ -37,6 +37,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser):
     objects = UserManager()
+    picture = models.TextField(null=True, blank=True)
+    social_profile = models.TextField(null=True, blank=True)
 
     @staticmethod
     def get_natural_key_fields():
@@ -126,6 +128,7 @@ class UserProfile(NaturalKeyModel):
 class Resource(models.Model):
     """This is the record of a Person."""
     profile = models.OneToOneField(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=50, help_text='Overwritten by profile.first_name if profile is provided',
                                   blank=True)
     last_name = models.CharField(max_length=50, help_text='Overwritten by profile.last_name if profile is provided',
@@ -141,6 +144,6 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
 
 
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
+# @receiver(post_save, sender=User)
+# def save_user_profile(sender, instance, **kwargs):
+#     instance.profile.save()

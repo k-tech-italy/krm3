@@ -133,6 +133,7 @@ class RateFactory(factory.django.DjangoModelFactory):
 
 
 class ReimbursementFactory(factory.django.DjangoModelFactory):
+    resource = factory.SubFactory(ResourceFactory)
 
     class Meta:
         model = 'missions.Reimbursement'
