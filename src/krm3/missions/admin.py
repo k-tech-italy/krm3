@@ -190,7 +190,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 
 @admin.register(DocumentType)
-class DocumentTypeAdmin(ModelAdmin):
+class DocumentTypeAdmin(ExtraButtonsMixin, AdminFiltersMixin):
     list_display = ['title', 'active', 'default']
     search_fields = ['title']
 
