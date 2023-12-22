@@ -47,7 +47,7 @@
             function loadPage() {
                 // Make an AJAX request to the page URL
                 $.ajax({
-                    url: '{% url "expense-check-ts" expense.pk %}?ms={{ expense.get_updated_millis }}',
+                    url: '{% url "missions:expense-check-ts" expense.pk %}?ms={{ expense.get_updated_millis }}',
                     method: 'GET',
                     success: function (data, textStatus, xhr) {
                         // Update the content div with the loaded page content
