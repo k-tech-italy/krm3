@@ -481,9 +481,9 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         # FIXME: This cannot work as the mobile uploading the client is not authenticated so no same session!
         request.session[EXPENSE_UPLOAD_IMAGES] = []
 
-        ref = rest_reverse(
-            'missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
-
+        ref = rest_reverse('missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
+        if settings.FORCE_DEBUG_SSL:
+            ref = 'https' + ref[ref.index(':'):]  # force https also locally for ngrok
         return TemplateResponse(
             request,
             context={

@@ -56,6 +56,9 @@ DEFAULTS = dict(
 
     CSRF_COOKIE_SAMESITE=(str, 'strict'),
     SESSION_COOKIE_SAMESITE=(str, 'lax'),
+    CSRF_TRUSTED_ORIGINS=(list, ''),
+    FORCE_DEBUG_SSL=(bool, False),
+
 
     SECURE_HSTS_SECONDS=(int, 0),
     SECURE_HSTS_PRELOAD=(bool, False),
