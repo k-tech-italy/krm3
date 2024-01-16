@@ -9,8 +9,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from ..session import EXPENSE_UPLOAD_IMAGES
-from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer,
-                                  ExpenseCreateSerializer, ExpenseImageUploadSerializer,
+from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseCreateSerializer,
                                   ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,)
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
 
@@ -65,8 +64,7 @@ class ExpenseAPIViewSet(ModelViewSet):
     @action(
         methods=['patch'],
         detail=True,
-        permission_classes=[],
-        serializer_class=ExpenseImageUploadSerializer
+        permission_classes=[]
         # parser_classes=(MultiPartParser, FormParser)
     )
     def upload_image(self, request, *args, **kwargs):
@@ -75,8 +73,7 @@ class ExpenseAPIViewSet(ModelViewSet):
 
         serializer = self.get_serializer(expense, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        if expense.check_otp(serializer.validated_data['otp']):
-            self.perform_update(serializer)
+        if expense.check_otp(request.POST.get('otp')):
             expense.image = serializer.validated_data['image']
             expense.save()
 

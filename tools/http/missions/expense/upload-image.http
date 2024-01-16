@@ -18,13 +18,13 @@ Content-Type: application/json
     client.test("Request executed successfully", function () {
         client.assert(response.status === 200, "Response status is not 200");
     });
-    client.global.set("auth_token", response.body.json.access);
-    client.global.set("refresh_token", response.body.json.refresh);
+    client.global.set("auth_token", response.body.access);
+    client.global.set("refresh_token", response.body.refresh);
 %}
 
 ###
 
-GET {{server_url}}/api/v1/expense/1/otp/
+GET {{server_url}}/api/v1/missions/expense/{{expense_id_to_upload}}/otp/
 Content-Type: application/json
 Accept: application/json
 Authorization: JWT {{auth_token}}
@@ -38,7 +38,7 @@ Authorization: JWT {{auth_token}}
 
 ###
 
-PATCH {{server_url}}/api/v1/expense/1/upload_image/
+PATCH {{server_url}}/api/v1/expense/{{expense_id_to_upload}}/upload_image/
 #Content-Type: application/json
 Accept: application/json
 Authorization: JWT {{auth_token}}

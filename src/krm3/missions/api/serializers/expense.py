@@ -13,14 +13,6 @@ def token_validator(value):
         raise serializers.ValidationError('OTP is invalid')
 
 
-class ExpenseImageUploadSerializer(serializers.ModelSerializer):
-    otp = serializers.CharField(max_length=200, validators=[token_validator])
-
-    class Meta:
-        model = Expense
-        fields = ['otp', 'image']
-
-
 class ExpenseCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
 
     class Meta:

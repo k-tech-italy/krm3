@@ -13,9 +13,10 @@ Content-Type: application/json
   "password": "{{admin_password}}"
 }
 
-
-
 > {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
     client.global.set("auth_token", response.body.access);
     client.global.set("refresh_token", response.body.refresh);
 %}
