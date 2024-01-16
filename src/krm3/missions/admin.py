@@ -28,7 +28,6 @@ from rangefilter.filters import DateTimeRangeFilter, NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
-from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -72,9 +71,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name']
 
     inlines = [ExpenseInline]
-    list_display = ('number', 'year', 'resource', 'project', 'title', 'from_date', 'to_date',
+    list_display = ('number', 'year', 'status', 'resource', 'project', 'title', 'from_date', 'to_date',
                     'default_currency', 'city', 'expense_num')
     list_filter = (
+        'status',
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
@@ -89,7 +89,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             None,
             {
                 'fields': [
-                    ('number', 'year', 'title'),
+                    ('number', 'year', 'status', 'title'),
                     ('from_date', 'to_date', 'default_currency'),
                     ('project', 'city', 'resource'),
                 ]
@@ -108,6 +108,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         if db_field.name == 'default_currency':
             kwargs['queryset'] = Currency.objects.actives()
         return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @button(
+        html_attrs=NORMAL,
+        visible=lambda btn: btn.original.status == Mission.MissionStatus.DRAFT
+    )
+    def submit(self, request, pk):
+        mission = Mission.objects.get(pk=pk)
+        mission.save()
 
     @button(
         html_attrs=NORMAL,
@@ -212,6 +220,11 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 @admin.action(description='Get the rates for the dates')
 def get_rates(modeladmin, request, queryset, silent=False):
+
+    if queryset.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
+        messages.warning(request, 'Please select only expenses of non DRAFT missions.')
+        return
+
     expenses = queryset.filter(amount_base__isnull=True)
     ret = expenses.count()
     qs = expenses.all()
@@ -226,8 +239,14 @@ def get_rates(modeladmin, request, queryset, silent=False):
 @admin.action(description='Create reimbursement ')
 def create_reimbursement(modeladmin, request, expenses):
 
+    if expenses.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
+        messages.warning(request, 'Please select only expenses of non DRAFT missions.')
+        return
+
     if expenses.filter(reimbursement__isnull=False).exists():
-        raise AlreadyReimbursed('Please select only expenses not already reimbursed.')
+        messages.warning(request, 'Please select only expenses not already reimbursed.')
+        return
+
     try:
         msg = get_rates(modeladmin, request, expenses, silent=True)
         reimbursement = Reimbursement.objects.create(title=str(expenses.first().mission),
@@ -309,6 +328,11 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         )
     ]
     actions = [get_rates, create_reimbursement]
+
+    def lookup_allowed(self, lookup, value, request=None):
+        if lookup == 'mission_id':
+            return True
+        return super().lookup_allowed(lookup, value, request)
 
     def get_queryset(self, request):
         return Expense.objects.filter_acl(request.user)
@@ -457,7 +481,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         # FIXME: This cannot work as the mobile uploading the client is not authenticated so no same session!
         request.session[EXPENSE_UPLOAD_IMAGES] = []
 
-        ref = rest_reverse('missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
+        ref = rest_reverse(
+            'missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
 
         return TemplateResponse(
             request,
@@ -483,7 +508,8 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     def goto_reimbursement(self, request, pk):
         expense = self.model.objects.get(pk=pk)
-        return HttpResponseRedirect(reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
+        return HttpResponseRedirect(
+            reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
 
     @button(
         html_attrs=DANGEROUS,

@@ -30,13 +30,24 @@ class MissionManager(ActiveManagerMixin, models.Manager):
 
 
 class Mission(models.Model):
-    number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
+    class MissionStatus(models.TextChoices):
+        DRAFT = 'DRAFT', _('Draft')
+        SUBMITTED = 'SUBMITTED', _('Submitted')
+
+    status = models.CharField(
+        max_length=9,
+        choices=MissionStatus,
+        default=MissionStatus.DRAFT,
+    )
+
+    number = models.PositiveIntegerField(blank=True, null=True, help_text='Set automatically if left blank')
     title = models.CharField(max_length=50, null=True, blank=True)
     from_date = models.DateField()
     to_date = models.DateField()
-    year = models.PositiveIntegerField(blank=True, help_text="Leave blank for defaulting to from_date's year")
+    year = models.PositiveIntegerField(
+        blank=True, null=True, help_text="Leave blank for defaulting to from_date's year")
 
-    default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True,
+    default_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, blank=True, null=True,
                                          help_text=f'Leave blank for default [{settings.BASE_CURRENCY}]')
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
