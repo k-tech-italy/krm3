@@ -65,6 +65,7 @@ def export(modeladmin, request, queryset):
 
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    save_on_top = True
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']
     actions = [export]

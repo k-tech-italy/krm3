@@ -12,13 +12,14 @@ class MissionAdminForm(ModelForm):
 
     def clean(self):
         ret = super().clean()
+
+        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
+            self.cleaned_data['year'] = from_date.year
+
+        if not self.cleaned_data.get('default_currency'):
+            self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.BASE_CURRENCY)
+
         if self.cleaned_data.get('status') != Mission.MissionStatus.DRAFT:
-
-            if not self.cleaned_data.get('default_currency'):
-                self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.BASE_CURRENCY)
-
-            if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
-                self.cleaned_data['year'] = from_date.year
 
             if (from_date := self.cleaned_data.get('from_date')) and self.cleaned_data.get('number', None) is None:
                 qs = Mission.objects.filter(from_date__year=self.cleaned_data['year'])
@@ -30,6 +31,10 @@ class MissionAdminForm(ModelForm):
                 if self.cleaned_data.get('number', None) is None:
                     self.add_error('number', ValidationError('Number requires from_Date to be autocalculated',
                                                              code='invalid'))
+            if not self.cleaned_data.get('title') and (city := self.cleaned_data.get('city')):
+                city = city.name.lower()
+                self.cleaned_data['title'] = f"{self.cleaned_data['number']}-{self.cleaned_data['year']}_{city}"
+
         return ret
 
     class Meta:

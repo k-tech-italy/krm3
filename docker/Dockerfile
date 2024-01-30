@@ -17,7 +17,7 @@ ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
 
 WORKDIR /code
 
-RUN sha1sum -c /CHECKSUM
+#RUN sha1sum -c /CHECKSUM
 
 ADD . /code
 

@@ -64,8 +64,7 @@ USER root
 RUN set -ex \
     ls -al /code \
     && pip install -U pip==23.2.1 \
-    && pip install -r image-requirements.txt \
-    && sha1sum image-requirements.txt > /CHECKSUM
+    && pip install -r image-requirements.txt
 
 
 RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
@@ -74,6 +73,9 @@ RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
     && rm -rf /var/lib/apt/lists/* \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/
+
+COPY dist/django-adminfilters-2.3.1.tar.gz /code/django-adminfilters-2.3.1.tar.gz
+RUN ls -al /code && pip install -U /code/django-adminfilters-2.3.1.tar.gz
 
 COPY docker/etc/mime.types /etc/mime.types
 
