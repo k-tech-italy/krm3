@@ -7,7 +7,12 @@
     function printWithSpecialFileName(){
         var tempTitle = document.title;
         document.title = "{{filename}}";
-        window.print();
+        try {
+          // Print for Safari browser
+          document.execCommand('print', false, null)
+        } catch {
+          window.print()
+        }
         document.title = tempTitle;
     }
     </script>
