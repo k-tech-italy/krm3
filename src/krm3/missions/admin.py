@@ -17,7 +17,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import site
 from django.http.response import FileResponse, HttpResponseRedirect
-from django.shortcuts import redirect, reverse
+from django.shortcuts import redirect, render, reverse
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from django.utils.http import urlencode
@@ -56,19 +56,12 @@ class ExpenseInline(admin.TabularInline):  # noqa: D101
         return super(ExpenseInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-@admin.action(description='Export selected missions')
-def export(modeladmin, request, queryset):
-    pathname = MissionExporter(queryset).export()
-    response = FileResponse(open(pathname, 'rb'))
-    return response
-
-
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     save_on_top = True
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']
-    actions = [export]
+    actions = ['export', 'reimburse']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name']
 
     inlines = [ExpenseInline]
@@ -98,11 +91,29 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         )
     ]
 
+    @admin.action(description='Reimburse selected missions')
+    def reimburse(self, request, queryset):
+        missions = {m: [] for m in queryset.all()}
+        for k, v in missions.items():
+            k: Mission
+            v.extend(list(k.expenses.filter(reimbursement=None)))
+        return render(
+            request,
+            'admin/missions/mission/to_reimburse.html',
+            context={'missions': missions})
+
+    @admin.action(description='Export selected missions')
+    def export(self, request, queryset):
+        pathname = MissionExporter(queryset).export()
+        response = FileResponse(open(pathname, 'rb'))
+        return response
+
     def get_queryset(self, request):
         return Mission.objects.prefetch_related('expenses').all()
 
     def expense_num(self, obj: Reimbursement):
         return obj.expense_count
+
     expense_num.short_description = 'Num expenses'
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -173,7 +184,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         for expense in qs:
             summary['Spese trasferta'] += expense.amount_base or decimal.Decimal(0.0)
-            summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False\
+            summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False \
                 else decimal.Decimal(0.0)
             summary['Da rimborsare'] += expense.amount_reimbursement or decimal.Decimal(0.0)
 
@@ -221,7 +232,6 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 @admin.action(description='Get the rates for the dates')
 def get_rates(modeladmin, request, queryset, silent=False):
-
     if queryset.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
         messages.warning(request, 'Please select only expenses of non DRAFT missions.')
         return
@@ -239,7 +249,6 @@ def get_rates(modeladmin, request, queryset, silent=False):
 
 @admin.action(description='Create reimbursement ')
 def create_reimbursement(modeladmin, request, expenses):
-
     if expenses.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
         messages.warning(request, 'Please select only expenses of non DRAFT missions.')
         return
@@ -285,11 +294,11 @@ def create_reimbursement(modeladmin, request, expenses):
             request,
             mark_safe(
                 msg + f' Assigned {expenses.count()}'
-                f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
-                f" pers. con imm.={counters['p_i']}, "
-                f" pers. senza imm.={counters['p_noi']}, "
-                f" az. con imm.={counters['a_i']}, "
-                f" az. senza imm.={counters['a_noi']}")
+                      f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
+                      f" pers. con imm.={counters['p_i']}, "
+                      f" pers. senza imm.={counters['p_noi']}, "
+                      f" az. con imm.={counters['a_i']}, "
+                      f" az. senza imm.={counters['a_noi']}")
         )
     except Exception as e:
         messages.error(request, str(e))
@@ -300,7 +309,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
-    list_display = ('mission', 'day', 'colored_amount_currency',  'colored_amount_base', 'colored_amount_reimbursement',
+    list_display = ('mission', 'day', 'colored_amount_currency', 'colored_amount_base', 'colored_amount_reimbursement',
                     'category', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
@@ -345,6 +354,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             cell_html = '%s'
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % f'{obj.amount_currency} {obj.currency.iso3}')
+
     colored_amount_currency.short_description = 'Amt. currency'
     colored_amount_currency.admin_order_field = 'amount_currency'
 
@@ -357,6 +367,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % value)
+
     colored_amount_reimbursement.short_description = 'Amt. reimbursement'
     colored_amount_reimbursement.admin_order_field = 'amount_reimbursement'
 
@@ -367,6 +378,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             cell_html = '%s'
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % obj.amount_base)
+
     colored_amount_base.short_description = 'Amt. base'
     colored_amount_base.admin_order_field = 'amount_base'
 
@@ -376,7 +388,9 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             return format_html('<a href="{}">{}</a>', link, obj.reimbursement)
         else:
             return '--'
+
     link_to_reimbursement.short_description = 'Reimbursement'
+
     # link_to_reimbursement.allow_tags = True
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -565,6 +579,7 @@ class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
 
     def expense_num(self, obj: Reimbursement):
         return obj.expense_count
+
     expense_num.short_description = 'Num expenses'
 
     @button(
@@ -591,11 +606,11 @@ class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
         byexpcategory = {pc: [decimal.Decimal(0)] * 2 for pc in ExpenseCategory.objects.root_nodes()}
 
         summary = {
-            'Totale rimborso': decimal.Decimal(0.0),
-        } | {
-            expense.category.get_root(): decimal.Decimal(0.0)
-            for expense in qs
-        }
+                      'Totale rimborso': decimal.Decimal(0.0),
+                  } | {
+                      expense.category.get_root(): decimal.Decimal(0.0)
+                      for expense in qs
+                  }
         for expense in qs:
             summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
             summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)

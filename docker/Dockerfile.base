@@ -74,8 +74,8 @@ RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
     && rm -fr /root/.cache/ \
     && rm -fr /usr/include/
 
-COPY dist/django-adminfilters-2.3.1.tar.gz /code/django-adminfilters-2.3.1.tar.gz
-RUN ls -al /code && pip install -U /code/django-adminfilters-2.3.1.tar.gz
+#COPY dist/django-adminfilters-2.3.1.tar.gz /code/django-adminfilters-2.3.1.tar.gz
+#RUN ls -al /code && pip install -U /code/django-adminfilters-2.3.1.tar.gz
 
 COPY docker/etc/mime.types /etc/mime.types
 

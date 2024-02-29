@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+
+{% block branding %}
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
+    {% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+{% block content %}
+    <p>Are you sure you want to create a reimbursement for the following expenses?</p>
+    <ul>
+        {% for mission, expenses in missions.items %}
+            <li>{{ mission }}
+                {% if expenses %}
+                    <ul>
+                        {% for expense in expenses %}
+                            <li>{{ expense }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    : No expenses to reimburse
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    <form action="{% url 'missions:reimburse-mission' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form }}
+        <input type=submit>
+    </form>
+    <br>
+    <a href="{% url 'admin:missions_mission_changelist' %}">Back to missions</a>
+{% endblock %}
