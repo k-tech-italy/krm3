@@ -1,14 +1,14 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Max
-from django.forms import FileField, Form, ModelForm
+from django import forms
 
 from krm3.currencies.models import Currency
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import Expense, Mission
 
 
-class MissionAdminForm(ModelForm):
+class MissionAdminForm(forms.ModelForm):
 
     def clean(self):
         ret = super().clean()
@@ -42,7 +42,7 @@ class MissionAdminForm(ModelForm):
         fields = '__all__'
 
 
-class ExpenseAdminForm(ModelForm):
+class ExpenseAdminForm(forms.ModelForm):
 
     def clean(self):
         ret = super().clean()
@@ -57,13 +57,18 @@ class ExpenseAdminForm(ModelForm):
         fields = '__all__'
 
 
-class MissionsImportForm(Form):
+class MissionsImportForm(forms.Form):
     """Accepts .zip missions dump to import."""
 
-    file = FileField(help_text='Load the missions zip file')
+    file = forms.FileField(help_text='Load the missions zip file')
 
     def is_valid(self):
         ret = super().is_valid()
         if ret:
             MissionImporter(self.cleaned_data['file']).validate()
         return ret
+
+
+class MissionsReimbursementForm(forms.Form):
+    """Form for reimbursement of multiple missions."""
+    missions = forms.CharField(label='Missions', widget=forms.HiddenInput())
