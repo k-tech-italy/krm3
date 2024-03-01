@@ -29,7 +29,7 @@ def mocked_messages(monkeypatch):
 def test_create_reimbursement(expenses, counters, mocked_messages, db, monkeypatch):
     monkeypatch.setattr('krm3.missions.admin.get_rates', Mock(return_value='Mocked get_rates'))
 
-    from krm3.missions.admin import create_reimbursement
+    from krm3.missions.actions import create_reimbursement
     from krm3.missions.models import Expense, Reimbursement
 
     assert Expense.objects.count() == 0

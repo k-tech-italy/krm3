@@ -1,23 +1,25 @@
 import logging
 
-from django.contrib.auth.decorators import permission_required
-from django.views.generic import FormView
-# from django.shortcuts import render
-# from django.urls import reverse
-# from django.views.generic import RedirectView
+from django.shortcuts import redirect
 from django.views.generic.base import View
+
+from krm3.missions.actions import create_reimbursement
+from krm3.missions.models import Expense
 
 logger = logging.getLogger(__name__)
 
 
-@permission_required("missions.add_reimbursement")
-class ReimburseMissionsView(FormView):
+class ReimburseMissionsView(View):
     http_method_names = ['post']
-    template_name = ''
-    form_class = 'missions.forms.MissionsReimbursementForm'
-
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        return self.render_to_response(context=1,)
+        to_reimburse = request.session['to-reimburse']
+        back = request.session['back']
+        del request.session['to-reimburse']
+        del request.session['back']
+
+        for r, expense_ids in to_reimburse.items():
+            expenses = Expense.objects.filter(id__in=expense_ids)
+            create_reimbursement(None, request, expenses)
+
+        return redirect(back)
