@@ -11,6 +11,7 @@ dist
 !.secrets.baseline
 !.coveragerc
 !.nvmrc
+!.dockerignore
 
 *.private.env.json
 

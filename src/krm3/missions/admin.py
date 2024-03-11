@@ -92,18 +92,22 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         )
     ]
 
-    @admin.action(description='Reimburse selected missions')
-    def reimburse(self, request, queryset):
+    def _reimburse(self, queryset):
         to_reimburse = {}
         resources = {}
-        for mission in queryset.all():
-            if mission.status == Mission.MissionStatus.SUBMITTED:
-                mission: Mission
-                expenses = mission.expenses.filter(reimbursement=None)
-                if expenses.count():
-                    resources.setdefault(mission.resource, {})[mission] = MissionExpenseTable(
-                        expenses, order_by=['day'])
-                    to_reimburse.setdefault(mission.resource.id, []).extend([e.id for e in expenses.all()])
+
+        for mission in queryset.filter(status=Mission.MissionStatus.SUBMITTED):  # only submitted
+            mission: Mission
+            expenses = mission.expenses.filter(reimbursement__isnull=True)  # only not already reimbursed
+            if expenses.count():
+                resources.setdefault(mission.resource, {})[mission] = MissionExpenseTable(
+                    expenses, order_by=['day'])
+                to_reimburse.setdefault(mission.resource.id, []).extend([e.id for e in expenses])
+        return to_reimburse, resources
+
+    @admin.action(description='Reimburse selected missions')
+    def reimburse(self, request, queryset):
+        to_reimburse, resources = self._reimburse(queryset)
 
         request.session['to-reimburse'] = to_reimburse
         request.session['back'] = request.META['PATH_INFO']

@@ -56,7 +56,7 @@ def test_api_create_mission(expense, admin_user):
 
     client = APIClient()
     client.force_authenticate(user=admin_user)
-    url = reverse('missions:expense-list')
+    url = reverse('missions-api:expense-list')
     response = client.post(url, data=expdata, format='json')
 
     assert response.status_code == 201

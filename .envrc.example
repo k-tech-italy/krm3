@@ -1,6 +1,12 @@
 dotenv
 
-layout python
+if [ -e ".python-version" ]; then
+  VER=`head -n 1 .python-version`
+  PYENV_PREFIX=$(pyenv prefix ${VER}) || exit 1
+  layout python $PYENV_PREFIX/bin/python
+else
+  layout python
+fi
 
 nvmrc=~/.nvm/nvm.sh
 if [ -e $nvmrc ]; then

@@ -3,9 +3,9 @@ from factory.fuzzy import FuzzyChoice
 
 
 @pytest.fixture()
-def euro_currency(db):
-    from factories import CurrencyFactory
-    return CurrencyFactory(iso3='EUR', title='Euro', symbol='€')
+def euro_currency():
+    from krm3.currencies.models import Currency
+    Currency.objects.get(iso3='EUR')
 
 
 @pytest.fixture()

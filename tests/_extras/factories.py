@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 from factory.fuzzy import FuzzyDecimal
 
 from krm3.core.models import User
+from krm3.currencies import models
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -22,6 +23,7 @@ class CountryFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Country'
+        django_get_or_create = ('name', )
 
 
 class CityFactory(factory.django.DjangoModelFactory):
@@ -40,6 +42,7 @@ class CurrencyFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'currencies.Currency'
+        django_get_or_create = ('iso3',)
 
 
 class ResourceFactory(factory.django.DjangoModelFactory):
@@ -48,6 +51,7 @@ class ResourceFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Resource'
+        django_get_or_create = ('first_name', 'last_name')
 
 
 class ClientFactory(factory.django.DjangoModelFactory):
@@ -55,6 +59,7 @@ class ClientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Client'
+        django_get_or_create = ('name', )
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
@@ -63,6 +68,7 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Project'
+        django_get_or_create = ('name', 'client')
 
 
 class MissionFactory(factory.django.DjangoModelFactory):
@@ -78,8 +84,9 @@ class MissionFactory(factory.django.DjangoModelFactory):
     # country = factory.SubFactory(CountryFactory)
     city = factory.SubFactory(CityFactory)
     resource = factory.SubFactory(ResourceFactory)
-    default_currency = factory.SubFactory(CurrencyFactory)
+    default_currency = factory.Iterator(models.Currency.objects.all())
     year = factory.LazyAttribute(lambda obj: obj.from_date.year)
+    status = 'SUBMITTED'
 
     class Meta:
         model = 'missions.Mission'

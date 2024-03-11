@@ -1,5 +1,6 @@
 import datetime
 
+from constance import config
 from django.conf import settings
 from django.db import models
 
@@ -41,10 +42,10 @@ class Rate(models.Model):
         if include is None:
             include = []
 
-        missing = (set(settings.CURRENCIES) | set(include)) - set(self.rates.keys())
+        missing = (set(config.CURRENCIES.split(',')) | set(include)) - set(self.rates.keys())
 
         if force:
-            missing = set(settings.CURRENCIES) | set(include) | set(self.rates.keys())
+            missing = set(config.CURRENCIES.split(',')) | set(include) | set(self.rates.keys())
         if missing:
             from krm3.currencies.client import get_client
             client = get_client()
@@ -60,7 +61,7 @@ class Rate(models.Model):
             include = []
 
         self.ensure_rates(force=force, include=include)
-        return {k: v for k, v in self.rates.items() if k in settings.CURRENCIES}
+        return {k: v for k, v in self.rates.items() if k in config.CURRENCIES.split(',')}
 
     def convert(self, from_value, from_currency: str, to_currency: str = None, force=False):
         """Converts a value from a specific currency to another.

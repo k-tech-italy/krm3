@@ -1,3 +1,5 @@
+from adminfilters.autocomplete import AutoCompleteFilter
+from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
@@ -42,13 +44,16 @@ class CountryAdmin(ModelAdmin):
 
 
 @admin.register(City)
-class CityAdmin(ModelAdmin):
+class CityAdmin(AdminFiltersMixin, ModelAdmin):
     search_fields = ['name', 'country__name']
+    list_filter = [
+        ('country__name', AutoCompleteFilter)
+    ]
 
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
-    list_display = ('first_name', 'last_name')
+    list_display = ('first_name', 'last_name', 'user')
     search_fields = ['first_name', 'last_name']
     form = ResourceAdminForm
 

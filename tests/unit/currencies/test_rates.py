@@ -136,7 +136,8 @@ def test_rate_convert(from_value, from_currency, to_currency, expected):
     ]
 )
 def test_rate_get_rates(ensured, force, include, expected, monkeypatch):
-    monkeypatch.setattr('krm3.currencies.models.Rate.ensure_rates', mock := Mock(return_value=ensured))
+    monkeypatch.setattr('krm3.currencies.models.currencies.Rate.ensure_rates',
+                        mock := Mock(return_value=ensured))
     from krm3.currencies.models import Rate
     rate = Rate(date(2022, 5, 7), {'EUR': 0.2, 'GBP': 2, 'USD': 1})
     if force:

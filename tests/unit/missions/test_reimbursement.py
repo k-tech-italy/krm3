@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import responses
 from django.core.files import File
-from factories import ExpenseFactory, PaymentCategoryFactory
+from factories import ExpenseFactory, MissionFactory, PaymentCategoryFactory
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def mocked_messages(monkeypatch):
     ]
 )
 def test_create_reimbursement(expenses, counters, mocked_messages, db, monkeypatch):
-    monkeypatch.setattr('krm3.missions.admin.get_rates', Mock(return_value='Mocked get_rates'))
+    monkeypatch.setattr('krm3.missions.actions.get_rates', Mock(return_value='Mocked get_rates'))
 
     from krm3.missions.actions import create_reimbursement
     from krm3.missions.models import Expense, Reimbursement
@@ -43,8 +43,9 @@ def test_create_reimbursement(expenses, counters, mocked_messages, db, monkeypat
             image = None
 
         payment_type = PaymentCategoryFactory(personal_expense=expense_type == 'P')
+        mission = MissionFactory(status='SUBMITTED')
         expense_list.append(ExpenseFactory(amount_base=amt_base, image=image, payment_type=payment_type,
-                                           reimbursement=None))
+                                           reimbursement=None, mission=mission))
 
     create_reimbursement(modeladmin=None, request=None, expenses=Expense.objects.all())
 

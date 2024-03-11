@@ -121,7 +121,6 @@ TEMPLATES = [
                                       'django.contrib.auth.context_processors.auth',
                                       'django.contrib.messages.context_processors.messages',
                                   ] + SOCIAL_TEMPLATE_PROCESSORS + [  # noqa: F405
-                                      'django.template.context_processors.request'
                                   ],
         },
     },
@@ -175,8 +174,8 @@ SYSINFO = {
     'masker': 'krm3.utils.sysinfo.masker',
 }
 
+# the default currency for the organisation
 BASE_CURRENCY = env('BASE_CURRENCY')
-CURRENCIES = env('CURRENCY_CHOICES')
 
 if oerai := env('OPEN_EXCHANGE_RATES_APP_ID'):
     OPEN_EXCHANGE_RATES_APP_ID = oerai

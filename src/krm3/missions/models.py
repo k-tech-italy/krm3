@@ -1,3 +1,4 @@
+import itertools
 from datetime import datetime
 from decimal import Decimal
 
@@ -33,6 +34,7 @@ class Mission(models.Model):
     class MissionStatus(models.TextChoices):
         DRAFT = 'DRAFT', _('Draft')
         SUBMITTED = 'SUBMITTED', _('Submitted')
+        CANCELLED = 'CANCELLED', _('Cancelled')
 
     status = models.CharField(
         max_length=9,
@@ -56,6 +58,20 @@ class Mission(models.Model):
 
     objects = MissionManager()
 
+    @staticmethod
+    def calculate_number(instance_id: int, year: int) -> int:
+        qs = Mission.objects.filter(
+            number__isnull=False, from_date__year=year,
+            status__in=[Mission.MissionStatus.SUBMITTED, Mission.MissionStatus.CANCELLED]
+        )
+        if instance_id:
+            qs = qs.exclude(pk=instance_id)
+        nums = [0] + sorted(list(qs.values_list('number', flat=True)))
+        ret = list(
+            itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums))
+        )[-1]
+        return ret[1] + 1
+
     @property
     def expense_count(self):
         return self.expenses.count()
@@ -65,11 +81,17 @@ class Mission(models.Model):
         return f'{self.resource}, {title}, {self.number}'
 
     def clean(self):
+        if (self.number and self.status == Mission.MissionStatus.DRAFT) or \
+                (self.number is None and self.status != Mission.MissionStatus.DRAFT):
+            raise ValidationError(
+                _('If a mission is in DRAFT then number must empty, otherwise it is mandatory'),
+                code='number'
+            )
         if self.to_date is not None and self.from_date is not None and self.to_date < self.from_date:
             raise ValidationError(_('to_date must be > from_date'))
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        self.clean()
+        self.full_clean()
         super().save(force_insert, force_update, using, update_fields)
 
     def is_accessible(self, user) -> bool:

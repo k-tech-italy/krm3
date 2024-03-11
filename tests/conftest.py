@@ -12,11 +12,25 @@ def pytest_configure(config):
     sys.path.insert(0, str(here / '_extras'))
 
 
+@pytest.fixture()
+def krm3app(django_app_factory):
+    yield django_app_factory(csrf_checks=False)
+
+
 @pytest.fixture(autouse=True)
 def dummy_currencies(settings):
     settings.CURRENCIES = ['GBP', 'EUR', 'USD']
     settings.OPEN_EXCHANGE_RATES_APP_ID = 'abc'
     settings.BASE_CURRENCY = 'EUR'
+
+
+@pytest.fixture(autouse=True)
+def currencies(db):
+    from krm3.currencies.models import Currency
+    Currency.objects.create(iso3='GBP', title='GBP', symbol='£', fractional_unit='cents', base=100, active=True)
+    Currency.objects.create(iso3='EUR', title='EUR', symbol='€', fractional_unit='cents', base=100, active=True)
+    Currency.objects.create(iso3='USD', title='USD', symbol='$', fractional_unit='cents', base=100, active=True)
+    Currency.objects.create(iso3='CHF', title='CHF', symbol='CHF', fractional_unit='cents', base=100, active=True)
 
 
 @pytest.fixture()

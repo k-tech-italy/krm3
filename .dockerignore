@@ -1,0 +1,9 @@
+./.*
+./~*
+dist
+!dist/image-requirements.txt
+./docs
+./tests
+./tools
+
+!tools/zapdata/demo
