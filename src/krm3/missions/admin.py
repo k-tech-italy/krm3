@@ -141,7 +141,13 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     def submit(self, request, pk):
         mission = Mission.objects.get(pk=pk)
-        mission.save()
+        if mission.status == Mission.MissionStatus.DRAFT:
+            mission.status = Mission.MissionStatus.SUBMITTED
+            mission.save()
+        else:
+            messages.warning(
+                request,
+                f'Cannot change status {mission.status} to {Mission.MissionStatus.SUBMITTED}')
 
     @button(
         html_attrs=NORMAL,
