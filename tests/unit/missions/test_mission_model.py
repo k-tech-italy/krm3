@@ -77,3 +77,35 @@ def test_missions_validation(from_date, to_date, expectation):
     with expectation:
         mission.clean()
         assert True
+
+
+def test_calculate_number():
+    from factories import MissionFactory
+
+    from krm3.missions.models import Mission
+
+    assert Mission.calculate_number(None, 2023) == 1
+
+    mission = MissionFactory(
+        number=2, status=Mission.MissionStatus.SUBMITTED,
+        from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+    )
+
+    assert Mission.calculate_number(None, 2023) == 1
+    assert Mission.calculate_number(mission.id, 2023) == 1
+
+    mission2 = MissionFactory(
+        number=1, status=Mission.MissionStatus.SUBMITTED,
+        from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+    )
+
+    assert Mission.calculate_number(None, 2023) == 3
+    assert Mission.calculate_number(mission.id, 2023) == mission.number
+    assert Mission.calculate_number(mission2.id, 2023) == mission2.number
+
+    assert Mission.calculate_number(None, 2024) == 1
+    mission.year = 2024
+    mission.number = 1
+    mission.save()
+
+    assert Mission.calculate_number(None, 2024) == 2

@@ -59,9 +59,9 @@ class Mission(models.Model):
     objects = MissionManager()
 
     @staticmethod
-    def calculate_number(instance_id: int, year: int) -> int:
+    def calculate_number(instance_id: int | None, year: int) -> int:
         qs = Mission.objects.filter(
-            number__isnull=False, from_date__year=year,
+            number__isnull=False, year=year,
             status__in=[Mission.MissionStatus.SUBMITTED, Mission.MissionStatus.CANCELLED]
         )
         if instance_id:
