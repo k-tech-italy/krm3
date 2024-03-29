@@ -4,7 +4,6 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.template.response import TemplateResponse
 
-import krm3.missions.actions
 from krm3.currencies.forms import RatesImportForm
 from krm3.currencies.impexp import RateImporter
 from krm3.currencies.models import Currency, Rate
@@ -23,11 +22,10 @@ class RateAdmin(ExtraButtonsMixin, ModelAdmin):
     list_display = ['day', 'rates']
     list_filter = ('day',)
 
-    @button(html_attrs={'style': NORMAL})
+    @button(html_attrs=NORMAL)
     def refresh(self, request, pk):
         def _action(req):
-            Rate.objects.get(pk=pk)
-            krm3.missions.actions.get_rates(force=True)
+            Rate.objects.get(pk=pk).ensure_rates(force=True)
 
         return confirm_action(self, request, _action, 'Confirm refresh rates from online service',
                               'Successfully refreshed', )

@@ -32,7 +32,7 @@ class Currency(models.Model):
 
 class Rate(models.Model):
     day = models.DateField(primary_key=True)
-    rates = models.JSONField(default=dict)
+    rates = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return f'{self.day:%Y-%m-%d}'
