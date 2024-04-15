@@ -143,6 +143,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         mission = Mission.objects.get(pk=pk)
         if mission.status == Mission.MissionStatus.DRAFT:
             mission.status = Mission.MissionStatus.SUBMITTED
+            if mission.number is None:
+                mission.number = Mission.calculate_number(mission.id, mission.year)
             mission.save()
         else:
             messages.warning(
@@ -200,13 +202,16 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         summary = {
             'Spese trasferta': decimal.Decimal(0.0),
             'Anticipato': decimal.Decimal(0.0),
-            'Da rimborsare': decimal.Decimal(0.0)}
+            'Da rimborsare': decimal.Decimal(0.0),
+            'Rimborsate': decimal.Decimal(0.0)
+        }
 
         for expense in qs:
             summary['Spese trasferta'] += expense.amount_base or decimal.Decimal(0.0)
             summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False \
                 else decimal.Decimal(0.0)
-            summary['Da rimborsare'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+            summary['Rimborsate'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+        summary['Da rimborsare'] = summary['Spese trasferta'] - summary['Anticipato'] - summary['Rimborsate']
 
         return TemplateResponse(
             request,
