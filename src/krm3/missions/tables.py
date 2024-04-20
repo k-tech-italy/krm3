@@ -51,6 +51,14 @@ class ExpenseTableMixin:
 
 
 class MissionExpenseTable(ExpenseTableMixin, tables.Table):
+    id = tables.Column(footer='Totals')
+    amount_base = tables.Column(
+        footer=lambda table: sum(x.amount_base for x in table.data)
+    )
+    amount_reimbursement = tables.Column(
+        footer=lambda table: sum(x.amount_reimbursement for x in table.data)
+    )
+
     def render_image(self, record):
         if record.image:
             return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')

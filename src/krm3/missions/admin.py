@@ -196,8 +196,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         qs = mission.expenses.all()
         update_rates(qs)
+        sorting = request.GET.get('sort')
 
-        expenses = MissionExpenseTable(qs, order_by=['day'])
+        expenses = MissionExpenseTable(qs, order_by=[sorting] if sorting else ['day'])
 
         summary = {
             'Spese trasferta': decimal.Decimal(0.0),
