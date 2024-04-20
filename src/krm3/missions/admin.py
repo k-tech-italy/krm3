@@ -514,12 +514,13 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
-    list_display = ['title', 'issue_date', 'expense_num', 'resource']
+    list_display = ['title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     inlines = [ExpenseInline]
     search_fields = ['title', 'issue_date']
     list_filter = (
         ('resource', AutoCompleteFilter),
         ('issue_date', DateRangeFilter),
+        ('paid_date', admin.EmptyFieldListFilter),
     )
 
     def get_queryset(self, request):

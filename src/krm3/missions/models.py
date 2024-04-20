@@ -169,6 +169,7 @@ class Reimbursement(models.Model):
     title = models.CharField(max_length=50)
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
+    paid_date = models.DateField(blank=True, null=True)
 
     @property
     def expense_count(self):
