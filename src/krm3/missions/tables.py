@@ -53,10 +53,10 @@ class ExpenseTableMixin:
 class MissionExpenseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
     amount_base = tables.Column(
-        footer=lambda table: sum(x.amount_base for x in table.data)
+        footer=lambda table: sum(x.amount_base or 0.0 for x in table.data)
     )
     amount_reimbursement = tables.Column(
-        footer=lambda table: sum(x.amount_reimbursement for x in table.data)
+        footer=lambda table: sum(x.amount_reimbursement or 0.0 for x in table.data)
     )
 
     def render_image(self, record):
