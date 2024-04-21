@@ -261,12 +261,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
-    list_display = ('mission', 'day', 'colored_amount_currency', 'colored_amount_base', 'colored_amount_reimbursement',
-                    'category', 'payment_type', 'document_type', 'link_to_reimbursement', 'image')
+    list_display = ('mission_st', 'day', 'colored_amount_currency', 'colored_amount_base',
+                    'colored_amount_reimbursement', 'category', 'payment_type', 'document_type',
+                    'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
         ('mission__number', NumberFilter),
         ('mission__year', NumberFilter),
+        'mission__status',
         ('amount_currency', NumericRangeFilterBuilder()),
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
@@ -299,6 +301,16 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def get_queryset(self, request):
         return Expense.objects.filter_acl(request.user)
 
+    @admin.display(description='Mission', ordering='mission')
+    def mission_st(self, expense: Expense):
+        txt = '%s'
+        if expense.mission.status == Mission.MissionStatus.DRAFT:
+            txt = '<span style="color: grey;">%s</span>'
+        elif expense.mission.status == Mission.MissionStatus.CANCELLED:
+            txt = '<span style="color: grey;text-decoration: line-through">%s</span>'
+        return format_html(txt % expense.mission)
+
+    @admin.display(description='Amt. currency', ordering='amount_currency')
     def colored_amount_currency(self, obj):
         if obj.payment_type.personal_expense:
             cell_html = '<span style="color: blue;">%s</span>'
@@ -307,9 +319,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % f'{obj.amount_currency} {obj.currency.iso3}')
 
-    colored_amount_currency.short_description = 'Amt. currency'
-    colored_amount_currency.admin_order_field = 'amount_currency'
-
+    @admin.display(description='Amt. reimbursement', ordering='amount_reimbursement')
     def colored_amount_reimbursement(self, obj):
         if value := obj.amount_reimbursement and obj.amount_reimbursement < decimal.Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
@@ -319,9 +329,6 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % value)
-
-    colored_amount_reimbursement.short_description = 'Amt. reimbursement'
-    colored_amount_reimbursement.admin_order_field = 'amount_reimbursement'
 
     def colored_amount_base(self, obj):
         if obj.amount_base and obj.amount_base < decimal.Decimal(0):
