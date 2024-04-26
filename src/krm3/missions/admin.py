@@ -73,7 +73,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
-        ('from_date', DateRangeFilter),
+        ('from_date', DateTimeRangeFilter),
         ('to_date', DateRangeFilter),
         ('number', NumberFilter),
         'year',
