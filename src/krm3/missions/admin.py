@@ -266,14 +266,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     'link_to_reimbursement', 'image')
     list_filter = (
         ('mission__resource', AutoCompleteFilter),
+        ('reimbursement', admin.EmptyFieldListFilter),
+        'mission__status',
         ('mission__number', NumberFilter),
         ('mission__year', NumberFilter),
-        'mission__status',
         ('amount_currency', NumericRangeFilterBuilder()),
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
-        ('reimbursement', admin.EmptyFieldListFilter),
         ('day', DateTimeRangeFilter)
     )
     search_fields = ['amount_currency', 'mission__number']
