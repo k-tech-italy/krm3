@@ -302,11 +302,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return super().lookup_allowed(lookup, value, request)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if not request.user.is_superuser and not request.user.get_all_permissions().intersection(
-                {'missions.manage_any_expense', 'missions.view_any_expense'}):
-            qs = qs.filter(mission__resource__user_id=request.user.id)
-        return qs
+        return super().get_queryset(request).prefetch_related('mission')
 
     @admin.display(description='Mission', ordering='mission')
     def mission_st(self, expense: Expense):
@@ -371,9 +367,19 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     def get_changeform_initial_data(self, request):
         ret = super().get_changeform_initial_data(request)
-        pk = ret.pop('mission_id', None)
-        if pk:
-            ret['mission'] = Mission.objects.filter_acl(request.user).get(pk=pk)
+        like = ret.pop('like', None)
+        if like:
+            source = Expense.objects.get(pk=like)
+            ret['mission'] = source.mission
+            ret['category'] = source.category
+            ret['payment_type'] = source.payment_type
+            ret['document_type'] = source.document_type
+            ret['day'] = source.day
+            ret['currency'] = source.currency
+        else:
+            pk = ret.pop('mission_id', None)
+            if pk:
+                ret['mission'] = Mission.objects.filter_acl(request.user).get(pk=pk)
         return ret
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -475,6 +481,13 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'debug': True
             },
             template='admin/missions/expense/expense_qr.html')
+
+    @button(
+        html_attrs=NORMAL,
+        visible=lambda btn: bool(btn.original.id)
+    )
+    def clone(self, request, pk):
+        return HttpResponseRedirect(reverse('admin:missions_expense_add') + f'?like={pk}')
 
     @button(
         html_attrs=NORMAL,
