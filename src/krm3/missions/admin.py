@@ -123,7 +123,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return response
 
     def get_queryset(self, request):
-        return Mission.objects.prefetch_related('expenses').all()
+        return super().get_queryset(request).prefetch_related('expenses')
 
     def expense_num(self, obj: Reimbursement):
         return obj.expense_count
@@ -167,7 +167,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         from_date = mission.from_date.strftime('%Y-%m-%d')
         return redirect(reverse('admin:missions_expense_add') + f'?mission_id={pk}&day={from_date}')
 
-    @button(html_attrs=NORMAL)
+    @button(
+        html_attrs=NORMAL,
+        visible=lambda button: button.request.user.has_perm('missions.manage_any_mission'),
+    )
     def import_missions(self, request):  # noqa: D102
         if request.method == 'POST':
             form = MissionsImportForm(request.POST, request.FILES)
@@ -299,7 +302,11 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return super().lookup_allowed(lookup, value, request)
 
     def get_queryset(self, request):
-        return Expense.objects.filter_acl(request.user)
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser and not request.user.get_all_permissions().intersection(
+                {'missions.manage_any_expense', 'missions.view_any_expense'}):
+            qs = qs.filter(mission__resource__user_id=request.user.id)
+        return qs
 
     @admin.display(description='Mission', ordering='mission')
     def mission_st(self, expense: Expense):

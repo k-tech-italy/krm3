@@ -27,7 +27,7 @@ class MissionManager(ActiveManagerMixin, models.Manager):
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_mission', 'missions.view_any_mission'}):
             return self.all()
-        return self.filter(resource__profile__user=user)
+        return self.filter(resource__user=user)
 
 
 class Mission(models.Model):
@@ -195,7 +195,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
         if user.is_superuser or user.get_all_permissions().intersection(
                 {'missions.manage_any_expense', 'missions.view_any_expense'}):
             return self.all()
-        return self.filter(mission__resource__profile__user_id=user.id)
+        return self.filter(mission__resource__user_id=user.id)
 
 
 class Expense(models.Model):
