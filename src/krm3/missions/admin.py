@@ -24,7 +24,7 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from mptt.admin import MPTTModelAdmin
-from rangefilter.filters import DateTimeRangeFilter, NumericRangeFilterBuilder
+from rangefilter.filters import NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
@@ -73,8 +73,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('resource', AutoCompleteFilter),
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
-        ('from_date', DateTimeRangeFilter),
-        ('to_date', DateRangeFilter),
+        ('from_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
+        ('to_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
         ('number', NumberFilter),
         'year',
     )
@@ -277,7 +277,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
-        ('day', DateTimeRangeFilter)
+        ('day', DateRangeFilter.factory(title='day YYYY-MM-DD'))
     )
     search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
