@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block branding %}
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
+    {% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+{% block content %}
+    <h2>Created following reimbursements</h2>
+    <ul>
+        {% for reimbursement in reimbursements %}
+            <li>
+                <a href="{% url "admin:missions_reimbursement_change" reimbursement.id %}">{{ reimbursement }}</a>
+                <a href="{% url "admin:missions_reimbursement_overview" reimbursement.id %}">
+                    <img alt="preview"
+                         src="{% static "images/preview-24.png" %}"></a>
+            </li>
+        {% endfor %}
+    </ul>
+    <br>
+    <a href="{% url 'admin:missions_expense_changelist' %}">Back to expenses</a>
+{% endblock %}

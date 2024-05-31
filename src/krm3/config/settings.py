@@ -59,9 +59,11 @@ INSTALLED_APPS = (
             'krm3.config.admin_extras.apps.AdminConfig',
             'krm3.core',
             'krm3',
+
             'krm3.currencies',
             'krm3.missions',
             'krm3.api',
+            'krm3.web',
 
             # Third party apps.
             'qr_code',

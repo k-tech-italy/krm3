@@ -1,5 +1,4 @@
 import itertools
-from datetime import datetime
 from decimal import Decimal
 
 from django.conf import settings
@@ -9,7 +8,6 @@ from django.db.models import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
-# from krm3.currencies.models import Currency
 from krm3.core.models import City, Project, Resource
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
@@ -166,18 +164,43 @@ class PaymentCategory(MPTTModel):
 
 
 class Reimbursement(models.Model):
-    title = models.CharField(max_length=50)
+    number = models.PositiveIntegerField(blank=True, help_text='Set automatically')
+    year = models.PositiveIntegerField(blank=True)
+    title = models.CharField(max_length=120)
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     paid_date = models.DateField(blank=True, null=True)
+
+    @staticmethod
+    def calculate_number(instance_id: int | None, year: int) -> int:
+        qs = Reimbursement.objects.filter(year=year)
+        if instance_id:
+            qs = qs.exclude(pk=instance_id)
+        nums = [0] + sorted(list(qs.values_list('number', flat=True)))
+        ret = list(
+            itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums))
+        )[-1]
+        return ret[1] + 1
 
     @property
     def expense_count(self):
         return self.expenses.count()
 
+    def clean(self):
+        if self.number is None and self.year:
+            self.number = Reimbursement.calculate_number(self.id, self.year)
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.full_clean()
+        super().save(force_insert, force_update, using, update_fields)
+
     def __str__(self):
-        data = datetime.strftime(self.issue_date, '%Y-%m-%d')
-        return f'{self.title} {data}'
+        return f'{self.title} ({self.number}/{self.year})'
+
+    class Meta:
+        constraints = [
+            UniqueConstraint('year', 'number', name='unique_reimbursement_number')
+        ]
 
 
 class ExpenseManager(ActiveManagerMixin, models.Manager):
@@ -253,7 +276,7 @@ class Expense(models.Model):
                 self.save()
         return self.amount_base
 
-    def calculate_reimbursement(self, force=False, save=True):
+    def calculate_reimbursement(self, force=False, save=True, reimbursement=None):
         if self.reimbursement and not force:
             raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
         if force or self.amount_reimbursement is None:
@@ -272,6 +295,7 @@ class Expense(models.Model):
                 else:
                     self.amount_reimbursement = Decimal(-1) * Decimal(self.amount_base)
             if save:
+                self.reimbursement = reimbursement
                 self.save()
         return self.amount_reimbursement
 

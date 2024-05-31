@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load render_table from django_tables2 %}
+{% load numformat %}
 
 {% block extrahead %}
     {{ block.super }}
@@ -34,7 +35,7 @@
     <p>Summaries</p>
     <ul>
     {% for key, value in summary.items %}
-      <li>{{key}}: {{value|floatformat:"2g"}} {{ base }}</li>
+      <li>{{key}}: {{value|numformat:"2g"}} {{ base }}</li>
     {% endfor %}
     </ul>
 

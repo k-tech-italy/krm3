@@ -42,7 +42,7 @@ DEFAULTS = dict(
 
     MEDIA_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~media')),
     MEDIA_URL=(str, '/media/'),
-    STATIC_ROOT=(str, str(Path(__file__).parent.parent / 'web/static')),
+    STATIC_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~static')),
 
 
     ADMINS=(parse_emails, ''),

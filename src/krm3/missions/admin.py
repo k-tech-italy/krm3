@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+from decimal import Decimal
 from pathlib import Path
 
 import cv2
@@ -17,7 +18,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.sites import site
 from django.http.response import FileResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render, reverse
+from django.shortcuts import redirect, reverse
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from django.utils.http import urlencode
@@ -29,7 +30,7 @@ from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
 from krm3.missions.actions import create_reimbursement, get_rates
-from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm
+from krm3.missions.forms import ExpenseAdminForm, MissionAdminForm, MissionsImportForm, ReimbursementAdminForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
@@ -91,30 +92,6 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             }
         )
     ]
-
-    def _reimburse(self, queryset):
-        to_reimburse = {}
-        resources = {}
-
-        for mission in queryset.filter(status=Mission.MissionStatus.SUBMITTED):  # only submitted
-            mission: Mission
-            expenses = mission.expenses.filter(reimbursement__isnull=True)  # only not already reimbursed
-            if expenses.count():
-                resources.setdefault(mission.resource, {})[mission] = MissionExpenseTable(
-                    expenses, order_by=['day'])
-                to_reimburse.setdefault(mission.resource.id, []).extend([e.id for e in expenses])
-        return to_reimburse, resources
-
-    @admin.action(description='Reimburse selected missions')
-    def reimburse(self, request, queryset):
-        to_reimburse, resources = self._reimburse(queryset)
-
-        request.session['to-reimburse'] = to_reimburse
-        request.session['back'] = request.META['PATH_INFO']
-        return render(
-            request,
-            'admin/missions/mission/to_reimburse.html',
-            context={'resources': resources})
 
     @admin.action(description='Export selected missions')
     def export(self, request, queryset):
@@ -302,7 +279,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return super().lookup_allowed(lookup, value, request)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('mission')
+        return super().get_queryset(request).prefetch_related('mission', 'reimbursement')
 
     @admin.display(description='Mission', ordering='mission')
     def mission_st(self, expense: Expense):
@@ -324,7 +301,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     @admin.display(description='Amt. reimbursement', ordering='amount_reimbursement')
     def colored_amount_reimbursement(self, obj):
-        if value := obj.amount_reimbursement and obj.amount_reimbursement < decimal.Decimal(0):
+        if (value := obj.amount_reimbursement) and obj.amount_reimbursement < decimal.Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
             value *= decimal.Decimal(-1)
         else:
@@ -541,11 +518,14 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
-    list_display = ['title', 'issue_date', 'paid_date', 'expense_num', 'resource']
+    list_display = ['number', 'year', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
+    form = ReimbursementAdminForm
     inlines = [ExpenseInline]
+    autocomplete_fields = ['resource']
     search_fields = ['title', 'issue_date']
     list_filter = (
         ('resource', AutoCompleteFilter),
+        'year',
         ('issue_date', DateRangeFilter),
         ('paid_date', admin.EmptyFieldListFilter),
     )
@@ -596,11 +576,11 @@ class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
             summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
             summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)
 
-            bypayment[expense.payment_type.get_root()][0] += expense.amount_base
-            bypayment[expense.payment_type.get_root()][1] += expense.amount_reimbursement
+            bypayment[expense.payment_type.get_root()][0] += expense.amount_base or Decimal('0')
+            bypayment[expense.payment_type.get_root()][1] += expense.amount_reimbursement or Decimal('0')
 
-            byexpcategory[expense.category.get_root()][0] += expense.amount_base
-            byexpcategory[expense.category.get_root()][1] += expense.amount_reimbursement
+            byexpcategory[expense.category.get_root()][0] += expense.amount_base or Decimal('0')
+            byexpcategory[expense.category.get_root()][1] += expense.amount_reimbursement or Decimal('0')
 
         missions = set([x.mission for x in qs])
 

@@ -140,6 +140,8 @@ class RateFactory(factory.django.DjangoModelFactory):
 
 
 class ReimbursementFactory(factory.django.DjangoModelFactory):
+    title = factory.Sequence(lambda n: f'Tit {n + 1}')
+    year = 2024
     resource = factory.SubFactory(ResourceFactory)
 
     class Meta:

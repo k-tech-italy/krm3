@@ -1,3 +1,3 @@
 __author__ = 'K-Tech team'
-__version__ = '0.15.6'
+__version__ = '0.16.0'
 __name__ = 'krm3'

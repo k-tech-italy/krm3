@@ -1,15 +1,25 @@
-from django.contrib import admin, messages
-from django.urls import reverse
-from django.utils.safestring import mark_safe
+import datetime
+import typing
 
-from krm3.missions.models import Mission, Reimbursement
+from django.contrib import admin, messages
+from django.template.response import TemplateResponse
+
+from krm3.missions.facilities import ReimbursementFacility
+from krm3.missions.forms import MissionsReimbursementForm
+from krm3.missions.models import Mission
+from krm3.sentry import capture_exception
 from krm3.utils.rates import update_rates
+
+if typing.TYPE_CHECKING:
+    from django.db.models import QuerySet
+
+    from krm3.missions.models import Expense
 
 
 @admin.action(description='Create reimbursement ')
-def create_reimbursement(modeladmin, request, expenses):
+def create_reimbursement(modeladmin, request, expenses: typing.Union['QuerySet', typing.List['Expense']]):
     if expenses.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
-        messages.warning(request, 'Please select only expenses of non DRAFT missions.')
+        messages.warning(request, 'Please select only expenses of SUBMITTED missions.')
         return
 
     if expenses.filter(reimbursement__isnull=False).exists():
@@ -17,56 +27,27 @@ def create_reimbursement(modeladmin, request, expenses):
         return
 
     try:
-        msg = get_rates(modeladmin, request, expenses, silent=True)
-        reimbursement = Reimbursement.objects.create(title=str(expenses.first().mission),
-                                                     resource=expenses.first().mission.resource)
-        counters = {
-            'filled': 0,
-            'p_i': 0,
-            'p_noi': 0,
-            'a_i': 0,
-            'a_noi': 0,
-        }
-        for expense in expenses.all():
-            expense.calculate_reimbursement(force=False, save=False)
+        _ = get_rates(modeladmin, request, expenses, silent=True)
 
-            # Personale
-            if expense.payment_type.personal_expense:
-                # con immagine
-                if expense.image:
-                    counters['p_i'] += 1
-                else:
-                    counters['p_noi'] += 1
-            # Aziendale
-            else:
-                if expense.image:
-                    counters['a_i'] += 1
-                else:
-                    counters['a_noi'] += 1
-
-            counters['filled'] += 1
-            expense.reimbursement = reimbursement
-            expense.save()
-
-        rurl = reverse('admin:missions_reimbursement_change', args=[reimbursement.id])
-        messages.success(
+        form = MissionsReimbursementForm(initial={
+            'expenses': ','.join([str(pk) for pk in expenses.values_list('id', flat=True)]),
+            'year': datetime.date.today().year
+        })
+        return TemplateResponse(
             request,
-            mark_safe(
-                msg + f' Assigned {expenses.count()}'
-                      f' to new reimbursement <a href="{rurl}">{reimbursement}</a>.'
-                      f" pers. con imm.={counters['p_i']}, "
-                      f" pers. senza imm.={counters['p_noi']}, "
-                      f" az. con imm.={counters['a_i']}, "
-                      f" az. senza imm.={counters['a_noi']}")
+            'admin/missions/reimbursement/preview.html',
+            {'form': form, 'resources': ReimbursementFacility(expenses).render()}
         )
+
     except Exception as e:
+        capture_exception(e)
         messages.error(request, str(e))
 
 
 @admin.action(description='Get the rates for the dates')
 def get_rates(modeladmin, request, queryset, silent=False):
     if queryset.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
-        messages.warning(request, 'Please select only expenses of non DRAFT missions.')
+        messages.warning(request, 'Please select only expenses of SUBMITTED missions.')
         return
 
     expenses = queryset.filter(amount_base__isnull=True)
