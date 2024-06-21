@@ -51,6 +51,6 @@ class ReimbursementFacility:
             )
             for mission, expenses in missions.items():
                 for expense in expenses:
-                    expense.calculate_reimbursement(force=True, save=True, reimbursement=reimbursement)
+                    expense.calculate_reimbursement(force=False, save=True, reimbursement=reimbursement)
             reimbursements.append(reimbursement)
         return reimbursements

@@ -279,7 +279,7 @@ class Expense(models.Model):
     def calculate_reimbursement(self, force=False, save=True, reimbursement=None):
         if self.reimbursement and not force:
             raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
-        if force or self.amount_reimbursement is None:
+        if self.amount_reimbursement is None or force:
             self.calculate_base(save=False)
             # Personale
             if self.payment_type.personal_expense:
