@@ -276,7 +276,11 @@ class Expense(models.Model):
                 self.save()
         return self.amount_base
 
-    def calculate_reimbursement(self, force=False, save=True, reimbursement=None):
+    def calculate_reimbursement(self, force=False, reimbursement=None):
+        """Calculate the reimbursement amount.
+
+        Will save the record if reimbursement is provided.
+        """
         if self.reimbursement and not force:
             raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
         if self.amount_reimbursement is None or force:
@@ -294,9 +298,9 @@ class Expense(models.Model):
                     self.amount_reimbursement = 0
                 else:
                     self.amount_reimbursement = Decimal(-1) * Decimal(self.amount_base)
-            if save:
-                self.reimbursement = reimbursement
-                self.save()
+        if reimbursement:
+            self.reimbursement = reimbursement
+            self.save()
         return self.amount_reimbursement
 
     def __str__(self):
