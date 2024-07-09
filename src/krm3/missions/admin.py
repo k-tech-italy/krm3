@@ -193,7 +193,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False \
                 else decimal.Decimal(0.0)
             summary['Rimborsate'] += expense.amount_reimbursement or decimal.Decimal(0.0)
-            summary['Non Rimborsate'] += expense.amount_base - expense.amount_reimbursement \
+            summary['Non Rimborsate'] += (expense.amount_base or decimal.Decimal(0.0)) - (
+                    expense.amount_reimbursement or decimal.Decimal(0.0)) \
                 if expense.payment_type.personal_expense else decimal.Decimal(0.0)
             summary['Spese trasferta'] += (
                                               expense.amount_base if not expense.payment_type.personal_expense
@@ -592,7 +593,8 @@ class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
 
             byexpcategory[expense.category.get_root()][0] += expense.amount_base or Decimal('0')
             byexpcategory[expense.category.get_root()][1] += expense.amount_reimbursement or Decimal('0')
-            summary['Non Rimborsate'] += expense.amount_base - expense.amount_reimbursement \
+            summary['Non Rimborsate'] += (expense.amount_base or decimal.Decimal(0.0)) - (
+                        expense.amount_reimbursement or decimal.Decimal(0.0)) \
                 if expense.payment_type.personal_expense else decimal.Decimal(0.0)
             summary['Totale spese'] += (
                                            expense.amount_base if not expense.payment_type.personal_expense
