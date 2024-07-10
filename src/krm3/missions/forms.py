@@ -54,6 +54,7 @@ class MissionAdminForm(forms.ModelForm):
                     self.instance.expenses.filter(reimbursement__isnull=False).exists()):
                 raise ValidationError(
                     f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception')
+
         return ret
 
     class Meta:

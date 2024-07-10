@@ -69,16 +69,16 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     inlines = [ExpenseInline]
     list_display = ('number', 'year', 'status', 'resource', 'project', 'title', 'from_date', 'to_date',
                     'default_currency', 'city', 'expense_num')
-    list_filter = (
+    list_filter = [
         'status',
-        ('resource', AutoCompleteFilter),
+
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
         ('from_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
         ('to_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
         ('number', NumberFilter),
         'year',
-    )
+    ]
 
     fieldsets = [
         (
@@ -92,6 +92,18 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             }
         )
     ]
+
+    def get_changeform_initial_data(self, request):
+        ret = super().get_changeform_initial_data(request)
+        if not request.user.has_perm('missions.manage_any_mission'):
+            ret['resource'] = request.user.resource
+        return ret
+
+    def get_list_filter(self, request):
+        ret = super().get_list_filter(request).copy()
+        if request.user.has_perm('missions.view_any_mission') or request.user.has_perm('missions.manage_any_mission'):
+            ret.insert(1, ('resource', AutoCompleteFilter),)
+        return ret
 
     @admin.action(description='Export selected missions')
     def export(self, request, queryset):
