@@ -163,6 +163,19 @@ class PaymentCategory(MPTTModel):
         )
 
 
+class ReimbursementManager(models.Manager):
+
+    def filter_acl(self, user):
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+                {'missions.manage_any_mission', 'missions.view_any_mission'}):
+            return self.all()
+        return self.filter(resource__user=user)
+
+
 class Reimbursement(models.Model):
     number = models.PositiveIntegerField(blank=True, help_text='Set automatically')
     year = models.PositiveIntegerField(blank=True)
@@ -170,6 +183,8 @@ class Reimbursement(models.Model):
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     paid_date = models.DateField(blank=True, null=True)
+
+    objects = ReimbursementManager()
 
     @staticmethod
     def calculate_number(instance_id: int | None, year: int) -> int:

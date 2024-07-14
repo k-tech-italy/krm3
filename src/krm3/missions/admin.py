@@ -42,7 +42,16 @@ from krm3.utils.queryset import ACLMixin
 from krm3.utils.rates import update_rates
 
 
-class ExpenseInline(admin.TabularInline):  # noqa: D101
+class RestrictedReimbursementMixin:
+    def get_readonly_fields(self, request, obj=None):
+        ret = list(super().get_readonly_fields(request, obj))
+        if not request.user.has_perm('missions.view_any_mission') and \
+                not request.user.has_perm('missions.manage_any_mission'):
+            ret.append('reimbursement')
+        return ret
+
+
+class ExpenseInline(RestrictedReimbursementMixin, admin.TabularInline):  # noqa: D101
     form = ExpenseAdminForm
     model = Expense
     extra = 3
@@ -71,7 +80,6 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     'default_currency', 'city', 'expense_num')
     list_filter = [
         'status',
-
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
         ('from_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
@@ -97,12 +105,6 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ret = super().get_changeform_initial_data(request)
         if not request.user.has_perm('missions.manage_any_mission'):
             ret['resource'] = request.user.resource
-        return ret
-
-    def get_list_filter(self, request):
-        ret = super().get_list_filter(request).copy()
-        if request.user.has_perm('missions.view_any_mission') or request.user.has_perm('missions.manage_any_mission'):
-            ret.insert(1, ('resource', AutoCompleteFilter),)
         return ret
 
     @admin.action(description='Export selected missions')
@@ -258,15 +260,14 @@ class ExpenseCategoryAdmin(MPTTModelAdmin):
 
 
 @admin.register(Expense)
-class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
     list_display = ('mission_st', 'day', 'colored_amount_currency', 'colored_amount_base',
                     'colored_amount_reimbursement', 'category', 'payment_type', 'document_type',
                     'link_to_reimbursement', 'image')
-    list_filter = (
-        ('mission__resource', AutoCompleteFilter),
+    list_filter = [
         ('reimbursement', admin.EmptyFieldListFilter),
         'mission__status',
         ('mission__number', NumberFilter),
@@ -276,7 +277,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
         ('day', DateRangeFilter.factory(title='day YYYY-MM-DD'))
-    )
+    ]
     search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
         (
@@ -293,6 +294,7 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         )
     ]
     actions = [get_rates, create_reimbursement]
+    _resource_link = 'mission__resource'
 
     def lookup_allowed(self, lookup, value, request=None):
         if lookup == 'mission_id':
@@ -538,21 +540,23 @@ class ExpenseAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 
 @admin.register(Reimbursement)
-class ReimbursementAdmin(ExtraButtonsMixin, AdminFiltersMixin):
+class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     list_display = ['number', 'year', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     form = ReimbursementAdminForm
     inlines = [ExpenseInline]
     autocomplete_fields = ['resource']
     search_fields = ['title', 'issue_date']
-    list_filter = (
-        ('resource', AutoCompleteFilter),
+    list_filter = [
         'year',
         ('issue_date', DateRangeFilter),
         ('paid_date', admin.EmptyFieldListFilter),
-    )
+    ]
 
     def get_queryset(self, request):
-        return Reimbursement.objects.prefetch_related('expenses').all()
+        return super().get_queryset(request).prefetch_related('expenses')
+
+    # def get_queryset_(self, request):
+    #     return Reimbursement.objects.prefetch_related('expenses').all()
 
     def get_object(self, request, object_id, from_field=None):
         queryset = self.get_queryset(request)

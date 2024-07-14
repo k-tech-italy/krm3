@@ -1,22 +1,18 @@
+from adminfilters.autocomplete import AutoCompleteFilter
+from django.contrib import admin
 from django.db import models
-#
-# def filter_for_resource(request, queryset, lookup='resource'):
-#     if not request.user.is_superuser:
-#         queryset = queryset.filter(**{lookup: request.user.profile.resource})
-#     return queryset
-#
-#
-# class FilterByResourceMixin:
-#     filter_by_resource_lookup = 'resource'
-#
-#     def get_queryset(self, request):
-#         ret = super().get_queryset(request)
-#         ret = filter_for_resource(request, ret, lookup=self.filter_by_resource_lookup)
-#         return ret
 
 
 class ACLMixin:
     """Restrict access to superuser, owner, or manager."""
+    _resource_link = 'resource'
+
+    def get_list_filter(self, request):
+        ret = admin.ModelAdmin.get_list_filter(self, request).copy()
+        if request.user.has_perm('missions.view_any_mission') or request.user.has_perm('missions.manage_any_mission'):
+            ret.insert(1, (self._resource_link, AutoCompleteFilter),)
+        return ret
+
     def get_queryset(self, request):
         return self.model.objects.filter_acl(request.user)
 
