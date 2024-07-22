@@ -367,8 +367,9 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     def get_changeform_initial_data(self, request):
         ret = super().get_changeform_initial_data(request)
-        like = ret.pop('like', None)
+        like = request.session.get('_like', None)
         if like:
+            del request.session['_like']
             source = Expense.objects.get(pk=like)
             ret['mission'] = source.mission
             ret['category'] = source.category
@@ -487,7 +488,8 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         visible=lambda btn: bool(btn.original.id)
     )
     def clone(self, request, pk):
-        return HttpResponseRedirect(reverse('admin:missions_expense_add') + f'?like={pk}')
+        request.session['_like'] = pk
+        return HttpResponseRedirect(reverse('admin:missions_expense_add'))
 
     @button(
         html_attrs=NORMAL,
