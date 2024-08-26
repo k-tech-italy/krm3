@@ -58,7 +58,7 @@ def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image,
     payment_type = PaymentCategoryFactory(personal_expense=expense_type == 'P')
     expense = ExpenseFactory(amount_base=amt_base, image=image, payment_type=payment_type,
                              amount_reimbursement=initial, reimbursement=None)
-    reimbursed = expense.calculate_reimbursement(force=force)
+    reimbursed = expense.apply_reimbursement(force=force)
 
     assert reimbursed == Decimal(expected)
 
@@ -66,4 +66,4 @@ def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image,
 def test_expense_already_reimbursed(db):
     expense = ExpenseFactory(reimbursement=ReimbursementFactory())
     with pytest.raises(AlreadyReimbursed):
-        expense.calculate_reimbursement()
+        expense.apply_reimbursement()

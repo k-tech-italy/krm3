@@ -1,6 +1,7 @@
 {% extends "admin/base_site.html" %}
 {% load render_table from django_tables2 %}
 {% load numformat %}
+{% load querystring from django_tables2 %}
 
 {% block extrahead %}
     {{ block.super }}
@@ -24,6 +25,7 @@
     <h1>Reimbursement: <a
             href="{% url "admin:missions_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a
             onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
+    <a href="{% querystring '_export'='xlsx' %}">Download XLSX</a>
 
     <table>
         <tr>

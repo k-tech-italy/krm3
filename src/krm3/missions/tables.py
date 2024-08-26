@@ -34,10 +34,6 @@ class ExpenseTableMixin:
     def render_day(self, value):
         return datetime.strftime(value, '%Y-%m-%d')
 
-    def render_id(self, value):
-        url = reverse('admin:missions_expense_change', args=[value])
-        return mark_safe(f'<a href="{url}">{value}</a>')
-
     def render_image(self, value):
         file_type = value.name.split('.')[-1]
         # url = reverse('admin:missions_expense_change', args=[value])
@@ -51,7 +47,7 @@ class ExpenseTableMixin:
             return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')
 
 
-class MissionExpenseTable(ExpenseTableMixin, tables.Table):
+class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
     amount_base = tables.Column(
         footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data)
@@ -59,6 +55,13 @@ class MissionExpenseTable(ExpenseTableMixin, tables.Table):
     amount_reimbursement = tables.Column(
         footer=lambda table: sum(x.amount_reimbursement or Decimal(0.0) for x in table.data)
     )
+
+    class Meta:
+        model = Expense
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
+
+
+class MissionExpenseTable(MissionExpenseBaseTable):
 
     def render_image(self, record):
         if record.image:
@@ -73,12 +76,21 @@ class MissionExpenseTable(ExpenseTableMixin, tables.Table):
         else:
             return '--'
 
-    class Meta:
-        model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
+    def render_id(self, value):
+        url = reverse('admin:missions_expense_change', args=[value])
+        return mark_safe(f'<a href="{url}">{value}</a>')
 
 
-class ReimbursementExpenseTable(ExpenseTableMixin, tables.Table):
+class MissionExpenseExportTable(MissionExpenseBaseTable):
+
+    def render_image(self, record):
+        return 'yes' if record.image else 'no'
+
+    def render_reimbursement(self, record):
+        return record.reimbursement if record.reimbursement else '--'
+
+
+class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
     amount_base = tables.Column(
         footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data)
@@ -87,6 +99,12 @@ class ReimbursementExpenseTable(ExpenseTableMixin, tables.Table):
         footer=lambda table: sum(x.amount_reimbursement or Decimal(0.0) for x in table.data)
     )
 
+    class Meta:
+        model = Expense
+        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
+
+
+class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
     def render_image(self, record):
         if record.image:
             return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')
@@ -100,6 +118,10 @@ class ReimbursementExpenseTable(ExpenseTableMixin, tables.Table):
         else:
             return '--'
 
-    class Meta:
-        model = Expense
-        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
+
+class ReimbursementExpenseExportTable(ReimbursementExpenseBaseTable):
+    def render_image(self, record):
+        return 'yes' if record.image else 'no'
+
+    def render_mission(self, record):
+        return record.mission if record.mission else '--'

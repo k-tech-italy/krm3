@@ -24,6 +24,7 @@ from django.utils.html import format_html
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
+from django_tables2.export.export import TableExport
 from mptt.admin import MPTTModelAdmin
 from rangefilter.filters import NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
@@ -35,7 +36,8 @@ from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
-from krm3.missions.tables import MissionExpenseTable, ReimbursementExpenseTable
+from krm3.missions.tables import (MissionExpenseExportTable, MissionExpenseTable,
+                                  ReimbursementExpenseExportTable, ReimbursementExpenseTable,)
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
 from krm3.utils.queryset import ACLMixin
@@ -187,12 +189,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     def overview(self, request, pk):
         mission = self.get_object(request, pk)
-
-        qs = mission.expenses.all()
-        update_rates(qs)
         sorting = request.GET.get('sort')
+        qs = mission.expenses.all()
 
-        expenses = MissionExpenseTable(qs, order_by=[sorting] if sorting else ['day'])
+        if export_format := request.GET.get('_export', None):
+            expenses = self.build_mission_expenses_table(qs, sorting, True)
+            return self.export_table(mission, expenses, export_format, request)
+        else:
+            expenses = self.build_mission_expenses_table(qs, sorting)
 
         summary = {
             'Spese trasferta': decimal.Decimal(0.0),
@@ -228,6 +232,22 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'filename': format_html(f'{slugify(str(mission))}.pdf')
             },
             template='admin/missions/mission/summary.html')
+
+    def build_mission_expenses_table(self, qs, sorting, report=False):
+        klass = MissionExpenseExportTable if report else MissionExpenseTable
+        update_rates(qs)
+        expenses = klass(qs, order_by=[sorting] if sorting else ['day'])
+        return expenses
+
+    def export_table(self, mission: Mission, table_data, export_format, request):
+        """Function to export django table data."""
+        from django_tables2.config import RequestConfig
+
+        RequestConfig(request).configure(table_data)
+
+        if TableExport.is_valid_format(export_format):
+            exporter = TableExport(export_format, table_data)
+            return exporter.response(f'mission_{mission.year}_{mission.number}_expenses.{export_format}')
 
     @button(
         html_attrs=NORMAL,
@@ -588,6 +608,12 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
         expenses = ReimbursementExpenseTable(qs, order_by=['day'])
 
+        if export_format := request.GET.get('_export', None):
+            expenses = ReimbursementExpenseExportTable(qs, order_by=['day'])
+            return self.export_table(reimbursement, expenses, export_format, request)
+        else:
+            expenses = ReimbursementExpenseTable(qs, order_by=['day'])
+
         # categories = ExpenseCategory.objects.values_list('id', 'parent_id')
 
         bypayment = {pc: [decimal.Decimal(0)] * 2 for pc in PaymentCategory.objects.root_nodes()}
@@ -635,3 +661,13 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
                 'filename': format_html(f'{slugify(str(reimbursement))}.pdf')
             },
             template='admin/missions/reimbursement/summary.html')
+
+    def export_table(self, reimbursement: Reimbursement, table_data, export_format, request):
+        """Function to export django table data."""
+        from django_tables2.config import RequestConfig
+
+        RequestConfig(request).configure(table_data)
+
+        if TableExport.is_valid_format(export_format):
+            exporter = TableExport(export_format, table_data)
+            return exporter.response(f'mission_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}')

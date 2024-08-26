@@ -291,7 +291,7 @@ class Expense(models.Model):
                 self.save()
         return self.amount_base
 
-    def calculate_reimbursement(self, force=False, reimbursement=None):
+    def apply_reimbursement(self, force=False, reimbursement=None):
         """Calculate the reimbursement amount.
 
         Will save the record if reimbursement is provided.
@@ -301,22 +301,25 @@ class Expense(models.Model):
         if self.amount_reimbursement is None or force:
             self.calculate_base(save=False)
             # Personale
-            if self.payment_type.personal_expense:
-                # con immagine
-                if self.image:
-                    self.amount_reimbursement = self.amount_base
-                else:
-                    self.amount_reimbursement = 0
-            # Aziendale
-            else:
-                if self.image:
-                    self.amount_reimbursement = 0
-                else:
-                    self.amount_reimbursement = Decimal(-1) * Decimal(self.amount_base)
+            self.amount_reimbursement = self.get_reimbursement_amount()
         if reimbursement:
             self.reimbursement = reimbursement
             self.save()
         return self.amount_reimbursement
+
+    def get_reimbursement_amount(self):
+        if self.payment_type.personal_expense:
+            # con immagine
+            if self.image:
+                return self.amount_base
+            else:
+                return 0
+        # Aziendale
+        else:
+            if self.image:
+                return 0
+            else:
+                return Decimal(-1) * Decimal(self.amount_base)
 
     def __str__(self):
         return f'{self.day}, {self.amount_currency} for {self.category}'
