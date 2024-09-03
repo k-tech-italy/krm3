@@ -1,3 +1,4 @@
+from contextlib import nullcontext as does_not_raise
 from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
@@ -67,3 +68,72 @@ def test_expense_already_reimbursed(db):
     expense = ExpenseFactory(reimbursement=ReimbursementFactory())
     with pytest.raises(AlreadyReimbursed):
         expense.apply_reimbursement()
+
+
+@pytest.mark.parametrize(
+    'exp_type, reimbursement, result, expectation', [
+        pytest.param(True, None, 10, does_not_raise(), id='personal'),
+        pytest.param(False, None, 0, does_not_raise(), id='company'),
+        pytest.param(False, True, 0, pytest.raises(AlreadyReimbursed), id='reimbursed'),
+    ]
+)
+def test_expense_recalculate_reimbursement_with_image(exp_type, reimbursement, result, expectation, db):
+    exp_type = PaymentCategoryFactory(personal_expense=exp_type)
+    image = MagicMock(spec=File)
+    image.name = 'image.pdf'
+
+    if reimbursement:
+        reimbursement = ReimbursementFactory()
+    expense: Expense = ExpenseFactory(
+        amount_currency=10, amount_base=10, payment_type=exp_type,
+        reimbursement=reimbursement
+    )
+
+    assert expense.amount_reimbursement is None  # Should be none whe first created
+    with expectation:
+        expense.image = image
+        expense.save()
+        expense.refresh_from_db()
+        assert expense.amount_reimbursement == result
+
+
+@pytest.mark.parametrize(
+    'initial, target, reimbursement, result, expectation', [
+        pytest.param('P', 'C', None, 0, does_not_raise(), id='p-2-c'),
+        pytest.param('C', 'P',  None, 10, does_not_raise(), id='c-2-p'),
+        pytest.param('P', 'P2',  None, 77, does_not_raise(), id='p-2-p'),
+        pytest.param('C', 'C2',  None, 77, does_not_raise(), id='c-2-c'),
+        pytest.param('P', 'C', True, 0, pytest.raises(AlreadyReimbursed), id='reimbursed'),
+    ]
+)
+def test_expense_recalculate_reimbursement_with_pt(initial, target, reimbursement, result, expectation, db):
+    personal = PaymentCategoryFactory(personal_expense=True)
+    company = PaymentCategoryFactory(personal_expense=False)
+    personal2 = PaymentCategoryFactory(personal_expense=True)
+    company2 = PaymentCategoryFactory(personal_expense=False)
+    image = MagicMock(spec=File)
+    image.name = 'image.pdf'
+
+    if reimbursement:
+        reimbursement = ReimbursementFactory()
+
+    exp_type = personal if initial == 'P' else company
+    target = {
+        'P': personal,
+        'C': company,
+        'P2': personal2,
+        'C2': company2,
+    }[target]
+
+    expense: Expense = ExpenseFactory(
+        amount_currency=10, amount_base=10, amount_reimbursement=77,
+        image=image,
+        payment_type=exp_type, reimbursement=reimbursement
+    )
+
+    with expectation:
+        expense.payment_type = target
+        expense.detail = 'updated'
+        expense.save()
+        expense.refresh_from_db()
+        assert expense.amount_reimbursement == result

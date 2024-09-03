@@ -5,6 +5,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
@@ -298,10 +300,8 @@ class Expense(models.Model):
         """
         if self.reimbursement and not force:
             raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
-        if self.amount_reimbursement is None or force:
-            self.calculate_base(save=False)
-            # Personale
-            self.amount_reimbursement = self.get_reimbursement_amount()
+        self.calculate_base(save=False)
+        self.amount_reimbursement = self.get_reimbursement_amount()
         if reimbursement:
             self.reimbursement = reimbursement
             self.save()
@@ -329,3 +329,12 @@ class Expense(models.Model):
             ('view_any_expense', "Can view(only) everybody's expenses"),
             ('manage_any_expense', "Can view, and manage everybody's expenses"),
         ]
+
+
+@receiver(pre_save, sender=Expense)
+def recalculate_reimbursement(sender, instance: Expense, update_fields=None, **kwargs):
+    if instance.id:
+        old_instance = Expense.objects.get(id=instance.id)
+        if (not old_instance.image and bool(instance.image) or
+                old_instance.payment_type.personal_expense != instance.payment_type.personal_expense):
+            instance.apply_reimbursement()
