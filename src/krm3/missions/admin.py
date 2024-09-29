@@ -201,8 +201,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         summary = {
             'Spese trasferta': decimal.Decimal(0.0),
             'Anticipato': decimal.Decimal(0.0),
-            'Da rimborsare': decimal.Decimal(0.0),
-            'Rimborsate': decimal.Decimal(0.0),
+            'Totale Rimborso': decimal.Decimal(0.0),
+            'Già Rimborsate': decimal.Decimal(0.0),
+            # 'Ancora da rimborsare': decimal.Decimal(0.0),
             'Non Rimborsate': decimal.Decimal(0.0),
         }
 
@@ -210,7 +211,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             expense: Expense
             summary['Anticipato'] += expense.amount_base if expense.payment_type.personal_expense is False \
                 else decimal.Decimal(0.0)
-            summary['Rimborsate'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+            summary['Totale Rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
+            summary['Già Rimborsate'] += expense.amount_reimbursement if expense.reimbursement else decimal.Decimal(
+                0.0) or decimal.Decimal(0.0)
             summary['Non Rimborsate'] += (expense.amount_base or decimal.Decimal(0.0)) - (
                     expense.amount_reimbursement or decimal.Decimal(0.0)) \
                 if expense.payment_type.personal_expense else decimal.Decimal(0.0)
@@ -219,7 +222,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                                               else expense.amount_reimbursement or Decimal('0')
                                           ) or decimal.Decimal(0.0)
 
-        summary['Da rimborsare'] = summary['Spese trasferta'] - summary['Anticipato'] - summary['Rimborsate']
+        da_rimborsare = summary['Spese trasferta'] - summary['Anticipato'] - summary['Già Rimborsate']
+        summary['Totale Rimborso'] = \
+            f"{summary['Totale Rimborso']} ({summary.pop('Già Rimborsate')} già Rimborsate, {da_rimborsare} rimanenti)"
 
         return TemplateResponse(
             request,
