@@ -45,7 +45,7 @@ def test_expense_calculate_base(iso3, amt_currency, amt_base, expected, force_ra
     'amt_base, initial, expense_type, image, force, expected', [
         pytest.param(100.0, None, 'P', True, False, 100, id='pers-wimage'),
         pytest.param(100.0, None, 'A', True, False, 0, id='az-wimage'),
-        pytest.param(100.0, None, 'P', False, False, 0, id='az-woimage'),
+        pytest.param(100.0, None, 'P', False, False, 0, id='pres-woimage'),
         pytest.param(100.0, None, 'A', False, False, -100, id='az-woimage'),
     ]
 )
@@ -55,6 +55,8 @@ def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image,
     if image:
         image = MagicMock(spec=File)
         image.name = 'image.pdf'
+    else:
+        image = None
 
     payment_type = PaymentCategoryFactory(personal_expense=expense_type == 'P')
     expense = ExpenseFactory(amount_base=amt_base, image=image, payment_type=payment_type,

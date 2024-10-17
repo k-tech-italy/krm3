@@ -103,6 +103,10 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
         model = Expense
         exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
 
+    def render_id(self, record):
+        url = reverse('admin:missions_expense_change', args=[record.id])
+        return mark_safe(f'<a href="{url}">{record.id}</a>')
+
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
     def render_image(self, record):
