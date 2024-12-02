@@ -2,6 +2,7 @@ import decimal
 import json
 from decimal import Decimal
 
+import sentry_sdk
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
@@ -164,51 +165,55 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         sorting = request.GET.get('sort')
         qs = mission.expenses.all()
 
-        if export_format := request.GET.get('_export', None):
-            expenses = self.build_mission_expenses_table(qs, sorting, True)
-            return self.export_table(mission, expenses, export_format, request)
-        else:
-            expenses = self.build_mission_expenses_table(qs, sorting)
+        try:
+            if export_format := request.GET.get('_export', None):
+                expenses = self.build_mission_expenses_table(qs, sorting, True)
+                return self.export_table(mission, expenses, export_format, request)
+            else:
+                expenses = self.build_mission_expenses_table(qs, sorting)
 
-        summary = {
-            SPESE_TRASFERTA: decimal.Decimal(0.0),
-            ANTICIPATO: decimal.Decimal(0.0),
-            TOTALE_RIMBORSO: decimal.Decimal(0.0),
-            GIA_RIMBORSATE: decimal.Decimal(0.0),
-            # 'Ancora da rimborsare': decimal.Decimal(0.0),
-            NON_RIMBORSATE: decimal.Decimal(0.0),
-        }
+            summary = {
+                SPESE_TRASFERTA: decimal.Decimal(0.0),
+                ANTICIPATO: decimal.Decimal(0.0),
+                TOTALE_RIMBORSO: decimal.Decimal(0.0),
+                GIA_RIMBORSATE: decimal.Decimal(0.0),
+                # 'Ancora da rimborsare': decimal.Decimal(0.0),
+                NON_RIMBORSATE: decimal.Decimal(0.0),
+            }
 
-        for expense in qs:
-            expense: Expense
-            summary[ANTICIPATO] += expense.amount_base if expense.payment_type.personal_expense is False \
-                else decimal.Decimal(0.0)
-            summary[TOTALE_RIMBORSO] += expense.amount_reimbursement or decimal.Decimal(0.0)
-            summary[GIA_RIMBORSATE] += expense.amount_reimbursement if expense.reimbursement else decimal.Decimal(
-                0.0) or decimal.Decimal(0.0)
-            summary[NON_RIMBORSATE] += (expense.amount_base or decimal.Decimal(0.0)) - (
-                    expense.amount_reimbursement or decimal.Decimal(0.0)) \
-                if expense.payment_type.personal_expense else decimal.Decimal(0.0)
-            summary[SPESE_TRASFERTA] += (
-                                              expense.amount_base if not expense.payment_type.personal_expense
-                                              else expense.amount_reimbursement or Decimal('0')
-                                          ) or decimal.Decimal(0.0)
+            for expense in qs:
+                expense: Expense
+                summary[ANTICIPATO] += expense.amount_base if expense.payment_type.personal_expense is False \
+                    else decimal.Decimal(0.0)
+                summary[TOTALE_RIMBORSO] += expense.amount_reimbursement or decimal.Decimal(0.0)
+                summary[GIA_RIMBORSATE] += expense.amount_reimbursement if expense.reimbursement else decimal.Decimal(
+                    0.0) or decimal.Decimal(0.0)
+                summary[NON_RIMBORSATE] += (expense.amount_base or decimal.Decimal(0.0)) - (
+                        expense.amount_reimbursement or decimal.Decimal(0.0)) \
+                    if expense.payment_type.personal_expense else decimal.Decimal(0.0)
+                summary[SPESE_TRASFERTA] += (
+                                                  expense.amount_base if not expense.payment_type.personal_expense
+                                                  else expense.amount_reimbursement or Decimal('0')
+                                              ) or decimal.Decimal(0.0)
 
-        da_rimborsare = summary[SPESE_TRASFERTA] - summary[ANTICIPATO] - summary[GIA_RIMBORSATE]
-        summary[TOTALE_RIMBORSO] = \
-            f'{summary[TOTALE_RIMBORSO]} ({summary.pop(GIA_RIMBORSATE)} già Rimborsate, {da_rimborsare} rimanenti)'
+            da_rimborsare = summary[SPESE_TRASFERTA] - summary[ANTICIPATO] - summary[GIA_RIMBORSATE]
+            summary[TOTALE_RIMBORSO] = \
+                f'{summary[TOTALE_RIMBORSO]} ({summary.pop(GIA_RIMBORSATE)} già Rimborsate, {da_rimborsare} rimanenti)'
 
-        return TemplateResponse(
-            request,
-            context={
-                'site_header': site.site_header,
-                'mission': mission,
-                'expenses': expenses,
-                'summary': summary,
-                'base': settings.BASE_CURRENCY,
-                'filename': format_html(f'{slugify(str(mission))}.pdf')
-            },
-            template='admin/missions/mission/summary.html')
+            return TemplateResponse(
+                request,
+                context={
+                    'site_header': site.site_header,
+                    'mission': mission,
+                    'expenses': expenses,
+                    'summary': summary,
+                    'base': settings.BASE_CURRENCY,
+                    'filename': format_html(f'{slugify(str(mission))}.pdf')
+                },
+                template='admin/missions/mission/summary.html')
+        except RuntimeError as e:
+            sentry_sdk.capture_exception(e)
+            messages.error(request, str(e))
 
     def build_mission_expenses_table(self, qs, sorting, report=False):
         klass = MissionExpenseExportTable if report else MissionExpenseTable
