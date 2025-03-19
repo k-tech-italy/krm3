@@ -18,7 +18,7 @@ class ACLMixin:
 
     def get_object(self, request, *args, **kwargs):
         ret = super().get_object(request, *args, **kwargs)
-        if not ret.is_accessible(request.user):
+        if ret is None or not ret.is_accessible(request.user):
             raise self.model.DoesNotExist('Object does not exists or is unavailable')
         return ret
 
