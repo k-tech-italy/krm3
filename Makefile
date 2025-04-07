@@ -64,13 +64,6 @@ static:  ## build static assets
 	@echo $(shell /bin/ls -alu src/krm3/web/static/krm3/app.js)
 	@echo $(shell /bin/ls -alu src/krm3/web/static/krm3/app.css)
 
-develop:  ## configure development environment
-	@git config branch.autosetuprebase always
-	@poetry install --sync
-	@poetry run pre-commit install
-	@poetry run pre-commit install --hook-type pre-push
-	@npm install
-
 
 backup_file := ~$(shell date +%Y-%m-%d).json
 reset-migrations: ## reset django migrations
@@ -190,8 +183,5 @@ schema-serve: schema  # Runs a docker container for serving the schema
 	@docker run --rm -p 8080:8080 -e SWAGGER_JSON=/schema.yml -v ${PWD}/schema.yml:/schema.yml swaggerapi/swagger-ui
 
 outdated:  ## Generates .outdated.txt and .tree.txt files
-	@poetry show --tree > .tree.txt
-	@poetry show -o -T -l > .outdated.txt
-
-requirements-run:  # generates the .requirements-run.txt
-	@poetry export --only=main -o .requirements-run.txt
+	uv tree > .tree.txt
+	uv pip list --outdated > .outdated.txt

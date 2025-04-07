@@ -63,7 +63,7 @@ USER root
 
 RUN set -ex \
     ls -al /code \
-    && pip install -U pip==23.2.1 \
+    && pip install -U pip \
     && pip install -r image-requirements.txt
 
 

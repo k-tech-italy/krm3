@@ -63,7 +63,7 @@ INSTALLED_APPS = (
             'krm3.currencies',
             'krm3.missions',
             'krm3.api',
-            'krm3.timesheet'
+            'krm3.timesheet',
             'krm3.web',
 
             # Third party apps.
@@ -139,14 +139,6 @@ DATABASES = {
 }
 
 DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django,public'}
-# DATABASES['default']['ENGINE'] = 'krm3.utils.db.postgresql'
-
-# Password validation
-# https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/3.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-uk'
 
