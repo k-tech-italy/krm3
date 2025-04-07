@@ -38,9 +38,11 @@ export PRINT_HELP_PYSCRIPT
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-build-base:  ## Builds the base image
-	@#poetry build --format sdist
-	@poetry export --without dev --without test --with image -f requirements.txt > ../dist/image-requirements.txt
+requirements:  ## Builds the /dist/image-requirements.txt
+	@cd .. && uv build --sdist
+	@uv export --no-dev --no-emit-project --group image --format requirements-txt > ../dist/image-requirements.txt
+
+build-base: requirements  ## Builds the base image
 	@cd .. && docker build \
 			${BUILD_OPTIONS} \
 			--platform linux/amd64 \

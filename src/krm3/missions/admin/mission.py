@@ -8,7 +8,7 @@ from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
-from adminfilters.numbers import NumberFilter
+from adminfilters.num import NumberFilter
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, site
@@ -51,8 +51,19 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name']
 
     inlines = [ExpenseInline]
-    list_display = ('number', 'year', 'status', 'resource', 'project', 'title', 'from_date', 'to_date',
-                    'default_currency', 'city', 'expense_num')
+    list_display = (
+        'number',
+        'year',
+        'status',
+        'resource',
+        'project',
+        'title',
+        'from_date',
+        'to_date',
+        'default_currency',
+        'city',
+        'expense_num',
+    )
     list_filter = [
         'status',
         ('project', AutoCompleteFilter),
@@ -72,7 +83,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     ('from_date', 'to_date', 'default_currency'),
                     ('project', 'city', 'resource'),
                 ]
-            }
+            },
         )
     ]
 
@@ -101,10 +112,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             kwargs['queryset'] = Currency.objects.actives()
         return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: btn.original.status == Mission.MissionStatus.DRAFT
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: btn.original.status == Mission.MissionStatus.DRAFT)
     def submit(self, request, pk):
         mission = Mission.objects.get(pk=pk)
         if mission.status == Mission.MissionStatus.DRAFT:
@@ -113,17 +121,12 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 mission.number = Mission.calculate_number(mission.id, mission.year)
             mission.save()
         else:
-            messages.warning(
-                request,
-                f'Cannot change status {mission.status} to {Mission.MissionStatus.SUBMITTED}')
+            messages.warning(request, f'Cannot change status {mission.status} to {Mission.MissionStatus.SUBMITTED}')
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original))
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original)))
     def view_linked_reimbursements(self, request, pk):
         rids = map(str, Reimbursement.objects.filter(expenses__mission_id=pk).values_list('id', flat=True))
-        return redirect(reverse('admin:missions_reimbursement_changelist') + f"?id__in={','.join(rids)}")
+        return redirect(reverse('admin:missions_reimbursement_changelist') + f'?id__in={",".join(rids)}')
 
     @button(
         html_attrs=NORMAL,
@@ -147,14 +150,12 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 data = json.dumps(data, indent=4)
 
                 return TemplateResponse(
-                    request,
-                    context={'data': data}, template='admin/missions/mission/import_missions_check.html'
+                    request, context={'data': data}, template='admin/missions/mission/import_missions_check.html'
                 )
         else:
             form = MissionsImportForm()
             return TemplateResponse(
-                request,
-                context={'form': form}, template='admin/missions/mission/import_missions.html'
+                request, context={'form': form}, template='admin/missions/mission/import_missions.html'
             )
 
     @button(
@@ -183,22 +184,31 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
             for expense in qs:
                 expense: Expense
-                summary[ANTICIPATO] += expense.amount_base if expense.payment_type.personal_expense is False \
-                    else decimal.Decimal(0.0)
+                summary[ANTICIPATO] += (
+                    expense.amount_base if expense.payment_type.personal_expense is False else decimal.Decimal(0.0)
+                )
                 summary[TOTALE_RIMBORSO] += expense.amount_reimbursement or decimal.Decimal(0.0)
-                summary[GIA_RIMBORSATE] += expense.amount_reimbursement if expense.reimbursement else decimal.Decimal(
-                    0.0) or decimal.Decimal(0.0)
-                summary[NON_RIMBORSATE] += (expense.amount_base or decimal.Decimal(0.0)) - (
-                        expense.amount_reimbursement or decimal.Decimal(0.0)) \
-                    if expense.payment_type.personal_expense else decimal.Decimal(0.0)
+                summary[GIA_RIMBORSATE] += (
+                    expense.amount_reimbursement
+                    if expense.reimbursement
+                    else decimal.Decimal(0.0) or decimal.Decimal(0.0)
+                )
+                summary[NON_RIMBORSATE] += (
+                    (expense.amount_base or decimal.Decimal(0.0))
+                    - (expense.amount_reimbursement or decimal.Decimal(0.0))
+                    if expense.payment_type.personal_expense
+                    else decimal.Decimal(0.0)
+                )
                 summary[SPESE_TRASFERTA] += (
-                                                  expense.amount_base if not expense.payment_type.personal_expense
-                                                  else expense.amount_reimbursement or Decimal('0')
-                                              ) or decimal.Decimal(0.0)
+                    expense.amount_base
+                    if not expense.payment_type.personal_expense
+                    else expense.amount_reimbursement or Decimal('0')
+                ) or decimal.Decimal(0.0)
 
             da_rimborsare = summary[SPESE_TRASFERTA] - summary[ANTICIPATO] - summary[GIA_RIMBORSATE]
-            summary[TOTALE_RIMBORSO] = \
+            summary[TOTALE_RIMBORSO] = (
                 f'{summary[TOTALE_RIMBORSO]} ({summary.pop(GIA_RIMBORSATE)} già Rimborsate, {da_rimborsare} rimanenti)'
+            )
 
             return TemplateResponse(
                 request,
@@ -208,9 +218,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     'expenses': expenses,
                     'summary': summary,
                     'base': settings.BASE_CURRENCY,
-                    'filename': format_html(f'{slugify(str(mission))}.pdf')
+                    'filename': format_html(f'{slugify(str(mission))}.pdf'),
                 },
-                template='admin/missions/mission/summary.html')
+                template='admin/missions/mission/summary.html',
+            )
         except RuntimeError as e:
             sentry_sdk.capture_exception(e)
             messages.error(request, str(e))
@@ -231,10 +242,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             exporter = TableExport(export_format, table_data)
             return exporter.response(f'mission_{mission.year}_{mission.number}_expenses.{export_format}')
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(btn.original.id)
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_expenses(self, request, pk):
         url = reverse('admin:missions_expense_changelist') + f'?mission_id={pk}'
         return HttpResponseRedirect(url)

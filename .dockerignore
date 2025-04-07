@@ -6,4 +6,5 @@ dist
 ./tests
 ./tools
 
+*.egg-info
 !tools/zapdata/demo

@@ -1,44 +1,8 @@
 exclude: '^$'
 fail_fast: false
 repos:
-  - repo: local
-    hooks:
-      - id: ci-cache-key
-        name: update ci-cache-key
-        entry: sh .hooks/pre-commit.sh
-        language: system
-        stages: [commit]
-        files: Poetry.lock
-
-      - id: isort
-#        args:
-#          - --check-only
-        exclude: tweepy
-        name: isort
-        entry: isort
-        language: system
-        types: [python]
-        stages: [commit]
-
-      - id: flake8
-        args:
-          - --config=.flake8
-        name: flake8
-        entry: flake8
-        language: system
-        types: [python]
-        stages: [commit]
-
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-    -   id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: (tests/.*|.*/tenant\.sql|Pipfile\.lock|.*\.js|.gitlab-ci.yml|poetry.lock|src/datcoco/git_info.py)
-        stages: [push]
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       # See https://pre-commit.com/hooks.html for more hooks
       - id: check-ast
@@ -48,49 +12,62 @@ repos:
         exclude: (tests/_extras/.*|docs)
       - id: trailing-whitespace
 
-      - id: double-quote-string-fixer
-        stages: [commit]
-
       - id: debug-statements
         exclude: (_plugin_template|python_twitter)
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: end-of-file-fixer
         exclude: .bumpversion.cfg
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: check-merge-conflict
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: check-case-conflict
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: check-toml
-        stages: [commit]
+        stages: [pre-commit]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+    -   id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: (tests/.*|.*/tenant\.sql|Pipfile\.lock|.*\.js|.gitlab-ci.yml|poetry.lock|src/datcoco/git_info.py)
+        stages: [pre-push]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.1.3'
+    rev: 'v0.11.4'
     hooks:
       - id: ruff
 
   - repo: https://github.com/saxix/pch
     rev: '0.1'
     hooks:
+      - id: check-missed-migrations
+        args:
+          - src
+        stages: [ pre-commit ]
+        additional_dependencies: [ setuptools ]
+
       - id: check-version-release-match
         args:
           - --pythonpath=src
           - --package=datcoco
-        stages: [push]
+        stages: [pre-push]
+        additional_dependencies: [ setuptools ]
 
       - id: check-untracked
         args:
           - src
           - tests
-        stages: [push]
+        stages: [pre-push]
 
       - id: check-forbidden
         args:
           - -p
           - \.showbrowser\(
-        stages: [commit]
+        stages: [pre-commit]
+        additional_dependencies: [ setuptools ]
