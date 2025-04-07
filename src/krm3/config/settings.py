@@ -63,6 +63,7 @@ INSTALLED_APPS = (
             'krm3.currencies',
             'krm3.missions',
             'krm3.api',
+            'krm3.timesheet'
             'krm3.web',
 
             # Third party apps.
