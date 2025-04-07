@@ -10,7 +10,7 @@ from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
-from adminfilters.numbers import NumberFilter
+from adminfilters.num import NumberFilter
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, site
@@ -36,8 +36,9 @@ from krm3.utils.queryset import ACLMixin
 class RestrictedReimbursementMixin:
     def get_readonly_fields(self, request, obj=None):
         ret = list(super().get_readonly_fields(request, obj))
-        if not request.user.has_perm('missions.view_any_mission') and \
-                not request.user.has_perm('missions.manage_any_mission'):
+        if not request.user.has_perm('missions.view_any_mission') and not request.user.has_perm(
+            'missions.manage_any_mission'
+        ):
             ret.append('reimbursement')
         return ret
 
@@ -63,9 +64,18 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
-    list_display = ('mission_st', 'day', 'colored_amount_currency', 'colored_amount_base',
-                    'colored_amount_reimbursement', 'category', 'payment_type', 'document_type',
-                    'link_to_reimbursement', 'image')
+    list_display = (
+        'mission_st',
+        'day',
+        'colored_amount_currency',
+        'colored_amount_base',
+        'colored_amount_reimbursement',
+        'category',
+        'payment_type',
+        'document_type',
+        'link_to_reimbursement',
+        'image',
+    )
     list_filter = [
         ('reimbursement', admin.EmptyFieldListFilter),
         'mission__status',
@@ -75,7 +85,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
-        ('day', DateRangeFilter.factory(title='day YYYY-MM-DD'))
+        ('day', DateRangeFilter.factory(title='day YYYY-MM-DD')),
     ]
     search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
@@ -88,8 +98,9 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
                     ('amount_base', 'amount_reimbursement'),
                     'detail',
                     ('category', 'payment_type', 'document_type', 'reimbursement'),
-                    'image']
-            }
+                    'image',
+                ]
+            },
         )
     ]
     actions = [get_rates, create_reimbursement]
@@ -200,10 +211,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             ret = HttpResponseRedirect(f'{ret.url}{qs}')
         return ret
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda button: button.request.GET.get('mission_id') is not None
-    )
+    @button(html_attrs=NORMAL, visible=lambda button: button.request.GET.get('mission_id') is not None)
     def capture(self, request):
         changelist_fitlers = re.match(r'mission_id=(?P<mission_id>\d+)', request.GET.get('_changelist_filters'))
         mission_id = changelist_fitlers.groupdict().get('mission_id')
@@ -214,14 +222,12 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             next, others = expenses[0], expenses[1:] if len(expenses) > 1 else []
             if others:
                 request.session[EXPENSE_UPLOAD_IMAGES] = others
-            url = f"{reverse('admin:missions_expense_changelist')}{next}/view_qr/"
+            url = f'{reverse("admin:missions_expense_changelist")}{next}/view_qr/'
             return HttpResponseRedirect(url)
         else:
             messages.info(request, 'There are no images left to capture')
 
-    @button(
-        html_attrs={'style': 'background-color:#0CDC6C;color:black'}
-    )
+    @button(html_attrs={'style': 'background-color:#0CDC6C;color:black'})
     def purge_obsolete_images(self, request):
         count = 0
         storage = Expense.image.field.storage
@@ -236,10 +242,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         messages.success(request, f'Cleaned {count} files')
 
     # FIXME: does not work ?
-    @button(
-        html_attrs=DANGEROUS,
-        visible=lambda btn: bool(btn.original.id and btn.original.image)
-    )
+    @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
     def clean_image(self, request, pk):
         expense = self.model.objects.get(pk=pk)
         pathname = Path(expense.image.file.name)
@@ -249,75 +252,55 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         try:
             written = cv2.imwrite(str(pathname), cleaned)
             if written:
-                url = reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode(
-                    {'revert': f'{backup_path}'})
+                url = (
+                    reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
+                )
                 messages.success(
-                    request, mark_safe(f'New image saved. <a href="{url}">click here to revert to previous image</a>'))
+                    request, mark_safe(f'New image saved. <a href="{url}">click here to revert to previous image</a>')
+                )
             else:
                 messages.warning(request, 'Could not save image')
         except Exception as e:
             messages.error(request, str(e))
 
-    @button(
-        html_attrs=DANGEROUS,
-        visible=lambda btn: bool(btn.original.id)
-    )
+    @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id))
     def view_qr(self, request, pk):
         expense = self.get_object(request, pk)
 
         # FIXME: This cannot work as the mobile uploading the client is not authenticated so no same session!
         request.session[EXPENSE_UPLOAD_IMAGES] = []
 
-        ref = rest_reverse('missions-api:expense-upload-image',
-                           args=[pk], request=request) + f'?otp={expense.get_otp()}'
+        ref = (
+            rest_reverse('missions-api:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
+        )
         if settings.FORCE_DEBUG_SSL:
-            ref = 'https' + ref[ref.index(':'):]  # force https also locally for ngrok
+            ref = 'https' + ref[ref.index(':') :]  # force https also locally for ngrok
         return TemplateResponse(
             request,
-            context={
-                'site_header': site.site_header,
-                'expense': expense,
-                'ref': ref,
-                'debug': True
-            },
-            template='admin/missions/expense/expense_qr.html')
+            context={'site_header': site.site_header, 'expense': expense, 'ref': ref, 'debug': True},
+            template='admin/missions/expense/expense_qr.html',
+        )
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(btn.original.id)
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def clone(self, request, pk):
         request.session['_like'] = pk
         return HttpResponseRedirect(reverse('admin:missions_expense_add'))
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(btn.original.id)
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def goto_mission(self, request, pk):
         expense = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
 
-    @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(btn.original.id) and btn.original.reimbursement_id is not None
-    )
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id) and btn.original.reimbursement_id is not None)
     def goto_reimbursement(self, request, pk):
         expense = self.model.objects.get(pk=pk)
-        return HttpResponseRedirect(
-            reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
+        return HttpResponseRedirect(reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
 
-    @button(
-        html_attrs=DANGEROUS,
-        visible=lambda btn: bool(btn.original.id and btn.original.image)
-    )
+    @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
     def rotate_left(self, request, pk):
         self._rotate_by_90(pk, request, 'left')
 
-    @button(
-        html_attrs=DANGEROUS,
-        visible=lambda btn: bool(btn.original.id and btn.original.image)
-    )
+    @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
     def rotate_right(self, request, pk):
         self._rotate_by_90(pk, request, 'right')
 
@@ -329,11 +312,12 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         try:
             turned = rotate_90(expense.image.file.name, direction)
             if turned:
-                url = reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode(
-                    {'revert': f'{backup_path}'})
+                url = (
+                    reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
+                )
                 messages.success(
-                    request,
-                    mark_safe(f'Image was turned. <a href="{url}">click here to revert to previous image</a>'))
+                    request, mark_safe(f'Image was turned. <a href="{url}">click here to revert to previous image</a>')
+                )
             else:
                 messages.warning(request, 'Could not be turned')
         except Exception as e:
