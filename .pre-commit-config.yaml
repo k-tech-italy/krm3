@@ -57,6 +57,7 @@ repos:
           - --pythonpath=src
           - --package=datcoco
         stages: [pre-push]
+        additional_dependencies: [ setuptools ]
 
       - id: check-untracked
         args:
