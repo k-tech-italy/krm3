@@ -4,7 +4,7 @@
 
 - [UV](https://docs.astral.sh/uv/getting-started/installation/) as package manager, venv manager, and for managing Python binaries
 - [Ruff](https://docs.astral.sh/ruff/installation/) as code linter/verifier
-- [Services](/Development/Development-environment/Services): a MSSQL database for testing, an S3 bucket for storing raw data server)
+- [PostgreSQL](https://postgresql.org) as the database.
 
 ## Optional requirements
 
@@ -12,33 +12,48 @@
 
 ## Preparation
 
-### Initial one-off
-```shell
-git clone https://dev.azure.com/worldfoodprogramme/mVAM/_git/mvam-pipelines-v2
-cd mvam-pipelines-v2
-git co <your working branch>  # if you need to change to a non-default branch
-```
+* Clone the repo.
 
-```shell
-# Install Python binaries
-uv python install 3.11  # or any other version required, see https://dev.azure.com/worldfoodprogramme/mVAM/_git/mvam-pipelines-v2?path=/.python-version
+    ```shell
+    git clone https://github.com/k-tech-italy/krm3.git
+    cd krm3
 
-# Create virtualenv
-uv venv
+    # switch to your working branch - use the `-c` flag to create a new one
+    git switch <your working branch>
+    ```
 
-# Install dependencies
-uv sync   # To be repeated whenever you pull a release requiring new dependencies
+* Prepare the Python environment for the project.
 
-# Install pre-commit checks
-pre-commit install
+    ```shell
+    # Install Python binaries
+    # see https://github.com/k-tech-italy/krm3/blob/uv/.python-version for the version to install
+    uv python install 3.12
 
-cp .env.example .env
-```
+    # Create the virtualenv
+    uv venv
 
-**IMPORTANT: Now edit the content of your .env according to your needs**
+    # Install dependencies
+    # Always do this every time a new dependency is added in a commit
+    uv sync
 
-If using direnv:
-```shell
-cp .envrc.example .envrc
-direnv allow  # To be repeated whenever you change your .env or .envrc content
-```
+    # Install pre-commit checks
+    pre-commit install
+    ```
+
+* Create a dedicated database on your PostgreSQL instance (e.g. `krm3`)
+
+* Make a copy of the dotenv example file. Make sure it is called `.env`.
+
+    ```shell
+    cp .env.example .env
+    ```
+
+* **IMPORTANT**: Edit the .env file according to your personal setup.
+  * Most importantly, edit the `KRM3_DATABASE_URL` variable to match your database's DSN.
+
+* If using `direnv`:
+    ```shell
+    cp .envrc.example .envrc
+    direnv allow
+    ```
+  Whenever you make a change to your `.env` or `.envrc` files, you need to run `direnv reload` or `direnv allow` to apply them.
