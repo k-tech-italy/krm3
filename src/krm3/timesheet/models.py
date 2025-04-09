@@ -23,7 +23,8 @@ class PO(models.Model):
 
     _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
-    ref = models.CharField(max_length=50, null=True, blank=True)
+    ref = models.CharField(max_length=50)
+    is_billable = models.BooleanField(default=True)
     state = models.TextField(choices=POState, default=POState.OPEN)  # type: ignore
     start_date = models.DateField(default=_DEFAULT_START_DATE)
     end_date = models.DateField(null=True, blank=True)
@@ -31,31 +32,13 @@ class PO(models.Model):
     project = models.ForeignKey(core_models.Project, on_delete=models.CASCADE)
 
     class Meta:
-        # NOTE: only works on PostgreSQL 15+
-        constraints = (models.UniqueConstraint(fields=('ref',), name='unique_ref_in_po', nulls_distinct=True),)
+        constraints = (models.UniqueConstraint(fields=('ref',), name='unique_ref_in_po'),)
         verbose_name = 'PO'
         verbose_name_plural = 'POs'
 
     @override
     def __str__(self) -> str:
-        return self.ref or f'Internal (#{self.pk})'
-
-    def is_billable(self) -> bool:
-        """Check whether the PO is billable.
-
-        POs without a `ref` are internal, therefore they cannot be
-        billed to a client.
-
-        :return: `True` if the PO is billable, `False` otherwise.
-        """
-        return bool(self.ref)
-
-    def is_open(self) -> bool:
-        """Check whether the PO is open.
-
-        :return: `True` if this PO is open, `False` otherwise.
-        """
-        return self.state == POState.OPEN
+        return self.ref
 
 
 class Basket(models.Model):
@@ -86,8 +69,8 @@ class Basket(models.Model):
 
         Calculations use both invoices and time entries.
 
-        :raises NotImplementedError:
-        :return:
+        :raises NotImplementedError: TODO
+        :return: the computed capacity
         """
         raise NotImplementedError('TODO: implement current_projected_capacity')
 
@@ -112,19 +95,6 @@ class Task(models.Model):
         return Basket.objects.filter(title=self.basket_title)
 
 
-class TimeEntryCategory(models.TextChoices):
-    """Qualifier for a timesheet entry.
-
-    Denotes how the `Resource` spent the time logged on the time sheet
-    (e.g. normal work, overtime).
-    """
-
-    WORK = 'WORK', _('Work')
-    TRAVEL = 'TRAVEL', _('Travel')
-    OVERTIME = 'OVERTIME', _('Overtime')
-    ON_CALL = 'ON CALL', _('On call')
-
-
 class TimeEntryState(models.TextChoices):
     """The state of a timesheet entry."""
 
@@ -136,9 +106,14 @@ class TimeEntry(models.Model):
     """A timesheet entry."""
 
     date = models.DateField()
-    category = models.TextField(choices=TimeEntryCategory, default=TimeEntryCategory.WORK)  # type: ignore
     last_modified = models.DateTimeField(auto_now=True)
-    hours_worked = models.DecimalField(max_digits=4, decimal_places=2)
+    work_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    overtime_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # type: ignore
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
