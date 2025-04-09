@@ -1,8 +1,10 @@
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
+from django.core import exceptions
 from django.db import models
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
 from krm3.core import models as core_models
@@ -107,18 +109,18 @@ class TimeEntry(models.Model):
 
     date = models.DateField()
     last_modified = models.DateTimeField(auto_now=True)
-    work_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    work_hours = models.DecimalField(max_digits=4, decimal_places=2)
     sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     overtime_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # type: ignore
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
 
-    # XXX: should we keep this instead?
     resource = models.ForeignKey(core_models.Resource, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
 
@@ -128,3 +130,47 @@ class TimeEntry(models.Model):
     @override
     def __str__(self) -> str:
         return f'{self.date}: {self.resource} on "{self.task}" ({self.state})'
+
+    @override
+    def clean(self) -> None:
+        errors = []
+
+        is_work_day = any(
+            hours > 0.0
+            for hours in (
+                self.work_hours,
+                self.leave_hours,
+                self.overtime_hours,
+                self.on_call_hours,
+                self.rest_hours,
+                self.travel_hours,
+            )
+        )
+        is_sick_day = self.sick_hours > 0.0
+        is_holiday = self.holiday_hours > 0.0
+
+        if is_sick_day and is_holiday:
+            errors.append(
+                exceptions.ValidationError(
+                    _('You cannot log more than one type of full-day absences in a day.'),
+                    code='multiple_full_day_absence_hours',
+                )
+            )
+
+        is_full_day_absence = is_sick_day or is_holiday
+        if is_work_day and is_full_day_absence:
+            errors.append(
+                exceptions.ValidationError(
+                    _('You cannot log work-related hours on %(what)s.'),
+                    params={'what': _('a sick day') if is_sick_day else _('a holiday')},
+                    code='work_during_full_day_absence',
+                )
+            )
+
+        if errors:
+            raise exceptions.ValidationError(errors)
+
+
+@receiver(models.signals.pre_save, sender=TimeEntry)
+def validate_time_entry(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    instance.clean()
