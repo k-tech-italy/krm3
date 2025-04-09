@@ -67,6 +67,7 @@ ignore = [
     "SIM108", # Use ternary operator instead of...
     "PLR2004", # Magic value used in comparison
     "DJ001", # Avoid using `null=True` on string-based fields such as `CharField`
+    "N818",  # Exception name `{name}` should be named with an Error suffix
 ]
 
 [format]
