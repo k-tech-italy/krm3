@@ -23,7 +23,7 @@ class TaskAdmin(admin.ModelAdmin):
 
 
 @admin.register(timesheet_models.TimeEntry)
-class TimeEntryAdmin(admin.ModelAdmin):
+class TimeEntryAdmin(AdminFiltersMixin, admin.ModelAdmin):
     list_fields = ('date', 'resource', 'task', 'category', 'hours_worked', 'state')
     search_fields = ('date', 'category', 'state')
     list_filter = [('resource', AutoCompleteFilter), ('task', AutoCompleteFilter)]
