@@ -51,7 +51,7 @@ class Basket(models.Model):
     title = models.CharField(max_length=200)
     initial_capacity = models.DecimalField(max_digits=10, decimal_places=2)
     # XXX: should we SET_NULL? or rather SET(next in line if any)?
-    follows = models.ForeignKey('self', on_delete=models.RESTRICT, null=True, blank=True)
+    follows = models.OneToOneField('self', on_delete=models.RESTRICT, null=True, blank=True, related_name='followed_by')
 
     po = models.ForeignKey(PO, on_delete=models.CASCADE)
 
