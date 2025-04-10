@@ -160,6 +160,7 @@ class BasketFactory(factory.django.DjangoModelFactory):
 
 class TaskFactory(factory.django.DjangoModelFactory):
     title = factory.Faker('sentence', nb_words=3)
+    work_price = factory.Faker('random_int', min=100, max=1000)
     project = factory.SubFactory(ProjectFactory)
     resource = factory.SubFactory(ResourceFactory)
 
@@ -175,3 +176,19 @@ class TimeEntryFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'timesheet.TimeEntry'
+
+
+class InvoiceFactory(factory.django.DjangoModelFactory):
+    number = factory.Sequence(lambda n: f'Inv_{n + 1:04}')
+
+    class Meta:
+        model = 'accounting.Invoice'
+
+
+class InvoiceEntryFactory(factory.django.DjangoModelFactory):
+    amount = factory.Faker('random_int', min=10, max=100)
+    basket = factory.SubFactory(BasketFactory)
+    invoice = factory.SubFactory(InvoiceFactory)
+
+    class Meta:
+        model = 'accounting.InvoiceEntry'

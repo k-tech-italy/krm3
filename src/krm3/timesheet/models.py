@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import datetime
-from decimal import Decimal
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Self, override
 
 from django.core import exceptions
 from django.db import models
@@ -10,9 +11,12 @@ from django.utils.translation import gettext_lazy as _
 from krm3.core import models as core_models
 
 if TYPE_CHECKING:
+    from decimal import Decimal
     from django.db.models.fields.related_descriptors import RelatedManager
 
     from krm3.accounting.models import InvoiceEntry
+
+_DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
 
 class POState(models.TextChoices):
@@ -23,8 +27,6 @@ class POState(models.TextChoices):
 class PO(models.Model):
     """A PO for a project."""
 
-    _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
-
     ref = models.CharField(max_length=50)
     is_billable = models.BooleanField(default=True)
     state = models.TextField(choices=POState, default=POState.OPEN)  # type: ignore
@@ -34,7 +36,7 @@ class PO(models.Model):
     project = models.ForeignKey(core_models.Project, on_delete=models.CASCADE)
 
     class Meta:
-        constraints = (models.UniqueConstraint(fields=('ref',), name='unique_ref_in_po'),)
+        constraints = (models.UniqueConstraint(fields=('ref', 'project'), name='unique_ref_project_in_po'),)
         verbose_name = 'PO'
         verbose_name_plural = 'POs'
 
@@ -58,23 +60,31 @@ class Basket(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    def tasks(self) -> models.QuerySet[Task]:
+        """Return the tasks attached to this basket.
+
+        :return: a queryset of related `Task`s.
+        """
+        return Task.objects.filter(basket_title=self.title)
+
     def current_capacity(self) -> Decimal:
         """Compute the basket's current capacity based on invoiced hours.
 
-        :raises NotImplementedError: TODO
         :return: the computed capacity
         """
-        raise NotImplementedError('TODO: implement current_capacity')
+        invoiced_hours = self.invoice_entries.values_list('amount', flat=True)
+        return self.initial_capacity - sum(invoiced_hours)
 
     def current_projected_capacity(self) -> Decimal:
         """Compute the basket' current capacity.
 
-        Calculations use both invoices and time entries.
+        Calculations use both invoices and open time entries.
 
-        :raises NotImplementedError: TODO
         :return: the computed capacity
         """
-        raise NotImplementedError('TODO: implement current_projected_capacity')
+        time_entries = TimeEntry.objects.open().filter(task__in=self.tasks())  # pyright: ignore
+        logged_hours = sum(entry.total_work_hours for entry in time_entries)
+        return self.current_capacity() - logged_hours
 
 
 class Task(models.Model):
@@ -84,17 +94,24 @@ class Task(models.Model):
     basket_title = models.CharField(max_length=200, null=True, blank=True)
     # TODO: validate this
     color = models.TextField(max_length=6, null=True, blank=True)
+    start_date = models.DateField(default=_DEFAULT_START_DATE)
+    end_date = models.DateField(null=True, blank=True)
+    # TODO: make prices currency-aware
+    work_price = models.DecimalField(max_digits=10, decimal_places=2)
+    on_call_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    travel_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    overtime_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     project = models.ForeignKey(core_models.Project, on_delete=models.CASCADE)
     # XXX: should we retain this instead?
     resource = models.ForeignKey(core_models.Resource, on_delete=models.CASCADE)
 
+    if TYPE_CHECKING:
+        time_entries: RelatedManager[TimeEntry]
+
     @override
     def __str__(self) -> str:
         return self.title
-
-    def baskets(self) -> models.QuerySet[Basket]:
-        return Basket.objects.filter(title=self.basket_title)
 
 
 class TimeEntryState(models.TextChoices):
@@ -102,6 +119,15 @@ class TimeEntryState(models.TextChoices):
 
     OPEN = 'OPEN', _('Open')
     CLOSED = 'CLOSED', _('Closed')
+
+
+class TimeEntryQuerySet(models.QuerySet):
+    def open(self) -> Self:
+        """Select the open time entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.filter(state=POState.OPEN)
 
 
 class TimeEntry(models.Model):
@@ -122,7 +148,9 @@ class TimeEntry(models.Model):
     metadata = models.JSONField(default=dict, null=True, blank=True)
 
     resource = models.ForeignKey(core_models.Resource, on_delete=models.CASCADE)
-    task = models.ForeignKey(Task, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
+
+    objects = TimeEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = 'Time entries'
@@ -131,8 +159,27 @@ class TimeEntry(models.Model):
     def __str__(self) -> str:
         return f'{self.date}: {self.resource} on "{self.task}" ({self.state})'
 
+    @property
+    def total_work_hours(self) -> Decimal:
+        """Compute the total task-related hours logged on this entry.
+
+        :return: the computed total.
+        """
+        return self.work_hours + self.leave_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+
     @override
     def clean(self) -> None:
+        """Validate logged hours.
+
+        Rules:
+        - You cannot log more than one full-day absence (sick, holiday)
+          in the same entry
+        - You cannot log task-related hours (work, overtime, etc.)
+          if the entry already has a full-day absence logged.
+
+        :raises exceptions.ValidationError: when any of the rules above
+          is violated.
+        """
         errors = []
 
         is_work_day = any(
@@ -161,8 +208,8 @@ class TimeEntry(models.Model):
         if is_work_day and is_full_day_absence:
             errors.append(
                 exceptions.ValidationError(
-                    _('You cannot log work-related hours on %(what)s.'),
-                    params={'what': _('a sick day') if is_sick_day else _('a holiday')},
+                    _('You cannot log work-related hours on %(absence)s.'),
+                    params={'absence': _('a sick day') if is_sick_day else _('a holiday')},
                     code='work_during_full_day_absence',
                 )
             )

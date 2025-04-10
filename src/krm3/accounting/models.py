@@ -20,11 +20,10 @@ class Invoice(models.Model):
 class InvoiceEntry(models.Model):
     """Models how many person-hours will be charged.
 
-    :param amount: how many hours to charge.
-    :param basket: the basket from which the charged hours are taken.
+    These hours are taken from the related `basket`.
     """
 
-    amount = models.DecimalField(max_digits=4, decimal_places=2, help_text='Number of hours to charge')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Number of hours to charge')
 
     basket = models.ForeignKey(timesheet_models.Basket, on_delete=models.CASCADE, related_name='invoice_entries')
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='entries')
