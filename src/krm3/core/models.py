@@ -49,11 +49,11 @@ class User(AbstractUser):
     def get_natural_key_fields() -> list[str]:
         return ['username']
 
-    def can_manage_and_view_any_projects(self) -> bool:
-        """Visibility and edit rights check for privileged users.
+    def can_manage_and_view_any_project(self) -> bool:
+        """Check visibility and edit rights for privileged users.
 
-        Return `True` if the user is allowed to view and edit data on
-        any project, `False` otherwise.
+        :return: `True` if the user is allowed to view and edit data on
+            any project, `False` otherwise.
         """
         return (
             self.is_superuser
@@ -74,7 +74,7 @@ class ProjectManager(NaturalKeyModelManager):
 
         Superuser gets them all.
         """
-        if user.can_manage_and_view_any_projects():
+        if user.can_manage_and_view_any_project():
             return self.all()
         return self.filter(mission__resource__profile__user=user)
 
@@ -96,7 +96,7 @@ class Project(NaturalKeyModel):
         return str(self.name)
 
     def is_accessible(self, user: User) -> bool:
-        if user.can_manage_and_view_any_projects():
+        if user.can_manage_and_view_any_project():
             return True
         return self.mission_set.filter(resource__profile__user=user).count() > 0
 
