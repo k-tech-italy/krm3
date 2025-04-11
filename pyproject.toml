@@ -36,6 +36,7 @@ dependencies = [
     "django-smart-admin[full]>=2.6.0",
     "tablib>=3.8.0",
     "django-environ>=0.12.0",
+    "djangorestframework>=3.16.0",
 ]
 
 [dependency-groups]
