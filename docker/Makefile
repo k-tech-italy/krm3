@@ -65,18 +65,17 @@ build: ## Builds the image
 	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
 
 registrylogin:  ## Log in to docker
-	@echo ${DOCKER_SECRET} | echo docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin ; \
+	@echo "${DOCKER_PWD}" | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USR} --password-stdin
 
 save:
 	@mkdir -p ../dist
 	@echo "Saving image ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz"
 	@docker save ${DOCKER_IMAGE_FULLNAME} | gzip > ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz
 
-release:  ## For now manual release until we fix nexus
+release:  registrylogin  ## For now manual release until we fix nexus
 #	@scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp
 #	@echo "Now you can run on  the server:"
 #	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"
-	@echo "${DOCKER_PWD}" | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USR} --password-stdin
 	@docker push ${DOCKER_IMAGE_FULLNAME}
 
 #release: registrylogin  ## Release the image
