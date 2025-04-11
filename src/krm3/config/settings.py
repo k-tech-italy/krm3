@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+
 import logging
 import os
 from pathlib import Path
@@ -37,54 +38,54 @@ MEDIA_URL = env('MEDIA_URL')
 DEBUG = env('DEBUG')
 
 INSTALLED_APPS = (
-        [
-            # 'django.contrib.admin',
-            'django.contrib.auth',
-            'django.contrib.contenttypes',
-            'django.contrib.sessions',
-            'django.contrib.messages',
-            'django.contrib.staticfiles',
-            'django.contrib.admindocs',
-            'django.contrib.sites',
-
-            'django_sysinfo',
-            'adminactions',
-            'adminfilters',
-            'rangefilter',
-            'admin_extra_buttons',
-        ] +
-        SMART_ADMIN_APPS +  # noqa: F405
-        DDT_APPS + [  # noqa: F405 we import it from smartadmin fragment
-            # Project apps.
-            'krm3.config.admin_extras.apps.AdminConfig',
-            'krm3.core',
-            'krm3',
-
-            'krm3.currencies',
-            'krm3.missions',
-            'krm3.api',
-            'krm3.timesheet',
-            'krm3.web',
-
-            # Third party apps.
-            'qr_code',
-            'django_filters',
-            'rest_framework',
-            'drf_spectacular',
-            'djoser',
-            'corsheaders',
-            'mptt',
-            'social_django',
-            'crispy_forms',
-            'rest_framework_simplejwt',
-            'rest_framework_simplejwt.token_blacklist',
-            'django_tables2',
-            'constance'
-        ]
+    [
+        # 'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        'django.contrib.admindocs',
+        'django.contrib.sites',
+        'django_sysinfo',
+        'adminactions',
+        'adminfilters',
+        'rangefilter',
+        'admin_extra_buttons',
+    ]
+    + SMART_ADMIN_APPS  # noqa: F405
+    + DDT_APPS  # noqa: F405 we import it from smartadmin fragment
+    + [
+        # Project apps.
+        'krm3.config.admin_extras.apps.AdminConfig',
+        'krm3.core',
+        'krm3',
+        'krm3.currencies',
+        'krm3.missions',
+        'krm3.api',
+        'krm3.timesheet',
+        'krm3.accounting',
+        'krm3.web',
+        # Third party apps.
+        'qr_code',
+        'django_filters',
+        'rest_framework',
+        'drf_spectacular',
+        'djoser',
+        'corsheaders',
+        'mptt',
+        'social_django',
+        'crispy_forms',
+        'rest_framework_simplejwt',
+        'rest_framework_simplejwt.token_blacklist',
+        'django_tables2',
+        'constance',
+    ]
 )
 
 try:
     import django_extensions as _  # noqa: F401
+
     INSTALLED_APPS.append('django_extensions')
 except ModuleNotFoundError:
     pass
@@ -92,19 +93,24 @@ except ModuleNotFoundError:
 SITE_ID = 1
 
 
-MIDDLEWARE = [
-                 'django.middleware.security.SecurityMiddleware',
-                 'django.contrib.sessions.middleware.SessionMiddleware',
-                 'corsheaders.middleware.CorsMiddleware',
-                 'django.middleware.common.CommonMiddleware',
-                 'django.middleware.csrf.CsrfViewMiddleware',
-                 'django.contrib.auth.middleware.AuthenticationMiddleware',
-                 'django.contrib.messages.middleware.MessageMiddleware',
-                 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-             ] + SOCIAL_MIDDLEWARES + DDT_MIDDLEWARES + [  # noqa: F405
-                 'django.contrib.admindocs.middleware.XViewMiddleware',
-                 # Third party middlewares.
-             ]
+MIDDLEWARE = (
+    [
+        'django.middleware.security.SecurityMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'corsheaders.middleware.CorsMiddleware',
+        'django.middleware.common.CommonMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    ]
+    + SOCIAL_MIDDLEWARES  # noqa: F405
+    + DDT_MIDDLEWARES  # noqa: F405
+    + [
+        'django.contrib.admindocs.middleware.XViewMiddleware',
+        # Third party middlewares.
+    ]
+)
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -113,18 +119,17 @@ ROOT_URLCONF = 'krm3.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            os.path.join(BASE_DIR, 'web/templates')
-        ],
+        'DIRS': [os.path.join(BASE_DIR, 'web/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                                      'django.template.context_processors.debug',
-                                      'django.template.context_processors.request',
-                                      'django.contrib.auth.context_processors.auth',
-                                      'django.contrib.messages.context_processors.messages',
-                                  ] + SOCIAL_TEMPLATE_PROCESSORS + [  # noqa: F405
-                                  ],
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ]
+            + SOCIAL_TEMPLATE_PROCESSORS  # noqa: F405
+            + [],
         },
     },
 ]
@@ -185,7 +190,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 100
+    'PAGE_SIZE': 100,
 }
 
 SPECTACULAR_SETTINGS = {

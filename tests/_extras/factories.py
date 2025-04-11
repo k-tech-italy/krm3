@@ -10,7 +10,7 @@ from krm3.currencies import models
 
 class UserFactory(factory.django.DjangoModelFactory):
     username = factory.Sequence(lambda n: 'User %02d' % n)
-    email = factory.Sequence(lambda n: 'u%02d@wfp.org' % n)
+    email = factory.Sequence(lambda n: 'u%02d@example.com' % n)
 
     class Meta:
         model = User
@@ -19,11 +19,9 @@ class UserFactory(factory.django.DjangoModelFactory):
 class CountryFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('country')
 
-    # florida = factory.LazyAttribute(lambda x: faker.florida())
-
     class Meta:
         model = 'core.Country'
-        django_get_or_create = ('name', )
+        django_get_or_create = ('name',)
 
 
 class CityFactory(factory.django.DjangoModelFactory):
@@ -59,7 +57,7 @@ class ClientFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Client'
-        django_get_or_create = ('name', )
+        django_get_or_create = ('name',)
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
@@ -73,15 +71,12 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
 class MissionFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: n + 1)
-    from_date = factory.Faker('date_between_dates',
-                              date_start=date.fromisoformat('2020-01-01'),
-                              date_end=date.fromisoformat('2020-10-01'))
-    to_date = factory.LazyAttribute(
-        lambda obj: obj.from_date + relativedelta(days=5)
+    from_date = factory.Faker(
+        'date_between_dates', date_start=date.fromisoformat('2020-01-01'), date_end=date.fromisoformat('2020-10-01')
     )
+    to_date = factory.LazyAttribute(lambda obj: obj.from_date + relativedelta(days=5))
 
     project = factory.SubFactory(ProjectFactory)
-    # country = factory.SubFactory(CountryFactory)
     city = factory.SubFactory(CityFactory)
     resource = factory.SubFactory(ResourceFactory)
     default_currency = factory.Iterator(models.Currency.objects.all())
@@ -116,9 +111,7 @@ class DocumentTypeFactory(factory.django.DjangoModelFactory):
 class ExpenseFactory(factory.django.DjangoModelFactory):
     mission = factory.SubFactory(MissionFactory)
     amount_currency = FuzzyDecimal(0.5, 170)
-    day = factory.LazyAttribute(
-        lambda obj: obj.mission.from_date
-    )
+    day = factory.LazyAttribute(lambda obj: obj.mission.from_date)
     currency = factory.SubFactory(CurrencyFactory)
     category = factory.SubFactory(ExpenseCategoryFactory)
     payment_type = factory.SubFactory(PaymentCategoryFactory)
@@ -146,3 +139,56 @@ class ReimbursementFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'missions.Reimbursement'
+
+
+class POFactory(factory.django.DjangoModelFactory):
+    ref = factory.Sequence(lambda n: f'Ext_{n + 1:04}')
+    project = factory.SubFactory(ProjectFactory)
+
+    class Meta:
+        model = 'timesheet.PO'
+
+
+class BasketFactory(factory.django.DjangoModelFactory):
+    title = factory.Faker('sentence', nb_words=3)
+    initial_capacity = FuzzyDecimal(100, 5000)
+    po = factory.SubFactory(POFactory)
+
+    class Meta:
+        model = 'timesheet.Basket'
+
+
+class TaskFactory(factory.django.DjangoModelFactory):
+    title = factory.Faker('sentence', nb_words=3)
+    work_price = factory.Faker('random_int', min=100, max=1000)
+    project = factory.SubFactory(ProjectFactory)
+    resource = factory.SubFactory(ResourceFactory)
+
+    class Meta:
+        model = 'timesheet.Task'
+
+
+class TimeEntryFactory(factory.django.DjangoModelFactory):
+    date = factory.Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
+    work_hours = factory.Faker('random_int', min=0, max=8)
+    task = factory.SubFactory(TaskFactory)
+    resource = factory.LazyAttribute(lambda entry: entry.task.resource)
+
+    class Meta:
+        model = 'timesheet.TimeEntry'
+
+
+class InvoiceFactory(factory.django.DjangoModelFactory):
+    number = factory.Sequence(lambda n: f'Inv_{n + 1:04}')
+
+    class Meta:
+        model = 'accounting.Invoice'
+
+
+class InvoiceEntryFactory(factory.django.DjangoModelFactory):
+    amount = factory.Faker('random_int', min=10, max=100)
+    basket = factory.SubFactory(BasketFactory)
+    invoice = factory.SubFactory(InvoiceFactory)
+
+    class Meta:
+        model = 'accounting.InvoiceEntry'
