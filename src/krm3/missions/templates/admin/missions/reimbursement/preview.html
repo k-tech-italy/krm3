@@ -24,7 +24,7 @@
     </ul>
     <form action="{% url 'missions:reimburse-expenses' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ form.as_table }}
+        {{ form.as_p }}
         <br>
         <input type=submit>
     </form>

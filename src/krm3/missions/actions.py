@@ -31,7 +31,6 @@ def create_reimbursement(modeladmin, request, expenses: typing.Union['QuerySet',
 
         form = MissionsReimbursementForm(initial={
             'expenses': ','.join([str(pk) for pk in expenses.values_list('id', flat=True)]),
-            'year': datetime.date.today().year
         })
         return TemplateResponse(
             request,

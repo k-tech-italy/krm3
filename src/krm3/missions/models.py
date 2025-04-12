@@ -179,9 +179,9 @@ class ReimbursementManager(models.Manager):
 
 
 class Reimbursement(models.Model):
-    number = models.PositiveIntegerField(blank=True, help_text='Set automatically')
+    number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
     year = models.PositiveIntegerField(blank=True)
-    title = models.CharField(max_length=120)
+    title = models.CharField(max_length=120, help_text='Set automatically if left blank')
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     paid_date = models.DateField(blank=True, null=True)
@@ -262,6 +262,15 @@ class Expense(models.Model):
 
     objects = ExpenseManager()
 
+    class Meta:
+        permissions = [
+            ('view_any_expense', "Can view(only) everybody's expenses"),
+            ('manage_any_expense', "Can view, and manage everybody's expenses"),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.day}, {self.amount_currency} for {self.category}'
+
     def get_updated_millis(self):
         return int(self.modified_ts.timestamp() * 1000)
 
@@ -312,27 +321,16 @@ class Expense(models.Model):
             # con immagine
             if self.image:
                 return self.amount_base
-            else:
-                return 0
+            return 0
         # Aziendale
-        else:
-            if self.image:
-                return 0
-            else:
-                return Decimal(-1) * Decimal(self.amount_base)
+        if self.image:
+            return 0
+        return Decimal(-1) * Decimal(self.amount_base)
 
-    def __str__(self):
-        return f'{self.day}, {self.amount_currency} for {self.category}'
-
-    class Meta:
-        permissions = [
-            ('view_any_expense', "Can view(only) everybody's expenses"),
-            ('manage_any_expense', "Can view, and manage everybody's expenses"),
-        ]
 
 
 @receiver(pre_save, sender=Expense)
-def recalculate_reimbursement(sender, instance: Expense, update_fields=None, **kwargs):
+def recalculate_reimbursement(sender, instance: Expense, update_fields=None, **kwargs) -> None:  # noqa: ANN003
     if instance.id:
         old_instance = Expense.objects.get(id=instance.id)
         if (not old_instance.image and bool(instance.image) or

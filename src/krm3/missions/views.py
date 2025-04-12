@@ -18,36 +18,28 @@ class ReimburseMissionsView(FormView):
     http_method_names = ['post']
     template_name = 'admin/missions/reimbursement/preview.html'
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:  # noqa: ANN003
         ret = super().get_context_data(**kwargs)
         ret['resources'] = ReimbursementFacility(ret['form'].cleaned_data['expenses']).render()
         return ret
 
-    def post(self, request, *args, **kwargs):
-        """
-        Handle POST requests: instantiate a form instance with the passed
-        POST variables and then check if it's valid.
-        """
+    def post(self, request, *args, **kwargs):  # noqa: ANN001,ANN002,ANN003,ANN201
+        """Instantiate a form instance with the passed POST variables and then check if it's valid."""
         form = self.get_form()
         if form.is_valid():
             url = reverse('missions:reimburse-results')
             ids = form.cleaned_data['expenses']
-            reimbursements = ReimbursementFacility(ids).reimburse(form.cleaned_data['year'], form.cleaned_data['title'])
+            reimbursements = ReimbursementFacility(ids).reimburse(
+                form.cleaned_data['year'], form.cleaned_data['title'], form.cleaned_data['month']
+            )
             ids = ','.join([str(r.id) for r in reimbursements])
             return HttpResponseRedirect(f'{url}?ids={ids}')
-        else:
-            return self.form_invalid(form)
+        return self.form_invalid(form)
 
 
 class ReimbursementResultsView(View):
     http_method_names = ['get']
 
-    def get(self, request, *args, **kwargs):
-        ctx = {
-            'reimbursements': Reimbursement.objects.filter(id__in=request.GET['ids'].split(','))
-        }
-        return TemplateResponse(
-            request,
-            'admin/missions/reimbursement/results.html',
-            ctx
-        )
+    def get(self, request, *args, **kwargs):  # noqa: ANN001,ANN002,ANN003,ANN201
+        ctx = {'reimbursements': Reimbursement.objects.filter(id__in=request.GET['ids'].split(','))}
+        return TemplateResponse(request, 'admin/missions/reimbursement/results.html', ctx)

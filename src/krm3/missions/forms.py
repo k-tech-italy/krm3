@@ -3,6 +3,7 @@ import datetime
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 
 from krm3.currencies.models import Currency
 from krm3.missions.facilities import ReimbursementFacility
@@ -11,7 +12,6 @@ from krm3.missions.models import Expense, Mission, Reimbursement
 
 
 class MissionAdminForm(forms.ModelForm):
-
     def calculate_number(self) -> int:
         return Mission.calculate_number(self.instance and self.instance.id, self.cleaned_data['year'])
 
@@ -19,6 +19,7 @@ class MissionAdminForm(forms.ModelForm):
         number = self.cleaned_data['number']
         if number and number <= 0:
             raise ValidationError('Number must be > 0')
+        return number
 
     def clean(self):
         """Clean data."""
@@ -34,26 +35,34 @@ class MissionAdminForm(forms.ModelForm):
 
         # if SUBMITTED
         if self.cleaned_data.get('status') != Mission.MissionStatus.DRAFT:
-
             # if we have from_date and number is empty
             if (from_date := self.cleaned_data.get('from_date')) and self.cleaned_data.get('number', None) is None:
                 self.cleaned_data['number'] = self.calculate_number()
             else:
                 if self.cleaned_data.get('number', None) is None:
                     self.add_error(
-                        'number',
-                        ValidationError('Number requires from_Date to be autocalculated', code='invalid'))
+                        'number', ValidationError('Number requires from_date to be autocalculated', code='invalid')
+                    )
 
             # set a title if empty
             if not self.cleaned_data.get('title') and (city := self.cleaned_data.get('city')):
                 city = city.name.lower()
-                self.cleaned_data['title'] = f"{self.cleaned_data['number']}-{self.cleaned_data['year']}_{city}"
+                if to_date := self.cleaned_data.get('to_date'):
+                    # self.cleaned_data['title'] = f"{self.cleaned_data['number']}-{self.cleaned_data['year']}_{city}"
+                    self.cleaned_data['title'] = (
+                        f"M_{self.cleaned_data['year']}_{self.cleaned_data['number']:03}_"
+                        f"{from_date:%d}{from_date:%b}-{to_date:%d}{to_date:%b}"
+                        f"_{self.cleaned_data['resource'].last_name.replace(' ','')}_{slugify(city)}"
+                    )
 
         if 'status' in self.changed_data and self.instance:
-            if (self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED and
-                    self.instance.expenses.filter(reimbursement__isnull=False).exists()):
+            if (
+                self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
+                and self.instance.expenses.filter(reimbursement__isnull=False).exists()
+            ):
                 raise ValidationError(
-                    f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception')
+                    f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception'
+                )
 
         return ret
 
@@ -63,7 +72,6 @@ class MissionAdminForm(forms.ModelForm):
 
 
 class ExpenseAdminForm(forms.ModelForm):
-
     def clean(self):
         ret = super().clean()
 
@@ -91,14 +99,11 @@ class MissionsImportForm(forms.Form):
 
 class MissionsReimbursementForm(forms.Form):
     """Form for reimbursement of multiple expenses."""
-    expenses = forms.CharField(widget=forms.HiddenInput())
-    year = forms.IntegerField(help_text='Please select the fiscal year for the reimbursements', required=True)
-    title = forms.CharField(help_text='The mission name will be [resource]-[year]-[title]', required=True)
 
-    def get_initial_for_field(self, field, field_name):
-        if field_name == 'title':
-            return datetime.date.today().strftime('%B')
-        return super().get_initial_for_field(field, field_name)
+    expenses = forms.CharField(widget=forms.HiddenInput())
+    year = forms.IntegerField(help_text='Please select the fiscal year for the reimbursements', required=True, initial=lambda :datetime.date.today().year)
+    month = forms.CharField(help_text='Month of reimbursement', required=True, initial=lambda :datetime.date.today().strftime('%b'))
+    title = forms.CharField(help_text='If blank calculated as R_[year]_[num:3]_[mmm]_[last_name]', required=False)
 
     def clean(self):
         ret = super().clean()
@@ -107,6 +112,9 @@ class MissionsReimbursementForm(forms.Form):
 
 
 class ReimbursementAdminForm(forms.ModelForm):
+    title = forms.CharField(
+        required=False, widget=forms.TextInput(attrs={'size': 60}), help_text='Set automatically if left blank'
+    )
 
     def calculate_number(self) -> int:
         return Reimbursement.calculate_number(self.instance and self.instance.id, self.cleaned_data['year'])
@@ -130,5 +138,5 @@ class ReimbursementAdminForm(forms.ModelForm):
         return ret
 
     class Meta:
-        model = Mission
+        model = Reimbursement
         fields = '__all__'

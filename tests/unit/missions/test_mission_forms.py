@@ -1,5 +1,7 @@
 import pytest
 from django.shortcuts import reverse
+from django.utils.text import slugify
+
 from testutils import map_mission_status
 
 from krm3.missions.forms import MissionAdminForm
@@ -7,7 +9,7 @@ from krm3.utils.dates import dt
 
 
 @pytest.mark.parametrize(
-    'input, expected',
+    "dataset, expected",  # noqa: PT006
     [
         pytest.param([], 1, id='empty'),
         pytest.param([1], 2, id='one'),
@@ -19,11 +21,11 @@ from krm3.utils.dates import dt
         pytest.param([4, '-2', 1], 3, id='cancelled-gap'),
     ]
 )
-def test_calculate_mission_number(input, expected):
+def test_calculate_mission_number(dataset, expected):
     from factories import MissionFactory
 
     from krm3.missions.models import Mission
-    for m in input:
+    for m in dataset:
         MissionFactory(
             number=abs(int(m)),
             status=Mission.MissionStatus.SUBMITTED if isinstance(m, int) else Mission.MissionStatus.CANCELLED,
@@ -36,7 +38,7 @@ def test_calculate_mission_number(input, expected):
 
 
 @pytest.mark.parametrize(
-    'existing_status, this_status, expected_number, same_year',
+    'existing_status, this_status, expected_number, same_year',  # noqa: PT006
     [
         pytest.param('D', 'S', 1, True, id='first-submitted'),
         pytest.param(None, 'S', 1, True, id='only-submitted'),
@@ -76,11 +78,11 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
 
 
 @pytest.mark.parametrize(
-    'prev, next, next_number, expected_number, reimbursed_expenses, err_msg',
+    "prev, succ, next_number, expected_number, reimbursed_expenses, err_msg",  # noqa: PT006
     [
         pytest.param('D', 'S', 1, 1, None, None, id='first-submitted'),
         pytest.param('S', 'D', None, None, False, None, id='no-reimbursed-expenses'),
-        pytest.param('S', 'D', 1, None, False, None, id='draft-number-not-none'),
+        pytest.param('S', 'D', 1, 1, False, None, id='draft-number-not-none'),
         pytest.param('S', 'C', 1, 1, False, None, id='cancelled-number-not-none'),
         pytest.param(
             'S', 'D', None, None, True,
@@ -93,7 +95,7 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
     ]
 )
 def test_mission_status_transitions(
-        prev, next, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user):
+        prev, succ, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user):
     from factories import ExpenseFactory, MissionFactory, ReimbursementFactory
 
     mission = MissionFactory(number=None if prev == 'D' else 1, status=map_mission_status(prev))
@@ -106,7 +108,7 @@ def test_mission_status_transitions(
 
     url = reverse('admin:missions_mission_change', args=[mission.id])
     form = krm3app.get(url, user=admin_user).forms['mission_form']
-    form['status'] = map_mission_status(next)
+    form['status'] = map_mission_status(succ)
     form['number'] = next_number
     response = form.submit()
     if response.status_code == 302:
@@ -117,3 +119,19 @@ def test_mission_status_transitions(
     else:
         mission.refresh_from_db()
         assert mission.number == expected_number
+
+
+def test_mission_clean(project, resource, city) -> None:
+    from krm3.missions.models import Mission
+    form = MissionAdminForm(data={
+        'from_date': '2025-12-27',
+        'to_date': '2026-01-05',
+        'number': 11,
+        'status': Mission.MissionStatus.SUBMITTED,
+        'city': city.id,
+        'resource': resource.id,
+        'project': project.id
+    })
+
+    assert form.is_valid()
+    assert form.cleaned_data['title'] == f"M_2025_011_27Dec-05Jan_{resource.last_name}_{slugify(city.name)}"

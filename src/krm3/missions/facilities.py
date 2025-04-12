@@ -41,13 +41,22 @@ class ReimbursementFacility:
         if not min_max['mi'] <= year <= min_max['ma']:
             raise ValidationError(f"Year must be between {min_max['mi']} and {min_max['ma']}", code='year')
 
-    def reimburse(self, year: int, title: str) -> List[Reimbursement]:
+    def reimburse(self, year: int, title: str, month: str) -> List[Reimbursement]:
         reimbursements = []
 
+        number = Reimbursement.objects.filter(year=year).aggregate(Max('number'))['number__max'] or 0
+
         for resource, missions in self.resources.items():
-            tit = f'{resource}-{year}-{title}'
+            number += 1
+            last_name = resource.last_name.replace(' ', '')
+            if title:
+                if not title.endswith('_'):
+                    title += '_'
+                tit = f'{title}{last_name}'
+            else:
+                tit = f'R_{year}_{number:03}_{month}_{last_name}'
             reimbursement = Reimbursement.objects.create(
-                title=tit, resource=resource, year=year
+                title=tit, resource=resource, year=year, number=number,
             )
             for mission, expenses in missions.items():
                 for expense in expenses:
