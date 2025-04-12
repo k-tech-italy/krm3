@@ -64,8 +64,8 @@ USER root
 RUN set -ex \
     ls -al /code \
     && pip install -U pip \
-    && pip install -r image-requirements.txt
-
+    && pip install -r image-requirements.txt \
+    && pip install uwsgi
 
 RUN apt-get purge -y --auto-remove `cat /tmp/buildDeps` \
     gnupg  \
