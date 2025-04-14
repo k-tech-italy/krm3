@@ -125,6 +125,9 @@ class Task(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    def time_entries_between(self, start: datetime.date, end: datetime.date) -> models.QuerySet[TimeEntry]:
+        return self.time_entries.filter(date__range=(start, end))
+
 
 class TimeEntryState(models.TextChoices):
     """The state of a timesheet entry."""
