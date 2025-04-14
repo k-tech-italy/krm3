@@ -35,9 +35,6 @@
     # Install dependencies
     # Always do this every time a new dependency is added in a commit
     uv sync
-
-    # Install pre-commit checks
-    pre-commit install
     ```
 
 * Create a dedicated database on your PostgreSQL instance (e.g. `krm3`)
@@ -57,3 +54,16 @@
     direnv allow
     ```
   Whenever you make a change to your `.env` or `.envrc` files, you need to run `direnv reload` or `direnv allow` to apply them.
+
+- Install pre-commit-hooks
+  ```bash
+  # Install pre-commit checks
+  pre-commit install
+  ```
+
+- Now create you database according to your _.env_ entry *KRM3_DATABASE_URL*, apply migrations and create a superuser with:
+  ```bash
+  ./manage.py migrate
+  ./manage.py createsuperuser
+  ./manage.py runserver localhost:8000
+  ```
