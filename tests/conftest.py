@@ -8,13 +8,12 @@ from django.utils.http import urlencode
 
 def pytest_configure(config):
     here = Path(__file__).parent
-    # root = here.parent.parent
     sys.path.insert(0, str(here / '_extras'))
 
 
-@pytest.fixture()
+@pytest.fixture
 def krm3app(django_app_factory):
-    yield django_app_factory(csrf_checks=False)
+    return django_app_factory(csrf_checks=False)
 
 
 @pytest.fixture(autouse=True)
@@ -27,41 +26,45 @@ def dummy_currencies(settings):
 @pytest.fixture(autouse=True)
 def currencies(db):
     from krm3.currencies.models import Currency
+
     Currency.objects.create(iso3='GBP', title='GBP', symbol='£', fractional_unit='cents', base=100, active=True)
     Currency.objects.create(iso3='EUR', title='EUR', symbol='€', fractional_unit='cents', base=100, active=True)
     Currency.objects.create(iso3='USD', title='USD', symbol='$', fractional_unit='cents', base=100, active=True)
     Currency.objects.create(iso3='CHF', title='CHF', symbol='CHF', fractional_unit='cents', base=100, active=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_rate_provider(settings, db):
     def fx(day, requested, retrieved):
         responses.add(
             responses.GET,
-            f'https://openexchangerates.org/api/historical/{day:%Y-%m-%d}.json?' +
-            urlencode({'app_id': settings.OPEN_EXCHANGE_RATES_APP_ID, 'symbols': requested}),
+            f'https://openexchangerates.org/api/historical/{day:%Y-%m-%d}.json?'
+            + urlencode({'app_id': settings.OPEN_EXCHANGE_RATES_APP_ID, 'symbols': requested}),
             json={
                 'disclaimer': 'Usage subject to terms: https://openexchangerates.org/terms',
                 'license': 'https://openexchangerates.org/license',
                 'timestamp': 1582588799,
                 'base': 'USD',
-                'rates': retrieved
+                'rates': retrieved,
             },
-            status=200
+            status=200,
         )
+
     return fx
 
 
-@pytest.fixture()
+@pytest.fixture
 def regular_user(db):
     from factories import UserFactory
+
     return UserFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def payment_types(db):
     results = []
     from krm3.missions.models import PaymentCategory
+
     azienda = PaymentCategory.objects.create(title='Azienda')
     results.append(PaymentCategory.objects.create(title='Anticipo', parent=azienda))
     results.append(PaymentCategory.objects.create(title='CCA', parent=azienda))
@@ -71,10 +74,11 @@ def payment_types(db):
     return results
 
 
-@pytest.fixture()
+@pytest.fixture
 def document_types(db):
     results = []
     from krm3.missions.models import DocumentType
+
     results.append(DocumentType.objects.get_or_create(title='Scontrino', default=True)[0])
     results.append(DocumentType.objects.get_or_create(title='Fattura')[0])
     results.append(DocumentType.objects.get_or_create(title='Altro')[0])
@@ -82,10 +86,11 @@ def document_types(db):
     return results
 
 
-@pytest.fixture()
+@pytest.fixture
 def categories(db):
     results = []
     from krm3.missions.models import ExpenseCategory
+
     viaggi = ExpenseCategory.objects.create(title='Viaggi')
     results.append(ExpenseCategory.objects.create(title='Taxi', parent=viaggi))
     results.append(ExpenseCategory.objects.create(title='Train', parent=viaggi))
@@ -95,31 +100,46 @@ def categories(db):
     return results
 
 
-@pytest.fixture()
+@pytest.fixture
 def country(db):
     from factories import CountryFactory
+
     return CountryFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def city(db):
     from factories import CityFactory
+
     return CityFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def resource(db):
     from factories import ResourceFactory
+
     return ResourceFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
+def resource_factory():
+    from factories import ResourceFactory
+
+    def _make(*args, **kwargs):
+        return ResourceFactory(*args, **kwargs)
+
+    return _make
+
+
+@pytest.fixture
 def project(db):
     from factories import ProjectFactory
+
     return ProjectFactory()
 
 
-@pytest.fixture()
+@pytest.fixture
 def krm3client(db):
     from factories import ClientFactory
+
     return ClientFactory()
