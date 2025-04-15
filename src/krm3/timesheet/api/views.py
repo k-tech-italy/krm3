@@ -31,8 +31,8 @@ class TaskAPIViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             resource_id = request.query_params['resource_id']
             start_date_iso = request.query_params['start_date']
             end_date_iso = request.query_params['end_date']
-        except KeyError as e:
-            return Response(data={'error': f'Missing mandatory field {e}.'}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError:
+            return Response(data={'error': 'Required query parameter(s) missing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         resource = Resource.objects.get(pk=resource_id)
         if resource.user != request.user and not cast('User', request.user).can_manage_and_view_any_project():
@@ -40,17 +40,13 @@ class TaskAPIViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
         try:
             start_date = datetime.date.fromisoformat(start_date_iso)
-        except (TypeError, ValueError) as e:
-            return Response(
-                data={'error': 'Cannot parse start date.', 'reason': str(e)}, status=status.HTTP_400_BAD_REQUEST
-            )
+        except (TypeError, ValueError):
+            return Response(data={'error': 'Cannot parse start date.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             end_date = datetime.date.fromisoformat(end_date_iso)
-        except (TypeError, ValueError) as e:
-            return Response(
-                data={'error': 'Cannot parse end date.', 'reason': str(e)}, status=status.HTTP_400_BAD_REQUEST
-            )
+        except (TypeError, ValueError):
+            return Response(data={'error': 'Cannot parse end date.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if start_date > end_date:
             return Response(
