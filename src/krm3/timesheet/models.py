@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any, Self, override
 
+
 from django.core import exceptions
 from django.db import models
 from django.dispatch import receiver
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from django.db.models.fields.related_descriptors import RelatedManager
 
     from krm3.accounting.models import InvoiceEntry
+    from django.contrib.auth.models import AbstractUser
 
 _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
@@ -89,12 +91,23 @@ class Basket(models.Model):
         return self.current_capacity() - logged_hours
 
 
-class TaskQuerySet(models.QuerySet['Task']):
+class TaskQuerySet(models.QuerySet[type['Task']]):
     def active_between(self, start: datetime.date, end: datetime.date) -> Self:
         return self.filter(start_date__lte=end, end_date__gte=start)
 
     def assigned_to(self, resource: core_models.Resource | int) -> Self:
         return self.filter(resource=resource)
+
+    def filter_acl(self, user: type[AbstractUser]) -> Self:
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+            {'core.manage_any_project', 'core.view_any_project'}
+        ):
+            return self.all()
+        return self.filter(resource__user=user)
 
 
 class Task(models.Model):
@@ -144,6 +157,17 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         """
         return self.filter(state=POState.OPEN)
 
+    def filter_acl(self, user: type[AbstractUser]) -> Self:
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+            {'timesheet.manage_any_timesheet', 'timesheet.view_any_timesheet'}
+        ):
+            return self.all()
+        return self.filter(resource__user=user)
+
 
 class TimeEntry(models.Model):
     """A timesheet entry."""
@@ -169,6 +193,10 @@ class TimeEntry(models.Model):
 
     class Meta:
         verbose_name_plural = 'Time entries'
+        permissions = [
+            ('view_any_timesheet', "Can view(only) everybody's timesheets"),
+            ('manage_any_timesheet', "Can view, and manage everybody's timesheets"),
+        ]
 
     @override
     def __str__(self) -> str:

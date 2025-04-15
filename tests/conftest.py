@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import responses
 from django.utils.http import urlencode
+from rest_framework.test import APIClient
 
 
 def pytest_configure(config):
@@ -143,3 +144,13 @@ def krm3client(db):
     from factories import ClientFactory
 
     return ClientFactory()
+
+
+@pytest.fixture
+def api_client():
+    def fx(user=None):
+        client = APIClient()
+        if user:
+            client.force_authenticate(user=user)
+        return client
+    return fx
