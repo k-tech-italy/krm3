@@ -89,13 +89,21 @@ class Basket(models.Model):
         return self.current_capacity() - logged_hours
 
 
+class TaskQuerySet(models.QuerySet['Task']):
+    def active_between(self, start: datetime.date, end: datetime.date) -> Self:
+        return self.filter(start_date__lte=end, end_date__gte=start)
+
+    def assigned_to(self, resource: core_models.Resource | int) -> Self:
+        return self.filter(resource=resource)
+
+
 class Task(models.Model):
     """A task assigned to a resource."""
 
     title = models.CharField(max_length=200)
     basket_title = models.CharField(max_length=200, null=True, blank=True)
     # TODO: validate this
-    color = models.TextField(max_length=6, null=True, blank=True)
+    color = models.TextField(null=True, blank=True)
     start_date = models.DateField(default=_DEFAULT_START_DATE)
     end_date = models.DateField(null=True, blank=True)
     # TODO: make prices currency-aware
@@ -108,12 +116,17 @@ class Task(models.Model):
     # XXX: should we retain this instead?
     resource = models.ForeignKey(core_models.Resource, on_delete=models.CASCADE)
 
+    objects = TaskQuerySet.as_manager()
+
     if TYPE_CHECKING:
         time_entries: RelatedManager[TimeEntry]
 
     @override
     def __str__(self) -> str:
         return self.title
+
+    def time_entries_between(self, start: datetime.date, end: datetime.date) -> models.QuerySet[TimeEntry]:
+        return self.time_entries.filter(date__range=(start, end))
 
 
 class TimeEntryState(models.TextChoices):
@@ -123,7 +136,7 @@ class TimeEntryState(models.TextChoices):
     CLOSED = 'CLOSED', _('Closed')
 
 
-class TimeEntryQuerySet(models.QuerySet):
+class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     def open(self) -> Self:
         """Select the open time entries in this queryset.
 
