@@ -8,7 +8,7 @@ from django.views.generic.base import View
 
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.forms import MissionsReimbursementForm
-from krm3.missions.models import Reimbursement
+from krm3.core.models import Reimbursement
 
 logger = logging.getLogger(__name__)
 

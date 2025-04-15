@@ -3,7 +3,7 @@ from rest_framework.test import APIClient
 
 from krm3.currencies.models import Currency
 from krm3.missions.api.serializers.expense import ExpenseCreateSerializer
-from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 
 BASE_JSON = {
     'mission': 1,

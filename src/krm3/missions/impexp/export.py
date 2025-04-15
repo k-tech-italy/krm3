@@ -10,7 +10,7 @@ from krm3.currencies.models import Currency
 from krm3.missions.api.serializers.expense import ExpenseExportSerializer
 from krm3.missions.api.serializers.mission import MissionSerializer
 from krm3.missions.media import EXPENSES_IMAGE_PREFIX
-from krm3.missions.models import ExpenseCategory, Mission, PaymentCategory
+from krm3.core.models import ExpenseCategory, Mission, PaymentCategory
 
 
 def _add_data(data, param, id, data1):

@@ -1,7 +1,7 @@
 from django.db.models import Max
 from rest_framework import serializers
 
-from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
+from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 

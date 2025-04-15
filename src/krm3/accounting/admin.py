@@ -1,12 +1,12 @@
 from django.contrib import admin
 
-from krm3.accounting import models as accounting_models
+from krm3.core.models import Invoice, InvoiceEntry
 
 
-@admin.register(accounting_models.Invoice)
+@admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin): ...
 
 
-@admin.register(accounting_models.InvoiceEntry)
+@admin.register(InvoiceEntry)
 class InvoiceEntryAdmin(admin.ModelAdmin):
     search_fields = ('invoice',)

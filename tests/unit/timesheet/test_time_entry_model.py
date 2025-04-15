@@ -4,7 +4,7 @@ from django.core import exceptions
 import pytest
 
 from factories import InvoiceEntryFactory, TimeEntryFactory, TaskFactory, BasketFactory
-from krm3.timesheet.models import TimeEntryState
+from krm3.core.models import TimeEntryState
 
 
 class TestBasket:

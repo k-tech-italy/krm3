@@ -27,7 +27,7 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Mission: <a href="{% url "admin:missions_mission_change" mission.pk %}">{{ mission }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
+    <h1>Mission: <a href="{% url "admin:core_mission_change" mission.pk %}">{{ mission }}</a> (<a onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
     <a href="{% querystring '_export'='xlsx' %}">Download XLSX</a>
 
 

@@ -20,7 +20,7 @@ def test_user_can_manage_own_timesheets(user, perm, expected, admin_user, regula
     if perm:
         user.user_permissions.add(Permission.objects.get(codename=perm))
 
-    from krm3.timesheet.models import TimeEntry
+    from krm3.core.models import TimeEntry
 
     entries = list(TimeEntry.objects.filter_acl(user=user).all())
     assert entries == [user_time_entry, admin_time_entry] if expected == 'all' else [user_time_entry]
@@ -42,7 +42,7 @@ def test_user_can_access_own_tasks(user, perm, expected, admin_user, regular_use
     if perm:
         user.user_permissions.add(Permission.objects.get(codename=perm))
 
-    from krm3.timesheet.models import Task
+    from krm3.core.models import Task
 
     entries = list(Task.objects.filter_acl(user=user).all())
     assert entries == [user_task, admin_ask] if expected == 'all' else [user_task]

@@ -6,14 +6,14 @@ from django.template.response import TemplateResponse
 
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.forms import MissionsReimbursementForm
-from krm3.missions.models import Mission
+from krm3.core.models import Mission
 from krm3.sentry import capture_exception
 from krm3.utils.rates import update_rates
 
 if typing.TYPE_CHECKING:
     from django.db.models import QuerySet
 
-    from krm3.missions.models import Expense
+    from krm3.core.models import Expense
 
 
 @admin.action(description='Create reimbursement ')

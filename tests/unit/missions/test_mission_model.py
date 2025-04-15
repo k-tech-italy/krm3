@@ -14,11 +14,11 @@ from django.core.exceptions import ValidationError
 from krm3.utils.dates import dt
 
 if TYPE_CHECKING:
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
 
 
 def map_mission_status(status: str) -> 'Mission.MissionStatus':
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
     return {
         'S': Mission.MissionStatus.SUBMITTED,
         'D': Mission.MissionStatus.DRAFT,
@@ -40,7 +40,7 @@ def map_mission_status(status: str) -> 'Mission.MissionStatus':
 def test_mission_status_transitions(number, status, expectation):
     from factories import MissionFactory
 
-    mission = MissionFactory.build(
+    mission: Mission = MissionFactory.build(
         number=number, status=map_mission_status(status)
     )
 
@@ -50,7 +50,7 @@ def test_mission_status_transitions(number, status, expectation):
 
 
 @pytest.mark.parametrize(
-    'from_date, to_date, expectation',
+    'from_date, to_date, expectation',  # noqa: PT007
     (
             pytest.param(dt('2023-11-03'), dt('2023-11-02'),
                          pytest.raises(ValidationError, match='to_date must be > from_date'),
@@ -67,9 +67,9 @@ def test_mission_status_transitions(number, status, expectation):
 def test_missions_validation(from_date, to_date, expectation):
     from factories import MissionFactory
 
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
 
-    mission = MissionFactory.build(
+    mission: Mission = MissionFactory.build(
         number=1, status=Mission.MissionStatus.SUBMITTED,
         from_date=from_date, to_date=to_date
     )
@@ -82,11 +82,11 @@ def test_missions_validation(from_date, to_date, expectation):
 def test_calculate_number():
     from factories import MissionFactory
 
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
 
     assert Mission.calculate_number(None, 2023) == 1
 
-    mission = MissionFactory(
+    mission: Mission = MissionFactory(
         number=2, status=Mission.MissionStatus.SUBMITTED,
         from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
     )

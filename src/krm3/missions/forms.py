@@ -8,7 +8,7 @@ from django.utils.text import slugify
 from krm3.currencies.models import Currency
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.impexp.imp import MissionImporter
-from krm3.missions.models import Expense, Mission, Reimbursement
+from krm3.core.models import Expense, Mission, Reimbursement
 
 
 class MissionAdminForm(forms.ModelForm):

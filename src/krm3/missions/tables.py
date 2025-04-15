@@ -8,7 +8,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from krm3.missions.models import Expense
+from krm3.core.models import Expense
 
 
 class ExpenseTableMixin:
@@ -36,14 +36,14 @@ class ExpenseTableMixin:
 
     def render_image(self, value):
         file_type = value.name.split('.')[-1]
-        # url = reverse('admin:missions_expense_change', args=[value])
+        # url = reverse('admin:core_expense_change', args=[value])
         return mark_safe(f'<a href="{value.url}">{file_type}</a>')
 
     def render_attachment(self, record):
         if record.image:
             return self.render_image(record.image)
         else:
-            url = reverse('admin:missions_expense_changelist')
+            url = reverse('admin:core_expense_changelist')
             return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')
 
 
@@ -71,13 +71,13 @@ class MissionExpenseTable(MissionExpenseBaseTable):
 
     def render_reimbursement(self, record):
         if record.reimbursement:
-            url = reverse('admin:missions_reimbursement_change', args=[record.reimbursement.id])
+            url = reverse('admin:core_reimbursement_change', args=[record.reimbursement.id])
             return mark_safe(f'<a href="{url}">{record.reimbursement}</a>')
         else:
             return '--'
 
     def render_id(self, value):
-        url = reverse('admin:missions_expense_change', args=[value])
+        url = reverse('admin:core_expense_change', args=[value])
         return mark_safe(f'<a href="{url}">{value}</a>')
 
 
@@ -104,7 +104,7 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
         exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
 
     def render_id(self, record):
-        url = reverse('admin:missions_expense_change', args=[record.id])
+        url = reverse('admin:core_expense_change', args=[record.id])
         return mark_safe(f'<a href="{url}">{record.id}</a>')
 
 
@@ -117,7 +117,7 @@ class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
 
     def render_mission(self, record):
         if record.mission:
-            url = reverse('admin:missions_mission_change', args=[record.mission.id])
+            url = reverse('admin:core_mission_change', args=[record.mission.id])
             return mark_safe(f'<a href="{url}">{record.mission}</a>')
         else:
             return '--'

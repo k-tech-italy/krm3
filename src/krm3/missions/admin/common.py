@@ -3,7 +3,7 @@ from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from mptt.admin import MPTTModelAdmin
 
-from krm3.missions.models import DocumentType, ExpenseCategory, PaymentCategory
+from krm3.core.models import DocumentType, ExpenseCategory, PaymentCategory
 
 
 @admin.register(DocumentType)

@@ -7,6 +7,10 @@ SMART_ADMIN_APPS = [
 ]
 
 SMART_ADMIN_SECTIONS = {
+    'Accounting': [
+        'core.Invoice',
+        'core.InvoiceEntry',
+    ],
     'Core': [
         'core.City',
         'core.Client',
@@ -15,7 +19,22 @@ SMART_ADMIN_SECTIONS = {
         'core.Resource',
     ],
     'Missions': [
-        'missions',
+        'core.Mission',
+        'core.ExpenseCategory',
+        'core.Expense',
+        'core.PaymentCategory',
+        'core.DocumentType',
+        'core.ReimbursementCategory',
+        'core.Reimbursement',
+    ],
+    'Projects': [
+        'core.Project',
+        'core.Task',
+        'core.Basket',
+        'core.PO',
+    ],
+    'Timesheets': [
+        'core.TimeEntry',
     ],
     '_hidden_': ['sites'],
     'Security': [

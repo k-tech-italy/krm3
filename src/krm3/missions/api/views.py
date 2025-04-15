@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from krm3.missions.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
+from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseCreateSerializer,
@@ -81,7 +81,7 @@ class ExpenseAPIViewSet(ModelViewSet):
                 next, others = next[0], next[1:] if len(next) > 1 else []
                 if others:
                     request.session[EXPENSE_UPLOAD_IMAGES] = others
-                url = f"{reverse('admin:missions_expense_changelist')}{next}/view_qr/"
+                url = f"{reverse('admin:core_expense_changelist')}{next}/view_qr/"
                 return HttpResponseRedirect(reverse(url))
             else:
                 return Response(status=204)

@@ -24,7 +24,7 @@ from krm3.utils.dates import dt
 def test_calculate_mission_number(dataset, expected):
     from factories import MissionFactory
 
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
     for m in dataset:
         MissionFactory(
             number=abs(int(m)),
@@ -52,7 +52,7 @@ def test_calculate_mission_number(dataset, expected):
 def test_auto_mission_number(existing_status, this_status, expected_number, same_year, city, project, resource):
     from factories import MissionFactory
 
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
 
     assert Mission.objects.count() == 0
     mission = None
@@ -106,7 +106,7 @@ def test_mission_status_transitions(
         else:
             ExpenseFactory(mission=mission, reimbursement=None)
 
-    url = reverse('admin:missions_mission_change', args=[mission.id])
+    url = reverse('admin:core_mission_change', args=[mission.id])
     form = krm3app.get(url, user=admin_user).forms['mission_form']
     form['status'] = map_mission_status(succ)
     form['number'] = next_number
@@ -122,7 +122,7 @@ def test_mission_status_transitions(
 
 
 def test_mission_clean(project, resource, city) -> None:
-    from krm3.missions.models import Mission
+    from krm3.core.models import Mission
     form = MissionAdminForm(data={
         'from_date': '2025-12-27',
         'to_date': '2026-01-05',

@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Any
 from rest_framework import serializers
 
-from krm3.timesheet.models import Task, TimeEntry
+from krm3.core.models import Task, TimeEntry
 
 
 class TimeEntrySerializer(serializers.ModelSerializer):

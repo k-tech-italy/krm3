@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-    <a href="{% url "admin:missions_expense_change" expense.id %}">Back to expense {{ expense }}</a>
+    <a href="{% url "admin:core_expense_change" expense.id %}">Back to expense {{ expense }}</a>
     <br>
     <table>
         <tr>
@@ -52,7 +52,7 @@
                     success: function (data, textStatus, xhr) {
                         // Update the content div with the loaded page content
                         if (xhr.status == 204) {
-                            window.location.href = "{% url "admin:missions_expense_change" expense.id %}";
+                            window.location.href = "{% url "admin:core_expense_change" expense.id %}";
                         }
                         {#$('#content').html(response);#}
                         console.log('Status: ' + xhr.status);

@@ -9,7 +9,7 @@ from django.core.files import File
 from factories import CurrencyFactory, ExpenseFactory, PaymentCategoryFactory, ReimbursementFactory
 
 from krm3.missions.exceptions import AlreadyReimbursed
-from krm3.missions.models import Expense
+from krm3.core.models import Expense
 
 
 def test_expense_manager(expense):
@@ -50,7 +50,7 @@ def test_expense_calculate_base(iso3, amt_currency, amt_base, expected, force_ra
     ]
 )
 def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image, force, expected, db, monkeypatch):
-    monkeypatch.setattr('krm3.missions.models.Expense.calculate_base', Mock())
+    monkeypatch.setattr('krm3.core.models.Expense.calculate_base', Mock())
 
     if image:
         image = MagicMock(spec=File)

@@ -11,13 +11,13 @@
     <ul>
         {% for reimbursement in reimbursements %}
             <li>
-                <a href="{% url "admin:missions_reimbursement_change" reimbursement.id %}">{{ reimbursement }}</a>
-                <a href="{% url "admin:missions_reimbursement_overview" reimbursement.id %}">
+                <a href="{% url "admin:core_reimbursement_change" reimbursement.id %}">{{ reimbursement }}</a>
+                <a href="{% url "admin:core_reimbursement_overview" reimbursement.id %}">
                     <img alt="preview"
                          src="{% static "images/preview-24.png" %}"></a>
             </li>
         {% endfor %}
     </ul>
     <br>
-    <a href="{% url 'admin:missions_expense_changelist' %}">Back to expenses</a>
+    <a href="{% url 'admin:core_expense_changelist' %}">Back to expenses</a>
 {% endblock %}

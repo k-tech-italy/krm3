@@ -26,7 +26,7 @@ from rest_framework.reverse import reverse as rest_reverse
 from krm3.currencies.models import Currency
 from krm3.missions.actions import create_reimbursement, get_rates
 from krm3.missions.forms import ExpenseAdminForm
-from krm3.missions.models import Expense, Mission
+from krm3.core.models import Expense, Mission
 from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
 from krm3.missions.transform import clean_image, rotate_90
 from krm3.styles.buttons import DANGEROUS, NORMAL
@@ -156,7 +156,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     def link_to_reimbursement(self, obj):
         if obj.reimbursement:
-            link = reverse('admin:missions_reimbursement_change', args=[obj.reimbursement.id])
+            link = reverse('admin:core_reimbursement_change', args=[obj.reimbursement.id])
             return format_html('<a href="{}">{}</a>', link, obj.reimbursement)
         else:
             return '--'
@@ -222,7 +222,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             next, others = expenses[0], expenses[1:] if len(expenses) > 1 else []
             if others:
                 request.session[EXPENSE_UPLOAD_IMAGES] = others
-            url = f'{reverse("admin:missions_expense_changelist")}{next}/view_qr/'
+            url = f'{reverse("admin:core_expense_changelist")}{next}/view_qr/'
             return HttpResponseRedirect(url)
         else:
             messages.info(request, 'There are no images left to capture')
@@ -253,7 +253,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             written = cv2.imwrite(str(pathname), cleaned)
             if written:
                 url = (
-                    reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
+                    reverse('admin:core_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
                 )
                 messages.success(
                     request, mark_safe(f'New image saved. <a href="{url}">click here to revert to previous image</a>')
@@ -284,17 +284,17 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def clone(self, request, pk):
         request.session['_like'] = pk
-        return HttpResponseRedirect(reverse('admin:missions_expense_add'))
+        return HttpResponseRedirect(reverse('admin:core_expense_add'))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def goto_mission(self, request, pk):
         expense = self.model.objects.get(pk=pk)
-        return HttpResponseRedirect(reverse('admin:missions_mission_change', args=[expense.mission_id]))
+        return HttpResponseRedirect(reverse('admin:core_mission_change', args=[expense.mission_id]))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id) and btn.original.reimbursement_id is not None)
     def goto_reimbursement(self, request, pk):
         expense = self.model.objects.get(pk=pk)
-        return HttpResponseRedirect(reverse('admin:missions_reimbursement_change', args=[expense.reimbursement_id]))
+        return HttpResponseRedirect(reverse('admin:core_reimbursement_change', args=[expense.reimbursement_id]))
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
     def rotate_left(self, request, pk):
@@ -313,7 +313,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             turned = rotate_90(expense.image.file.name, direction)
             if turned:
                 url = (
-                    reverse('admin:missions_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
+                    reverse('admin:core_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
                 )
                 messages.success(
                     request, mark_safe(f'Image was turned. <a href="{url}">click here to revert to previous image</a>')

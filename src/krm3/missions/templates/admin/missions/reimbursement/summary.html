@@ -23,7 +23,7 @@
 
 {% block content %}
     <h1>Reimbursement: <a
-            href="{% url "admin:missions_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a
+            href="{% url "admin:core_reimbursement_change" reimbursement.pk %}">{{ reimbursement }}</a> (<a
             onclick="printWithSpecialFileName();">print to pdf</a>)</h1>
     <a href="{% querystring '_export'='xlsx' %}">Download XLSX</a>
 

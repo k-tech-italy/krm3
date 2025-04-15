@@ -1,7 +1,7 @@
 from typing import override
 from django.db import models
 
-from krm3.timesheet import models as timesheet_models
+from .projects import Basket
 
 
 class Invoice(models.Model):
@@ -25,7 +25,7 @@ class InvoiceEntry(models.Model):
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Number of hours to charge')
 
-    basket = models.ForeignKey(timesheet_models.Basket, on_delete=models.CASCADE, related_name='invoice_entries')
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE, related_name='invoice_entries')
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='entries')
 
     class Meta:

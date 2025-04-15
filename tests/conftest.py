@@ -64,7 +64,7 @@ def regular_user(db):
 @pytest.fixture
 def payment_types(db):
     results = []
-    from krm3.missions.models import PaymentCategory
+    from krm3.core.models import PaymentCategory
 
     azienda = PaymentCategory.objects.create(title='Azienda')
     results.append(PaymentCategory.objects.create(title='Anticipo', parent=azienda))
@@ -78,7 +78,7 @@ def payment_types(db):
 @pytest.fixture
 def document_types(db):
     results = []
-    from krm3.missions.models import DocumentType
+    from krm3.core.models import DocumentType
 
     results.append(DocumentType.objects.get_or_create(title='Scontrino', default=True)[0])
     results.append(DocumentType.objects.get_or_create(title='Fattura')[0])
@@ -90,7 +90,7 @@ def document_types(db):
 @pytest.fixture
 def categories(db):
     results = []
-    from krm3.missions.models import ExpenseCategory
+    from krm3.core.models import ExpenseCategory
 
     viaggi = ExpenseCategory.objects.create(title='Viaggi')
     results.append(ExpenseCategory.objects.create(title='Taxi', parent=viaggi))

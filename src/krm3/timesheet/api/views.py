@@ -6,9 +6,8 @@ from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Resource
+from krm3.core.models import Resource, Task
 from krm3.timesheet.api.serializers import TimesheetTaskSerializer
-from krm3.timesheet.models import Task
 
 if TYPE_CHECKING:
     from krm3.core.models import User

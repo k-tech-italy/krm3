@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Dict, List, Union
 from django.db.models import Max, Min
 from django.forms import ValidationError
 
-from krm3.missions.models import Expense, Reimbursement
+from krm3.core.models import Expense, Reimbursement
 from krm3.missions.tables import MissionExpenseTable
 
 if TYPE_CHECKING:

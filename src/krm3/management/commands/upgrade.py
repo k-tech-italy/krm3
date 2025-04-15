@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from krm3.config.environ import env
 from krm3.sentry import capture_exception
 
+
 User = get_user_model()
 
 
@@ -25,6 +26,7 @@ def configure_dirs(prompt, verbosity):
                 if verbosity > 0:
                     click.echo(f"Create {_dir} '{target}'")
                 target.mkdir(parents=True)
+
 
 
 @click.command()  # noqa: C901

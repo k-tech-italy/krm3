@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from factory.fuzzy import FuzzyDecimal
 
 from krm3.core.models import User
-from krm3.currencies import models
+from krm3.currencies.models import Currency
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -79,33 +79,33 @@ class MissionFactory(factory.django.DjangoModelFactory):
     project = factory.SubFactory(ProjectFactory)
     city = factory.SubFactory(CityFactory)
     resource = factory.SubFactory(ResourceFactory)
-    default_currency = factory.Iterator(models.Currency.objects.all())
+    default_currency = factory.Iterator(Currency.objects.all())
     year = factory.LazyAttribute(lambda obj: obj.from_date.year)
     status = 'SUBMITTED'
 
     class Meta:
-        model = 'missions.Mission'
+        model = 'core.Mission'
 
 
 class ExpenseCategoryFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: n + 1)
 
     class Meta:
-        model = 'missions.ExpenseCategory'
+        model = 'core.ExpenseCategory'
 
 
 class PaymentCategoryFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: n + 1)
 
     class Meta:
-        model = 'missions.PaymentCategory'
+        model = 'core.PaymentCategory'
 
 
 class DocumentTypeFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: f'DT {n + 1}')
 
     class Meta:
-        model = 'missions.DocumentType'
+        model = 'core.DocumentType'
 
 
 class ExpenseFactory(factory.django.DjangoModelFactory):
@@ -118,7 +118,7 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
     document_type = factory.SubFactory(DocumentTypeFactory)
 
     class Meta:
-        model = 'missions.Expense'
+        model = 'core.Expense'
 
 
 class RateFactory(factory.django.DjangoModelFactory):
@@ -138,7 +138,7 @@ class ReimbursementFactory(factory.django.DjangoModelFactory):
     resource = factory.SubFactory(ResourceFactory)
 
     class Meta:
-        model = 'missions.Reimbursement'
+        model = 'core.Reimbursement'
 
 
 class POFactory(factory.django.DjangoModelFactory):
@@ -146,7 +146,7 @@ class POFactory(factory.django.DjangoModelFactory):
     project = factory.SubFactory(ProjectFactory)
 
     class Meta:
-        model = 'timesheet.PO'
+        model = 'core.PO'
 
 
 class BasketFactory(factory.django.DjangoModelFactory):
@@ -155,7 +155,7 @@ class BasketFactory(factory.django.DjangoModelFactory):
     po = factory.SubFactory(POFactory)
 
     class Meta:
-        model = 'timesheet.Basket'
+        model = 'core.Basket'
 
 
 class TaskFactory(factory.django.DjangoModelFactory):
@@ -165,7 +165,7 @@ class TaskFactory(factory.django.DjangoModelFactory):
     resource = factory.SubFactory(ResourceFactory)
 
     class Meta:
-        model = 'timesheet.Task'
+        model = 'core.Task'
 
 
 class TimeEntryFactory(factory.django.DjangoModelFactory):
@@ -175,14 +175,14 @@ class TimeEntryFactory(factory.django.DjangoModelFactory):
     resource = factory.LazyAttribute(lambda entry: entry.task.resource)
 
     class Meta:
-        model = 'timesheet.TimeEntry'
+        model = 'core.TimeEntry'
 
 
 class InvoiceFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: f'Inv_{n + 1:04}')
 
     class Meta:
-        model = 'accounting.Invoice'
+        model = 'core.Invoice'
 
 
 class InvoiceEntryFactory(factory.django.DjangoModelFactory):
@@ -191,4 +191,4 @@ class InvoiceEntryFactory(factory.django.DjangoModelFactory):
     invoice = factory.SubFactory(InvoiceFactory)
 
     class Meta:
-        model = 'accounting.InvoiceEntry'
+        model = 'core.InvoiceEntry'

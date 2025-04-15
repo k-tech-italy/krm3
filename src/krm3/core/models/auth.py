@@ -1,24 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self, Any
-
+import typing
 from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.models import AbstractUser
+from natural_keys import NaturalKeyModel
 from django.db import models
-from django.db.models import UniqueConstraint
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from natural_keys.models import NaturalKeyModel, NaturalKeyModelManager
-
-from krm3.currencies.models import Currency
-
-if TYPE_CHECKING:
-    from django.db.models.fields.related_descriptors import RelatedManager
-    from krm3.missions.models import Mission
+from django.contrib.auth.models import AbstractUser
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email: str, password: str | None = None, **kwargs: Any) -> User:
+    def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
         if not email:
             raise ValueError('Users must have an email address')
         email = self.normalize_email(email)
@@ -27,7 +19,7 @@ class UserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, username: str, email: str, password: str | None = None, **kwargs: Any) -> User:
+    def create_superuser(self, username: str, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
         kwargs.setdefault('is_active', True)
         kwargs.setdefault('is_staff', True)
         kwargs.setdefault('is_superuser', True)
@@ -61,75 +53,6 @@ class User(AbstractUser):
         )
 
 
-class Client(NaturalKeyModel):
-    name = models.CharField(max_length=80, unique=True)
-
-    def __str__(self) -> str:
-        return str(self.name)
-
-
-class ProjectManager(NaturalKeyModelManager):
-    def filter_acl(self, user: User) -> models.QuerySet[User]:
-        """Return the queryset for the owned records.
-
-        Superuser gets them all.
-        """
-        if user.can_manage_and_view_any_project():
-            return self.all()
-        return self.filter(mission__resource__profile__user=user)
-
-
-class Project(NaturalKeyModel):
-    name = models.CharField(max_length=80, unique=True)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
-    metadata = models.JSONField(default=dict, null=True, blank=True)
-    notes = models.TextField(null=True, blank=True)
-
-    objects = ProjectManager()
-
-    if TYPE_CHECKING:
-        mission_set: RelatedManager[Mission]
-
-    def __str__(self) -> str:
-        return str(self.name)
-
-    def is_accessible(self, user: User) -> bool:
-        if user.can_manage_and_view_any_project():
-            return True
-        return self.mission_set.filter(resource__profile__user=user).count() > 0
-
-    class Meta:
-        permissions = [
-            ('view_any_project', "Can view(only) everybody's projects"),
-            ('manage_any_project', "Can view, and manage everybody's projects"),
-        ]
-
-
-class Country(NaturalKeyModel):
-    name = models.CharField(max_length=80, unique=True)
-    default_currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self) -> str:
-        return str(self.name)
-
-    class Meta:
-        verbose_name_plural = 'countries'
-
-
-class City(NaturalKeyModel):
-    name = models.CharField(max_length=80)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
-
-    def __str__(self) -> str:
-        return f'{self.name} ({self.country.name})'
-
-    class Meta:
-        constraints = (UniqueConstraint(fields=('name', 'country'), name='unique_city_in_country'),)
-        verbose_name_plural = 'cities'
-
-
 class UserProfile(NaturalKeyModel):
     """The Profile is used to record the user profile picture in social auth."""
 
@@ -141,7 +64,7 @@ class UserProfile(NaturalKeyModel):
         return self.user.username
 
     @classmethod
-    def new(cls, user: User) -> Self:
+    def new(cls, user: User) -> typing.Self:
         return cls.objects.create(user=user)
 
 

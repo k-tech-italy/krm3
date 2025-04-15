@@ -17,7 +17,7 @@ from django_tables2.export import TableExport
 
 from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
-from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.core.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
 from krm3.styles.buttons import NORMAL
 from krm3.utils.queryset import ACLMixin
@@ -58,7 +58,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     )
     def view_linked_missions(self, request, pk):
         rids = map(str, Mission.objects.filter(expenses__reimbursement_id=pk).values_list('id', flat=True))
-        return redirect(reverse('admin:missions_mission_changelist') + f"?id__in={','.join(rids)}")
+        return redirect(reverse('admin:core_mission_changelist') + f"?id__in={','.join(rids)}")
 
     @button(
         html_attrs=NORMAL,

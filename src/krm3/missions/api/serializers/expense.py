@@ -2,7 +2,7 @@ from cryptography.fernet import InvalidToken
 from django.conf import settings
 from rest_framework import serializers
 
-from krm3.missions.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
+from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 

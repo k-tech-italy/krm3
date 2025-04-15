@@ -6,9 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from pydantic_core._pydantic_core import ValidationError
 
-from krm3.core.models import City, Client, Country, Project
+from krm3.core.models import City, Client, Country, Project, Expense, ExpenseCategory, Mission, PaymentCategory
 from krm3.currencies.models import Currency
-from krm3.missions.models import Expense, ExpenseCategory, Mission, PaymentCategory
 
 
 class MissionImporter:
@@ -36,8 +35,17 @@ class MissionImporter:
     def get_data(pathname):
         def make_pk_as_int(data):
             """Convert pk to int when needed."""
-            for f in ['clients', 'countries', 'projects', 'cities', 'resources',
-                      'categories', 'payment_types', 'missions', 'expenses']:
+            for f in [
+                'clients',
+                'countries',
+                'projects',
+                'cities',
+                'resources',
+                'categories',
+                'payment_types',
+                'missions',
+                'expenses',
+            ]:
                 new_data = {int(k): v for k, v in data[f].items()}
                 data[f] = new_data
 
@@ -48,20 +56,48 @@ class MissionImporter:
         check_existing(Country, data, 'countries', ['name'])
         check_existing(Project, data, 'projects', ['name', ('client__name', 'clients')], amend=['notes'])
         check_existing(City, data, 'cities', ['name', ('country__name', 'countries')])
-        check_existing(Currency, data, 'currencies', ['title'],
-                       amend=['symbol', 'base', 'fractional_unit', 'decimals'], pkname='iso3')
+        check_existing(
+            Currency,
+            data,
+            'currencies',
+            ['title'],
+            amend=['symbol', 'base', 'fractional_unit', 'decimals'],
+            pkname='iso3',
+        )
         check_existing(ExpenseCategory, data, 'categories', ['title'], amend=['active'], tree=True)
         check_existing(PaymentCategory, data, 'payment_types', ['title'], amend=['active'], tree=True)
-        check_existing(Mission, data, 'missions', ['number', 'year'],
-                       amend=['title', ('from_date', lambda o: o.from_date.strftime('%Y-%m-%d')),
-                              ('to_date', lambda o: o.to_date.strftime('%Y-%m-%d')),
-                              ('default_currency', lambda o: o.default_currency.iso3)])
-        check_existing(Expense, data, 'expenses',
-                       ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail',
-                        'created_ts', 'modified_ts', 'currency', 'category', 'payment_type', 'document_type',
-                        'reimbursement']
-                       # TODO: calculate image checksum
-                       )
+        check_existing(
+            Mission,
+            data,
+            'missions',
+            ['number', 'year'],
+            amend=[
+                'title',
+                ('from_date', lambda o: o.from_date.strftime('%Y-%m-%d')),
+                ('to_date', lambda o: o.to_date.strftime('%Y-%m-%d')),
+                ('default_currency', lambda o: o.default_currency.iso3),
+            ],
+        )
+        check_existing(
+            Expense,
+            data,
+            'expenses',
+            [
+                'day',
+                'amount_currency',
+                'amount_base',
+                'amount_reimbursement',
+                'detail',
+                'created_ts',
+                'modified_ts',
+                'currency',
+                'category',
+                'payment_type',
+                'document_type',
+                'reimbursement',
+            ],
+            # TODO: calculate image checksum
+        )
 
         return data
 

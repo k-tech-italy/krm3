@@ -90,6 +90,6 @@ section-order = ["future", "standard-library", "third-party", "first-party",  "l
 
 
 [lint.per-file-ignores]
-"tests/**.py" = ["S101", "PLR2004", "S", "SIM117", "D", "UP", "PLR0913", "ANN", "N999"]
+"tests/**.py" = ["S101", "PLR2004", "S", "SIM117", "D", "UP", "PLR0913", "ANN", "N999", "PT006", "PT007"]
 "src/**/versioning/**.py" = ["N999", ]
 "src/**/migrations/**.py" = ["E501", ]

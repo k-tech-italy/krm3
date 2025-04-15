@@ -25,7 +25,7 @@ from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
-from krm3.missions.models import Expense, Mission, Reimbursement
+from krm3.core.models import Expense, Mission, Reimbursement
 from krm3.missions.tables import MissionExpenseExportTable, MissionExpenseTable
 from krm3.styles.buttons import NORMAL
 from krm3.utils.queryset import ACLMixin
@@ -126,7 +126,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     @button(html_attrs=NORMAL, visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original)))
     def view_linked_reimbursements(self, request, pk):
         rids = map(str, Reimbursement.objects.filter(expenses__mission_id=pk).values_list('id', flat=True))
-        return redirect(reverse('admin:missions_reimbursement_changelist') + f'?id__in={",".join(rids)}')
+        return redirect(reverse('admin:core_reimbursement_changelist') + f'?id__in={",".join(rids)}')
 
     @button(
         html_attrs=NORMAL,
@@ -134,7 +134,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def add_expense(self, request, pk):
         mission = Mission.objects.get(pk=pk)
         from_date = mission.from_date.strftime('%Y-%m-%d')
-        return redirect(reverse('admin:missions_expense_add') + f'?mission_id={pk}&day={from_date}')
+        return redirect(reverse('admin:core_expense_add') + f'?mission_id={pk}&day={from_date}')
 
     @button(
         html_attrs=NORMAL,
@@ -244,5 +244,5 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_expenses(self, request, pk):
-        url = reverse('admin:missions_expense_changelist') + f'?mission_id={pk}'
+        url = reverse('admin:core_expense_changelist') + f'?mission_id={pk}'
         return HttpResponseRedirect(url)
