@@ -59,7 +59,7 @@ class TestTaskAPIListView:
     @pytest.mark.parametrize(('start_date', 'expected_status_code'), _iso_date_test_cases)
     def test_rejects_non_iso_start_date(self, start_date, expected_status_code, admin_user, resource_factory):
         resource = resource_factory()
-        params = {'resource_id': resource.id, 'start_date': start_date, 'end_date': '2024-01-07'}
+        params = {'resourceId': resource.id, 'startDate': start_date, 'endDate': '2024-01-07'}
         response = authenticated_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
@@ -136,24 +136,24 @@ class TestTaskAPIListView:
         assert task_data == {
             'id': task.id,
             'title': task.title,
-            'basket_title': task.basket_title,
+            'basketTitle': task.basket_title,
             'color': task.color,
-            'start_date': task_start_date.isoformat(),
-            'end_date': task_end_date.isoformat(),
-            'project_name': task.project.name,
-            'time_entries': [
+            'startDate': task_start_date.isoformat(),
+            'endDate': task_end_date.isoformat(),
+            'projectName': task.project.name,
+            'timeEntries': [
                 {
                     'id': time_entry_within_range.id,
                     'date': date_within_range.isoformat(),
-                    'last_modified': time_entry_within_range.last_modified.isoformat(),
-                    'work_hours': _as_quantized_decimal(time_entry_within_range.work_hours),
-                    'sick_hours': _as_quantized_decimal(time_entry_within_range.sick_hours),
-                    'holiday_hours': _as_quantized_decimal(time_entry_within_range.holiday_hours),
-                    'leave_hours': _as_quantized_decimal(time_entry_within_range.leave_hours),
-                    'overtime_hours': _as_quantized_decimal(time_entry_within_range.overtime_hours),
-                    'on_call_hours': _as_quantized_decimal(time_entry_within_range.on_call_hours),
-                    'travel_hours': _as_quantized_decimal(time_entry_within_range.travel_hours),
-                    'rest_hours': _as_quantized_decimal(time_entry_within_range.rest_hours),
+                    'lastModified': time_entry_within_range.last_modified.isoformat(),
+                    'workHours': _as_quantized_decimal(time_entry_within_range.work_hours),
+                    'sickHours': _as_quantized_decimal(time_entry_within_range.sick_hours),
+                    'holidayHours': _as_quantized_decimal(time_entry_within_range.holiday_hours),
+                    'leaveHours': _as_quantized_decimal(time_entry_within_range.leave_hours),
+                    'overtimeHours': _as_quantized_decimal(time_entry_within_range.overtime_hours),
+                    'onCallHours': _as_quantized_decimal(time_entry_within_range.on_call_hours),
+                    'travelHours': _as_quantized_decimal(time_entry_within_range.travel_hours),
+                    'restHours': _as_quantized_decimal(time_entry_within_range.rest_hours),
                     'state': str(time_entry_within_range.state),
                     'comment': 'Within range',
                 }
