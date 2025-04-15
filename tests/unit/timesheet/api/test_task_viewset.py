@@ -1,15 +1,16 @@
 import datetime
+import typing
 from decimal import Decimal
 import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
-from rest_framework.test import APIClient
 
 
-def authenticated_client(*, user):
-    client = APIClient()
-    client.force_authenticate(user=user)
-    return client
+from factories import ResourceFactory, TaskFactory, TimeEntryFactory
+
+if typing.TYPE_CHECKING:
+    from krm3.core.models import Resource
+    from krm3.timesheet.models import Task
 
 
 class TestTaskAPIListView:
@@ -17,22 +18,22 @@ class TestTaskAPIListView:
     def url():
         return reverse('timesheet-api:api-task-list')
 
-    def test_rejects_unauthenticated_users(self, resource_factory):
-        resource = resource_factory()
-        response = APIClient().get(
+    def test_rejects_unauthenticated_users(self, api_client):
+        resource: Resource = ResourceFactory()
+        response = api_client().get(
             self.url(), data={'resource_id': resource.id, 'start_date': '2024-01-01', 'end_date': '2024-01-07'}
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_rejects_missing_query_params(self, admin_user, resource_factory):
-        client = authenticated_client(user=admin_user)
+    def test_rejects_missing_query_params(self, admin_user, api_client):
+        client = api_client(user=admin_user)
         params = {}
 
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'error': "Missing mandatory field 'resource_id'."}
 
-        resource = resource_factory()
+        resource = ResourceFactory()
         params.setdefault('resource_id', resource.id)
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -57,10 +58,10 @@ class TestTaskAPIListView:
     ]
 
     @pytest.mark.parametrize(('start_date', 'expected_status_code'), _iso_date_test_cases)
-    def test_rejects_non_iso_start_date(self, start_date, expected_status_code, admin_user, resource_factory):
-        resource = resource_factory()
+    def test_rejects_non_iso_start_date(self, start_date, expected_status_code, admin_user, api_client):
+        resource: "Resource" = ResourceFactory()
         params = {'resourceId': resource.id, 'startDate': start_date, 'endDate': '2024-01-07'}
-        response = authenticated_client(user=admin_user).get(self.url(), data=params)
+        response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
             assert response.data == {
@@ -69,10 +70,10 @@ class TestTaskAPIListView:
             }
 
     @pytest.mark.parametrize(('end_date', 'expected_status_code'), _iso_date_test_cases)
-    def test_rejects_non_iso_end_date(self, end_date, expected_status_code, admin_user, resource_factory):
-        resource = resource_factory()
+    def test_rejects_non_iso_end_date(self, end_date, expected_status_code, admin_user, api_client):
+        resource: Resource = ResourceFactory()
         params = {'resource_id': resource.id, 'start_date': '2023-12-26', 'end_date': end_date}
-        response = authenticated_client(user=admin_user).get(self.url(), data=params)
+        response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
             assert response.data == {
@@ -88,26 +89,26 @@ class TestTaskAPIListView:
             pytest.param('2024-01-07', status.HTTP_200_OK, id='end_date_later_than_start_date'),
         ],
     )
-    def test_validates_date_range(self, end_date, expected_status_code, admin_user, resource_factory):
-        resource = resource_factory()
+    def test_validates_date_range(self, end_date, expected_status_code, admin_user, api_client):
+        resource: "Resource" = ResourceFactory()
         params = {'resource_id': resource.id, 'start_date': '2024-01-01', 'end_date': end_date}
-        response = authenticated_client(user=admin_user).get(self.url(), data=params)
+        response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
-    def test_returns_valid_time_entry_data(self, admin_user, resource_factory, task_factory, time_entry_factory):
+    def test_returns_valid_time_entry_data(self, admin_user, api_client):
         task_start_date = datetime.date(2023, 1, 1)
         task_end_date = datetime.date(2024, 12, 31)
 
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
 
-        resource = resource_factory()
-        task = task_factory(resource=resource, start_date=task_start_date, end_date=task_end_date)
+        resource: Resource = ResourceFactory()
+        task: "Task" = TaskFactory(resource=resource, start_date=task_start_date, end_date=task_end_date)
 
         def _make_time_entry(**kwargs):
-            return time_entry_factory(task=task, resource=resource, **kwargs)
+            return TimeEntryFactory(task=task, resource=resource, **kwargs)
 
         date_within_range = datetime.date(2024, 1, 3)
 
@@ -115,7 +116,7 @@ class TestTaskAPIListView:
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
         time_entry_within_range = _make_time_entry(date=date_within_range, comment='Within range')
 
-        response = authenticated_client(user=admin_user).get(
+        response = api_client(user=admin_user).get(
             self.url(),
             data={
                 'resource_id': resource.id,
@@ -160,31 +161,31 @@ class TestTaskAPIListView:
             ],
         }
 
-    def test_picks_only_ongoing_tasks(self, admin_user, resource_factory, task_factory):
+    def test_picks_only_ongoing_tasks(self, admin_user, api_client):
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
 
-        resource = resource_factory()
+        resource: "Resource" = ResourceFactory()
 
-        _expired_task = task_factory(
+        _expired_task = TaskFactory(
             resource=resource, start_date=datetime.date(2022, 1, 1), end_date=datetime.date(2023, 12, 31)
         )
         # NOTE: tasks expiring within the given range are considered ongoing
-        expiring_task = task_factory(
+        expiring_task = TaskFactory(
             resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2024, 1, 3)
         )
-        ongoing_task = task_factory(
+        ongoing_task = TaskFactory(
             resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2024, 12, 31)
         )
         # NOTE: tasks starting within the given range are considered ongoing
-        starting_midweek_task = task_factory(
+        starting_midweek_task = TaskFactory(
             resource=resource, start_date=datetime.date(2024, 1, 4), end_date=datetime.date(2025, 12, 31)
         )
-        _future_task = task_factory(
+        _future_task = TaskFactory(
             resource=resource, start_date=datetime.date(2032, 1, 1), end_date=datetime.date(2033, 12, 31)
         )
 
-        response = authenticated_client(user=admin_user).get(
+        response = api_client(user=admin_user).get(
             self.url(),
             data={
                 'resource_id': resource.id,
@@ -197,17 +198,17 @@ class TestTaskAPIListView:
         actual_task_ids = {task_data.get('id') for task_data in response.json()}
         assert actual_task_ids == {expiring_task.id, ongoing_task.id, starting_midweek_task.id}
 
-    def test_admin_can_see_all_tasks(self, admin_user, resource_factory, task_factory):
-        user_resource = resource_factory()
-        other_user_resource = resource_factory()
+    def test_admin_can_see_all_tasks(self, admin_user, api_client):
+        user_resource = ResourceFactory()
+        other_user_resource = ResourceFactory()
 
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
 
-        user_task = task_factory(resource=user_resource, start_date=start_date, end_date=end_date)
-        other_user_task = task_factory(resource=other_user_resource, start_date=start_date, end_date=end_date)
+        user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
+        other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
 
-        client = authenticated_client(user=admin_user)
+        client = api_client(user=admin_user)
 
         user_response = client.get(
             self.url(),
@@ -231,17 +232,17 @@ class TestTaskAPIListView:
         assert other_user_response.status_code == status.HTTP_200_OK
         assert other_user_response.json()[0].get('id') == other_user_task.id
 
-    def test_regular_user_can_see_only_own_tasks(self, regular_user, resource_factory, task_factory):
-        user_resource = resource_factory(user=regular_user)
-        other_user_resource = resource_factory()
+    def test_regular_user_can_see_only_own_tasks(self, regular_user, api_client):
+        user_resource = ResourceFactory(user=regular_user)
+        other_user_resource = ResourceFactory()
 
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
 
-        user_task = task_factory(resource=user_resource, start_date=start_date, end_date=end_date)
-        _other_user_task = task_factory(resource=other_user_resource, start_date=start_date, end_date=end_date)
+        user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
+        _other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
 
-        client = authenticated_client(user=user_resource.user)
+        client = api_client(user=user_resource.user)
 
         user_response = client.get(
             self.url(),
