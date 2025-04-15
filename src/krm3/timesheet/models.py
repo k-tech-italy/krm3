@@ -91,14 +91,14 @@ class Basket(models.Model):
         return self.current_capacity() - logged_hours
 
 
-class TaskQuerySet(models.QuerySet[type['Task']]):
+class TaskQuerySet(models.QuerySet['Task']):
     def active_between(self, start: datetime.date, end: datetime.date) -> Self:
         return self.filter(start_date__lte=end, end_date__gte=start)
 
     def assigned_to(self, resource: core_models.Resource | int) -> Self:
         return self.filter(resource=resource)
 
-    def filter_acl(self, user: type[AbstractUser]) -> Self:
+    def filter_acl(self, user: AbstractUser) -> Self:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -157,7 +157,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         """
         return self.filter(state=POState.OPEN)
 
-    def filter_acl(self, user: type[AbstractUser]) -> Self:
+    def filter_acl(self, user: AbstractUser) -> Self:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
