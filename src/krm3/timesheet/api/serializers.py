@@ -5,11 +5,15 @@ from rest_framework import serializers
 from krm3.core.models import Task, TimeEntry
 
 
-class TimeEntrySerializer(serializers.ModelSerializer):
-    last_modified = serializers.SerializerMethodField()
-
+class BaseTimeEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = TimeEntry
+
+
+class TimeEntryReadSerializer(BaseTimeEntrySerializer):
+    last_modified = serializers.SerializerMethodField()
+
+    class Meta(BaseTimeEntrySerializer.Meta):
         fields = (
             'id',
             'date',
@@ -25,9 +29,28 @@ class TimeEntrySerializer(serializers.ModelSerializer):
             'state',
             'comment',
         )
+        read_only_fields = fields
 
     def get_last_modified(self, obj: TimeEntry) -> str:
         return obj.last_modified.isoformat()
+
+
+class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
+    class Meta(BaseTimeEntrySerializer.Meta):
+        fields = (
+            'date',
+            'work_hours',
+            'sick_hours',
+            'holiday_hours',
+            'leave_hours',
+            'overtime_hours',
+            'on_call_hours',
+            'travel_hours',
+            'rest_hours',
+            'comment',
+            'task',
+            'resource',
+        )
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -64,4 +87,4 @@ class TimesheetTaskSerializer(TaskSerializer):
         time_entries = obj.time_entries.all()
         if self._start_date and self._end_date:
             time_entries = obj.time_entries_between(self._start_date, self._end_date)
-        return TimeEntrySerializer(time_entries, many=True).data
+        return TimeEntryReadSerializer(time_entries, many=True).data

@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 
 from factories import ResourceFactory, TaskFactory, TimeEntryFactory
+from krm3.core.models import TimeEntry
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
@@ -276,4 +277,25 @@ class TestTaskAPIListView:
         )
         assert (status_code := other_user_response.status_code) == expected_status_code
         if status_code <= 400:
-            assert user_response.json()[0].get('id') == other_user_task.id
+            assert other_user_response.json()[0].get('id') == other_user_task.id
+
+
+class TestTimeEntryAPICreateView:
+    @staticmethod
+    def url():
+        return reverse('timesheet-api:api-time-entry-list')
+
+    def test_creates_valid_instance_with_only_required_data(self, admin_user, api_client):
+        task = TaskFactory()
+        assert not TimeEntry.objects.filter(task=task).exists()
+
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'workHours': 8,
+            'taskId': task.pk,
+            'resourceId': task.resource.pk,
+        }
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        assert TimeEntry.objects.filter(task=task).exists()

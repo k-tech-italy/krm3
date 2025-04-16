@@ -47,10 +47,16 @@ class User(AbstractUser):
         :return: `True` if the user is allowed to view and edit data on
             any project, `False` otherwise.
         """
-        return (
-            self.is_superuser
-            or self.get_all_permissions().intersection({'core.manage_any_project', 'core.view_any_project'}) != set()
-        )
+        return self.has_any_perm('core.manage_any_project', 'core.view_any_project')
+
+    def has_any_perm(self, *perms: str) -> bool:
+        """Check that the user has at least one of the given permissions.
+
+        :param : the permissions to check
+        :return: `True` if the user has at least one of the given
+          `perms`, `False` otherwise.
+        """
+        return self.is_superuser or any(self.has_perm(perm) for perm in perms)
 
 
 class UserProfile(NaturalKeyModel):
