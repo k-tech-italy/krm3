@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import TYPE_CHECKING, override, Self, Any
 
 from django.core.exceptions import ValidationError
@@ -11,6 +10,7 @@ from django.dispatch import receiver
 from .auth import Resource
 
 if TYPE_CHECKING:
+    from decimal import Decimal
     from django.contrib.auth.models import AbstractUser
 
 
@@ -28,6 +28,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         :return: the filtered queryset.
         """
         from .projects import POState
+
         return self.filter(state=POState.OPEN)
 
     def filter_acl(self, user: AbstractUser) -> Self:
@@ -60,7 +61,7 @@ class TimeEntry(models.Model):
     metadata = models.JSONField(default=dict, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    task = models.ForeignKey("Task", on_delete=models.CASCADE, related_name='time_entries')
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries')
 
     objects = TimeEntryQuerySet.as_manager()
 

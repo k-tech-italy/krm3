@@ -1,27 +1,28 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, override, Self
-from decimal import Decimal
+from typing import TYPE_CHECKING, Self, override
 
-from django.contrib.auth.models import AbstractUser
-from natural_keys import NaturalKeyModelManager, NaturalKeyModel
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 
 from .auth import Resource
 from .contacts import Client
 from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
-    from .auth import User
+    from decimal import Decimal
+
+    from django.contrib.auth.models import AbstractUser
     from django.db.models.fields.related_descriptors import RelatedManager
+
     from .accounting import InvoiceEntry
+    from .auth import User
     from .missions import Mission
 
 
 _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
-
 
 
 class ProjectManager(NaturalKeyModelManager):
@@ -60,7 +61,6 @@ class Project(NaturalKeyModel):
             ('view_any_project', "Can view(only) everybody's projects"),
             ('manage_any_project', "Can view, and manage everybody's projects"),
         ]
-
 
 
 class POState(models.TextChoices):
@@ -132,7 +132,7 @@ class Basket(models.Model):
         return self.current_capacity() - logged_hours
 
 
-class TaskQuerySet(models.QuerySet[type['Task']]):
+class TaskQuerySet(models.QuerySet['Task']):
     def active_between(self, start: datetime.date, end: datetime.date) -> Self:
         return self.filter(start_date__lte=end, end_date__gte=start)
 
