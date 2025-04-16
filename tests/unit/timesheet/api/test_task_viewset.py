@@ -1,16 +1,16 @@
 import datetime
 import typing
 from decimal import Decimal
+from django.contrib.auth.models import Permission
 import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
-
 
 from factories import ResourceFactory, TaskFactory, TimeEntryFactory
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
-    from krm3.timesheet.models import Task
+    from krm3.core.models import Task
 
 
 class TestTaskAPIListView:
@@ -21,7 +21,7 @@ class TestTaskAPIListView:
     def test_rejects_unauthenticated_users(self, api_client):
         resource: Resource = ResourceFactory()
         response = api_client().get(
-            self.url(), data={'resource_id': resource.id, 'start_date': '2024-01-01', 'end_date': '2024-01-07'}
+            self.url(), data={'resource_id': resource.pk, 'start_date': '2024-01-01', 'end_date': '2024-01-07'}
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -34,7 +34,7 @@ class TestTaskAPIListView:
         assert response.data == {'error': "Missing mandatory field 'resource_id'."}
 
         resource = ResourceFactory()
-        params.setdefault('resource_id', resource.id)
+        params.setdefault('resource_id', resource.pk)
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'error': "Missing mandatory field 'start_date'."}
@@ -59,8 +59,8 @@ class TestTaskAPIListView:
 
     @pytest.mark.parametrize(('start_date', 'expected_status_code'), _iso_date_test_cases)
     def test_rejects_non_iso_start_date(self, start_date, expected_status_code, admin_user, api_client):
-        resource: "Resource" = ResourceFactory()
-        params = {'resourceId': resource.id, 'startDate': start_date, 'endDate': '2024-01-07'}
+        resource: 'Resource' = ResourceFactory()
+        params = {'resourceId': resource.pk, 'startDate': start_date, 'endDate': '2024-01-07'}
         response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
@@ -72,7 +72,7 @@ class TestTaskAPIListView:
     @pytest.mark.parametrize(('end_date', 'expected_status_code'), _iso_date_test_cases)
     def test_rejects_non_iso_end_date(self, end_date, expected_status_code, admin_user, api_client):
         resource: Resource = ResourceFactory()
-        params = {'resource_id': resource.id, 'start_date': '2023-12-26', 'end_date': end_date}
+        params = {'resource_id': resource.pk, 'start_date': '2023-12-26', 'end_date': end_date}
         response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
@@ -90,8 +90,8 @@ class TestTaskAPIListView:
         ],
     )
     def test_validates_date_range(self, end_date, expected_status_code, admin_user, api_client):
-        resource: "Resource" = ResourceFactory()
-        params = {'resource_id': resource.id, 'start_date': '2024-01-01', 'end_date': end_date}
+        resource: 'Resource' = ResourceFactory()
+        params = {'resource_id': resource.pk, 'start_date': '2024-01-01', 'end_date': end_date}
         response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
@@ -105,7 +105,7 @@ class TestTaskAPIListView:
         time_entry_end_date = datetime.date(2024, 1, 7)
 
         resource: Resource = ResourceFactory()
-        task: "Task" = TaskFactory(resource=resource, start_date=task_start_date, end_date=task_end_date)
+        task: 'Task' = TaskFactory(resource=resource, start_date=task_start_date, end_date=task_end_date)
 
         def _make_time_entry(**kwargs):
             return TimeEntryFactory(task=task, resource=resource, **kwargs)
@@ -119,7 +119,7 @@ class TestTaskAPIListView:
         response = api_client(user=admin_user).get(
             self.url(),
             data={
-                'resource_id': resource.id,
+                'resource_id': resource.pk,
                 'start_date': time_entry_start_date.isoformat(),
                 'end_date': time_entry_end_date.isoformat(),
             },
@@ -135,7 +135,7 @@ class TestTaskAPIListView:
 
         task_data = data[0]
         assert task_data == {
-            'id': task.id,
+            'id': task.pk,
             'title': task.title,
             'basketTitle': task.basket_title,
             'color': task.color,
@@ -165,7 +165,7 @@ class TestTaskAPIListView:
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
 
-        resource: "Resource" = ResourceFactory()
+        resource: 'Resource' = ResourceFactory()
 
         _expired_task = TaskFactory(
             resource=resource, start_date=datetime.date(2022, 1, 1), end_date=datetime.date(2023, 12, 31)
@@ -188,7 +188,7 @@ class TestTaskAPIListView:
         response = api_client(user=admin_user).get(
             self.url(),
             data={
-                'resource_id': resource.id,
+                'resource_id': resource.pk,
                 'start_date': time_entry_start_date.isoformat(),
                 'end_date': time_entry_end_date.isoformat(),
             },
@@ -213,7 +213,7 @@ class TestTaskAPIListView:
         user_response = client.get(
             self.url(),
             data={
-                'resource_id': user_resource.id,
+                'resource_id': user_resource.pk,
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat(),
             },
@@ -224,7 +224,7 @@ class TestTaskAPIListView:
         other_user_response = client.get(
             self.url(),
             data={
-                'resource_id': other_user_resource.id,
+                'resource_id': other_user_resource.pk,
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat(),
             },
@@ -232,22 +232,38 @@ class TestTaskAPIListView:
         assert other_user_response.status_code == status.HTTP_200_OK
         assert other_user_response.json()[0].get('id') == other_user_task.id
 
-    def test_regular_user_can_see_only_own_tasks(self, regular_user, api_client):
+    @pytest.mark.parametrize(
+        ('permission', 'expected_status_code'),
+        [
+            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param('manage_any_project', status.HTTP_200_OK, id='project_manager'),
+            pytest.param('manage_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_manager'),
+            pytest.param('view_any_project', status.HTTP_200_OK, id='project_viewer'),
+            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+        ],
+    )
+    def test_regular_user_can_see_tasks_based_on_permissions(
+        self, permission, expected_status_code, regular_user, api_client
+    ):
         user_resource = ResourceFactory(user=regular_user)
         other_user_resource = ResourceFactory()
+
+        user = user_resource.user
+        if permission:
+            user.user_permissions.add(Permission.objects.get(codename=permission))
 
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
 
         user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
-        _other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
+        other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
 
-        client = api_client(user=user_resource.user)
+        client = api_client(user=user)
 
         user_response = client.get(
             self.url(),
             data={
-                'resource_id': user_resource.id,
+                'resource_id': user_resource.pk,
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat(),
             },
@@ -258,9 +274,11 @@ class TestTaskAPIListView:
         other_user_response = client.get(
             self.url(),
             data={
-                'resource_id': other_user_resource.id,
+                'resource_id': other_user_resource.pk,
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat(),
             },
         )
-        assert other_user_response.status_code == status.HTTP_403_FORBIDDEN
+        assert (status_code := other_user_response.status_code) == expected_status_code
+        if status_code <= 400:
+            assert user_response.json()[0].get('id') == other_user_task.id

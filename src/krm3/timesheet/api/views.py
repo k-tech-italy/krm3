@@ -21,13 +21,9 @@ class TaskAPIViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     def get_queryset(self) -> QuerySet[Task]:
         user = cast('User', self.request.user)
 
-        # privileged users can view everyone's tasks
         if user.can_manage_and_view_any_project():
             return Task.objects.all()
-
-        # regular users can only view their own tasks
-        resource = Resource.objects.get(user=user)
-        return Task.objects.assigned_to(resource=resource)  # pyright: ignore
+        return Task.objects.filter_acl(user=user)  # pyright: ignore
 
     @override
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
