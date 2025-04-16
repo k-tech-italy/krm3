@@ -321,7 +321,7 @@ class TestTimeEntryAPICreateView:
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
-    def test_rejects_entries_with_work_and_day_absence_hours(self, hours_key, admin_user, api_client):
+    def test_rejects_entries_with_work_and_absence_hours(self, hours_key, admin_user, api_client):
         task = TaskFactory()
 
         time_entry_data = {
@@ -335,3 +335,35 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert not TimeEntry.objects.filter(task=task).exists()
+
+    @pytest.mark.parametrize(
+        ('sick_hours', 'holiday_hours', 'leave_hours', 'expected_status_code'),
+        (
+            pytest.param(8, 0, 0, status.HTTP_201_CREATED, id='sick'),
+            pytest.param(0, 8, 0, status.HTTP_201_CREATED, id='holiday'),
+            pytest.param(0, 0, 4, status.HTTP_201_CREATED, id='leave'),
+            pytest.param(8, 8, 0, status.HTTP_400_BAD_REQUEST, id='sick_and_holiday'),
+            pytest.param(8, 0, 4, status.HTTP_400_BAD_REQUEST, id='sick_and_leave'),
+            pytest.param(0, 8, 4, status.HTTP_400_BAD_REQUEST, id='holiday_and_leave'),
+            pytest.param(8, 8, 4, status.HTTP_400_BAD_REQUEST, id='all'),
+        ),
+    )
+    def test_accepts_entries_with_only_one_absence_kind(
+        self, sick_hours, holiday_hours, expected_status_code, leave_hours, admin_user, api_client
+    ):
+        task = TaskFactory()
+
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'workHours': 0,
+            'sickHours': sick_hours,
+            'holidayHours': holiday_hours,
+            'leaveHours': leave_hours,
+            'taskId': task.pk,
+            'resourceId': task.resource.pk,
+        }
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == expected_status_code
+        created = response.status_code == status.HTTP_201_CREATED
+        assert TimeEntry.objects.filter(task=task).exists() is created

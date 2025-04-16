@@ -113,7 +113,8 @@ class TimeEntry(models.Model):
         is_holiday = self.holiday_hours > 0.0
         is_leave = self.leave_hours > 0.0
 
-        if is_sick_day and is_holiday and is_leave:
+        has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
+        if has_too_many_absences_logged:
             errors.append(
                 ValidationError(
                     _('You cannot log more than one kind of absence in a day.'),
