@@ -180,4 +180,10 @@ class Task(models.Model):
         return self.title
 
     def time_entries_between(self, start: datetime.date, end: datetime.date) -> models.QuerySet[TimeEntry]:
+        """Return all time entries between the two given dates.
+
+        :param start: the date at the start of the range
+        :param end: the date at the end of the range
+        :return: a `QuerySet` of time entries
+        """
         return self.time_entries.filter(date__range=(start, end))
