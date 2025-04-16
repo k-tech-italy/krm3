@@ -1,9 +1,12 @@
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
+
+type Hours = Decimal | float | int
 
 
 class BaseTimeEntrySerializer(serializers.ModelSerializer):
@@ -53,6 +56,30 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'resource',
         )
 
+    def validate_work_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='work_hours')
+
+    def validate_sick_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='sick_hours')
+
+    def validate_holiday_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='holiday_hours')
+
+    def validate_leave_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='leave_hours')
+
+    def validate_overtime_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='overtime_hours')
+
+    def validate_on_call_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='on_call_hours')
+
+    def validate_travel_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='travel_hours')
+
+    def validate_rest_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='rest_hours')
+
     @override
     def validate(self, attrs: Any) -> Any:
         entries_on_same_day = TimeEntry.objects.filter(date=attrs['date'], resource=attrs['resource'])
@@ -69,10 +96,20 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
 
         if total_hours > 24:
             raise serializers.ValidationError(
-                _(f'Total hours on {attrs["date"]} ({total_hours}) is over 24 hours'), code='too_much_total_time_logged'
+                _('Total hours on {date} ({total_hours}) is over 24 hours').format(
+                    date=attrs['date'], total_hours=total_hours
+                ),
+                code='too_much_total_time_logged',
             )
 
         return super().validate(attrs)
+
+    def _validate_hours(self, value: Hours, field: str) -> Hours:
+        if Decimal(value) < 0:
+            raise serializers.ValidationError(
+                _('Hours must not be negative, got {value}.').format(value=value), code=field
+            )
+        return value
 
 
 class TaskSerializer(serializers.ModelSerializer):

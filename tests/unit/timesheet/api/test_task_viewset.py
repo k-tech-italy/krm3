@@ -14,6 +14,16 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Task
 
 
+_day_entry_kinds = ('sick', 'holiday', 'leave')
+_day_entry_keys = (f'{key}Hours' for key in _day_entry_kinds)
+
+_computed_hours_kinds = (*_day_entry_kinds, 'work', 'overtime', 'rest', 'travel')
+_computed_hours_keys = (f'{key}Hours' for key in _computed_hours_kinds)
+
+_all_hours_kinds = (*_computed_hours_kinds, 'on_call')
+_all_hours_keys = (*_computed_hours_keys, 'onCallHours')
+
+
 class TestTaskAPIListView:
     @staticmethod
     def url():
@@ -315,9 +325,6 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists()
 
-    _day_entry_kinds = ('sick', 'holiday', 'leave')
-    _day_entry_keys = (f'{key}Hours' for key in _day_entry_kinds)
-
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
@@ -452,4 +459,19 @@ class TestTimeEntryAPICreateView:
             },
             format='json',
         )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize(
+        'key', (pytest.param(key, id=kind) for key, kind in zip(_all_hours_keys, _all_hours_kinds, strict=True))
+    )
+    def test_reject_entry_with_negative_hours(self, key, admin_user, api_client):
+        task = TaskFactory()
+        data = {
+            'dates': ['2024-01-01'],
+            'taskId': task.id,
+            'resourceId': task.resource.id,
+        } | {key: -1}
+        data.setdefault('workHours', 0)
+
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
