@@ -285,17 +285,53 @@ class TestTimeEntryAPICreateView:
     def url():
         return reverse('timesheet-api:api-time-entry-list')
 
-    def test_creates_valid_instance_with_only_required_data(self, admin_user, api_client):
+    @pytest.mark.parametrize(
+        ('work_hours', 'optional_data'),
+        (
+            pytest.param(0, {}, id='no_work'),
+            pytest.param(8, {}, id='only_work_hours'),
+            pytest.param(
+                1,
+                {'overtimeHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
+                id='task_entry_with_optional_hours',
+            ),
+            pytest.param(0, {'leaveHours': 2}, id='day_entry_leave'),
+            pytest.param(0, {'holidayHours': 8}, id='day_entry_holiday'),
+            pytest.param(0, {'sickHours': 8}, id='day_entry_sick'),
+        ),
+    )
+    def test_creates_valid_instance(self, work_hours, optional_data, admin_user, api_client):
         task = TaskFactory()
         assert not TimeEntry.objects.filter(task=task).exists()
+
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'workHours': work_hours,
+            'taskId': task.pk,
+            'resourceId': task.resource.pk,
+        } | optional_data
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        assert TimeEntry.objects.filter(task=task).exists()
+
+    _day_entry_kinds = ('sick', 'holiday', 'leave')
+    _day_entry_keys = (f'{key}Hours' for key in _day_entry_kinds)
+
+    @pytest.mark.parametrize(
+        'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
+    )
+    def test_rejects_entries_with_work_and_day_absence_hours(self, hours_key, admin_user, api_client):
+        task = TaskFactory()
 
         time_entry_data = {
             'dates': ['2024-01-01'],
             'workHours': 8,
             'taskId': task.pk,
             'resourceId': task.resource.pk,
+            hours_key: 2,
         }
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
-        assert response.status_code == status.HTTP_201_CREATED
-        assert TimeEntry.objects.filter(task=task).exists()
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not TimeEntry.objects.filter(task=task).exists()

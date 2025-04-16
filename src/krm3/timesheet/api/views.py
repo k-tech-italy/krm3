@@ -1,6 +1,7 @@
 import datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
+from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework import mixins, permissions, status, viewsets
@@ -100,12 +101,15 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return Response(data={'error': 'Provide both task and resource ID.'}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            for date in dates:
-                time_entry_data = request.data.copy()
-                time_entry_data.setdefault('date', date)
-                serializer = self.get_serializer(data=time_entry_data, context={'request': request})
-                if serializer.is_valid(raise_exception=True):
-                    self.perform_create(serializer)
+            try:
+                for date in dates:
+                    time_entry_data = request.data.copy()
+                    time_entry_data.setdefault('date', date)
+                    serializer = self.get_serializer(data=time_entry_data, context={'request': request})
+                    if serializer.is_valid(raise_exception=True):
+                        self.perform_create(serializer)
+            except django_exceptions.ValidationError:
+                return Response(data={'error': f'Invalid data entry for {date}.'}, status=status.HTTP_400_BAD_REQUEST)
 
         headers = self.get_success_headers(serializer.data)
         return Response(status=status.HTTP_201_CREATED, headers=headers)

@@ -89,21 +89,20 @@ class TimeEntry(models.Model):
         """Validate logged hours.
 
         Rules:
-        - You cannot log more than one full-day absence (sick, holiday)
+        - You cannot log more than one absence (sick, holiday, leave)
           in the same entry
         - You cannot log task-related hours (work, overtime, etc.)
-          if the entry already has a full-day absence logged.
+          if the entry already has an absence logged.
 
         :raises exceptions.ValidationError: when any of the rules above
           is violated.
         """
         errors = []
 
-        is_work_day = any(
+        has_task_hours_logged = any(
             hours > 0.0
             for hours in (
                 self.work_hours,
-                self.leave_hours,
                 self.overtime_hours,
                 self.on_call_hours,
                 self.rest_hours,
@@ -112,23 +111,20 @@ class TimeEntry(models.Model):
         )
         is_sick_day = self.sick_hours > 0.0
         is_holiday = self.holiday_hours > 0.0
+        is_leave = self.leave_hours > 0.0
 
-        if is_sick_day and is_holiday:
+        if is_sick_day and is_holiday and is_leave:
             errors.append(
                 ValidationError(
-                    _('You cannot log more than one type of full-day absences in a day.'),
-                    code='multiple_full_day_absence_hours',
+                    _('You cannot log more than one kind of absence in a day.'),
+                    code='multiple_absence_kind',
                 )
             )
 
-        is_full_day_absence = is_sick_day or is_holiday
-        if is_work_day and is_full_day_absence:
+        is_day_entry = is_sick_day or is_holiday or is_leave
+        if has_task_hours_logged and is_day_entry:
             errors.append(
-                ValidationError(
-                    _('You cannot log work-related hours on %(absence)s.'),
-                    params={'absence': _('a sick day') if is_sick_day else _('a holiday')},
-                    code='work_during_full_day_absence',
-                )
+                ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
             )
 
         if errors:
