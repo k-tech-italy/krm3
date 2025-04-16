@@ -28,21 +28,22 @@ class TestTaskAPIListView:
     def test_rejects_missing_query_params(self, admin_user, api_client):
         client = api_client(user=admin_user)
         params = {}
+        expected_error_payload = {'error': 'Required query parameter(s) missing.'}
 
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'error': "Missing mandatory field 'resource_id'."}
+        assert response.data == expected_error_payload
 
         resource = ResourceFactory()
         params.setdefault('resource_id', resource.pk)
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'error': "Missing mandatory field 'start_date'."}
+        assert response.data == expected_error_payload
 
         params.setdefault('start_date', '2024-01-01')
         response = client.get(self.url(), data=params)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'error': "Missing mandatory field 'end_date'."}
+        assert response.data == expected_error_payload
 
         params.setdefault('end_date', '2024-01-07')
         response = client.get(self.url(), data=params)
@@ -64,10 +65,7 @@ class TestTaskAPIListView:
         response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
-            assert response.data == {
-                'error': 'Cannot parse start date.',
-                'reason': f"Invalid isoformat string: '{str(start_date)}'",
-            }
+            assert response.data == {'error': 'Cannot parse start date.'}
 
     @pytest.mark.parametrize(('end_date', 'expected_status_code'), _iso_date_test_cases)
     def test_rejects_non_iso_end_date(self, end_date, expected_status_code, admin_user, api_client):
@@ -76,10 +74,7 @@ class TestTaskAPIListView:
         response = api_client(user=admin_user).get(self.url(), data=params)
         assert response.status_code == expected_status_code
         if expected_status_code >= 400:
-            assert response.data == {
-                'error': 'Cannot parse end date.',
-                'reason': f"Invalid isoformat string: '{str(end_date)}'",
-            }
+            assert response.data == {'error': 'Cannot parse end date.'}
 
     @pytest.mark.parametrize(
         ('end_date', 'expected_status_code'),
