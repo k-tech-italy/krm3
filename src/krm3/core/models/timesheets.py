@@ -82,7 +82,17 @@ class TimeEntry(models.Model):
 
         :return: the computed total.
         """
-        return self.work_hours + self.leave_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+        return self.work_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+
+    @property
+    def total_hours(self) -> Decimal:
+        """Compute the grand total of all hours logged on this entry.
+
+        This includes hours logged as absence.
+
+        :return: the computed total.
+        """
+        return self.total_work_hours + self.leave_hours + self.sick_hours + self.holiday_hours
 
     @override
     def clean(self) -> None:

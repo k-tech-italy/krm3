@@ -1,5 +1,6 @@
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, override
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
@@ -51,6 +52,27 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'task',
             'resource',
         )
+
+    @override
+    def validate(self, attrs: Any) -> Any:
+        entries_on_same_day = TimeEntry.objects.filter(date=attrs['date'], resource=attrs['resource'])
+        total_hours_for_other_entries = sum(entry.total_hours for entry in entries_on_same_day)
+        total_hours = (
+            attrs['work_hours']
+            + attrs.get('overtime_hours', 0)
+            + attrs.get('rest_hours', 0)
+            + attrs.get('travel_hours', 0)
+            + attrs.get('sick_hours', 0)
+            + attrs.get('holiday_hours', 0)
+            + attrs.get('leave_hours', 0)
+        ) + total_hours_for_other_entries
+
+        if total_hours > 24:
+            raise serializers.ValidationError(
+                _(f'Total hours on {attrs["date"]} ({total_hours}) is over 24 hours'), code='too_much_total_time_logged'
+            )
+
+        return super().validate(attrs)
 
 
 class TaskSerializer(serializers.ModelSerializer):

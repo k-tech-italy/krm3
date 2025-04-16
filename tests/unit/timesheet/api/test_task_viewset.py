@@ -300,7 +300,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(0, {'sickHours': 8}, id='day_entry_sick'),
         ),
     )
-    def test_creates_valid_instance(self, work_hours, optional_data, admin_user, api_client):
+    def test_creates_single_valid_time_entry(self, work_hours, optional_data, admin_user, api_client):
         task = TaskFactory()
         assert not TimeEntry.objects.filter(task=task).exists()
 
@@ -321,7 +321,7 @@ class TestTimeEntryAPICreateView:
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
-    def test_rejects_entries_with_work_and_absence_hours(self, hours_key, admin_user, api_client):
+    def test_rejects_time_entries_with_work_and_absence_hours(self, hours_key, admin_user, api_client):
         task = TaskFactory()
 
         time_entry_data = {
@@ -348,7 +348,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(8, 8, 4, status.HTTP_400_BAD_REQUEST, id='all'),
         ),
     )
-    def test_accepts_entries_with_only_one_absence_kind(
+    def test_accepts_time_entries_with_only_one_absence_kind(
         self, sick_hours, holiday_hours, expected_status_code, leave_hours, admin_user, api_client
     ):
         task = TaskFactory()
@@ -367,3 +367,89 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == expected_status_code
         created = response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists() is created
+
+    @pytest.mark.parametrize(
+        'hours_data',
+        (
+            pytest.param({'workHours': 8}, id='work'),
+            pytest.param({'sickHours': 8}, id='sick'),
+            pytest.param({'holidayHours': 8}, id='holiday'),
+            pytest.param({'leaveHours': 4}, id='leave'),
+            pytest.param(
+                {'workHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'overtimeHours': 1},
+                id='all_task_hours',
+            ),
+        ),
+    )
+    def test_accepts_time_entries_for_multiple_days(self, hours_data, admin_user, api_client):
+        task = TaskFactory()
+
+        time_entry_data = {
+            'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
+            'taskId': task.pk,
+            'resourceId': task.resource.pk,
+        } | hours_data
+        # ensure we have work hours so we can save the new instances
+        time_entry_data.setdefault('workHours', 0)
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        instances = TimeEntry.objects.filter(task=task)
+        assert instances.count() == 5
+        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(1, 6)}
+
+    def test_rejects_new_time_entries_summing_up_to_more_than_24_hours(self, admin_user, api_client):
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+
+        first_task = TaskFactory(
+            title='First', resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2025, 12, 31)
+        )
+        second_task = TaskFactory(
+            title='Second',
+            resource=resource,
+            start_date=datetime.date(2023, 1, 1),
+            end_date=datetime.date(2025, 12, 31),
+        )
+        absence_task = TaskFactory(
+            title='absences',
+            resource=resource,
+            start_date=datetime.date(2023, 1, 1),
+            end_date=datetime.date(2025, 12, 31),
+        )
+
+        # we made some work on the first task
+        TimeEntryFactory(resource=resource, task=first_task, date=today, work_hours=6)
+        # ... but had to do lots of overtime on the second
+        TimeEntryFactory(resource=resource, task=second_task, date=today, work_hours=2, overtime_hours=6)
+
+        # to hell with it, let's log some paid leave to get back at the
+        # company! Take that, company! :^)
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': [today.isoformat()],
+                'taskId': absence_task.id,
+                'resourceId': resource.id,
+                'workHours': 0,
+                # we are now over 24h
+                'leaveHours': 12,
+            },
+            format='json',
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_rejects_single_time_entry_with_more_than_24_hours(self, admin_user, api_client):
+        task = TaskFactory()
+
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': ['2024-01-01'],
+                'taskId': task.id,
+                'resourceId': task.resource.id,
+                'workHours': 30,
+            },
+            format='json',
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
