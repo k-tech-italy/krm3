@@ -1,0 +1,35 @@
+- model: core.user
+  pk: 1
+  fields:
+    password: pbkdf2_sha256$870000$LK0AIqdRlgQhVHQvowaAnD$1qjXIhUcv/QLzapbzp+G3CDDko4wL1sypI5FOq3Drrs=
+    last_login: 2025-04-17 09:42:18.398859+00:00
+    is_superuser: true
+    username: admin
+    first_name: admin
+    last_name: admin
+    email: noreply@k-tech.it
+    is_staff: true
+    is_active: true
+    date_joined: 2023-04-25 07:45:54.364103+00:00
+    picture: null
+    social_profile: null
+    groups: []
+    user_permissions: []
+- model: core.user
+  pk: 2
+  fields:
+    password: pbkdf2_sha256$870000$jiQXqJkDLhEvOwbEqKijTr$wOYuV10e6QTLSbXRayT8xMS2Kz1/UymrbJCM+s0xlfs=
+    last_login: 2023-04-25 07:55:16+00:00
+    is_superuser: false
+    username: g.bronzini
+    first_name: Giovanni
+    last_name: Bronzini
+    email: g.bronzini@k-tech.it
+    is_staff: true
+    is_active: true
+    date_joined: 2023-04-25 07:55:16+00:00
+    picture: null
+    social_profile: null
+    groups:
+    - 3
+    user_permissions: []

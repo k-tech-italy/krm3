@@ -1,7 +1,8 @@
 - model: core.user
+  pk: 1
   fields:
-    password: pbkdf2_sha256$600000$IWlaA2kCGOcgQVVszEaoD3$/TITsgngAOGU+RA1q3nUDwKK1ZYVBqYgCWwWpMyIqAo=
-    last_login: 2023-05-29 09:10:47.762195+00:00
+    password: pbkdf2_sha256$870000$LK0AIqdRlgQhVHQvowaAnD$1qjXIhUcv/QLzapbzp+G3CDDko4wL1sypI5FOq3Drrs=
+    last_login: 2025-04-17 09:42:18.398859+00:00
     is_superuser: true
     username: admin
     first_name: admin
@@ -10,11 +11,14 @@
     is_staff: true
     is_active: true
     date_joined: 2023-04-25 07:45:54.364103+00:00
+    picture: null
+    social_profile: null
     groups: []
     user_permissions: []
 - model: core.user
+  pk: 2
   fields:
-    password: '!xtiKGLuvvf954o1Gpxah709ueQsF3iuqvRpUdRno'
+    password: pbkdf2_sha256$870000$jiQXqJkDLhEvOwbEqKijTr$wOYuV10e6QTLSbXRayT8xMS2Kz1/UymrbJCM+s0xlfs=
     last_login: 2023-04-25 07:55:16+00:00
     is_superuser: false
     username: g.bronzini
@@ -24,8 +28,10 @@
     is_staff: true
     is_active: true
     date_joined: 2023-04-25 07:55:16+00:00
+    picture: null
+    social_profile: null
     groups:
-    - - Missions Administrator
+    - 3
     user_permissions: []
 - model: core.client
   fields:

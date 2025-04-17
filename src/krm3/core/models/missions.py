@@ -334,10 +334,13 @@ class Expense(models.Model):
 @receiver(pre_save, sender=Expense)
 def recalculate_reimbursement(sender, instance: Expense, update_fields=None, **kwargs) -> None:  # noqa: ANN003
     if instance.id:
-        old_instance = Expense.objects.get(id=instance.id)
-        if (
-            not old_instance.image
-            and bool(instance.image)
-            or old_instance.payment_type.personal_expense != instance.payment_type.personal_expense
-        ):
+        try:
+            old_instance = Expense.objects.get(id=instance.id)
+            if (
+                not old_instance.image
+                and bool(instance.image)
+                or old_instance.payment_type.personal_expense != instance.payment_type.personal_expense
+            ):
+                instance.apply_reimbursement()
+        except Expense.DoesNotExist:
             instance.apply_reimbursement()

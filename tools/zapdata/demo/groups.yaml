@@ -590,210 +590,210 @@
   fields:
     name: Can export mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_export_mission
 - model: auth.permission
   fields:
     name: Can find_duplicates mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_find_duplicates_mission
 - model: auth.permission
   fields:
     name: Can merge mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_merge_mission
 - model: auth.permission
   fields:
     name: Can massupdate mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_massupdate_mission
 - model: auth.permission
   fields:
     name: Can chart mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_chart_mission
 - model: auth.permission
   fields:
     name: Can byrowsupdate mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_byrowsupdate_mission
 - model: auth.permission
   fields:
     name: Can export expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_export_expensecategory
 - model: auth.permission
   fields:
     name: Can find_duplicates expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_find_duplicates_expensecategory
 - model: auth.permission
   fields:
     name: Can merge expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_merge_expensecategory
 - model: auth.permission
   fields:
     name: Can massupdate expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_massupdate_expensecategory
 - model: auth.permission
   fields:
     name: Can chart expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_chart_expensecategory
 - model: auth.permission
   fields:
     name: Can byrowsupdate expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_byrowsupdate_expensecategory
 - model: auth.permission
   fields:
     name: Can export payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_export_paymentcategory
 - model: auth.permission
   fields:
     name: Can find_duplicates payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_find_duplicates_paymentcategory
 - model: auth.permission
   fields:
     name: Can merge payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_merge_paymentcategory
 - model: auth.permission
   fields:
     name: Can massupdate payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_massupdate_paymentcategory
 - model: auth.permission
   fields:
     name: Can chart payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_chart_paymentcategory
 - model: auth.permission
   fields:
     name: Can byrowsupdate payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_byrowsupdate_paymentcategory
 - model: auth.permission
   fields:
     name: Can export reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_export_reimbursement
 - model: auth.permission
   fields:
     name: Can find_duplicates reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_find_duplicates_reimbursement
 - model: auth.permission
   fields:
     name: Can merge reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_merge_reimbursement
 - model: auth.permission
   fields:
     name: Can massupdate reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_massupdate_reimbursement
 - model: auth.permission
   fields:
     name: Can chart reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_chart_reimbursement
 - model: auth.permission
   fields:
     name: Can byrowsupdate reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_byrowsupdate_reimbursement
 - model: auth.permission
   fields:
     name: Can export expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_export_expense
 - model: auth.permission
   fields:
     name: Can find_duplicates expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_find_duplicates_expense
 - model: auth.permission
   fields:
     name: Can merge expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_merge_expense
 - model: auth.permission
   fields:
     name: Can massupdate expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_massupdate_expense
 - model: auth.permission
   fields:
     name: Can chart expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_chart_expense
 - model: auth.permission
   fields:
     name: Can byrowsupdate expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_byrowsupdate_expense
 - model: auth.permission
@@ -1486,140 +1486,140 @@
   fields:
     name: Can add reimbursement
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: add_reimbursement
 - model: auth.permission
   fields:
     name: Can change reimbursement
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: change_reimbursement
 - model: auth.permission
   fields:
     name: Can delete reimbursement
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: delete_reimbursement
 - model: auth.permission
   fields:
     name: Can view reimbursement
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: view_reimbursement
 - model: auth.permission
   fields:
     name: Can add payment category
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: add_paymentcategory
 - model: auth.permission
   fields:
     name: Can change payment category
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: change_paymentcategory
 - model: auth.permission
   fields:
     name: Can delete payment category
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: delete_paymentcategory
 - model: auth.permission
   fields:
     name: Can view payment category
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: view_paymentcategory
 - model: auth.permission
   fields:
     name: Can add mission
     content_type:
-    - missions
+    - core
     - mission
     codename: add_mission
 - model: auth.permission
   fields:
     name: Can change mission
     content_type:
-    - missions
+    - core
     - mission
     codename: change_mission
 - model: auth.permission
   fields:
     name: Can delete mission
     content_type:
-    - missions
+    - core
     - mission
     codename: delete_mission
 - model: auth.permission
   fields:
     name: Can view mission
     content_type:
-    - missions
+    - core
     - mission
     codename: view_mission
 - model: auth.permission
   fields:
     name: Can add expense category
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: add_expensecategory
 - model: auth.permission
   fields:
     name: Can change expense category
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: change_expensecategory
 - model: auth.permission
   fields:
     name: Can delete expense category
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: delete_expensecategory
 - model: auth.permission
   fields:
     name: Can view expense category
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: view_expensecategory
 - model: auth.permission
   fields:
     name: Can add expense
     content_type:
-    - missions
+    - core
     - expense
     codename: add_expense
 - model: auth.permission
   fields:
     name: Can change expense
     content_type:
-    - missions
+    - core
     - expense
     codename: change_expense
 - model: auth.permission
   fields:
     name: Can delete expense
     content_type:
-    - missions
+    - core
     - expense
     codename: delete_expense
 - model: auth.permission
   fields:
     name: Can view expense
     content_type:
-    - missions
+    - core
     - expense
     codename: view_expense
 - model: auth.permission
@@ -1920,35 +1920,35 @@
   fields:
     name: Can bulkupdate mission (adminactions)
     content_type:
-    - missions
+    - core
     - mission
     codename: adminactions_bulkupdate_mission
 - model: auth.permission
   fields:
     name: Can bulkupdate expense category (adminactions)
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: adminactions_bulkupdate_expensecategory
 - model: auth.permission
   fields:
     name: Can bulkupdate payment category (adminactions)
     content_type:
-    - missions
+    - core
     - paymentcategory
     codename: adminactions_bulkupdate_paymentcategory
 - model: auth.permission
   fields:
     name: Can bulkupdate reimbursement (adminactions)
     content_type:
-    - missions
+    - core
     - reimbursement
     codename: adminactions_bulkupdate_reimbursement
 - model: auth.permission
   fields:
     name: Can bulkupdate expense (adminactions)
     content_type:
-    - missions
+    - core
     - expense
     codename: adminactions_bulkupdate_expense
 - model: auth.permission
@@ -2018,42 +2018,42 @@
   fields:
     name: Can view(only) everybody's missions
     content_type:
-    - missions
+    - core
     - mission
     codename: view_any_mission
 - model: auth.permission
   fields:
     name: Can view, and manage everybody's missions
     content_type:
-    - missions
+    - core
     - mission
     codename: manage_any_mission
 - model: auth.permission
   fields:
     name: Can view(only) everybody's expenses
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: view_any_expense
 - model: auth.permission
   fields:
     name: Can view, and manage everybody's expenses
     content_type:
-    - missions
+    - core
     - expensecategory
     codename: manage_any_expense
 - model: auth.permission
   fields:
     name: Can view(only) everybody's expenses
     content_type:
-    - missions
+    - core
     - expense
     codename: view_any_expense
 - model: auth.permission
   fields:
     name: Can view, and manage everybody's expenses
     content_type:
-    - missions
+    - core
     - expense
     codename: manage_any_expense
 - model: auth.group
@@ -2094,19 +2094,19 @@
       - currencies
       - rate
     - - view_expense
-      - missions
+      - core
       - expense
     - - view_expensecategory
-      - missions
+      - core
       - expensecategory
     - - view_mission
-      - missions
+      - core
       - mission
     - - view_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - view_reimbursement
-      - missions
+      - core
       - reimbursement
 - model: auth.group
   fields:
@@ -2122,28 +2122,28 @@
       - core
       - project
     - - add_expense
-      - missions
+      - core
       - expense
     - - change_expense
-      - missions
+      - core
       - expense
     - - delete_expense
-      - missions
+      - core
       - expense
     - - view_expense
-      - missions
+      - core
       - expense
     - - view_expensecategory
-      - missions
+      - core
       - expensecategory
     - - view_mission
-      - missions
+      - core
       - mission
     - - view_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - view_reimbursement
-      - missions
+      - core
       - reimbursement
 - model: auth.group
   fields:
@@ -2165,53 +2165,53 @@
       - core
       - project
     - - add_expense
-      - missions
+      - core
       - expense
     - - change_expense
-      - missions
+      - core
       - expense
     - - delete_expense
-      - missions
+      - core
       - expense
     - - view_expense
-      - missions
+      - core
       - expense
     - - add_mission
-      - missions
+      - core
       - mission
     - - change_mission
-      - missions
+      - core
       - mission
     - - delete_mission
-      - missions
+      - core
       - mission
     - - manage_any_mission
-      - missions
+      - core
       - mission
     - - view_mission
-      - missions
+      - core
       - mission
     - - add_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - change_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - delete_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - view_paymentcategory
-      - missions
+      - core
       - paymentcategory
     - - add_reimbursement
-      - missions
+      - core
       - reimbursement
     - - change_reimbursement
-      - missions
+      - core
       - reimbursement
     - - delete_reimbursement
-      - missions
+      - core
       - reimbursement
     - - view_reimbursement
-      - missions
+      - core
       - reimbursement
