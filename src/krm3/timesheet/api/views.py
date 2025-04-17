@@ -85,20 +85,32 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         try:
+            task_id = request.data.pop('task_id')
+            resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
-        except KeyError:
-            return Response(data={'error': 'Provide at least one date.'}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError as e:
+            match str(e):
+                case 'task_id' | 'resource_id':
+                    message = 'Provide both task and resource ID.'
+                case 'dates':
+                    message = 'Provide at least one date.'
+            return Response(data={'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not isinstance(dates, list):
-            return Response(
-                data={'error': 'List of dates required, but got single date'}, status=status.HTTP_400_BAD_REQUEST
-            )
+        request.data['task'] = task_id
+        request.data['resource'] = resource_id
 
         try:
-            request.data['task'] = request.data.pop('task_id')
-            request.data['resource'] = request.data.pop('resource_id')
-        except KeyError:
-            return Response(data={'error': 'Provide both task and resource ID.'}, status=status.HTTP_400_BAD_REQUEST)
+            resource = Resource.objects.get(pk=resource_id)
+        except Resource.DoesNotExist:
+            return Response('Resource not found.', status=status.HTTP_404_NOT_FOUND)
+
+        if resource.user != request.user and not cast('User', request.user).has_any_perm(
+            'core.manage_any_project', 'core.manage_any_timesheet'
+        ):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        if not isinstance(dates, list):
+            return Response(data={'error': 'List of dates required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             try:
@@ -109,7 +121,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     if serializer.is_valid(raise_exception=True):
                         self.perform_create(serializer)
             except django_exceptions.ValidationError:
-                return Response(data={'error': f'Invalid data entry for {date}.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(data={'error': f'Invalid time entry for {date}.'}, status=status.HTTP_400_BAD_REQUEST)
 
         headers = self.get_success_headers(serializer.data)
         return Response(status=status.HTTP_201_CREATED, headers=headers)

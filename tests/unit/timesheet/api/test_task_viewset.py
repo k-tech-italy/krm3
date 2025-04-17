@@ -1,17 +1,17 @@
 import datetime
 import typing
 from decimal import Decimal
-from django.contrib.auth.models import Permission
+
 import pytest
+from django.contrib.auth.models import Permission
+from factories import ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
 from rest_framework import status
 from rest_framework.reverse import reverse
 
-from factories import ResourceFactory, TaskFactory, TimeEntryFactory
 from krm3.core.models import TimeEntry
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import Resource
-    from krm3.core.models import Task
+    from krm3.core.models import Resource, Task
 
 
 _day_entry_kinds = ('sick', 'holiday', 'leave')
@@ -254,9 +254,8 @@ class TestTaskAPIListView:
         user_resource = ResourceFactory(user=regular_user)
         other_user_resource = ResourceFactory()
 
-        user = user_resource.user
         if permission:
-            user.user_permissions.add(Permission.objects.get(codename=permission))
+            regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
@@ -264,7 +263,7 @@ class TestTaskAPIListView:
         user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
         other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
 
-        client = api_client(user=user)
+        client = api_client(user=regular_user)
 
         user_response = client.get(
             self.url(),
@@ -475,3 +474,42 @@ class TestTimeEntryAPICreateView:
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize(
+        ('permission', 'expected_status_code'),
+        [
+            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param('manage_any_project', status.HTTP_201_CREATED, id='project_manager'),
+            pytest.param('manage_any_timesheet', status.HTTP_201_CREATED, id='timesheet_manager'),
+            pytest.param('view_any_project', status.HTTP_403_FORBIDDEN, id='project_viewer'),
+            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+        ],
+    )
+    def test_regular_user_has_restricted_write_access_to_time_entries(
+        self, permission, expected_status_code, regular_user, api_client
+    ):
+        own_resource = ResourceFactory(user=regular_user)
+        own_task = TaskFactory(resource=own_resource)
+
+        if permission:
+            regular_user.user_permissions.add(Permission.objects.get(codename=permission))
+
+        other_user = UserFactory()
+        other_resource = ResourceFactory(user=other_user)
+        other_task = TaskFactory(resource=other_resource)
+
+        entry_data = {'dates': ['2024-01-01'], 'workHours': 4}
+
+        client = api_client(user=regular_user)
+        # you should be able to create entries for your own tasks
+        own_response = client.post(
+            self.url(), data=entry_data | {'taskId': own_task.id, 'resourceId': own_resource.id}, format='json'
+        )
+        assert own_response.status_code == status.HTTP_201_CREATED
+
+        # you should be unable to create entries for other people's
+        # tasks unless you have the appropriate permissions
+        other_response = client.post(
+            self.url(), data=entry_data | {'taskId': other_task.id, 'resourceId': other_resource.id}, format='json'
+        )
+        assert other_response.status_code == expected_status_code
