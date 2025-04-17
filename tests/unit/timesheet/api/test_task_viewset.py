@@ -93,6 +93,7 @@ class TestTaskAPIListView:
             pytest.param('2023-12-26', status.HTTP_400_BAD_REQUEST, id='end_date_earlier_than_start_date'),
             pytest.param('2024-01-01', status.HTTP_200_OK, id='end_date_same_as_start_date'),
             pytest.param('2024-01-07', status.HTTP_200_OK, id='end_date_later_than_start_date'),
+            pytest.param(None, status.HTTP_200_OK, id='open_ended'),
         ],
     )
     def test_validates_date_range(self, end_date, expected_status_code, admin_user, api_client):
@@ -103,9 +104,12 @@ class TestTaskAPIListView:
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
-    def test_returns_valid_time_entry_data(self, admin_user, api_client):
+    @pytest.mark.parametrize(
+        'task_end_date',
+        (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
+    )
+    def test_returns_valid_time_entry_data(self, task_end_date, admin_user, api_client):
         task_start_date = datetime.date(2023, 1, 1)
-        task_end_date = datetime.date(2024, 12, 31)
 
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
@@ -190,6 +194,7 @@ class TestTaskAPIListView:
         _future_task = TaskFactory(
             resource=resource, start_date=datetime.date(2032, 1, 1), end_date=datetime.date(2033, 12, 31)
         )
+        open_ended_task = TaskFactory(resource=resource, start_date=datetime.date(2022, 1, 1), end_date=None)
 
         response = api_client(user=admin_user).get(
             self.url(),
@@ -202,7 +207,7 @@ class TestTaskAPIListView:
         assert response.status_code == status.HTTP_200_OK
 
         actual_task_ids = {task_data.get('id') for task_data in response.json()}
-        assert actual_task_ids == {expiring_task.id, ongoing_task.id, starting_midweek_task.id}
+        assert actual_task_ids == {expiring_task.id, ongoing_task.id, starting_midweek_task.id, open_ended_task.id}
 
     def test_admin_can_see_all_tasks(self, admin_user, api_client):
         user_resource = ResourceFactory()
