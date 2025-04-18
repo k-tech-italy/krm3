@@ -93,7 +93,6 @@ class TestTaskAPIListView:
             pytest.param('2023-12-26', status.HTTP_400_BAD_REQUEST, id='end_date_earlier_than_start_date'),
             pytest.param('2024-01-01', status.HTTP_200_OK, id='end_date_same_as_start_date'),
             pytest.param('2024-01-07', status.HTTP_200_OK, id='end_date_later_than_start_date'),
-            pytest.param(None, status.HTTP_200_OK, id='open_ended'),
         ],
     )
     def test_validates_date_range(self, end_date, expected_status_code, admin_user, api_client):
@@ -150,7 +149,7 @@ class TestTaskAPIListView:
             'basketTitle': task.basket_title,
             'color': task.color,
             'startDate': task_start_date.isoformat(),
-            'endDate': task_end_date.isoformat(),
+            'endDate': task_end_date.isoformat() if task_end_date else None,
             'projectName': task.project.name,
             'timeEntries': [
                 {

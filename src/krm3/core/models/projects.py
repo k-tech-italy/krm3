@@ -133,8 +133,10 @@ class Basket(models.Model):
 
 
 class TaskQuerySet(models.QuerySet['Task']):
-    def active_between(self, start: datetime.date, end: datetime.date) -> Self:
-        return self.filter(start_date__lte=end, end_date__gte=start)
+    def active_between(self, range_start: datetime.date, range_end: datetime.date) -> Self:
+        return self.filter(start_date__lte=range_end).filter(
+            models.Q(end_date=None) | models.Q(end_date__gte=range_start)
+        )
 
     def assigned_to(self, resource: Resource | int) -> Self:
         return self.filter(resource=resource)
