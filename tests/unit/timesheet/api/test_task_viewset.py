@@ -27,7 +27,7 @@ _all_hours_keys = (*_computed_hours_keys, 'onCallHours')
 class TestTaskAPIListView:
     @staticmethod
     def url():
-        return reverse('timesheet-api:api-task-list')
+        return reverse('timesheet-api:api-timesheet-list')
 
     def test_rejects_unauthenticated_users(self, api_client):
         resource: Resource = ResourceFactory()
