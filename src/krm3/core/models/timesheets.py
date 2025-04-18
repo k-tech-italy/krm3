@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import TYPE_CHECKING, override, Self, Any
 
 from django.core.exceptions import ValidationError
@@ -11,6 +10,7 @@ from django.dispatch import receiver
 from .auth import Resource
 
 if TYPE_CHECKING:
+    from decimal import Decimal
     from django.contrib.auth.models import AbstractUser
 
 
@@ -28,6 +28,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         :return: the filtered queryset.
         """
         from .projects import POState
+
         return self.filter(state=POState.OPEN)
 
     def filter_acl(self, user: AbstractUser) -> Self:
@@ -60,7 +61,7 @@ class TimeEntry(models.Model):
     metadata = models.JSONField(default=dict, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    task = models.ForeignKey("Task", on_delete=models.CASCADE, related_name='time_entries')
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries')
 
     objects = TimeEntryQuerySet.as_manager()
 
@@ -81,28 +82,37 @@ class TimeEntry(models.Model):
 
         :return: the computed total.
         """
-        return self.work_hours + self.leave_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+        return self.work_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+
+    @property
+    def total_hours(self) -> Decimal:
+        """Compute the grand total of all hours logged on this entry.
+
+        This includes hours logged as absence.
+
+        :return: the computed total.
+        """
+        return self.total_work_hours + self.leave_hours + self.sick_hours + self.holiday_hours
 
     @override
     def clean(self) -> None:
         """Validate logged hours.
 
         Rules:
-        - You cannot log more than one full-day absence (sick, holiday)
+        - You cannot log more than one absence (sick, holiday, leave)
           in the same entry
         - You cannot log task-related hours (work, overtime, etc.)
-          if the entry already has a full-day absence logged.
+          if the entry already has an absence logged.
 
         :raises exceptions.ValidationError: when any of the rules above
           is violated.
         """
         errors = []
 
-        is_work_day = any(
+        has_task_hours_logged = any(
             hours > 0.0
             for hours in (
                 self.work_hours,
-                self.leave_hours,
                 self.overtime_hours,
                 self.on_call_hours,
                 self.rest_hours,
@@ -111,23 +121,21 @@ class TimeEntry(models.Model):
         )
         is_sick_day = self.sick_hours > 0.0
         is_holiday = self.holiday_hours > 0.0
+        is_leave = self.leave_hours > 0.0
 
-        if is_sick_day and is_holiday:
+        has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
+        if has_too_many_absences_logged:
             errors.append(
                 ValidationError(
-                    _('You cannot log more than one type of full-day absences in a day.'),
-                    code='multiple_full_day_absence_hours',
+                    _('You cannot log more than one kind of absence in a day.'),
+                    code='multiple_absence_kind',
                 )
             )
 
-        is_full_day_absence = is_sick_day or is_holiday
-        if is_work_day and is_full_day_absence:
+        is_day_entry = is_sick_day or is_holiday or is_leave
+        if has_task_hours_logged and is_day_entry:
             errors.append(
-                ValidationError(
-                    _('You cannot log work-related hours on %(absence)s.'),
-                    params={'absence': _('a sick day') if is_sick_day else _('a holiday')},
-                    code='work_during_full_day_absence',
-                )
+                ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
             )
 
         if errors:

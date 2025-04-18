@@ -8,9 +8,7 @@ from krm3.core.models import TimeEntryState
 
 
 class TestBasket:
-    def test_current_capacity_is_affected_exclusively_by_invoiced_entries(
-        self
-    ):
+    def test_current_capacity_is_affected_exclusively_by_invoiced_entries(self):
         basket = BasketFactory(initial_capacity=1000)
 
         # invoiced hours should erode the capacity
@@ -27,9 +25,7 @@ class TestBasket:
         capacity_after_invoices_and_time_entries = basket.current_capacity()
         assert capacity_after_invoices_and_time_entries == capacity_after_invoices
 
-    def test_current_projected_capacity_is_affected_by_invoiced_entries_and_open_time_entries(
-        self
-    ):
+    def test_current_projected_capacity_is_affected_by_invoiced_entries_and_open_time_entries(self):
         basket = BasketFactory(initial_capacity=1000)
 
         # invoiced hours should erode the capacity
@@ -64,9 +60,10 @@ class TestBasket:
 class TestTimeEntry:
     # validations on the hours logged
     # we should be able to save a time entry if only one of the following occurs:
-    # - we logged hours on non-full-day absence fields (e.g. work, leave, rest)
-    # - we logged sick hours
-    # - we logged holiday hours
+    # - we logged hours on non absence fields (e.g. work, leave, rest)
+    # - we logged only sick hours
+    # - we logged only holiday hours
+    # - we logged only leave hours
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
@@ -80,16 +77,15 @@ class TestTimeEntry:
     def test_is_saved_with_all_non_full_day_absence_hours_filled(self):
         """Non-zero total hours on a task, all non-full-day absence fields filled"""
         entry = TimeEntryFactory(work_hours=8)
-        entry.leave_hours = 1
         entry.overtime_hours = 1
         entry.on_call_hours = 2
         entry.rest_hours = 1.5
         entry.travel_hours = 1
-        entry.work_hours = 4.5
+        entry.work_hours = 5.5
         entry.save()
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
-        assert entry.leave_hours + entry.rest_hours + entry.travel_hours + entry.work_hours == 8
+        assert entry.rest_hours + entry.travel_hours + entry.work_hours == 8
         assert entry.overtime_hours == 1
         assert entry.on_call_hours == 2
 
@@ -115,23 +111,33 @@ class TestTimeEntry:
         assert entry.work_hours == 0
         assert entry.holiday_hours == 8
 
-    def test_raises_if_more_than_one_full_day_absence_fields_is_filled(self):
+    def test_is_saved_as_leave(self):
+        """Sick day with no work or task-related hours logged"""
+        entry = TimeEntryFactory(work_hours=8)
+        entry.work_hours = 0
+        entry.leave_hours = 8
+        entry.save()
+        # NOTE: asserting the obvious to appease Ruff :^)
+        entry.refresh_from_db()
+        assert entry.work_hours == 0
+        assert entry.leave_hours == 8
+
+    def test_raises_if_more_than_one_absence_fields_is_filled(self):
         entry = TimeEntryFactory(work_hours=0)
         entry.sick_hours = 4
         entry.holiday_hours = 4
-        with pytest.raises(
-            exceptions.ValidationError, match='You cannot log more than one type of full-day absences in a day.'
-        ):
+        entry.leave_hours = 1
+        with pytest.raises(exceptions.ValidationError, match='more than one kind of absence in a day'):
             entry.save()
 
     def test_raises_if_logging_work_during_sick_days(self):
         entry = TimeEntryFactory(work_hours=4)
         entry.sick_hours = 4
-        with pytest.raises(exceptions.ValidationError, match='You cannot log work-related hours on a sick day.'):
+        with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
             entry.save()
 
     def test_raises_if_logging_work_during_holidays(self):
         entry = TimeEntryFactory(work_hours=4)
         entry.holiday_hours = 4
-        with pytest.raises(exceptions.ValidationError, match='You cannot log work-related hours on a holiday.'):
+        with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
             entry.save()
