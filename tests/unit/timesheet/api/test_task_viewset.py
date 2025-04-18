@@ -117,13 +117,16 @@ class TestTaskAPIListView:
         task: 'Task' = TaskFactory(resource=resource, start_date=task_start_date, end_date=task_end_date)
 
         def _make_time_entry(**kwargs):
-            return TimeEntryFactory(task=task, resource=resource, **kwargs)
+            return TimeEntryFactory(task=kwargs.pop('task', task), resource=resource, **kwargs)
 
         date_within_range = datetime.date(2024, 1, 3)
 
         _early_time_entry = _make_time_entry(date=datetime.date(2023, 7, 1), comment='Too early')
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
-        time_entry_within_range = _make_time_entry(date=date_within_range, comment='Within range')
+        task_entry_within_range = _make_time_entry(date=date_within_range, comment='Within range')
+        day_entry_within_range = _make_time_entry(
+            date=date_within_range, task=None, work_hours=0, leave_hours=2, comment='Within range (day)'
+        )
 
         response = api_client(user=admin_user).get(
             self.url(),
@@ -135,38 +138,54 @@ class TestTaskAPIListView:
         )
         assert response.status_code == status.HTTP_200_OK
 
-        # we're dealing with a single task right now...
-        data = response.json()
-        assert len(data) == 1
-
         def _as_quantized_decimal(n: int | float | Decimal) -> str:
             return str(Decimal(n).quantize(Decimal('1.00')))
 
-        task_data = data[0]
-        assert task_data == {
-            'id': task.pk,
-            'title': task.title,
-            'basketTitle': task.basket_title,
-            'color': task.color,
-            'startDate': task_start_date.isoformat(),
-            'endDate': task_end_date.isoformat() if task_end_date else None,
-            'projectName': task.project.name,
+        assert response.json() == {
+            'tasks': [
+                {
+                    'id': task.pk,
+                    'title': task.title,
+                    'basketTitle': task.basket_title,
+                    'color': task.color,
+                    'startDate': task_start_date.isoformat(),
+                    'endDate': task_end_date.isoformat() if task_end_date else None,
+                    'projectName': task.project.name,
+                }
+            ],
             'timeEntries': [
                 {
-                    'id': time_entry_within_range.id,
+                    'id': task_entry_within_range.id,
                     'date': date_within_range.isoformat(),
-                    'lastModified': time_entry_within_range.last_modified.isoformat(),
-                    'workHours': _as_quantized_decimal(time_entry_within_range.work_hours),
-                    'sickHours': _as_quantized_decimal(time_entry_within_range.sick_hours),
-                    'holidayHours': _as_quantized_decimal(time_entry_within_range.holiday_hours),
-                    'leaveHours': _as_quantized_decimal(time_entry_within_range.leave_hours),
-                    'overtimeHours': _as_quantized_decimal(time_entry_within_range.overtime_hours),
-                    'onCallHours': _as_quantized_decimal(time_entry_within_range.on_call_hours),
-                    'travelHours': _as_quantized_decimal(time_entry_within_range.travel_hours),
-                    'restHours': _as_quantized_decimal(time_entry_within_range.rest_hours),
-                    'state': str(time_entry_within_range.state),
+                    'lastModified': task_entry_within_range.last_modified.isoformat(),
+                    'workHours': _as_quantized_decimal(task_entry_within_range.work_hours),
+                    'sickHours': _as_quantized_decimal(task_entry_within_range.sick_hours),
+                    'holidayHours': _as_quantized_decimal(task_entry_within_range.holiday_hours),
+                    'leaveHours': _as_quantized_decimal(task_entry_within_range.leave_hours),
+                    'overtimeHours': _as_quantized_decimal(task_entry_within_range.overtime_hours),
+                    'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
+                    'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
+                    'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
+                    'state': str(task_entry_within_range.state),
                     'comment': 'Within range',
-                }
+                    'task': task.pk,
+                },
+                {
+                    'id': day_entry_within_range.id,
+                    'date': date_within_range.isoformat(),
+                    'lastModified': day_entry_within_range.last_modified.isoformat(),
+                    'workHours': _as_quantized_decimal(day_entry_within_range.work_hours),
+                    'sickHours': _as_quantized_decimal(day_entry_within_range.sick_hours),
+                    'holidayHours': _as_quantized_decimal(day_entry_within_range.holiday_hours),
+                    'leaveHours': _as_quantized_decimal(day_entry_within_range.leave_hours),
+                    'overtimeHours': _as_quantized_decimal(day_entry_within_range.overtime_hours),
+                    'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
+                    'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
+                    'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
+                    'state': str(day_entry_within_range.state),
+                    'comment': 'Within range (day)',
+                    'task': None,
+                },
             ],
         }
 
@@ -205,7 +224,7 @@ class TestTaskAPIListView:
         )
         assert response.status_code == status.HTTP_200_OK
 
-        actual_task_ids = {task_data.get('id') for task_data in response.json()}
+        actual_task_ids = {task_data.get('id') for task_data in response.json().get('tasks')}
         assert actual_task_ids == {expiring_task.id, ongoing_task.id, starting_midweek_task.id, open_ended_task.id}
 
     def test_admin_can_see_all_tasks(self, admin_user, api_client):
@@ -229,7 +248,7 @@ class TestTaskAPIListView:
             },
         )
         assert user_response.status_code == status.HTTP_200_OK
-        assert user_response.json()[0].get('id') == user_task.id
+        assert user_response.json().get('tasks', [])[0].get('id') == user_task.id
 
         other_user_response = client.get(
             self.url(),
@@ -240,7 +259,7 @@ class TestTaskAPIListView:
             },
         )
         assert other_user_response.status_code == status.HTTP_200_OK
-        assert other_user_response.json()[0].get('id') == other_user_task.id
+        assert other_user_response.json().get('tasks', [])[0].get('id') == other_user_task.id
 
     @pytest.mark.parametrize(
         ('permission', 'expected_status_code'),
@@ -278,7 +297,7 @@ class TestTaskAPIListView:
             },
         )
         assert user_response.status_code == status.HTTP_200_OK
-        assert user_response.json()[0].get('id') == user_task.id
+        assert user_response.json().get('tasks', [])[0].get('id') == user_task.id
 
         other_user_response = client.get(
             self.url(),
@@ -290,7 +309,7 @@ class TestTaskAPIListView:
         )
         assert (status_code := other_user_response.status_code) == expected_status_code
         if status_code <= 400:
-            assert other_user_response.json()[0].get('id') == other_user_task.id
+            assert other_user_response.json().get('tasks', [])[0].get('id') == other_user_task.id
 
 
 class TestTimeEntryAPICreateView:
@@ -421,12 +440,6 @@ class TestTimeEntryAPICreateView:
             start_date=datetime.date(2023, 1, 1),
             end_date=datetime.date(2025, 12, 31),
         )
-        absence_task = TaskFactory(
-            title='absences',
-            resource=resource,
-            start_date=datetime.date(2023, 1, 1),
-            end_date=datetime.date(2025, 12, 31),
-        )
 
         # we made some work on the first task
         TimeEntryFactory(resource=resource, task=first_task, date=today, work_hours=6)
@@ -439,7 +452,7 @@ class TestTimeEntryAPICreateView:
             self.url(),
             data={
                 'dates': [today.isoformat()],
-                'taskId': absence_task.id,
+                'taskId': None,
                 'resourceId': resource.id,
                 'workHours': 0,
                 # we are now over 24h
