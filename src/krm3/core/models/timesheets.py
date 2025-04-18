@@ -56,12 +56,12 @@ class TimeEntry(models.Model):
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # type: ignore
+    state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # pyright: ignore[reportArgumentType]
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries')
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries', null=True, blank=True)
 
     objects = TimeEntryQuerySet.as_manager()
 
