@@ -8,9 +8,9 @@ from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
 
 from .auth import Resource
+from decimal import Decimal
 
 if TYPE_CHECKING:
-    from decimal import Decimal
     from django.contrib.auth.models import AbstractUser
 
 
@@ -77,12 +77,19 @@ class TimeEntry(models.Model):
         return f'{self.date}: {self.resource} on "{self.task}" ({self.state})'
 
     @property
-    def total_work_hours(self) -> Decimal:
+    def total_task_hours(self) -> Decimal:
         """Compute the total task-related hours logged on this entry.
 
         :return: the computed total.
         """
-        return self.work_hours + self.overtime_hours + self.travel_hours + self.rest_hours
+        # NOTE: could use sum() on a comprehension, but `sum()` may also
+        #       return Literal[0], which trips up the type checker
+        return (
+            Decimal(self.work_hours)
+            + Decimal(self.overtime_hours)
+            + Decimal(self.travel_hours)
+            + Decimal(self.rest_hours)
+        )
 
     @property
     def total_hours(self) -> Decimal:
@@ -92,7 +99,18 @@ class TimeEntry(models.Model):
 
         :return: the computed total.
         """
-        return self.total_work_hours + self.leave_hours + self.sick_hours + self.holiday_hours
+        # NOTE: see `total_task` hours, the same applies here
+        return (
+            self.total_task_hours + Decimal(self.leave_hours) + Decimal(self.sick_hours) + Decimal(self.holiday_hours)
+        )
+
+    @property
+    def is_day_entry(self) -> bool:
+        return self.task is None
+
+    @property
+    def is_task_entry(self) -> bool:
+        return not self.is_day_entry
 
     @override
     def clean(self) -> None:
@@ -109,19 +127,20 @@ class TimeEntry(models.Model):
         """
         errors = []
 
-        has_task_hours_logged = any(
-            hours > 0.0
-            for hours in (
-                self.work_hours,
-                self.overtime_hours,
-                self.on_call_hours,
-                self.rest_hours,
-                self.travel_hours,
+        has_task_entry_hours = self.total_task_hours > 0.0 or self.on_call_hours > 0.0
+        if self.is_day_entry and has_task_entry_hours:
+            errors.append(
+                ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
             )
-        )
+
         is_sick_day = self.sick_hours > 0.0
         is_holiday = self.holiday_hours > 0.0
         is_leave = self.leave_hours > 0.0
+        has_day_entry_hours = is_sick_day or is_holiday or is_leave
+        if self.is_task_entry and has_day_entry_hours:
+            errors.append(
+                ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
+            )
 
         has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
         if has_too_many_absences_logged:
@@ -132,8 +151,7 @@ class TimeEntry(models.Model):
                 )
             )
 
-        is_day_entry = is_sick_day or is_holiday or is_leave
-        if has_task_hours_logged and is_day_entry:
+        if has_task_entry_hours and has_day_entry_hours:
             errors.append(
                 ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
             )

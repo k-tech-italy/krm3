@@ -76,16 +76,19 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        task_id = request.data.pop('task_id', None)
+
         try:
-            task_id = request.data.pop('task_id')
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
         except KeyError as e:
             match str(e):
-                case 'task_id' | 'resource_id':
+                case 'resource_id':
                     message = 'Provide both task and resource ID.'
                 case 'dates':
                     message = 'Provide at least one date.'
+                case _:
+                    raise
             return Response(data={'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data['task'] = task_id

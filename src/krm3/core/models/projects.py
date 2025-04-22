@@ -128,7 +128,7 @@ class Basket(models.Model):
         :return: the computed capacity
         """
         time_entries = TimeEntry.objects.open().filter(task__in=self.tasks())  # pyright: ignore
-        logged_hours = sum(entry.total_work_hours for entry in time_entries)
+        logged_hours = sum(entry.total_task_hours for entry in time_entries)
         return self.current_capacity() - logged_hours
 
 

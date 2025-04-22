@@ -14,8 +14,8 @@ from factories import TimeEntryFactory, ResourceFactory, TaskFactory
     ],
 )
 def test_user_can_manage_own_timesheets(user, perm, expected, admin_user, regular_user):
-    user_time_entry = TimeEntryFactory(resource=ResourceFactory(user=regular_user))
-    admin_time_entry = TimeEntryFactory(resource=ResourceFactory(user=admin_user))
+    user_time_entry = TimeEntryFactory(resource=ResourceFactory(user=regular_user), task=TaskFactory())
+    admin_time_entry = TimeEntryFactory(resource=ResourceFactory(user=admin_user), task=TaskFactory())
     user = admin_user if user == 'admin' else regular_user
     if perm:
         user.user_permissions.add(Permission.objects.get(codename=perm))

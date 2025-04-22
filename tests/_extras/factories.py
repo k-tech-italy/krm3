@@ -171,8 +171,7 @@ class TaskFactory(factory.django.DjangoModelFactory):
 class TimeEntryFactory(factory.django.DjangoModelFactory):
     date = factory.Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
     work_hours = factory.Faker('random_int', min=0, max=8)
-    task = factory.SubFactory(TaskFactory)
-    resource = factory.LazyAttribute(lambda entry: entry.task.resource)
+    resource = factory.SubFactory(ResourceFactory)
 
     class Meta:
         model = 'core.TimeEntry'

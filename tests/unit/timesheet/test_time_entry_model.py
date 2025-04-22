@@ -1,4 +1,5 @@
 import datetime
+from contextlib import nullcontext as does_not_raise
 
 from django.core import exceptions
 import pytest
@@ -65,18 +66,38 @@ class TestTimeEntry:
     # - we logged only holiday hours
     # - we logged only leave hours
 
+    @pytest.mark.parametrize(
+        ('hour_field', 'expected_behavior'),
+        (
+            pytest.param('sick_hours', does_not_raise(), id='sick'),
+            pytest.param('holiday_hours', does_not_raise(), id='holiday'),
+            pytest.param('leave_hours', does_not_raise(), id='leave'),
+            pytest.param('on_call_hours', pytest.raises(exceptions.ValidationError), id='on_call'),
+            pytest.param('overtime_hours', pytest.raises(exceptions.ValidationError), id='overtime'),
+            pytest.param('travel_hours', pytest.raises(exceptions.ValidationError), id='travel'),
+            pytest.param('rest_hours', pytest.raises(exceptions.ValidationError), id='rest'),
+        ),
+    )
+    def test_day_entry_is_saved_only_with_sick_holiday_or_leave_hours(self, hour_field, expected_behavior):
+        with expected_behavior:
+            entry = TimeEntryFactory(task=None, work_hours=0, **{hour_field: 8})
+            # NOTE: asserting the obvious to appease Ruff :^)
+            assert entry.task is None
+
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
-        entry = TimeEntryFactory(work_hours=8)
+        task = TaskFactory()
+        entry = TimeEntryFactory(work_hours=8, task=task, resource=task.resource)
         entry.work_hours = 0
         entry.save()
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
         assert entry.work_hours == 0
 
-    def test_is_saved_with_all_non_full_day_absence_hours_filled(self):
+    def test_is_saved_with_all_task_entry_hours_filled(self):
         """Non-zero total hours on a task, all non-full-day absence fields filled"""
-        entry = TimeEntryFactory(work_hours=8)
+        task = TaskFactory()
+        entry = TimeEntryFactory(work_hours=8, task=task, resource=task.resource)
         entry.overtime_hours = 1
         entry.on_call_hours = 2
         entry.rest_hours = 1.5
@@ -91,9 +112,14 @@ class TestTimeEntry:
 
     def test_is_saved_as_sick_day(self):
         """Sick day with no work or task-related hours logged"""
-        entry = TimeEntryFactory(work_hours=8)
+        entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
         entry.work_hours = 0
         entry.sick_hours = 8
+
+        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+            entry.save()
+
+        entry.task = None
         entry.save()
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
@@ -102,9 +128,14 @@ class TestTimeEntry:
 
     def test_is_saved_as_holiday(self):
         """Sick day with no work or task-related hours logged"""
-        entry = TimeEntryFactory(work_hours=8)
+        entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
         entry.work_hours = 0
         entry.holiday_hours = 8
+
+        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+            entry.save()
+
+        entry.task = None
         entry.save()
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
@@ -113,9 +144,14 @@ class TestTimeEntry:
 
     def test_is_saved_as_leave(self):
         """Sick day with no work or task-related hours logged"""
-        entry = TimeEntryFactory(work_hours=8)
+        entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
         entry.work_hours = 0
         entry.leave_hours = 8
+
+        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+            entry.save()
+
+        entry.task = None
         entry.save()
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
@@ -131,13 +167,13 @@ class TestTimeEntry:
             entry.save()
 
     def test_raises_if_logging_work_during_sick_days(self):
-        entry = TimeEntryFactory(work_hours=4)
+        entry = TimeEntryFactory(work_hours=4, task=TaskFactory())
         entry.sick_hours = 4
         with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
             entry.save()
 
     def test_raises_if_logging_work_during_holidays(self):
-        entry = TimeEntryFactory(work_hours=4)
+        entry = TimeEntryFactory(work_hours=4, task=TaskFactory())
         entry.holiday_hours = 4
         with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
             entry.save()

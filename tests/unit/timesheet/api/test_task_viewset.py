@@ -327,12 +327,9 @@ class TestTimeEntryAPICreateView:
                 {'overtimeHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
                 id='task_entry_with_optional_hours',
             ),
-            pytest.param(0, {'leaveHours': 2}, id='day_entry_leave'),
-            pytest.param(0, {'holidayHours': 8}, id='day_entry_holiday'),
-            pytest.param(0, {'sickHours': 8}, id='day_entry_sick'),
         ),
     )
-    def test_creates_single_valid_time_entry(self, work_hours, optional_data, admin_user, api_client):
+    def test_creates_single_valid_task_entry(self, work_hours, optional_data, admin_user, api_client):
         task = TaskFactory()
         assert not TimeEntry.objects.filter(task=task).exists()
 
@@ -346,6 +343,22 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists()
+
+    @pytest.mark.parametrize(
+        'hours_data',
+        (
+            pytest.param({'leaveHours': 2}, id='day_entry_leave'),
+            pytest.param({'holidayHours': 8}, id='day_entry_holiday'),
+            pytest.param({'sickHours': 8}, id='day_entry_sick'),
+        ),
+    )
+    def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
+        resource = ResourceFactory()
+        time_entry_data = {'dates': ['2024-01-01'], 'workHours': 0, 'resourceId': resource.pk} | hours_data
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        assert TimeEntry.objects.filter(resource=resource).exists()
 
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
@@ -380,37 +393,32 @@ class TestTimeEntryAPICreateView:
     def test_accepts_time_entries_with_only_one_absence_kind(
         self, sick_hours, holiday_hours, expected_status_code, leave_hours, admin_user, api_client
     ):
-        task = TaskFactory()
-
+        resource = ResourceFactory()
         time_entry_data = {
             'dates': ['2024-01-01'],
             'workHours': 0,
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
             'leaveHours': leave_hours,
-            'taskId': task.pk,
-            'resourceId': task.resource.pk,
+            'resourceId': resource.pk,
         }
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == expected_status_code
         created = response.status_code == status.HTTP_201_CREATED
-        assert TimeEntry.objects.filter(task=task).exists() is created
+        assert TimeEntry.objects.filter(resource=resource).exists() is created
 
     @pytest.mark.parametrize(
         'hours_data',
         (
             pytest.param({'workHours': 8}, id='work'),
-            pytest.param({'sickHours': 8}, id='sick'),
-            pytest.param({'holidayHours': 8}, id='holiday'),
-            pytest.param({'leaveHours': 4}, id='leave'),
             pytest.param(
                 {'workHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'overtimeHours': 1},
                 id='all_task_hours',
             ),
         ),
     )
-    def test_accepts_time_entries_for_multiple_days(self, hours_data, admin_user, api_client):
+    def test_accepts_task_entries_for_multiple_days(self, hours_data, admin_user, api_client):
         task = TaskFactory()
 
         time_entry_data = {
@@ -418,12 +426,37 @@ class TestTimeEntryAPICreateView:
             'taskId': task.pk,
             'resourceId': task.resource.pk,
         } | hours_data
-        # ensure we have work hours so we can save the new instances
+        # sanity check: ensure we have work hours so we can save the new instances
+        # NOTE: dict.setdefault() only sets a new value if the key is missing
         time_entry_data.setdefault('workHours', 0)
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         instances = TimeEntry.objects.filter(task=task)
+        assert instances.count() == 5
+        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(1, 6)}
+
+    @pytest.mark.parametrize(
+        'hours_data',
+        (
+            pytest.param({'sickHours': 8}, id='sick'),
+            pytest.param({'holidayHours': 8}, id='holiday'),
+            pytest.param({'leaveHours': 4}, id='leave'),
+        ),
+    )
+    def test_accepts_day_entries_for_multiple_days(self, hours_data, admin_user, api_client):
+        resource = ResourceFactory()
+
+        time_entry_data = {
+            'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
+            'resourceId': resource.pk,
+        } | hours_data
+        # ensure we have work hours so we can save the new instances
+        time_entry_data.setdefault('workHours', 0)
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        instances = TimeEntry.objects.filter(resource=resource)
         assert instances.count() == 5
         assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(1, 6)}
 
@@ -452,7 +485,6 @@ class TestTimeEntryAPICreateView:
             self.url(),
             data={
                 'dates': [today.isoformat()],
-                'taskId': None,
                 'resourceId': resource.id,
                 'workHours': 0,
                 # we are now over 24h
@@ -484,7 +516,7 @@ class TestTimeEntryAPICreateView:
         task = TaskFactory()
         data = {
             'dates': ['2024-01-01'],
-            'taskId': task.id,
+            'taskId': None if any(key.startswith(prefix) for prefix in ('sick', 'holiday', 'leave')) else task.id,
             'resourceId': task.resource.id,
         } | {key: -1}
         data.setdefault('workHours', 0)
