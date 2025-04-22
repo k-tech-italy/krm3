@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
@@ -32,6 +31,7 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'rest_hours',
             'state',
             'comment',
+            'task',
         )
         read_only_fields = fields
 
@@ -120,7 +120,6 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class TimesheetTaskSerializer(TaskSerializer):
     project_name = serializers.SerializerMethodField()
-    time_entries = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
         fields = (
@@ -130,20 +129,13 @@ class TimesheetTaskSerializer(TaskSerializer):
             'color',
             'start_date',
             'end_date',
-            'time_entries',
             'project_name',
         )
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._start_date = kwargs.pop('start_date', None)
-        self._end_date = kwargs.pop('end_date', None)
-        super().__init__(*args, **kwargs)
 
     def get_project_name(self, obj: Task) -> str:
         return obj.project.name
 
-    def get_time_entries(self, obj: Task) -> Iterable[dict]:
-        time_entries = obj.time_entries.all()
-        if self._start_date and self._end_date:
-            time_entries = obj.time_entries_between(self._start_date, self._end_date)
-        return TimeEntryReadSerializer(time_entries, many=True).data
+
+class TimesheetSerializer(serializers.Serializer):
+    tasks = TimesheetTaskSerializer(many=True)
+    time_entries = TimeEntryReadSerializer(many=True)

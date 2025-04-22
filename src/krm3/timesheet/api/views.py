@@ -8,33 +8,25 @@ from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Resource, Task
+from krm3.core.models import Resource
 from krm3.core.models.timesheets import TimeEntry
+from krm3.timesheet import entities
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     TimeEntryReadSerializer,
     TimeEntryCreateSerializer,
-    TimesheetTaskSerializer,
+    TimesheetSerializer,
 )
 
 if TYPE_CHECKING:
     from krm3.core.models import User
 
 
-class TaskAPIViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class TimesheetAPIViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = TimesheetTaskSerializer
+    serializer_class = TimesheetSerializer
 
-    @override
-    def get_queryset(self) -> QuerySet[Task]:
-        user = cast('User', self.request.user)
-
-        if user.can_manage_and_view_any_project():
-            return Task.objects.all()
-        return Task.objects.filter_acl(user=user)  # pyright: ignore
-
-    @override
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def list(self, request: Request) -> Response:
         try:
             resource_id = request.query_params['resource_id']
             start_date_iso = request.query_params['start_date']
@@ -61,9 +53,9 @@ class TaskAPIViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                 data={'error': 'Start date must be earlier than end date.'}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        tasks = self.get_queryset().active_between(start_date, end_date).assigned_to(resource=resource_id)  # pyright: ignore
-        task_data = self.get_serializer(tasks, many=True, start_date=start_date, end_date=end_date).data
-        return Response(task_data)
+        timesheet = entities.Timesheet(requested_by=cast('User', request.user)).fetch(resource, start_date, end_date)
+        serializer = TimesheetSerializer(timesheet)
+        return Response(serializer.data)
 
 
 class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -84,16 +76,19 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        task_id = request.data.pop('task_id', None)
+
         try:
-            task_id = request.data.pop('task_id')
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
         except KeyError as e:
             match str(e):
-                case 'task_id' | 'resource_id':
+                case 'resource_id':
                     message = 'Provide both task and resource ID.'
                 case 'dates':
                     message = 'Provide at least one date.'
+                case _:
+                    raise
             return Response(data={'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data['task'] = task_id
