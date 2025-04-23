@@ -11,6 +11,7 @@ from .auth import Resource
 from decimal import Decimal
 
 if TYPE_CHECKING:
+    import datetime
     from django.contrib.auth.models import AbstractUser
 
 
@@ -126,21 +127,40 @@ class TimeEntry(models.Model):
           is violated.
         """
         errors = []
+        other_entries_on_same_day = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(pk=self.pk)  # pyright: ignore[reportAttributeAccessIssue]
 
         has_task_entry_hours = self.total_task_hours > 0.0 or self.on_call_hours > 0.0
-        if self.is_day_entry and has_task_entry_hours:
-            errors.append(
-                ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
-            )
+        if self.is_day_entry:
+            other_day_entries = other_entries_on_same_day.filter(task__isnull=True)
+            if other_day_entries.exists():
+                message = _(
+                    'Date {date} already has a day entry. Consider deleting it before trying again.'.format(
+                        date=self.date
+                    )
+                )
+                errors.append(ValidationError(message))
+            if has_task_entry_hours:
+                errors.append(
+                    ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
+                )
 
         is_sick_day = self.sick_hours > 0.0
         is_holiday = self.holiday_hours > 0.0
         is_leave = self.leave_hours > 0.0
         has_day_entry_hours = is_sick_day or is_holiday or is_leave
-        if self.is_task_entry and has_day_entry_hours:
-            errors.append(
-                ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
-            )
+        if self.is_task_entry:
+            other_task_entries = other_entries_on_same_day.filter(task=self.task)
+            if other_task_entries.exists():
+                message = _(
+                    'Task {task} already has a time entry on {date}. Consider deleting it before trying again.'.format(
+                        task=self.task, date=self.date
+                    )
+                )
+                errors.append(ValidationError(message))
+            if has_day_entry_hours:
+                errors.append(
+                    ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
+                )
 
         has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
         if has_too_many_absences_logged:
