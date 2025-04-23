@@ -15,10 +15,13 @@ if typing.TYPE_CHECKING:
 
 
 _day_entry_kinds = ('sick', 'holiday', 'leave')
-_day_entry_keys = (f'{key}Hours' for key in _day_entry_kinds)
+_day_entry_keys = tuple(f'{key}Hours' for key in _day_entry_kinds)
 
-_computed_hours_kinds = (*_day_entry_kinds, 'work', 'overtime', 'rest', 'travel')
-_computed_hours_keys = (f'{key}Hours' for key in _computed_hours_kinds)
+_task_entry_kinds = ('work', 'overtime', 'rest', 'travel')
+_task_entry_keys = tuple(f'{key}Hours' for key in _task_entry_kinds)
+
+_computed_hours_kinds = (*_day_entry_kinds, *_task_entry_kinds)
+_computed_hours_keys = (*_day_entry_keys, *_task_entry_keys)
 
 _all_hours_kinds = (*_computed_hours_kinds, 'on_call')
 _all_hours_keys = (*_computed_hours_keys, 'onCallHours')
@@ -521,6 +524,44 @@ class TestTimeEntryAPICreateView:
         } | {key: -1}
         data.setdefault('workHours', 0)
 
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize(
+        'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
+    )
+    def test_rejects_day_entry_with_another_day_entry_on_same_date(self, hours_key, admin_user, api_client):
+        resource = ResourceFactory()
+        target_date = datetime.date(2024, 1, 1)
+        _existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, work_hours=0)
+
+        data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk} | {hours_key: 8}
+
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize(
+        'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True))
+    )
+    def test_rejects_task_entry_for_task_with_a_day_entry_on_same_date(self, hours_key, admin_user, api_client):
+        resource = ResourceFactory()
+        target_date = datetime.date(2024, 1, 1)
+        target_task = TaskFactory(title='target', resource=resource)
+        other_task = TaskFactory(title='other', resource=resource)
+        _existing_entry_on_target_task = TimeEntryFactory(
+            resource=resource, date=target_date, task=target_task, work_hours=4
+        )
+
+        # we can accept a new time entry on an "empty" task
+        data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': other_task.pk, hours_key: 4}
+        data.setdefault('workHours', 0)
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # we cannot accept a new time entry on the target task, as
+        # there is one already
+        data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': target_task.pk, hours_key: 4}
+        data.setdefault('workHours', 0)
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
