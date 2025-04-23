@@ -11,7 +11,6 @@ from .auth import Resource
 from decimal import Decimal
 
 if TYPE_CHECKING:
-    import datetime
     from django.contrib.auth.models import AbstractUser
 
 
@@ -138,7 +137,7 @@ class TimeEntry(models.Model):
                         date=self.date
                     )
                 )
-                errors.append(ValidationError(message))
+                errors.append(ValidationError(message, code='multiple_day_entries'))
             if has_task_entry_hours:
                 errors.append(
                     ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
@@ -156,7 +155,7 @@ class TimeEntry(models.Model):
                         task=self.task, date=self.date
                     )
                 )
-                errors.append(ValidationError(message))
+                errors.append(ValidationError(message, code='multiple_task_entries'))
             if has_day_entry_hours:
                 errors.append(
                     ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
