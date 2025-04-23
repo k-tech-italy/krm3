@@ -22,8 +22,8 @@ def test_user_can_manage_own_timesheets(user, perm, expected, admin_user, regula
 
     from krm3.core.models import TimeEntry
 
-    entries = list(TimeEntry.objects.filter_acl(user=user).all())
-    assert entries == [user_time_entry, admin_time_entry] if expected == 'all' else [user_time_entry]
+    entries = set(TimeEntry.objects.filter_acl(user=user).all())
+    assert entries == {user_time_entry, admin_time_entry} if expected == 'all' else {user_time_entry}
 
 
 @pytest.mark.parametrize(
@@ -44,5 +44,5 @@ def test_user_can_access_own_tasks(user, perm, expected, admin_user, regular_use
 
     from krm3.core.models import Task
 
-    entries = list(Task.objects.filter_acl(user=user).all())
-    assert entries == [user_task, admin_task] if expected == 'all' else [user_task]
+    entries = set(Task.objects.filter_acl(user=user).all())
+    assert entries == {user_task, admin_task} if expected == 'all' else {user_task}
