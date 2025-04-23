@@ -115,8 +115,11 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     serializer = self.get_serializer(data=time_entry_data, context={'request': request})
                     if serializer.is_valid(raise_exception=True):
                         self.perform_create(serializer)
-            except django_exceptions.ValidationError:
-                return Response(data={'error': f'Invalid time entry for {date}.'}, status=status.HTTP_400_BAD_REQUEST)
+            except django_exceptions.ValidationError as e:
+                return Response(
+                    data={'error': f'Invalid time entry for {date}: {"; ".join(e.messages)}.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         headers = self.get_success_headers(serializer.data)
         return Response(status=status.HTTP_201_CREATED, headers=headers)
