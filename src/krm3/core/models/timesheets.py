@@ -31,6 +31,15 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 
         return self.filter(state=POState.OPEN)
 
+    def closed(self) -> Self:
+        """Select the closed time entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        from .projects import POState
+
+        return self.filter(state=POState.CLOSED)
+
     def filter_acl(self, user: AbstractUser) -> Self:
         """Return the queryset for the owned records.
 

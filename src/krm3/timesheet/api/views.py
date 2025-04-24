@@ -5,11 +5,12 @@ from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
 from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from krm3.core.models import Resource
-from krm3.core.models.timesheets import TimeEntry
+from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
 from krm3.timesheet import entities
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
@@ -123,3 +124,40 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         headers = self.get_success_headers(serializer.data)
         return Response(status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(methods=['post'], detail=False)
+    def clear(self, request: Request) -> Response:
+        requested_entry_ids = request.data.get('ids', [])
+        if not requested_entry_ids:
+            return Response(data={'error': 'No time entry ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(requested_entry_ids, list):
+            return Response(data={'error': 'Time entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        entries: TimeEntryQuerySet = self.get_queryset().filter(pk__in=requested_entry_ids)  # pyright: ignore[reportAssignmentType]
+
+        if not cast('User', request.user).has_any_perm('core.manage_any_project', 'core.manage_any_timesheet'):
+            # since we already ACL-filtered the queryset, we need to
+            # know if we have fetched every single one of the objects
+            # we requested
+            # the problem, though, is that "core.view_any_timesheet"
+            # does not grant authorization to delete time entries, so
+            # we also need to know who the entries are for!
+            fetched_entry_ids = set(entries.values_list('pk', flat=True))
+            is_missing_acl_filtered_entries = set(requested_entry_ids) != fetched_entry_ids
+
+            authorized_resource = Resource.objects.get(user=request.user)
+            is_user_unauthorized = entries.exclude(resource=authorized_resource).exists()
+
+            if is_missing_acl_filtered_entries or is_user_unauthorized:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+
+        if entries.closed().exists():
+            return Response(
+                data={'error': 'Found closed time entry. Closed time entries are frozen and cannot be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            entries.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

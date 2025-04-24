@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 
 from krm3.core.models import TimeEntry
+from krm3.core.models.timesheets import TimeEntryState
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
@@ -603,3 +604,71 @@ class TestTimeEntryAPICreateView:
             self.url(), data=entry_data | {'taskId': other_task.id, 'resourceId': other_resource.id}, format='json'
         )
         assert other_response.status_code == expected_status_code
+
+
+class TestTimeEntryClearAPIAction:
+    @staticmethod
+    def url():
+        return reverse('timesheet-api:api-time-entry-clear')
+
+    def test_rejects_empty_list_of_time_entry_ids(self, admin_user, api_client):
+        response = api_client(user=admin_user).post(self.url(), data={}, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_rejects_time_entry_ids_not_in_a_list(self, admin_user, api_client):
+        entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
+        response = api_client(user=admin_user).post(self.url(), data={'ids': entry.id}, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
+        open_entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
+        closed_entry = TimeEntryFactory(work_hours=8, task=TaskFactory(), state=TimeEntryState.CLOSED)
+        response = api_client(user=admin_user).post(
+            self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_admin_can_clear_any_time_entry(self, admin_user, api_client):
+        day_entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8)
+        task_entry = TimeEntryFactory(date=datetime.date(2024, 1, 2), work_hours=8, task=TaskFactory())
+        assert TimeEntry.objects.exists()
+        response = api_client(user=admin_user).post(
+            self.url(), data={'ids': [day_entry.pk, task_entry.pk]}, format='json'
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not TimeEntry.objects.exists()
+
+    @pytest.mark.parametrize(
+        ('permission', 'expected_status_code'),
+        [
+            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param('manage_any_project', status.HTTP_204_NO_CONTENT, id='project_manager'),
+            pytest.param('manage_any_timesheet', status.HTTP_204_NO_CONTENT, id='timesheet_manager'),
+            pytest.param('view_any_project', status.HTTP_403_FORBIDDEN, id='project_viewer'),
+            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+        ],
+    )
+    def test_regular_user_can_only_clear_allowed_time_entries(
+        self, permission, expected_status_code, regular_user, api_client
+    ):
+        user_resource = ResourceFactory(user=regular_user)
+        other_user_resource = ResourceFactory()
+
+        if permission:
+            regular_user.user_permissions.add(Permission.objects.get(codename=permission))
+
+        entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8, resource=user_resource)
+        other_entry = TimeEntryFactory(
+            date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8, resource=other_user_resource
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(), data={'ids': [entry.pk, other_entry.pk]}, format='json'
+        )
+        assert response.status_code == expected_status_code
+
+        # if we were able to delete both entries before then we have
+        # nothing to delete
+        if expected_status_code < 400:
+            response = api_client(user=regular_user).post(self.url(), data={'ids': [entry.pk]}, format='json')
+            assert response.status_code == status.HTTP_204_NO_CONTENT
