@@ -271,7 +271,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         request.session[EXPENSE_UPLOAD_IMAGES] = []
 
         ref = (
-            rest_reverse('missions-api:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
+            rest_reverse('missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
         )
         if settings.FORCE_DEBUG_SSL:
             ref = 'https' + ref[ref.index(':') :]  # force https also locally for ngrok

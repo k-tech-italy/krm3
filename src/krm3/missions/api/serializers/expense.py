@@ -1,5 +1,6 @@
 from cryptography.fernet import InvalidToken
 from django.conf import settings
+from drf_extra_fields.fields import HybridImageField, Base64ImageField
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
@@ -41,6 +42,11 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
         model = Expense
         fields = '__all__'
         read_only_fields = ['amount_base']
+
+
+class ExpenseImageUploadSerializer(serializers.Serializer):
+    otp = serializers.CharField(max_length=200, required=True, validators=[token_validator])
+    image = HybridImageField(required=True)
 
 
 class ExpenseCreateSerializer(serializers.ModelSerializer):

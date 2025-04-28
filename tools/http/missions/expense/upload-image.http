@@ -42,17 +42,17 @@ PATCH {{server_url}}/api/v1/expense/{{expense_id_to_upload}}/upload_image/
 #Content-Type: application/json
 Accept: application/json
 Authorization: JWT {{auth_token}}
-Content-Type: multipart/form-data; boundary=WebAppBoundary
+Content-Type: multipart/form-data; boundary=data-boundary
 
---WebAppBoundary
+--data-boundary
 Content-Disposition: form-data; name="otp"
 Content-Type: text/plain
 
 {{otp}}
---WebAppBoundary
+--data-boundary
 Content-Disposition: form-data; name="image"; filename="original.jpg"
 Content-Type: image/jpeg
 
 < ../../../../tests/unit/missions/examples/original.jpg
---WebAppBoundary--
+--data-boundary--
 ###

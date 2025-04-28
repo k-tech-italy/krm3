@@ -1,12 +1,12 @@
 [project]
 name = "krm3"
-version = "1.0.0"
+version = "1.0.1"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "cryptography>=44.0.2",
-    "django<5.2",
+    "django>=5.2",
     "django-admin-rangefilter>=0.13.2",
     "django-adminfilters>=2.6",
     "django-click>=2.4.1",
@@ -33,10 +33,16 @@ dependencies = [
     "requests>=2.32.3",
     "sentry-sdk>=2.25.1",
     "tabulate>=0.9.0",
-    "django-smart-admin[full]>=2.6.0",
+    "django-smart-admin[full]>=2.7.0rc1",
     "tablib[xlsx]>=3.8.0",
     "django-environ>=0.12.0",
     "djangorestframework>=3.16.0",
+    "uv>=0.6.16",
+    "lock>=2018.3.25.2110",
+    "django-sysinfo>=2.7.0",
+    "django-adminactions>=2.4",
+    "drf-extra-fields>=3.7.0",
+    "pillow>=11.2.1",
 ]
 
 [dependency-groups]

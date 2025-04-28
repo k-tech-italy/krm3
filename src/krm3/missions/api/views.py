@@ -10,7 +10,8 @@ from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, Pa
 
 from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseCreateSerializer,
-                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,)
+                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,
+                                  ExpenseImageUploadSerializer )
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
 
 
@@ -52,7 +53,8 @@ class ExpenseAPIViewSet(ModelViewSet):
     def check_ts(self, request, pk):
         """Check if the record has been modified.
 
-        Return 304 for not modified or 204 (no content) if modified"""
+        Return 304 for not modified or 204 (no content) if modified
+        """
         ms = request.GET['ms']
         expense: Expense = self.get_object()
         return Response(status=304 if expense.get_updated_millis() == int(ms) else 204)
@@ -61,32 +63,31 @@ class ExpenseAPIViewSet(ModelViewSet):
     def otp(self, request, pk=None):
         return super().retrieve(request, pk=pk)
 
-    @action(
-        methods=['patch'],
-        detail=True,
-        permission_classes=[]
-        # parser_classes=(MultiPartParser, FormParser)
-    )
-    def upload_image(self, request, *args, **kwargs):
-        """Upload the image to the mission."""
-        expense: Expense = self.get_object()
-
-        serializer = self.get_serializer(expense, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        if expense.check_otp(request.POST.get('otp')):
-            expense.image = serializer.validated_data['image']
-            expense.save()
-
-            if next := request.session.pop(EXPENSE_UPLOAD_IMAGES, []):
-                next, others = next[0], next[1:] if len(next) > 1 else []
-                if others:
-                    request.session[EXPENSE_UPLOAD_IMAGES] = others
-                url = f"{reverse('admin:core_expense_changelist')}{next}/view_qr/"
-                return HttpResponseRedirect(reverse(url))
-            else:
-                return Response(status=204)
-        else:
-            raise serializers.ValidationError('OTP not matching')
+    # @action(
+    #     methods=['patch'],
+    #     detail=True,
+    #     permission_classes=[],
+    #     serializer_class=ExpenseImageUploadSerializer,
+    #     # parser_classes=(MultiPartParser, FormParser)
+    # )
+    # def upload_image(self, request, *args, **kwargs):
+    #     """Upload the image to the mission."""
+    #     expense: Expense = self.get_object()
+    #
+    #     serializer = self.serializer_class(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     if expense.check_otp(request.data.get('otp')):
+    #         expense.image = serializer.validated_data['image']
+    #         expense.save()
+    #
+    #         if next := request.session.pop(EXPENSE_UPLOAD_IMAGES, []):
+    #             next, others = next[0], next[1:] if len(next) > 1 else []
+    #             if others:
+    #                 request.session[EXPENSE_UPLOAD_IMAGES] = others
+    #             url = f"{reverse('admin:core_expense_changelist')}{next}/view_qr/"
+    #             return HttpResponseRedirect(reverse(url))
+    #         return Response(status=204)
+    #     raise serializers.ValidationError('OTP not matching')
 
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
@@ -98,9 +99,6 @@ class ExpenseCategoryAPIViewSet(
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
-
-
-# http_method_names = ['GET']
 
 
 class PaymentCategoryAPIViewSet(
