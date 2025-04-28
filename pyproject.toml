@@ -43,6 +43,8 @@ dependencies = [
     "django-adminactions>=2.4",
     "drf-extra-fields>=3.7.0",
     "pillow>=11.2.1",
+    "social-auth-app-django>=5.4.3",
+    "djangorestframework-simplejwt>=5.5.0",
 ]
 
 [dependency-groups]
