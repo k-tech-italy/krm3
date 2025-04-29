@@ -1,5 +1,6 @@
 import itertools
 from decimal import Decimal
+from typing import Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -7,6 +8,7 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
@@ -98,6 +100,9 @@ class Mission(models.Model):
         if self.to_date is not None and self.from_date is not None and self.to_date < self.from_date:
             raise ValidationError(_('to_date must be > from_date'))
 
+        if not self.title:
+            self.title = Mission.calculate_title(self)
+
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.full_clean()
         super().save(force_insert, force_update, using, update_fields)
@@ -108,6 +113,32 @@ class Mission(models.Model):
         ):
             return True
         return bool(self.resource and self.resource.user == user)
+
+    @staticmethod
+    def calculate_title(cleaned_data: Union[dict, "Mission"]) -> str:
+        if isinstance(cleaned_data, Mission):
+            from_date = cleaned_data.from_date
+            title = cleaned_data.title
+            city = cleaned_data.city
+            to_date = cleaned_data.to_date
+        else:
+            from_date = cleaned_data.get('from_date')
+            title = cleaned_data.get('title')
+            city = cleaned_data.get('city')
+            to_date = cleaned_data.get('to_date')
+        if (
+            from_date
+            and not title
+            and city
+            and to_date
+        ):
+            city = city.name.lower()
+            return (
+                f"M_{cleaned_data['year']}_{cleaned_data['number']:03}_"
+                f"{from_date:%d}{from_date:%b}-{to_date:%d}{to_date:%b}"
+                f"_{cleaned_data['resource'].last_name.replace(' ', '')}_{slugify(city)}"
+            )
+        return ''
 
     class Meta:
         permissions = [

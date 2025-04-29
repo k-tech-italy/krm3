@@ -45,20 +45,12 @@ class MissionAdminForm(forms.ModelForm):
                     )
 
             # set a title if empty
-            if not self.cleaned_data.get('title') and (city := self.cleaned_data.get('city')):
-                city = city.name.lower()
-                if to_date := self.cleaned_data.get('to_date'):
-                    # self.cleaned_data['title'] = f"{self.cleaned_data['number']}-{self.cleaned_data['year']}_{city}"
-                    self.cleaned_data['title'] = (
-                        f"M_{self.cleaned_data['year']}_{self.cleaned_data['number']:03}_"
-                        f"{from_date:%d}{from_date:%b}-{to_date:%d}{to_date:%b}"
-                        f"_{self.cleaned_data['resource'].last_name.replace(' ','')}_{slugify(city)}"
-                    )
+            self.cleaned_data['title'] = Mission.calculate_title(self.cleaned_data)
 
         if 'status' in self.changed_data and self.instance:
             if (
-                self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
-                and self.instance.expenses.filter(reimbursement__isnull=False).exists()
+                    self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
+                    and self.instance.expenses.filter(reimbursement__isnull=False).exists()
             ):
                 raise ValidationError(
                     f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception'
@@ -101,8 +93,10 @@ class MissionsReimbursementForm(forms.Form):
     """Form for reimbursement of multiple expenses."""
 
     expenses = forms.CharField(widget=forms.HiddenInput())
-    year = forms.IntegerField(help_text='Please select the fiscal year for the reimbursements', required=True, initial=lambda :datetime.date.today().year)
-    month = forms.CharField(help_text='Month of reimbursement', required=True, initial=lambda :datetime.date.today().strftime('%b'))
+    year = forms.IntegerField(help_text='Please select the fiscal year for the reimbursements', required=True,
+                              initial=lambda: datetime.date.today().year)
+    month = forms.CharField(help_text='Month of reimbursement', required=True,
+                            initial=lambda: datetime.date.today().strftime('%b'))
     title = forms.CharField(help_text='If blank calculated as R_[year]_[num:3]_[mmm]_[last_name]', required=False)
 
     def clean(self):
