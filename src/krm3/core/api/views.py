@@ -1,4 +1,6 @@
-from django.contrib.auth import get_user_model, login, logout
+from typing import Any
+
+from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout
 from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
@@ -39,28 +41,28 @@ class BlacklistRefreshAPIViewSet(ViewSetMixin, GenericAPIView):
 
 
 class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
     queryset = User.objects.all()
 
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
-        # create session data
-        # this allows automatic login on the backend (if permissions
-        # allow) to users logging in from the frontend
-        login(
-            request,
-            user=request.user,  # pyright: ignore[reportArgumentType]
-            backend='django.contrib.auth.backends.ModelBackend',
-        )
-
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def logout(self, request: Request) -> Response:
         # invalidate the session data created from the frontend if any
-        logout(request)
+        djlogout(request)
+        return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login(self, request: Request) -> Response:
+        user = User.objects.filter(username=request.data['username']).first()
+        djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
         return Response(status=status.HTTP_200_OK)
 
 
