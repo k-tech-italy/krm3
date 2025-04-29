@@ -1,5 +1,3 @@
-from typing import Any
-
 from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout
 from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
@@ -45,9 +43,6 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
     serializer_class = UserSerializer
     queryset = User.objects.all()
 
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user)
@@ -63,7 +58,7 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
     def login(self, request: Request) -> Response:
         user = User.objects.filter(username=request.data['username']).first()
         djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data={'CSRF_COOKIE': self.request.META['CSRF_COOKIE']})
 
 
 class ResourceSerializer(serializers.ModelSerializer):
