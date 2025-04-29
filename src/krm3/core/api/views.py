@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout
 from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -46,9 +46,9 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        return Response(serializer.data | {'_CID_': self.request.META['CSRF_COOKIE']})
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['post'])
     def logout(self, request: Request) -> Response:
         # invalidate the session data created from the frontend if any
         djlogout(request)
@@ -56,9 +56,9 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def login(self, request: Request) -> Response:
-        user = User.objects.filter(username=request.data['username']).first()
+        user = get_object_or_404(User, username=request.data['username'])
         djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
-        return Response(status=status.HTTP_200_OK, data={'CSRF_COOKIE': self.request.META['CSRF_COOKIE']})
+        return Response(status=status.HTTP_200_OK)
 
 
 class ResourceSerializer(serializers.ModelSerializer):
