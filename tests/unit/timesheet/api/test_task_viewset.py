@@ -204,19 +204,33 @@ class TestTaskAPIListView:
         )
         # NOTE: tasks expiring within the given range are considered ongoing
         expiring_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2024, 1, 3)
+            resource=resource,
+            start_date=datetime.date(2023, 1, 1),
+            end_date=datetime.date(2024, 1, 3),
+            project=_expired_task.project,
         )
         ongoing_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2024, 12, 31)
+            resource=resource,
+            start_date=datetime.date(2023, 1, 1),
+            end_date=datetime.date(2024, 12, 31),
+            project=_expired_task.project,
         )
         # NOTE: tasks starting within the given range are considered ongoing
         starting_midweek_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2024, 1, 4), end_date=datetime.date(2025, 12, 31)
+            resource=resource,
+            start_date=datetime.date(2024, 1, 4),
+            end_date=datetime.date(2025, 12, 31),
+            project=_expired_task.project,
         )
         _future_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2032, 1, 1), end_date=datetime.date(2033, 12, 31)
+            resource=resource,
+            start_date=datetime.date(2032, 1, 1),
+            end_date=datetime.date(2033, 12, 31),
+            project=_expired_task.project,
         )
-        open_ended_task = TaskFactory(resource=resource, start_date=datetime.date(2022, 1, 1), end_date=None)
+        open_ended_task = TaskFactory(
+            resource=resource, start_date=datetime.date(2022, 1, 1), end_date=None, project=_expired_task.project
+        )
 
         response = api_client(user=admin_user).get(
             self.url(),

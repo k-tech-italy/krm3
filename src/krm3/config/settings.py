@@ -66,6 +66,7 @@ INSTALLED_APPS = (
         'krm3.timesheet',
         'krm3.accounting',
         'krm3.web',
+        'krm3.fe',
         # Third party apps.
         'qr_code',
         'django_filters',

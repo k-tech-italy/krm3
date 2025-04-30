@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from krm3.core.models import Mission
+from krm3.core.models import Mission
 
 
 def map_mission_status(status: str) -> Mission.MissionStatus:
-    from krm3.core.models import Mission
-
     return {
         'S': Mission.MissionStatus.SUBMITTED,
         'D': Mission.MissionStatus.DRAFT,

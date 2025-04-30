@@ -1,6 +1,8 @@
+
+from __future__ import annotations
+
 import itertools
 from decimal import Decimal
-from typing import Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -114,29 +116,25 @@ class Mission(models.Model):
             return True
         return bool(self.resource and self.resource.user == user)
 
-    @staticmethod
-    def calculate_title(cleaned_data: Union[dict, "Mission"]) -> str:
-        if isinstance(cleaned_data, Mission):
-            from_date = cleaned_data.from_date
-            title = cleaned_data.title
-            city = cleaned_data.city
-            to_date = cleaned_data.to_date
+    @classmethod
+    def calculate_title(cls, cleaned_data: Mission | dict) -> str:
+        if not isinstance(cleaned_data, Mission):
+            mission = Mission(**cleaned_data)
         else:
-            from_date = cleaned_data.get('from_date')
-            title = cleaned_data.get('title')
-            city = cleaned_data.get('city')
-            to_date = cleaned_data.get('to_date')
+            mission = cleaned_data
         if (
-            from_date
-            and not title
-            and city
-            and to_date
+            mission.from_date
+            and not mission.title
+            and mission.city
+            and mission.to_date
+            and mission.number
+            and mission.resource
         ):
-            city = city.name.lower()
+            city = mission.city.name.lower()
             return (
-                f"M_{cleaned_data['year']}_{cleaned_data['number']:03}_"
-                f"{from_date:%d}{from_date:%b}-{to_date:%d}{to_date:%b}"
-                f"_{cleaned_data['resource'].last_name.replace(' ', '')}_{slugify(city)}"
+                f"M_{mission.year}_{mission.number:03}_"
+                f"{mission.from_date:%d}{mission.from_date:%b}-{mission.to_date:%d}{mission.to_date:%b}"
+                f"_{mission.resource.last_name.replace(' ', '')}_{slugify(city)}"
             )
         return ''
 

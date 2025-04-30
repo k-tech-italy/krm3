@@ -1,0 +1,3 @@
+[submodule "krm3-fe"]
+	path = krm3-fe
+	url = https://github.com/k-tech-italy/krm3-fe.git

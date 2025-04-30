@@ -2,7 +2,8 @@ import pytest
 from django.shortcuts import reverse
 from django.utils.text import slugify
 
-from testutils import map_mission_status
+from factories import ProjectFactory
+from testutils.mappings import map_mission_status
 
 from krm3.missions.forms import MissionAdminForm
 from krm3.utils.dates import dt
@@ -25,11 +26,13 @@ def test_calculate_mission_number(dataset, expected):
     from factories import MissionFactory
 
     from krm3.core.models import Mission
+    project = ProjectFactory()
     for m in dataset:
         MissionFactory(
             number=abs(int(m)),
             status=Mission.MissionStatus.SUBMITTED if isinstance(m, int) else Mission.MissionStatus.CANCELLED,
-            year=2020
+            year=2020,
+            project=project
         )
     form = MissionAdminForm()
     form.cleaned_data = {'year': 2020}
