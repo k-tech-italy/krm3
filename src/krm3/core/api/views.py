@@ -1,9 +1,10 @@
-from django.contrib.auth import get_user_model
-from rest_framework import mixins, permissions, serializers
+from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout
+from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSetMixin
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -30,7 +31,7 @@ class BlacklistRefreshAPIViewSet(ViewSetMixin, GenericAPIView):
         parser_classes=[JSONParser],
         name='Invalidate refresh token',
     )
-    def invalidate(self, request):
+    def invalidate(self, request: Request) -> Response:
         """Invalidate the refresh token."""
         token = RefreshToken(request.data.get('refresh'))
         token.blacklist()
@@ -38,14 +39,26 @@ class BlacklistRefreshAPIViewSet(ViewSetMixin, GenericAPIView):
 
 
 class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
     queryset = User.objects.all()
 
     @action(detail=False, methods=['get'])
-    def me(self, request):
+    def me(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        return Response(serializer.data | {'_CID_': self.request.META['CSRF_COOKIE']})
+
+    @action(detail=False, methods=['post'])
+    def logout(self, request: Request) -> Response:
+        # invalidate the session data created from the frontend if any
+        djlogout(request)
+        return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login(self, request: Request) -> Response:
+        user = get_object_or_404(User, username=request.data['username'])
+        djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
+        return Response(status=status.HTTP_200_OK)
 
 
 class ResourceSerializer(serializers.ModelSerializer):
@@ -54,9 +67,7 @@ class ResourceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ResourceAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ResourceSerializer
     queryset = Resource.objects.all()
@@ -80,9 +91,7 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CountryAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class CountryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CountrySerializer
     queryset = Country.objects.all()
@@ -94,9 +103,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ProjectAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ProjectAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
@@ -108,9 +115,7 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ClientAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
     queryset = Client.objects.all()

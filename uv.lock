@@ -853,7 +853,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "0.19.0"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -877,6 +877,7 @@ dependencies = [
     { name = "django-tables2" },
     { name = "djangorestframework" },
     { name = "djangorestframework-camel-case" },
+    { name = "djangorestframework-simplejwt" },
     { name = "djoser" },
     { name = "docutils" },
     { name = "drf-extra-fields" },
@@ -891,6 +892,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "sentry-sdk" },
+    { name = "social-auth-app-django" },
     { name = "tablib", extra = ["xlsx"] },
     { name = "tabulate" },
     { name = "uv" },
@@ -945,6 +947,7 @@ requires-dist = [
     { name = "django-tables2", specifier = ">=2.7.5" },
     { name = "djangorestframework", specifier = ">=3.16.0" },
     { name = "djangorestframework-camel-case", specifier = ">=1.4.2" },
+    { name = "djangorestframework-simplejwt", specifier = ">=5.5.0" },
     { name = "djoser", specifier = ">=2.3.1" },
     { name = "docutils", specifier = ">=0.21.2" },
     { name = "drf-extra-fields", specifier = ">=3.7.0" },
@@ -959,6 +962,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sentry-sdk", specifier = ">=2.25.1" },
+    { name = "social-auth-app-django", specifier = ">=5.4.3" },
     { name = "tablib", extras = ["xlsx"], specifier = ">=3.8.0" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "uv", specifier = ">=0.6.16" },
