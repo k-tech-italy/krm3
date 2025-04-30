@@ -11,6 +11,7 @@ from krm3.currencies.models import Currency
 class UserFactory(factory.django.DjangoModelFactory):
     username = factory.Sequence(lambda n: 'User %02d' % n)
     email = factory.Sequence(lambda n: 'u%02d@example.com' % n)
+    password = factory.PostGenerationMethodCall('set_password', 'password')
 
     class Meta:
         model = User

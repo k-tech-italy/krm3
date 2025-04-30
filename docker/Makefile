@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=1.0.1
+VERSION=1.1.0
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
