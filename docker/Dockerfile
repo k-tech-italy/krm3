@@ -21,6 +21,7 @@ WORKDIR /code
 
 ADD . /code
 
+RUN rm -rf /code/src/krm3/fe/static /code/node_modules /code/package*.* && mv krm3-fe/dist /code/src/krm3/fe/static
 RUN chown -R krm3:ktech /code/*
 
 USER krm3

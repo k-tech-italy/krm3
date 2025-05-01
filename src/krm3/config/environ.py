@@ -1,21 +1,30 @@
 import logging
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeAlias, Any
 
 from environ import ImproperlyConfigured, environ, re
+from smart_env import SmartEnv
 
 from . import DEFAULTS
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    ItemValue: TypeAlias = str | bool | int | list[str] | None
+    ConfigItem: TypeAlias = (
+        tuple[type, ItemValue]  # type, value
+        | tuple[type, ItemValue, str]  # type, value, help,
+        | tuple[type, ItemValue, str, Any]  # type, value, hell, develop_value
+    )
 
-class Env(environ.Env):
-    def __init__(self, prefix, **scheme):
-        self.scheme = scheme
-        self.prefix = prefix or ''
+
+class Env(SmartEnv):
+    def __init__(self, prefix: str, **scheme: "ConfigItem"):
+        super().__init__(**scheme)
+        self.prefix: str = prefix or ''
 
     def __getattr__(self, var):
-        # t = f"{self.prefix}{var}"
         return self.get_value(var)
 
     def __copy__(self):
@@ -24,24 +33,28 @@ class Env(environ.Env):
     def as_dict(self):
         return {k: v for k, v in self.ENVIRON.items() if k.startswith(self.prefix)}
 
-    def get_value(self, var, cast=None, default=environ.Env.NOTSET,  # noqa: C901
-                  parse_default=False, raw=False):
+    def get_value(
+        self,
+        var,
+        cast=None,
+        default=environ.Env.NOTSET,  # noqa: C901
+        parse_default=False,
+        raw=False,
+    ):
         """Return value for given environment variable.
 
-                :param var: Name of variable.
-                :param cast: Type to cast return value as.
-                :param default: If var not present in environ, return this instead.
-                :param parse_default: force to parse default..
+        :param var: Name of variable.
+        :param cast: Type to cast return value as.
+        :param default: If var not present in environ, return this instead.
+        :param parse_default: force to parse default..
 
-                :returns: Value from environment or default (if set)
-                """
+        :returns: Value from environment or default (if set)
+        """
 
         if raw:
             env_var = var
         else:
             env_var = f'{self.prefix}{var}'
-        # return super().get_value(env_var, cast, default, parse_default)
-        # logger.debug(f"get '{env_var}' casted as '{cast}' with default '{default}'")
 
         if var in self.scheme:
             var_info = self.scheme[var]
@@ -107,10 +120,12 @@ class Env(environ.Env):
                     val = re.sub(r'\\(.)', r'\1', m3.group(1))
                 self.ENVIRON[f'{key}'] = str(val)
 
-    # def write_env(self, env_file=None, **overrides):
-    #     with open(env_file, 'w') as f:
-    #         for k, v in self.scheme.items():
-    #             f.write(f'{k}={self.ENVIRON[k]}\n')
+    def check_explicit(self) -> list[str]:
+        missing = []
+        for k, cfg in sorted(self.config.items()):
+            if cfg["explicit"] and f'{self.prefix}{k}' not in self.ENVIRON:
+                missing.append(k)
+        return missing
 
 
 env = Env('KRM3_', **DEFAULTS)

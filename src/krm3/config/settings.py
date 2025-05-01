@@ -81,6 +81,7 @@ INSTALLED_APPS = (
         'rest_framework_simplejwt.token_blacklist',
         'django_tables2',
         'constance',
+        'smart_env'
     ]
 )
 

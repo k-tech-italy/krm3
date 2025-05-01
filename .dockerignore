@@ -8,3 +8,7 @@ dist
 
 *.egg-info
 !tools/zapdata/demo
+
+./krm3-fe
+!./krm3-fe/dist
+node_modules

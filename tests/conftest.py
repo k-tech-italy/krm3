@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 import responses
-from django.utils.http import urlencode
 from rest_framework.test import APIClient
 
 
@@ -36,6 +35,7 @@ def currencies(db):
 
 @pytest.fixture
 def mock_rate_provider(settings, db):
+    from django.utils.http import urlencode
     def fx(day, requested, retrieved):
         responses.add(
             responses.GET,
