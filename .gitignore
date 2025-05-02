@@ -19,6 +19,7 @@ dist
 *.sqlite3
 __pycache__
 node_modules
+latest_logs
 !docs/wiki/**/.attachments
 !.keep
 

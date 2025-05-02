@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout
+from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout, authenticate
 from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView, get_object_or_404
@@ -56,7 +56,9 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def login(self, request: Request) -> Response:
-        user = get_object_or_404(User, username=request.data['username'])
+        user = authenticate(username=request.data['username'], password=request.data['password'])
+        if user is None:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
         djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
         return Response(status=status.HTTP_200_OK)
 

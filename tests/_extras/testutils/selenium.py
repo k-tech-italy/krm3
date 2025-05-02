@@ -29,16 +29,16 @@ class AppSeleniumTC(BaseCase):
 
     def setUp(self, masterqa_mode=False):
         super().setUp()
-        from testutils.factories import SuperUserFactory
+        # from testutils.factories import SuperUserFactory
 
         super().setUpClass()
-        self.admin_user = SuperUserFactory()
-        self.admin_user._password = "password"
+        # self.admin_user = SuperUserFactory()
+        # self.admin_user._password = "password"
 
     def tearDown(self):
         self.save_teardown_screenshot()
         super().tearDown()
-        self.admin_user.delete()
+        # self.admin_user.delete()
 
     def base_method(self):
         pass
