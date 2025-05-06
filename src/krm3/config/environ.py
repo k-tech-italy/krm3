@@ -127,5 +127,11 @@ class Env(SmartEnv):
                 missing.append(k)
         return missing
 
+    def set_environ_for_test(self, dic: dict) -> None:
+        for key, conf in self.config.items():
+            value = dic[key] if key in dic else conf['develop']
+            os.environ[key] = str(value)
+
+
 
 env = Env('KRM3_', **DEFAULTS)
