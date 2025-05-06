@@ -67,7 +67,7 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Project'
-        django_get_or_create = ('name', 'client')
+        django_get_or_create = ('name', )
 
 
 class MissionFactory(factory.django.DjangoModelFactory):

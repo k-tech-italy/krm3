@@ -28,6 +28,7 @@ from krm3.missions.impexp.imp import MissionImporter
 from krm3.core.models import Expense, Mission, Reimbursement
 from krm3.missions.tables import MissionExpenseExportTable, MissionExpenseTable
 from krm3.styles.buttons import NORMAL
+from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
 from krm3.utils.rates import update_rates
 
@@ -66,6 +67,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     )
     list_filter = [
         'status',
+        RecentFilter,
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
         ('from_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
@@ -113,7 +115,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return super(MissionAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
     @button(html_attrs=NORMAL, visible=lambda btn: btn.original.status == Mission.MissionStatus.DRAFT)
-    def submit(self, request, pk):
+    def submit(self, request, pk: int):
         mission = Mission.objects.get(pk=pk)
         if mission.status == Mission.MissionStatus.DRAFT:
             mission.status = Mission.MissionStatus.SUBMITTED
@@ -124,14 +126,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             messages.warning(request, f'Cannot change status {mission.status} to {Mission.MissionStatus.SUBMITTED}')
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original)))
-    def view_linked_reimbursements(self, request, pk):
+    def view_linked_reimbursements(self, request, pk: int):
         rids = map(str, Reimbursement.objects.filter(expenses__mission_id=pk).values_list('id', flat=True))
         return redirect(reverse('admin:core_reimbursement_changelist') + f'?id__in={",".join(rids)}')
 
     @button(
         html_attrs=NORMAL,
     )
-    def add_expense(self, request, pk):
+    def add_expense(self, request, pk: int):
         mission = Mission.objects.get(pk=pk)
         from_date = mission.from_date.strftime('%Y-%m-%d')
         return redirect(reverse('admin:core_expense_add') + f'?mission_id={pk}&day={from_date}')
@@ -161,7 +163,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     @button(
         html_attrs=NORMAL,
     )
-    def overview(self, request, pk):
+    def overview(self, request, pk: int):
         mission = self.get_object(request, pk)
         sorting = request.GET.get('sort')
         qs = mission.expenses.all()
@@ -170,8 +172,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             if export_format := request.GET.get('_export', None):
                 expenses = self.build_mission_expenses_table(qs, sorting, True)
                 return self.export_table(mission, expenses, export_format, request)
-            else:
-                expenses = self.build_mission_expenses_table(qs, sorting)
+            expenses = self.build_mission_expenses_table(qs, sorting)
 
             summary = {
                 SPESE_TRASFERTA: decimal.Decimal(0.0),
@@ -229,11 +230,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def build_mission_expenses_table(self, qs, sorting, report=False):
         klass = MissionExpenseExportTable if report else MissionExpenseTable
         update_rates(qs)
-        expenses = klass(qs, order_by=[sorting] if sorting else ['day'])
-        return expenses
+        return klass(qs, order_by=[sorting] if sorting else ['day'])
 
     def export_table(self, mission: Mission, table_data, export_format, request):
-        """Function to export django table data."""
+        """Export django table data."""
         from django_tables2.config import RequestConfig
 
         RequestConfig(request).configure(table_data)
@@ -241,8 +241,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         if TableExport.is_valid_format(export_format):
             exporter = TableExport(export_format, table_data)
             return exporter.response(f'mission_{mission.year}_{mission.number}_expenses.{export_format}')
+        return None
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
-    def view_expenses(self, request, pk):
+    def view_expenses(self, request, pk: int):
         url = reverse('admin:core_expense_changelist') + f'?mission_id={pk}'
         return HttpResponseRedirect(url)

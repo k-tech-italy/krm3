@@ -1,6 +1,3 @@
-import decimal
-from decimal import Decimal
-
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.dates import DateRangeFilter
@@ -17,9 +14,11 @@ from django_tables2.export import TableExport
 
 from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
-from krm3.core.models import Expense, ExpenseCategory, Mission, PaymentCategory, Reimbursement
+from krm3.core.models import Mission, Reimbursement, Expense
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
+from krm3.missions.utilities import calculate_reimbursement_summaries
 from krm3.styles.buttons import NORMAL
+from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
 
 
@@ -28,10 +27,12 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     list_display = ['number', 'year', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     form = ReimbursementAdminForm
     inlines = [ExpenseInline]
+    actions = ['report']
     autocomplete_fields = ['resource']
     search_fields = ['title', 'issue_date']
     list_filter = [
         'year',
+        RecentFilter.factory('issue_date'),
         ('issue_date', DateRangeFilter),
         ('paid_date', admin.EmptyFieldListFilter),
     ]
@@ -78,34 +79,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
         # categories = ExpenseCategory.objects.values_list('id', 'parent_id')
 
-        bypayment = {pc: [decimal.Decimal(0)] * 2 for pc in PaymentCategory.objects.root_nodes()}
-        byexpcategory = {pc: [decimal.Decimal(0)] * 2 for pc in ExpenseCategory.objects.root_nodes()}
-
-        summary = {
-                      'Totale spese': decimal.Decimal(0.0),
-                      'Totale rimborso': decimal.Decimal(0.0),
-                      'Non Rimborsate': decimal.Decimal(0.0),
-                  } | {
-                      expense.category.get_root(): decimal.Decimal(0.0)
-                      for expense in qs
-                  }
-        for expense in qs:
-            expense: Expense
-            summary['Totale rimborso'] += expense.amount_reimbursement or decimal.Decimal(0.0)
-            summary[expense.category.get_root()] += expense.amount_reimbursement or decimal.Decimal(0.0)
-
-            bypayment[expense.payment_type.get_root()][0] += expense.amount_base or Decimal('0')
-            bypayment[expense.payment_type.get_root()][1] += expense.amount_reimbursement or Decimal('0')
-
-            byexpcategory[expense.category.get_root()][0] += expense.amount_base or Decimal('0')
-            byexpcategory[expense.category.get_root()][1] += expense.amount_reimbursement or Decimal('0')
-            summary['Non Rimborsate'] += (expense.amount_base or decimal.Decimal(0.0)) - (
-                        expense.amount_reimbursement or decimal.Decimal(0.0)) \
-                if expense.payment_type.personal_expense else decimal.Decimal(0.0)
-            summary['Totale spese'] += (
-                                           expense.amount_base if not expense.payment_type.personal_expense
-                                           else expense.amount_reimbursement or Decimal('0')
-                                       ) or decimal.Decimal(0.0)
+        byexpcategory, bypayment, summary = calculate_reimbursement_summaries(qs)
 
         missions = set([x.mission for x in qs])
 
@@ -133,3 +107,15 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         if TableExport.is_valid_format(export_format):
             exporter = TableExport(export_format, table_data)
             return exporter.response(f'mission_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}')
+
+    # TODO: Taiga issue #29 https://taiga.singlewave.co.uk/project/krm3/us/29?kanban-status=34
+    @admin.action(description='Reimbursement report')
+    def report(self, request, queryset):
+        report = {}
+        qs = Expense.objects.filter(reimbursement__in=queryset)
+        qs = set(qs.all().values_list('reimbursement__resource', 'mission'))
+        return TemplateResponse(
+            request,
+            'admin/missions/reimbursement/report.html',
+            {}
+        )
