@@ -15,7 +15,6 @@ SMART_ADMIN_SECTIONS = {
         'core.City',
         'core.Client',
         'core.Country',
-        'core.Project',
         'core.Resource',
     ],
     'Missions': [

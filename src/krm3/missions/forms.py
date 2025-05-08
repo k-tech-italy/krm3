@@ -97,7 +97,6 @@ class MissionsReimbursementForm(forms.Form):
                               initial=lambda: datetime.date.today().year)
     month = forms.CharField(help_text='Month of reimbursement', required=True,
                             initial=lambda: datetime.date.today().strftime('%b'))
-    title = forms.CharField(help_text='If blank calculated as R_[year]_[num:3]_[mmm]_[last_name]', required=False)
 
     def clean(self):
         ret = super().clean()

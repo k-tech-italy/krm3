@@ -38,7 +38,7 @@ def map_mission_status(status: str) -> 'Mission.MissionStatus':
     ]
 )
 def test_mission_status_transitions(number, status, expectation):
-    from factories import MissionFactory
+    from testutils.factories import MissionFactory
 
     mission: Mission = MissionFactory.build(
         number=number, status=map_mission_status(status)
@@ -65,7 +65,7 @@ def test_mission_status_transitions(number, status, expectation):
     )
 )
 def test_missions_validation(from_date, to_date, expectation):
-    from factories import MissionFactory
+    from testutils.factories import MissionFactory
 
     from krm3.core.models import Mission
 
@@ -80,7 +80,7 @@ def test_missions_validation(from_date, to_date, expectation):
 
 
 def test_calculate_number():
-    from factories import MissionFactory
+    from testutils.factories import MissionFactory
 
     from krm3.core.models import Mission
 

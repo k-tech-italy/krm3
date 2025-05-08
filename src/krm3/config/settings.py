@@ -65,6 +65,7 @@ INSTALLED_APPS = (
         'krm3.api',
         'krm3.timesheet',
         'krm3.accounting',
+        'krm3.projects',
         'krm3.web',
         'krm3.fe',
         # Third party apps.

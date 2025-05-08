@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Self, override
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
@@ -13,20 +14,19 @@ from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
     from decimal import Decimal
+    from krm3.core.models import Project, Task, Mission, InvoiceEntry
 
     from django.contrib.auth.models import AbstractUser
     from django.db.models.fields.related_descriptors import RelatedManager
 
-    from .accounting import InvoiceEntry
-    from .auth import User
-    from .missions import Mission
-
 
 _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
+User = get_user_model()
+
 
 class ProjectManager(NaturalKeyModelManager):
-    def filter_acl(self, user: User) -> models.QuerySet[Project]:
+    def filter_acl(self, user: User) -> models.QuerySet['Project']:
         """Return the queryset for the owned records.
 
         Superuser gets them all.

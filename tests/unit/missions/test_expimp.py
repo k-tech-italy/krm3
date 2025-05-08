@@ -1,6 +1,6 @@
 import json
 
-from factories import DocumentTypeFactory, ExpenseCategoryFactory, ExpenseFactory, PaymentCategoryFactory
+from testutils.factories import DocumentTypeFactory, ExpenseCategoryFactory, ExpenseFactory, PaymentCategoryFactory
 
 
 def prepare():

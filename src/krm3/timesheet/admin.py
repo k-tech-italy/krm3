@@ -2,7 +2,7 @@ from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 
-from krm3.core.models import PO, Basket, Task, TimeEntry
+from krm3.core.models import PO, Basket, TimeEntry
 
 
 @admin.register(PO)
@@ -14,12 +14,6 @@ class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
 @admin.register(Basket)
 class BasketAdmin(admin.ModelAdmin):
     search_fields = ('title',)
-
-
-@admin.register(Task)
-class TaskAdmin(admin.ModelAdmin):
-    list_fields = ('title', 'project', 'resource', 'basket_title')
-    search_fields = ('title', 'project', 'resource', 'basket_title')
 
 
 @admin.register(TimeEntry)

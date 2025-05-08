@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Permission
-from factories import ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
+from testutils.factories import ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
 from rest_framework import status
 from rest_framework.reverse import reverse
 

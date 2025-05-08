@@ -37,7 +37,7 @@ class ReimburseMissionsView(FormView):
             url = reverse('missions:reimburse-results')
             ids = form.cleaned_data['expenses']
             reimbursements = ReimbursementFacility(ids).reimburse(
-                form.cleaned_data['year'], form.cleaned_data['title'], form.cleaned_data['month']
+                form.cleaned_data['year'], None, form.cleaned_data['month']
             )
             ids = ','.join([str(r.id) for r in reimbursements])
             return HttpResponseRedirect(f'{url}?ids={ids}')

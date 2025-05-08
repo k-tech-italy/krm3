@@ -1,10 +1,12 @@
 import decimal
 from decimal import Decimal
 
+from django.db.models import QuerySet
+
 from krm3.core.models import PaymentCategory, ExpenseCategory, Expense
 
 
-def calculate_reimbursement_summaries(qs):
+def calculate_reimbursement_summaries(qs: QuerySet[Expense]):
     bypayment = {pc: [decimal.Decimal(0)] * 2 for pc in PaymentCategory.objects.root_nodes()}
     byexpcategory = {pc: [decimal.Decimal(0)] * 2 for pc in ExpenseCategory.objects.root_nodes()}
     summary = {

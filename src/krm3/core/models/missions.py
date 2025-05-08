@@ -209,6 +209,7 @@ class ReimbursementManager(models.Manager):
 class Reimbursement(models.Model):
     number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
     year = models.PositiveIntegerField(blank=True)
+    month = models.CharField(max_length=20, null=True)
     title = models.CharField(max_length=120, help_text='Set automatically if left blank')
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)

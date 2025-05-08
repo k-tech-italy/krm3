@@ -4,7 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from django.core import exceptions
 import pytest
 
-from factories import InvoiceEntryFactory, TimeEntryFactory, TaskFactory, BasketFactory, ResourceFactory
+from testutils.factories import InvoiceEntryFactory, TimeEntryFactory, TaskFactory, BasketFactory, ResourceFactory
 from krm3.core.models import TimeEntryState
 
 

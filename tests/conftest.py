@@ -36,6 +36,7 @@ def currencies(db):
 @pytest.fixture
 def mock_rate_provider(settings, db):
     from django.utils.http import urlencode
+
     def fx(day, requested, retrieved):
         responses.add(
             responses.GET,
@@ -56,7 +57,7 @@ def mock_rate_provider(settings, db):
 
 @pytest.fixture
 def regular_user(db):
-    from factories import UserFactory
+    from testutils.factories import UserFactory
 
     return UserFactory()
 
@@ -89,42 +90,71 @@ def document_types(db):
 
 @pytest.fixture
 def categories(db):
-    results = []
-    from krm3.core.models import ExpenseCategory
+    from testutils.factories import ExpenseCategoryFactory, PaymentCategoryFactory
 
-    viaggi = ExpenseCategory.objects.create(title='Viaggi')
-    results.append(ExpenseCategory.objects.create(title='Taxi', parent=viaggi))
-    results.append(ExpenseCategory.objects.create(title='Train', parent=viaggi))
-    vitto = ExpenseCategory.objects.create(title='Vitto')
-    results.append(ExpenseCategory.objects.create(title='Pranzo', parent=vitto))
-    results.append(ExpenseCategory.objects.create(title='Cena', parent=vitto))
-    return results
+    expenses = dict(
+        alloggio=ExpenseCategoryFactory(title='Alloggio'),
+        forfait=ExpenseCategoryFactory(title='Forfait'),
+        rappresentanza=ExpenseCategoryFactory(title='Rappresentanza'),
+        vitto=ExpenseCategoryFactory(title='Vitto'),
+        viaggio=ExpenseCategoryFactory(title='Viaggio'),
+    )
+
+    expenses.update(
+        {
+            'viaggio.taxi': ExpenseCategoryFactory(title='Taxi', parent=expenses['viaggio']),
+            'viaggio.train': ExpenseCategoryFactory(title='Train', parent=expenses['viaggio']),
+            'vitto.pranzo': ExpenseCategoryFactory(title='Pranzo', parent=expenses['vitto']),
+            'vitto.cena': ExpenseCategoryFactory(title='Cena', parent=expenses['vitto']),
+            'forfait.alloggio': ExpenseCategoryFactory(title='Alloggio', parent=expenses['forfait']),
+            'forfait.vitto': ExpenseCategoryFactory(title='Vitto', parent=expenses['forfait']),
+            'forfait.aereo': ExpenseCategoryFactory(title='Aereo', parent=expenses['forfait']),
+            'forfait.treno': ExpenseCategoryFactory(title='Treno', parent=expenses['forfait']),
+        }
+    )
+
+    payments = dict(
+        personal=PaymentCategoryFactory(title='Personal', personal_expense=True),
+        company=PaymentCategoryFactory(title='Company'),
+    )
+
+    payments.update(
+        {
+            'company.cca': PaymentCategoryFactory(title='CCA', parent=payments['company']),
+            'company.wire': PaymentCategoryFactory(title='Wire', parent=payments['company']),
+            'company.forfait': PaymentCategoryFactory(
+                title='Forfait', parent=payments['company'], personal_expense=True
+            ),
+        }
+    )
+
+    return type('Categories', (), {'expenses': expenses, 'payments': payments})()
 
 
 @pytest.fixture
 def country(db):
-    from factories import CountryFactory
+    from testutils.factories import CountryFactory
 
     return CountryFactory()
 
 
 @pytest.fixture
 def city(db):
-    from factories import CityFactory
+    from testutils.factories import CityFactory
 
     return CityFactory()
 
 
 @pytest.fixture
 def resource(db):
-    from factories import ResourceFactory
+    from testutils.factories import ResourceFactory
 
     return ResourceFactory()
 
 
 @pytest.fixture
 def resource_factory():
-    from factories import ResourceFactory
+    from testutils.factories import ResourceFactory
 
     def _make(*args, **kwargs):
         return ResourceFactory(*args, **kwargs)
@@ -134,14 +164,14 @@ def resource_factory():
 
 @pytest.fixture
 def project(db):
-    from factories import ProjectFactory
+    from testutils.factories import ProjectFactory
 
     return ProjectFactory()
 
 
 @pytest.fixture
 def krm3client(db):
-    from factories import ClientFactory
+    from testutils.factories import ClientFactory
 
     return ClientFactory()
 
@@ -153,4 +183,5 @@ def api_client():
         if user:
             client.force_authenticate(user=user)
         return client
+
     return fx

@@ -5,7 +5,8 @@ from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ResourceAdminForm
-from krm3.core.models import City, Client, Country, Project, Resource
+from krm3.core.models import City, Client, Country, Resource
+
 
 # from django.utils.html import escape
 # from django.utils.safestring import mark_safe
@@ -60,9 +61,3 @@ class ResourceAdmin(ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(ModelAdmin):
     search_fields = ['name']
-
-
-@admin.register(Project)
-class ProjectAdmin(ModelAdmin):
-    search_fields = ['name']
-    autocomplete_fields = ['client']

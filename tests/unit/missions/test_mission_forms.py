@@ -2,7 +2,7 @@ import pytest
 from django.shortcuts import reverse
 from django.utils.text import slugify
 
-from factories import ProjectFactory
+from testutils.factories import ProjectFactory
 from testutils.mappings import map_mission_status
 
 from krm3.missions.forms import MissionAdminForm
@@ -23,7 +23,7 @@ from krm3.utils.dates import dt
     ]
 )
 def test_calculate_mission_number(dataset, expected):
-    from factories import MissionFactory
+    from testutils.factories import MissionFactory
 
     from krm3.core.models import Mission
     project = ProjectFactory()
@@ -53,7 +53,7 @@ def test_calculate_mission_number(dataset, expected):
     ]
 )
 def test_auto_mission_number(existing_status, this_status, expected_number, same_year, city, project, resource):
-    from factories import MissionFactory
+    from testutils.factories import MissionFactory
 
     from krm3.core.models import Mission
 
@@ -99,7 +99,7 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
 )
 def test_mission_status_transitions(
         prev, succ, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user):
-    from factories import ExpenseFactory, MissionFactory, ReimbursementFactory
+    from testutils.factories import ExpenseFactory, MissionFactory, ReimbursementFactory
 
     mission = MissionFactory(number=None if prev == 'D' else 1, status=map_mission_status(prev))
     if reimbursed_expenses is not None:

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 import responses
-from factories import RateFactory
+from testutils.factories import RateFactory
 
 
 def test_rate_str(db):

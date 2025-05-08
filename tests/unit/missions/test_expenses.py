@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import responses
 from django.core.files import File
-from factories import CurrencyFactory, ExpenseFactory, PaymentCategoryFactory, ReimbursementFactory
+from testutils.factories import CurrencyFactory, ExpenseFactory, PaymentCategoryFactory, ReimbursementFactory
 
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.core.models import Expense

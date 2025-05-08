@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth.models import Permission
 
-from factories import TimeEntryFactory, ResourceFactory, TaskFactory
+from testutils.factories import TimeEntryFactory, ResourceFactory, TaskFactory
 
 
 @pytest.mark.parametrize(

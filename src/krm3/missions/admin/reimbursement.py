@@ -1,3 +1,4 @@
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.dates import DateRangeFilter
@@ -5,6 +6,7 @@ from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import site
+from django.db.models import QuerySet, When, Case, Value, BooleanField
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -14,7 +16,7 @@ from django_tables2.export import TableExport
 
 from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
-from krm3.core.models import Mission, Reimbursement, Expense
+from krm3.core.models import Mission, Reimbursement, Expense, Resource
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
 from krm3.missions.utilities import calculate_reimbursement_summaries
 from krm3.styles.buttons import NORMAL
@@ -22,9 +24,72 @@ from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
 
 
+def prepare_reimbursement_report_context(queryset: QuerySet[Reimbursement]) -> dict:
+    """Prepare data for reimbursement report template."""
+    results = {}
+    for year, month in queryset.values_list('year', 'month').order_by('year', 'id', 'month').distinct():
+        data = prepare_reimbursement_report_data(queryset.filter(year=year, month=month))
+        results.setdefault(key := f'{month} {year}', {'resources': data})
+        results[key]['max_missions'] = max([len(v) for v in data.values()])
+    return results
+
+
+def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict:
+    """Prepare data for reimbursement report for a specific month and year."""
+    reimbursements_id = queryset.values_list('id', flat=True)
+    # all expenses for reimbursements in queryset
+    expenses_to_reimburse = Expense.objects.filter(reimbursement__in=queryset.values_list('id', flat=True))
+
+    resource_and_mission = (
+        expenses_to_reimburse.order_by(
+            'reimbursement__resource__last_name', 'reimbursement__resource__first_name', 'mission__number'
+        )
+        .values_list('reimbursement__resource', 'mission')
+        .distinct()
+    )
+
+    results = {}
+    for resource_id, mission_id in resource_and_mission:
+        resource_data = results.setdefault(Resource.objects.get(id=resource_id), {})
+        mission = Mission.objects.get(pk=mission_id)
+        expenses_in_mr = (
+            Expense.objects.filter(
+                reimbursement__in=queryset,
+                mission=mission_id,
+            )
+            .annotate(
+                early=Case(
+                    When(day__lt=mission.from_date, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                )
+            )
+            .annotate(
+                late=Case(
+                    When(day__gt=mission.to_date, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                )
+            )
+        )
+
+        suffix = '*' if any(expenses_in_mr.values_list('early', flat=True)) else ''
+        prefix = '^' if any(expenses_in_mr.values_list('late', flat=True)) else ''
+        if (
+            not prefix
+            and Reimbursement.objects.filter(expenses__mission=mission_id).exclude(id__in=reimbursements_id).exists()
+        ):
+            prefix = '^'
+        resource_data[f'{prefix}{mission.number}{suffix}'] = dict(
+            zip(['byexpcategory', 'bypayment', 'summary'], calculate_reimbursement_summaries(expenses_in_mr), strict=False)
+        )
+
+    return results
+
+
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
-    list_display = ['number', 'year', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
+    list_display = ['number', 'year', 'month', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     form = ReimbursementAdminForm
     inlines = [ExpenseInline]
     actions = ['report']
@@ -54,8 +119,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     expense_num.short_description = 'Num expenses'
 
     @button(
-        html_attrs=NORMAL,
-        visible=lambda btn: bool(Mission.objects.filter(expenses__reimbursement_id=btn.original.id))
+        html_attrs=NORMAL, visible=lambda btn: bool(Mission.objects.filter(expenses__reimbursement_id=btn.original.id))
     )
     def view_linked_missions(self, request, pk):
         rids = map(str, Mission.objects.filter(expenses__reimbursement_id=pk).values_list('id', flat=True))
@@ -67,17 +131,14 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     def overview(self, request, pk):
         reimbursement = self.get_object(request, pk)
 
-        qs = reimbursement.expenses.all()
+        qs: QuerySet[Expense] = reimbursement.expenses.all()
 
         expenses = ReimbursementExpenseTable(qs, order_by=['day'])
 
         if export_format := request.GET.get('_export', None):
             expenses = ReimbursementExpenseExportTable(qs, order_by=['day'])
             return self.export_table(reimbursement, expenses, export_format, request)
-        else:
-            expenses = ReimbursementExpenseTable(qs, order_by=['day'])
-
-        # categories = ExpenseCategory.objects.values_list('id', 'parent_id')
+        expenses = ReimbursementExpenseTable(qs, order_by=['day'])
 
         byexpcategory, bypayment, summary = calculate_reimbursement_summaries(qs)
 
@@ -94,9 +155,10 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
                 'payments': bypayment,
                 'categories': byexpcategory,
                 'base': settings.BASE_CURRENCY,
-                'filename': format_html(f'{slugify(str(reimbursement))}.pdf')
+                'filename': format_html(f'{slugify(str(reimbursement))}.pdf'),
             },
-            template='admin/missions/reimbursement/summary.html')
+            template='admin/missions/reimbursement/summary.html',
+        )
 
     def export_table(self, reimbursement: Reimbursement, table_data, export_format, request):
         """Function to export django table data."""
@@ -112,10 +174,9 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     @admin.action(description='Reimbursement report')
     def report(self, request, queryset):
         report = {}
-        qs = Expense.objects.filter(reimbursement__in=queryset)
-        qs = set(qs.all().values_list('reimbursement__resource', 'mission'))
+        context = {'data': prepare_reimbursement_report_context(queryset)}
         return TemplateResponse(
             request,
             'admin/missions/reimbursement/report.html',
-            {}
+            context=context,
         )
