@@ -88,7 +88,7 @@ def test_expense_recalculate_reimbursement_with_image(exp_type, reimbursement, r
         reimbursement = ReimbursementFactory()
     expense: Expense = ExpenseFactory(
         amount_currency=10, amount_base=10, payment_type=exp_type,
-        reimbursement=reimbursement
+        reimbursement=reimbursement, amount_reimbursement=None,
     )
 
     assert expense.amount_reimbursement is None  # Should be none whe first created

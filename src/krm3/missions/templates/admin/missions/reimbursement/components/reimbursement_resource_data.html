@@ -1,0 +1,25 @@
+<table>
+    <thead>
+        <tr>
+            {% for column in table.columns %}
+                <th>{{ column.header }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in table.rows %}
+            {% with department=row.record.department %}
+                {% if not row.previous or row.previous.record.department != department %}
+                    <tr{% if row.attrs %} {{ row.attrs.as_html }}{% endif %}>
+                        <td rowspan="{{ table.get_rowspan_for_department(department, forloop.counter0) }}">{{ department }}</td>
+                        {% for column, cell in row.items %}
+                            {% if column.name != 'department' %}
+                                <td{% if cell.attrs %} {{ cell.attrs.as_html }}{% endif %}>{{ cell }}</td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </tbody>
+</table>

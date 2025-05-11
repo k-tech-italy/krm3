@@ -29,7 +29,6 @@ BASE_JSON = {
         'parent': 7
     },
     'amount_currency': '10',
-    'amount_base': ''
 }
 
 
@@ -61,20 +60,15 @@ def test_api_create_mission(expense, admin_user):
 
     assert response.status_code == 201
     response_data = dict(response.data)
-    response_data.pop('created_ts')
-    response_data.pop('modified_ts')
     assert response_data == {
         'mission': expense.mission_id,
         'day': expense.day.strftime('%Y-%m-%d'),
         'amount_currency': str(expense.amount_currency),
         'currency': expense.currency_id,
-        'amount_base': None,
-        'amount_reimbursement': None,
         'detail': 'copy',
         'category': expense.category_id,
         'document_type': expense.document_type_id,
         'payment_type': expense.payment_type_id,
-        'reimbursement': expdata['reimbursement'],
         'image': expdata['image']
     }
     assert Expense.objects.count() == 2

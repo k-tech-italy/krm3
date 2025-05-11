@@ -1,8 +1,10 @@
+import random
+
 import pytest
 
 from testutils.date_utils import _dt
 from testutils.factories import ExpenseFactory, ReimbursementFactory, MissionFactory, ResourceFactory
-from krm3.core.models import Reimbursement, Resource, Mission
+from krm3.core.models import Reimbursement, Resource, Mission, PaymentCategory, ExpenseCategory
 from krm3.missions.admin.reimbursement import prepare_reimbursement_report_data, prepare_reimbursement_report_context
 
 MARCH_EXPENSES = {
@@ -49,7 +51,7 @@ MAY_OUTCOME = {
 
 
 @pytest.fixture
-def expenses():
+def expenses(categories):
     return [
         [MARCH_EXPENSES, MARCH_OUTCOME],
         [APRIL_EXPENSES, APRIL_OUTCOME],
@@ -88,8 +90,17 @@ def prepare_data(expense_set, i, reimbursments_per_resource, resource_cache):
             r_surname, ReimbursementFactory(resource=resource, year=2025, month=['Mar', 'Apr', 'May'][i])
         )
 
+        expense_categories = list(ExpenseCategory.objects.all())
+        payment_categories = list(PaymentCategory.objects.all())
         for day in expense_data[1]:
-            ExpenseFactory(mission=mission_obj, day=_dt(day), reimbursement=reimbursement)
+            payment_type = random.choice(payment_categories)
+            ExpenseFactory(
+                mission=mission_obj,
+                day=_dt(day),
+                reimbursement=reimbursement,
+                category=random.choice(expense_categories),
+                payment_type=payment_type,
+            )
 
 
 def test_reimbursement_report_context(expenses):
@@ -101,4 +112,8 @@ def test_reimbursement_report_context(expenses):
 
     context = prepare_reimbursement_report_context(Reimbursement.objects.all())
     assert list(context.keys()) == ['Mar 2025', 'Apr 2025', 'May 2025']
-    assert [x['max_missions'] for x in context.values()] == [3, 3, 4]
+    missions = []
+    for resources in context.values():
+        first = next(iter(resources))
+        missions.append(len(resources[first]))
+    assert missions == [3, 3, 4]

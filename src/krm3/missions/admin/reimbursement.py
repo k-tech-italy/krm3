@@ -1,4 +1,3 @@
-
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.dates import DateRangeFilter
@@ -6,7 +5,8 @@ from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import site
-from django.db.models import QuerySet, When, Case, Value, BooleanField
+from django.db.models import QuerySet, When, Case, Value, BooleanField, F
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -16,21 +16,56 @@ from django_tables2.export import TableExport
 
 from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
-from krm3.core.models import Mission, Reimbursement, Expense, Resource
+from krm3.core.models import Mission, Reimbursement, Expense, Resource, ExpenseCategory
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
 from krm3.missions.utilities import calculate_reimbursement_summaries
 from krm3.styles.buttons import NORMAL
 from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
+from krm3.utils.tools import uniq
+
+
+def prepare_resources_html(resources: dict, max_missions: int):
+    """Prepare data for reimbursement report template."""
+    expense_categories = {str(x): x for x in ExpenseCategory.objects.all()}
+    # payment_categories = {x: 'Personal' if x.personal_expense==True else 'Company' for x in PaymentCategory.objects.all()}
+
+    results = {}
+    for resource_obj, mission_summaries in resources.items():
+        missions = [None] * max_missions
+        results[str(resource_obj)] = missions
+
+        for i, (mission_num, summary) in enumerate(mission_summaries.items()):
+            missions[i] = dict(
+                n_mission='',
+                tot_expenses='',
+                tot_company='',
+                forfait='',
+                to_reimburse='',
+                to_return='',
+                tot='',
+            )
+
+            missions[i]['n_mission'] = mission_num
+            missions[i]['tot_expenses'] = summary['summary']['Totale spese']
+            missions[i]['tot_company'] = summary['bypayment']['Company'][0]
+            missions[i]['difference'] = missions[i]['tot_expenses'] - missions[i]['tot_company']
+            missions[i]['forfait'] = summary['byexpcategory'][expense_categories['Forfait']][0]
+            missions[i]['to_reimburse'] = summary['summary']['Totale rimborso']
+            missions[i]['to_return'] = summary['summary']['Non Rimborsate']
+            missions[i]['tot'] = missions[i]['to_reimburse'] - missions[i]['to_return']
+    return results
 
 
 def prepare_reimbursement_report_context(queryset: QuerySet[Reimbursement]) -> dict:
     """Prepare data for reimbursement report template."""
     results = {}
-    for year, month in queryset.values_list('year', 'month').order_by('year', 'id', 'month').distinct():
+    years_and_months = list(uniq(queryset.values_list('year', 'month').order_by('year', 'id', 'month')))
+    for year, month in years_and_months:
         data = prepare_reimbursement_report_data(queryset.filter(year=year, month=month))
         results.setdefault(key := f'{month} {year}', {'resources': data})
-        results[key]['max_missions'] = max([len(v) for v in data.values()])
+        max_missions = max([len(v) for v in data.values()])
+        results[key] = prepare_resources_html(results[key]['resources'], max_missions)
     return results
 
 
@@ -57,6 +92,7 @@ def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict
                 reimbursement__in=queryset,
                 mission=mission_id,
             )
+            .annotate(personal_expense=F('payment_type__personal_expense'))
             .annotate(
                 early=Case(
                     When(day__lt=mission.from_date, then=Value(True)),
@@ -81,7 +117,11 @@ def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict
         ):
             prefix = '^'
         resource_data[f'{prefix}{mission.number}{suffix}'] = dict(
-            zip(['byexpcategory', 'bypayment', 'summary'], calculate_reimbursement_summaries(expenses_in_mr), strict=False)
+            zip(
+                ['byexpcategory', 'bypayment', 'summary'],
+                calculate_reimbursement_summaries(expenses_in_mr),
+                strict=False,
+            )
         )
 
     return results
@@ -108,7 +148,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     # def get_queryset_(self, request):
     #     return Reimbursement.objects.prefetch_related('expenses').all()
 
-    def get_object(self, request, object_id, from_field=None):
+    def get_object(self, request, object_id: int, from_field=None) -> Reimbursement:
         queryset = self.get_queryset(request)
         # Custom logic to retrieve the object
         return queryset.get(pk=object_id)
@@ -160,7 +200,9 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
             template='admin/missions/reimbursement/summary.html',
         )
 
-    def export_table(self, reimbursement: Reimbursement, table_data, export_format, request):
+    def export_table(
+        self, reimbursement: Reimbursement, table_data: list, export_format, request
+    ) -> HttpResponse | None:
         """Function to export django table data."""
         from django_tables2.config import RequestConfig
 
@@ -169,10 +211,10 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         if TableExport.is_valid_format(export_format):
             exporter = TableExport(export_format, table_data)
             return exporter.response(f'mission_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}')
+        return None
 
-    # TODO: Taiga issue #29 https://taiga.singlewave.co.uk/project/krm3/us/29?kanban-status=34
     @admin.action(description='Reimbursement report')
-    def report(self, request, queryset):
+    def report(self, request, queryset) -> TemplateResponse:
         report = {}
         context = {'data': prepare_reimbursement_report_context(queryset)}
         return TemplateResponse(

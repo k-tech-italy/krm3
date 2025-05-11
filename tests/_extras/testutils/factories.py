@@ -163,6 +163,8 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
     category = factory.SubFactory(ExpenseCategoryFactory)
     payment_type = factory.SubFactory(PaymentCategoryFactory)
     document_type = factory.SubFactory(DocumentTypeFactory)
+    amount_base = factory.LazyAttribute(lambda o: o.amount_currency)
+    amount_reimbursement = factory.LazyAttribute(lambda o: o.amount_currency if o.payment_type.personal_expense else 0)
 
     class Meta:
         model = 'core.Expense'

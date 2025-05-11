@@ -23,12 +23,12 @@ def dataset(request, categories):
             return {
                 'byexpcategory': {
                     'Alloggio': '3.50,3.50',
-                    'Forfait': '0,0',
-                    'Rappresentanza': '0,0',
-                    'Viaggio': '0,0',
-                    'Vitto': '0,0',
+                    'Forfait': '0.0,0.0',
+                    'Rappresentanza': '0.0,0.0',
+                    'Viaggio': '0.0,0.0',
+                    'Vitto': '0.0,0.0',
                 },
-                'bypayment': {'Company': '0,0', 'Personal': '3.50,3.50'},
+                'bypayment': {'Company': '0.0,0.0', 'Personal': '3.50,3.50'},
             }
         case 'partial_personal':
             for category, payment_type, currency, base, reimbursement in [
@@ -45,12 +45,12 @@ def dataset(request, categories):
             return {
                 'byexpcategory': {
                     'Alloggio': '3.50,1.60',
-                    'Forfait': '0,0',
-                    'Rappresentanza': '0,0',
-                    'Viaggio': '0,0',
-                    'Vitto': '0,0',
+                    'Forfait': '0.0,0.0',
+                    'Rappresentanza': '0.0,0.0',
+                    'Viaggio': '0.0,0.0',
+                    'Vitto': '0.0,0.0',
                 },
-                'bypayment': {'Company': '0,0', 'Personal': '3.50,1.60'},
+                'bypayment': {'Company': '0.0,0.0', 'Personal': '3.50,1.60'},
             }
         case 'mixed':
             for category, payment_type, currency, base, reimbursement in [
@@ -75,10 +75,10 @@ def dataset(request, categories):
                     'Alloggio': '3.50,1.60',
                     'Forfait': '3.50,0.50',
                     'Rappresentanza': '3.50,1.60',
-                    'Viaggio': '1.30,0',
-                    'Vitto': '2.40,0',
+                    'Viaggio': '1.30,0.0',
+                    'Vitto': '2.40,0.0',
                 },
-                'bypayment': {'Company': '4.80,0', 'Personal': '9.40,3.70'},
+                'bypayment': {'Company': '4.80,0.0', 'Personal': '9.40,3.70'},
             }
         case _:
             raise ValueError(f'Unknown scenario {request.getfixturevalue("scenario")}')
@@ -95,6 +95,6 @@ def dataset(request, categories):
 def test_calculate_reimbursement_summaries(dataset, scenario):
     byexpcategory, bypayment, summary = calculate_reimbursement_summaries(Expense.objects.all())
     byexpcategory = {k.title: f'{v[0]},{v[1]}' for k, v in byexpcategory.items()}
-    bypayment = {k.title: f'{v[0]},{v[1]}' for k, v in bypayment.items()}
+    bypayment = {k: f'{v[0]},{v[1]}' for k, v in bypayment.items()}
     assert byexpcategory == dataset['byexpcategory']
     assert bypayment == dataset['bypayment']

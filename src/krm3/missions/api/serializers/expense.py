@@ -1,6 +1,6 @@
 from cryptography.fernet import InvalidToken
 from django.conf import settings
-from drf_extra_fields.fields import HybridImageField, Base64ImageField
+from drf_extra_fields.fields import HybridImageField
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
@@ -58,16 +58,11 @@ class ExpenseCreateSerializer(serializers.ModelSerializer):
             'day',
             'amount_currency',
             'currency',
-            'amount_base',
-            'amount_reimbursement',
             'detail',
             'category',
             'document_type',
             'payment_type',
-            'reimbursement',
-            'image',
-            'created_ts',
-            'modified_ts'
+            'image'
         )
 
 
@@ -90,24 +85,6 @@ class ExpenseRetrieveSerializer(serializers.ModelSerializer):
         model = Expense
         fields = ['otp']
 
-
-# class ExportExpenseSerializer(serializers.ModelSerializer):
-#
-#     def __init__(self, instance=None, *args, **kwargs):
-#         exclude = kwargs.pop('exclude', None)
-#         super().__init__(instance, *args, **kwargs)
-#
-#         if exclude is not None:
-#             for field_name in exclude:
-#                 self.fields.pop(field_name)
-#
-#     class Meta:
-#         model = Expense
-#         # fields = []
-#         fields = '__all__'
-#         # fields = ['day', 'amount_currency', 'amount_base', 'amount_reimbursement', 'detail', 'category',
-#         #           'payment_type', 'reimbursement', 'created_ts', 'modified_ts']
-#         depth = 2
 
 class ExpenseNestedSerializer(serializers.ModelSerializer):
     class Meta:

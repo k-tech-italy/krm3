@@ -92,13 +92,13 @@ def document_types(db):
 def categories(db):
     from testutils.factories import ExpenseCategoryFactory, PaymentCategoryFactory
 
-    expenses = dict(
-        alloggio=ExpenseCategoryFactory(title='Alloggio'),
-        forfait=ExpenseCategoryFactory(title='Forfait'),
-        rappresentanza=ExpenseCategoryFactory(title='Rappresentanza'),
-        vitto=ExpenseCategoryFactory(title='Vitto'),
-        viaggio=ExpenseCategoryFactory(title='Viaggio'),
-    )
+    expenses = {
+        'alloggio': ExpenseCategoryFactory(title='Alloggio'),
+        'forfait': ExpenseCategoryFactory(title='Forfait'),
+        'rappresentanza': ExpenseCategoryFactory(title='Rappresentanza'),
+        'vitto': ExpenseCategoryFactory(title='Vitto'),
+        'viaggio': ExpenseCategoryFactory(title='Viaggio'),
+    }
 
     expenses.update(
         {
@@ -113,10 +113,10 @@ def categories(db):
         }
     )
 
-    payments = dict(
-        personal=PaymentCategoryFactory(title='Personal', personal_expense=True),
-        company=PaymentCategoryFactory(title='Company'),
-    )
+    payments = {
+        'personal': PaymentCategoryFactory(title='Personal', personal_expense=True),
+        'company': PaymentCategoryFactory(title='Company', personal_expense=False),
+    }
 
     payments.update(
         {

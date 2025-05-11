@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import itertools
@@ -311,12 +310,14 @@ class Expense(models.Model):
             return True
         return bool(self.mission.resource and self.mission.resource.user == user)
 
-    def get_otp(self):
+    def get_otp(self) -> str:
+        """Generate one-time-password."""
         return settings.FERNET_KEY.encrypt(f'{self.id}|{self.mission_id}|{self.modified_ts}'.encode()).decode('utf-8')[
             6:
         ]
 
-    def check_otp(self, otp: str):
+    def check_otp(self, otp: str) -> bool:
+        """Check the OTP."""
         return True
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}')
         expense_id, mission_id, ts = ref.split('|')
@@ -336,7 +337,7 @@ class Expense(models.Model):
                 self.save()
         return self.amount_base
 
-    def apply_reimbursement(self, force=False, reimbursement=None):
+    def apply_reimbursement(self, force=False, reimbursement=None) -> Decimal:
         """Calculate the reimbursement amount.
 
         Will save the record if reimbursement is provided.
@@ -350,20 +351,21 @@ class Expense(models.Model):
             self.save()
         return self.amount_reimbursement
 
-    def get_reimbursement_amount(self):
+    def get_reimbursement_amount(self) -> Decimal:
+        """Calculate the reimbursement amount based on the payment_type and presence of image."""
         if self.payment_type.personal_expense:
             # con immagine
             if self.image:
                 return self.amount_base
             return 0
-        # Aziendale
+        # Company
         if self.image:
             return 0
         return Decimal(-1) * Decimal(self.amount_base)
 
 
 @receiver(pre_save, sender=Expense)
-def recalculate_reimbursement(sender, instance: Expense, update_fields=None, **kwargs) -> None:  # noqa: ANN003
+def recalculate_reimbursement(sender, instance: Expense, **kwargs) -> None:  # noqa: ANN003
     if instance.id:
         try:
             old_instance = Expense.objects.get(id=instance.id)
