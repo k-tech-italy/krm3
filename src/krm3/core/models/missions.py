@@ -345,7 +345,8 @@ class Expense(models.Model):
         if self.reimbursement and not force:
             raise AlreadyReimbursed(f'Expense {self.id} already reimbursed in {self.reimbursement_id}')
         self.calculate_base(save=False)
-        self.amount_reimbursement = self.get_reimbursement_amount()
+        if self.amount_reimbursement is None:
+            self.amount_reimbursement = self.get_reimbursement_amount()
         if reimbursement:
             self.reimbursement = reimbursement
             self.save()
