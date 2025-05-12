@@ -1,3 +1,4 @@
+from contextlib import nullcontext as does_not_raise
 import datetime
 import typing
 from decimal import Decimal
@@ -543,27 +544,47 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.parametrize(
-        'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
+        'hours_key, hours_field',
+        (
+            pytest.param(key, f'{kind}_hours', id=kind)
+            for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)
+        ),
     )
-    def test_rejects_day_entry_with_another_day_entry_on_same_date(self, hours_key, admin_user, api_client):
+    def test_overwrites_day_entry_with_another_day_entry_on_same_date(
+        self, hours_key, hours_field, admin_user, api_client
+    ):
         resource = ResourceFactory()
         target_date = datetime.date(2024, 1, 1)
-        _existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, work_hours=0)
+        existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, work_hours=0)
 
-        data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk} | {hours_key: 8}
+        data = {
+            'dates': [target_date.isoformat()],
+            'resourceId': resource.pk,
+            'workHours': 0,
+            # NOTE: make sure to reset sick hours before updating
+            'sickHours': 0,
+        } | {hours_key: 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_201_CREATED
+        existing_day_entry.refresh_from_db()
+        assert getattr(existing_day_entry, hours_field) == 8
 
     @pytest.mark.parametrize(
-        'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True))
+        'hours_key, hours_field',
+        (
+            pytest.param(key, f'{kind}_hours', id=kind)
+            for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True)
+        ),
     )
-    def test_rejects_task_entry_for_task_with_a_day_entry_on_same_date(self, hours_key, admin_user, api_client):
+    def test_overwrites_task_entry_for_task_with_existing_task_entry_on_same_date(
+        self, hours_key, hours_field, admin_user, api_client
+    ):
         resource = ResourceFactory()
         target_date = datetime.date(2024, 1, 1)
         target_task = TaskFactory(title='target', resource=resource)
         other_task = TaskFactory(title='other', resource=resource)
-        _existing_entry_on_target_task = TimeEntryFactory(
+        existing_entry_on_target_task = TimeEntryFactory(
             resource=resource, date=target_date, task=target_task, work_hours=4
         )
 
@@ -573,12 +594,76 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
-        # we cannot accept a new time entry on the target task, as
-        # there is one already
+        # we MUST override any existing entry
         data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': target_task.pk, hours_key: 4}
         data.setdefault('workHours', 0)
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_201_CREATED
+        existing_entry_on_target_task.refresh_from_db()
+        if hours_field != 'work_hours':
+            assert existing_entry_on_target_task.work_hours == 0
+        assert getattr(existing_entry_on_target_task, hours_field) == 4
+
+    @pytest.mark.parametrize(
+        'hours_key, hours_field',
+        (
+            pytest.param(key, f'{kind}_hours', id=kind)
+            for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)
+        ),
+    )
+    def test_non_leave_day_entry_overwrites_task_entries_on_same_day(
+        self, hours_key, hours_field, admin_user, api_client
+    ):
+        resource = ResourceFactory()
+        target_date = datetime.date(2024, 1, 1)
+        task = TaskFactory(title='Should end up without task entries', resource=resource)
+        existing_task_entry = TimeEntryFactory(resource=resource, date=target_date, task=task, work_hours=4)
+        existing_task_entry_id = existing_task_entry.pk
+
+        data = {
+            'dates': [target_date.isoformat()],
+            'resourceId': resource.pk,
+            'workHours': 0,
+        } | {hours_key: 8}
+
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        should_raise_on_getting_deleted_record = (
+            does_not_raise() if hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+        )
+        with should_raise_on_getting_deleted_record:
+            TimeEntry.objects.get(pk=existing_task_entry_id)
+
+    @pytest.mark.parametrize(
+        'hours_key',
+        (pytest.param(key, id=kind) for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True)),
+    )
+    @pytest.mark.parametrize(
+        'existing_hours_field', (pytest.param(f'{kind}_hours', id=kind) for kind in _day_entry_kinds)
+    )
+    def test_task_entry_overwrites_non_leave_day_entry_on_same_day(
+        self, hours_key, existing_hours_field, admin_user, api_client
+    ):
+        resource = ResourceFactory()
+        target_date = datetime.date(2024, 1, 1)
+
+        existing_day_entry = TimeEntryFactory(
+            resource=resource, date=target_date, work_hours=0, **{existing_hours_field: 4}
+        )
+        existing_day_entry_id = existing_day_entry.pk
+
+        target_task = TaskFactory(resource=resource)
+
+        data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': target_task.pk, hours_key: 4}
+        data.setdefault('workHours', 0)
+        response = api_client(user=admin_user).post(self.url(), data=data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+
+        should_raise_on_getting_deleted_record = (
+            does_not_raise() if existing_hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+        )
+        with should_raise_on_getting_deleted_record:
+            TimeEntry.objects.get(pk=existing_day_entry_id)
 
     @pytest.mark.parametrize(
         ('permission', 'expected_status_code'),
