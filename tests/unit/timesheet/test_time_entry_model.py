@@ -2,6 +2,7 @@ import datetime
 from contextlib import nullcontext as does_not_raise
 
 from django.core import exceptions
+from krm3.core.models.timesheets import TimeEntry
 import pytest
 
 from testutils.factories import InvoiceEntryFactory, TimeEntryFactory, TaskFactory, BasketFactory, ResourceFactory
@@ -112,14 +113,13 @@ class TestTimeEntry:
 
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
-    def test_day_entry_is_saved_only_when_no_other_day_entry_exists_on_the_same_day(
-        self, existing_hours_field, new_hours_field
-    ):
+    def test_day_entry_overwrites_other_existing_day_entry_on_the_same_day(self, existing_hours_field, new_hours_field):
         resource = ResourceFactory()
         absence_day = datetime.date(2024, 1, 1)
         _absence_entry = TimeEntryFactory(
             date=absence_day, work_hours=0, **{existing_hours_field: 8}, resource=resource
         )
+        assert TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource).count() == 1  # pyright: ignore
 
         with does_not_raise():
             # the same resource should be able to log their absence on
@@ -135,10 +135,10 @@ class TestTimeEntry:
                 date=absence_day, work_hours=0, **{new_hours_field: 8}, resource=other_resource
             )
 
-        # ... but the same resource should not be able to log more than
-        # one absence entry
-        with pytest.raises(exceptions.ValidationError, match='already has a day entry'):
-            TimeEntryFactory(date=absence_day, work_hours=0, **{new_hours_field: 0}, resource=resource)
+        _new_entry = TimeEntryFactory(date=absence_day, work_hours=0, **{new_hours_field: 8}, resource=resource)
+        day_entries = TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource)  # pyright: ignore
+        assert day_entries.count() == 1
+        assert getattr(day_entries.get(), new_hours_field) == 8
 
     _task_entry_fields = ('work_hours', 'rest_hours', 'travel_hours', 'overtime_hours', 'on_call_hours')
 
@@ -162,8 +162,10 @@ class TestTimeEntry:
             _new_time_entry_on_other_task = TimeEntryFactory(
                 date=work_day, task=other_task, resource=resource, **{field: 6}
             )
-        with pytest.raises(exceptions.ValidationError, match='already has a time entry'):
-            TimeEntryFactory(date=work_day, task=task, resource=resource, **{field: 2})
+
+        _new_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, **{field: 2})
+        day_entries = TimeEntry.objects.task_entries().filter(date=work_day, resource=resource)  # pyright: ignore
+        assert day_entries.count() == 2
 
     def test_is_saved_as_sick_day(self):
         """Sick day with no work or task-related hours logged"""

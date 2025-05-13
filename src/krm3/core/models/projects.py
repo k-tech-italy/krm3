@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Self, override
 
-from django.contrib.auth import get_user_model
+# from django.contrib.auth import get_user_model  # noqa - see below
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
@@ -14,6 +14,7 @@ from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
     from decimal import Decimal
+    from krm3.core.models.auth import User
     from krm3.core.models import Project, Task, Mission, InvoiceEntry
 
     from django.contrib.auth.models import AbstractUser
@@ -22,7 +23,8 @@ if TYPE_CHECKING:
 
 _DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
-User = get_user_model()
+# FIXME: we cannot use a variable as a type hint
+# User = get_user_model()  # noqa
 
 
 class ProjectManager(NaturalKeyModelManager):
@@ -73,7 +75,7 @@ class PO(models.Model):
 
     ref = models.CharField(max_length=50)
     is_billable = models.BooleanField(default=True)
-    state = models.TextField(choices=POState, default=POState.OPEN)  # type: ignore
+    state = models.TextField(choices=POState, default=POState.OPEN)  # pyright: ignore[reportArgumentType]
     start_date = models.DateField(default=_DEFAULT_START_DATE)
     end_date = models.DateField(null=True, blank=True)
 

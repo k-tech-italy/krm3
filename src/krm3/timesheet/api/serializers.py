@@ -111,6 +111,16 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             )
         return value
 
+    @override
+    def create(self, validated_data: Any) -> TimeEntry:
+        date = validated_data.pop('date')
+        resource = validated_data.pop('resource')
+        task = validated_data.pop('task', None)
+        entry, _created = TimeEntry.objects.update_or_create(
+            date=date, resource=resource, task=task, defaults=validated_data
+        )
+        return entry
+
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
