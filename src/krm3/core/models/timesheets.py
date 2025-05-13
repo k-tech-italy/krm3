@@ -206,23 +206,32 @@ def validate_time_entry(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -
 
 @receiver(models.signals.post_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    open_entries = (
+        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
+    )
     if instance.is_task_entry:
-        overwritten = (
-            cast('TimeEntryQuerySet', TimeEntry.objects)
-            .open()
-            .sick_days_and_holidays()
-            .filter(date=instance.date, resource=instance.resource)
-        )
-        overwritten.delete()
+        overwritten = open_entries.sick_days_and_holidays()
+    elif instance.is_day_entry:
+        # just to be safe: remove any other existing day entry
+        overwritten = open_entries.day_entries().exclude(pk=instance.pk)
+    else:
+        # we should never get there
+        overwritten = TimeEntry.objects.none()
+    overwritten.delete()
 
 
 @receiver(models.signals.post_save, sender=TimeEntry)
 def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    open_entries = (
+        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
+    )
     if instance.is_day_entry and instance.leave_hours == 0:
-        overwritten = (
-            cast('TimeEntryQuerySet', TimeEntry.objects)
-            .open()
-            .task_entries()
-            .filter(date=instance.date, resource=instance.resource)
-        )
-        overwritten.delete()
+        overwritten = open_entries.task_entries()
+    elif instance.is_task_entry:
+        # just to be safe: remove any other existing task entry for the
+        # `instance`'s task
+        overwritten = open_entries.filter(task=instance.task).exclude(pk=instance.pk)
+    else:
+        # we should never get there
+        overwritten = TimeEntry.objects.none()
+    overwritten.delete()
