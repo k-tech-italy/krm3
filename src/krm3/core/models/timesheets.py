@@ -23,10 +23,10 @@ class TimeEntryState(models.TextChoices):
 
 class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     _TASK_ENTRY_FILTER = (
-        models.Q(work_hours__gt=0)
+        models.Q(day_shift_hours__gt=0)
         | models.Q(travel_hours__gt=0)
         | models.Q(rest_hours__gt=0)
-        | models.Q(overtime_hours__gt=0)
+        | models.Q(night_shift_hours__gt=0)
     )
 
     _DAY_ENTRY_FILTER = models.Q(sick_hours__gt=0) | models.Q(holiday_hours__gt=0) | models.Q(leave_hours__gt=0)
@@ -87,11 +87,11 @@ class TimeEntry(models.Model):
 
     date = models.DateField()
     last_modified = models.DateTimeField(auto_now=True)
-    work_hours = models.DecimalField(max_digits=4, decimal_places=2)
+    day_shift_hours = models.DecimalField(max_digits=4, decimal_places=2)
     sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    overtime_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    night_shift_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
@@ -124,8 +124,8 @@ class TimeEntry(models.Model):
         # NOTE: could use sum() on a comprehension, but `sum()` may also
         #       return Literal[0], which trips up the type checker
         return (
-            Decimal(self.work_hours)
-            + Decimal(self.overtime_hours)
+            Decimal(self.day_shift_hours)
+            + Decimal(self.night_shift_hours)
             + Decimal(self.travel_hours)
             + Decimal(self.rest_hours)
         )
