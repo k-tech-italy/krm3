@@ -4,18 +4,18 @@ import pytest
 from seleniumbase import config as sb_config
 from seleniumbase.core import session_helper
 
-from testutils.selenium import AppSeleniumTC
+import typing
 
-
-# from testutils.factories import ValidatorFactory
-# from testutils.selenium import AppSeleniumTC
+if typing.TYPE_CHECKING:
+    from testutils.selenium import AppSeleniumTC
 
 
 @pytest.fixture
-def browser(live_server, request) -> Generator[AppSeleniumTC, None, None]:
+def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
     """SeleniumBase as a pytest fixture.
     Usage example: "def test_one(sb):"
     You may need to use this for tests that use other pytest fixtures."""
+    from testutils.selenium import AppSeleniumTC
 
     if request.cls:
         if sb_config.reuse_class_session:

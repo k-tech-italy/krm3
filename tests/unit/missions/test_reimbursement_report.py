@@ -116,4 +116,4 @@ def test_reimbursement_report_context(expenses):
     for resources in context.values():
         first = next(iter(resources))
         missions.append(len(resources[first]))
-    assert missions == [3, 3, 4]
+    assert missions == [4, 4, 5]

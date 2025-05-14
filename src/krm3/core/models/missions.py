@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 from decimal import Decimal
+from enum import Enum
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -206,6 +207,16 @@ class ReimbursementManager(models.Manager):
 
 
 class Reimbursement(models.Model):
+    class ReimbursementSummaryEnum(Enum):
+        NON_RIMBORSATE = 'Non Rimborsate'
+        DA_RESTITUIRE = 'Da Restituire'
+        GIA_RIMBORSATE = 'Già Rimborsate'
+        TOTALE_RIMBORSO = 'Totale Rimborso'
+        ANTICIPATO = 'Anticipato'
+        SPESE_TRASFERTA = 'Spese trasferta'
+        TOTALE_SPESE = 'Totale spese'
+
+
     number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
     year = models.PositiveIntegerField(blank=True)
     month = models.CharField(max_length=20, null=True)

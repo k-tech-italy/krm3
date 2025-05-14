@@ -57,6 +57,7 @@ def dataset(request, categories):
                 ['rappresentanza', 'personal', 1.1, 1.1, 1.1],
                 ['rappresentanza', 'personal', 2.0, 2.4, 0.5],
                 ['alloggio', 'personal', 1.1, 1.1, 1.1],
+                ['alloggio', 'company', 10, 10.1, -5.5],
                 ['alloggio', 'personal', 2.0, 2.4, 0.5],
                 ['vitto', 'company', 2.0, 2.4, 0],
                 ['forfait.alloggio', 'company.wire', 1.1, 1.1, 0],
@@ -72,13 +73,13 @@ def dataset(request, categories):
                 )
             return {
                 'byexpcategory': {
-                    'Alloggio': '3.50,1.60',
+                    'Alloggio': '13.60,-3.90',
                     'Forfait': '3.50,0.50',
                     'Rappresentanza': '3.50,1.60',
                     'Viaggio': '1.30,0.0',
                     'Vitto': '2.40,0.0',
                 },
-                'bypayment': {'Company': '4.80,0.0', 'Personal': '9.40,3.70'},
+                'bypayment': {'Company': '14.90,-5.50', 'Personal': '9.40,3.70'},
             }
         case _:
             raise ValueError(f'Unknown scenario {request.getfixturevalue("scenario")}')
