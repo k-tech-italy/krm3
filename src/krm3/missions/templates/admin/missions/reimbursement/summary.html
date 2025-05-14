@@ -66,12 +66,16 @@
                             <th>Category</th>
                             <th>{{ base }}</th>
                             <th>Reimbursed</th>
+                            <th>Cost to Resource</th>
+                            <th>Cost to Company</th>
                         </tr>
                         {% for category, sums in categories.items %}
                             <tr style="text-align: right">
                                 <td>{{ category }}</td>
                                 <td>{{ sums.0 }}</td>
                                 <td>{{ sums.1 }}</td>
+                                <td>{{ sums.2 }}</td>
+                                <td>{{ sums.3 }}</td>
                             </tr>
                         {% endfor %}
                     </table>
@@ -82,12 +86,14 @@
                             <th>Paid by</th>
                             <th>{{ base }}</th>
                             <th>Reimbursed</th>
+                            <th>Total</th>
                         </tr>
                         {% for payment, sums in payments.items %}
                             <tr style="text-align: right">
                                 <td>{{ payment }}</td>
                                 <td>{{ sums.0 }}</td>
                                 <td>{{ sums.1 }}</td>
+                                <td>{{ sums.2 }}</td>
                             </tr>
                         {% endfor %}
                     </table>

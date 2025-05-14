@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override, Self, Any
+from typing import TYPE_CHECKING, cast, override, Self, Any
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -22,6 +22,15 @@ class TimeEntryState(models.TextChoices):
 
 
 class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
+    _TASK_ENTRY_FILTER = (
+        models.Q(work_hours__gt=0)
+        | models.Q(travel_hours__gt=0)
+        | models.Q(rest_hours__gt=0)
+        | models.Q(overtime_hours__gt=0)
+    )
+
+    _DAY_ENTRY_FILTER = models.Q(sick_hours__gt=0) | models.Q(holiday_hours__gt=0) | models.Q(leave_hours__gt=0)
+
     def open(self) -> Self:
         """Select the open time entries in this queryset.
 
@@ -39,6 +48,27 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         from .projects import POState
 
         return self.filter(state=POState.CLOSED)
+
+    def day_entries(self) -> Self:
+        """Select all day entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.filter(self._DAY_ENTRY_FILTER & ~self._TASK_ENTRY_FILTER)
+
+    def sick_days_and_holidays(self) -> Self:
+        """Select all sick and holiday entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.day_entries().filter(leave_hours=0)
+
+    def task_entries(self) -> Self:
+        """Select all task entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.filter(self._TASK_ENTRY_FILTER & ~self._DAY_ENTRY_FILTER)
 
     def filter_acl(self, user: AbstractUser) -> Self:
         """Return the queryset for the owned records.
@@ -135,40 +165,21 @@ class TimeEntry(models.Model):
           is violated.
         """
         errors = []
-        other_entries_on_same_day = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(pk=self.pk)  # pyright: ignore[reportAttributeAccessIssue]
 
         has_task_entry_hours = self.total_task_hours > 0.0 or self.on_call_hours > 0.0
-        if self.is_day_entry:
-            other_day_entries = other_entries_on_same_day.filter(task__isnull=True)
-            if other_day_entries.exists():
-                message = _(
-                    'Date {date} already has a day entry. Consider deleting it before trying again.'.format(
-                        date=self.date
-                    )
-                )
-                errors.append(ValidationError(message, code='multiple_day_entries'))
-            if has_task_entry_hours:
-                errors.append(
-                    ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
-                )
+        if self.is_day_entry and has_task_entry_hours:
+            errors.append(
+                ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
+            )
 
         is_sick_day = self.sick_hours > 0.0
         is_holiday = self.holiday_hours > 0.0
         is_leave = self.leave_hours > 0.0
         has_day_entry_hours = is_sick_day or is_holiday or is_leave
-        if self.is_task_entry:
-            other_task_entries = other_entries_on_same_day.filter(task=self.task)
-            if other_task_entries.exists():
-                message = _(
-                    'Task {task} already has a time entry on {date}. Consider deleting it before trying again.'.format(
-                        task=self.task, date=self.date
-                    )
-                )
-                errors.append(ValidationError(message, code='multiple_task_entries'))
-            if has_day_entry_hours:
-                errors.append(
-                    ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
-                )
+        if self.is_task_entry and has_day_entry_hours:
+            errors.append(
+                ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
+            )
 
         has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
         if has_too_many_absences_logged:
@@ -191,3 +202,36 @@ class TimeEntry(models.Model):
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def validate_time_entry(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     instance.clean()
+
+
+@receiver(models.signals.post_save, sender=TimeEntry)
+def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    open_entries = (
+        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
+    )
+    if instance.is_task_entry:
+        overwritten = open_entries.sick_days_and_holidays()
+    elif instance.is_day_entry:
+        # just to be safe: remove any other existing day entry
+        overwritten = open_entries.day_entries().exclude(pk=instance.pk)
+    else:
+        # we should never get there
+        overwritten = TimeEntry.objects.none()
+    overwritten.delete()
+
+
+@receiver(models.signals.post_save, sender=TimeEntry)
+def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    open_entries = (
+        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
+    )
+    if instance.is_day_entry and instance.leave_hours == 0:
+        overwritten = open_entries.task_entries()
+    elif instance.is_task_entry:
+        # just to be safe: remove any other existing task entry for the
+        # `instance`'s task
+        overwritten = open_entries.filter(task=instance.task).exclude(pk=instance.pk)
+    else:
+        # we should never get there
+        overwritten = TimeEntry.objects.none()
+    overwritten.delete()

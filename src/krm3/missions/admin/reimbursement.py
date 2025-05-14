@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.dates import DateRangeFilter
@@ -18,11 +20,13 @@ from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
 from krm3.core.models import Mission, Reimbursement, Expense, Resource, ExpenseCategory
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
-from krm3.missions.utilities import calculate_reimbursement_summaries
+from krm3.missions.utilities import calculate_reimbursement_summaries, ReimbursementSummaryEnum
 from krm3.styles.buttons import NORMAL
 from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
 from krm3.utils.tools import uniq
+
+summary_fields = ['tot_expenses', 'tot_company', 'difference', 'forfait', 'to_reimburse', 'to_return', 'tot']
 
 
 def prepare_resources_html(resources: dict, max_missions: int):
@@ -30,30 +34,34 @@ def prepare_resources_html(resources: dict, max_missions: int):
     expense_categories = {str(x): x for x in ExpenseCategory.objects.all()}
     # payment_categories = {x: 'Personal' if x.personal_expense==True else 'Company' for x in PaymentCategory.objects.all()}
 
+
     results = {}
     for resource_obj, mission_summaries in resources.items():
-        missions = [None] * max_missions
-        results[str(resource_obj)] = missions
-
+        missions = results.setdefault(str(resource_obj), [])
+        tot = dict(zip(summary_fields, [Decimal('0.0')] * len(summary_fields), strict=False)) | {'n_mission': 'Tot'}
         for i, (mission_num, summary) in enumerate(mission_summaries.items()):
-            missions[i] = dict(
-                n_mission='',
-                tot_expenses='',
-                tot_company='',
-                forfait='',
-                to_reimburse='',
-                to_return='',
-                tot='',
+            missions.append(
+                {
+                    'n_mission': mission_num,
+                    'tot_expenses': summary['summary'][ReimbursementSummaryEnum.TOTALE_SPESE],
+                    'tot_company': summary['bypayment']['Company'][0],
+                    # we suspect difference is n: needed anymore as identical to tot, but we keep it for now
+                    'forfait': summary['byexpcategory'][expense_categories['Forfait']][0],
+                    'to_reimburse': summary['bypayment']['Personal'][1],
+                    'to_return': summary['bypayment']['Company'][1] * -1,
+                }
+            )
+            missions[-1].update(
+                {
+                    'difference': missions[-1]['tot_expenses'] - missions[-1]['tot_company'],
+                    'tot': missions[-1]['to_reimburse'] - missions[-1]['to_return'],
+                }
             )
 
-            missions[i]['n_mission'] = mission_num
-            missions[i]['tot_expenses'] = summary['summary']['Totale spese']
-            missions[i]['tot_company'] = summary['bypayment']['Company'][0]
-            missions[i]['difference'] = missions[i]['tot_expenses'] - missions[i]['tot_company']
-            missions[i]['forfait'] = summary['byexpcategory'][expense_categories['Forfait']][0]
-            missions[i]['to_reimburse'] = summary['summary']['Totale rimborso']
-            missions[i]['to_return'] = summary['summary']['Non Rimborsate']
-            missions[i]['tot'] = missions[i]['to_reimburse'] - missions[i]['to_return']
+            for key in summary_fields:
+                tot[key] += missions[i][key]
+        missions.append(tot)
+
     return results
 
 
@@ -215,7 +223,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
     @admin.action(description='Reimbursement report')
     def report(self, request, queryset) -> TemplateResponse:
-        report = {}
+        """View reimbursement report."""
         context = {'data': prepare_reimbursement_report_context(queryset)}
         return TemplateResponse(
             request,
