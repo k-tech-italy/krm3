@@ -21,11 +21,11 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'id',
             'date',
             'last_modified',
-            'work_hours',
+            'day_shift_hours',
             'sick_hours',
             'holiday_hours',
             'leave_hours',
-            'overtime_hours',
+            'night_shift_hours',
             'on_call_hours',
             'travel_hours',
             'rest_hours',
@@ -43,11 +43,11 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
     class Meta(BaseTimeEntrySerializer.Meta):
         fields = (
             'date',
-            'work_hours',
+            'day_shift_hours',
             'sick_hours',
             'holiday_hours',
             'leave_hours',
-            'overtime_hours',
+            'night_shift_hours',
             'on_call_hours',
             'travel_hours',
             'rest_hours',
@@ -56,8 +56,8 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'resource',
         )
 
-    def validate_work_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='work_hours')
+    def validate_day_shift_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='day_shift_hours')
 
     def validate_sick_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='sick_hours')
@@ -68,8 +68,8 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
     def validate_leave_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='leave_hours')
 
-    def validate_overtime_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='overtime_hours')
+    def validate_night_shift_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='night_shift_hours')
 
     def validate_on_call_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='on_call_hours')
@@ -85,8 +85,8 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
         entries_on_same_day = TimeEntry.objects.filter(date=attrs['date'], resource=attrs['resource'])
         total_hours_for_other_entries = sum(entry.total_hours for entry in entries_on_same_day)
         total_hours = (
-            attrs['work_hours']
-            + attrs.get('overtime_hours', 0)
+            attrs['day_shift_hours']
+            + attrs.get('night_shift_hours', 0)
             + attrs.get('rest_hours', 0)
             + attrs.get('travel_hours', 0)
             + attrs.get('sick_hours', 0)
