@@ -148,8 +148,28 @@ class TimeEntry(models.Model):
         return self.task is None
 
     @property
+    def is_sick_day(self) -> bool:
+        return self.sick_hours > 0.0
+
+    @property
+    def is_holiday(self) -> bool:
+        return self.holiday_hours > 0.0
+
+    @property
+    def is_leave(self) -> bool:
+        return self.leave_hours > 0.0
+
+    @property
+    def has_day_entry_hours(self) -> bool:
+        return self.is_sick_day or self.is_holiday or self.is_leave
+
+    @property
     def is_task_entry(self) -> bool:
         return not self.is_day_entry
+
+    @property
+    def has_task_entry_hours(self) -> bool:
+        return self.total_task_hours > 0.0 or self.on_call_hours > 0.0
 
     @override
     def clean(self) -> None:
@@ -166,37 +186,44 @@ class TimeEntry(models.Model):
         """
         errors = []
 
-        has_task_entry_hours = self.total_task_hours > 0.0 or self.on_call_hours > 0.0
-        if self.is_day_entry and has_task_entry_hours:
-            errors.append(
-                ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
-            )
+        validators = (
+            self._verify_task_hours_not_logged_in_day_entry,
+            self._verify_day_hours_not_logged_in_task_entry,
+            self._verify_task_and_day_hours_not_logged_together,
+            self._verify_at_most_one_absence,
+        )
 
-        is_sick_day = self.sick_hours > 0.0
-        is_holiday = self.holiday_hours > 0.0
-        is_leave = self.leave_hours > 0.0
-        has_day_entry_hours = is_sick_day or is_holiday or is_leave
-        if self.is_task_entry and has_day_entry_hours:
-            errors.append(
-                ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
-            )
-
-        has_too_many_absences_logged = len([cond for cond in (is_sick_day, is_holiday, is_leave) if cond]) > 1
-        if has_too_many_absences_logged:
-            errors.append(
-                ValidationError(
-                    _('You cannot log more than one kind of absence in a day.'),
-                    code='multiple_absence_kind',
-                )
-            )
-
-        if has_task_entry_hours and has_day_entry_hours:
-            errors.append(
-                ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
-            )
+        for validator in validators:
+            try:
+                validator()
+            except ValidationError as e:
+                errors.append(e)
 
         if errors:
             raise ValidationError(errors)
+
+    def _verify_task_hours_not_logged_in_day_entry(self) -> None:
+        if self.is_day_entry and self.has_task_entry_hours:
+            raise ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
+
+    def _verify_day_hours_not_logged_in_task_entry(self) -> None:
+        if self.is_task_entry and self.has_day_entry_hours:
+            raise ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
+
+    def _verify_at_most_one_absence(self) -> None:
+        has_too_many_absences_logged = (
+            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave) if cond]) > 1
+        )
+        if has_too_many_absences_logged:
+            raise ValidationError(
+                _('You cannot log more than one kind of absence in a day.'),
+                code='multiple_absence_kind',
+            )
+
+    # XXX: is this necessary?
+    def _verify_task_and_day_hours_not_logged_together(self) -> None:
+        if self.has_task_entry_hours and self.has_day_entry_hours:
+            raise ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
 
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
