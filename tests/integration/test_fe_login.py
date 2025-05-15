@@ -5,9 +5,11 @@ import typing
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
 
+pytestmark = pytest.mark.ui
+
 
 @pytest.mark.django_db
-def test_login_ok(browser: "AppTestBrowser", regular_user):
+def test_login_ok(browser: 'AppTestBrowser', regular_user):
     browser.open('/')
     browser.type('#username', regular_user.username)
     browser.type('#password', 'password')
@@ -16,7 +18,7 @@ def test_login_ok(browser: "AppTestBrowser", regular_user):
 
 
 @pytest.mark.django_db
-def test_login_nok(browser: "AppTestBrowser", regular_user):
+def test_login_nok(browser: 'AppTestBrowser', regular_user):
     browser.open('/')
     browser.type('#username', regular_user.username)
     browser.type('#password', 'wrong')
