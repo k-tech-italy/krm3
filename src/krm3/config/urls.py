@@ -63,3 +63,6 @@ if settings.DEBUG:
     ) + static(
         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
     )
+
+if settings.RELOAD:
+    urlpatterns.append(path("__reload__/", include("django_browser_reload.urls")))

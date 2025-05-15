@@ -36,6 +36,7 @@ MEDIA_URL = env('MEDIA_URL')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+RELOAD = env("RELOAD")
 
 INSTALLED_APPS = (
     [
@@ -82,7 +83,10 @@ INSTALLED_APPS = (
         'rest_framework_simplejwt.token_blacklist',
         'django_tables2',
         'constance',
-        'smart_env'
+        'smart_env',
+        "tailwind",
+        "krm3.theme.apps.ThemeConfig",
+        "django_cotton.apps.SimpleAppConfig",
     ]
 )
 
@@ -116,6 +120,10 @@ MIDDLEWARE = (
     ]
 )
 
+if env("RELOAD"):
+    INSTALLED_APPS.append("django_browser_reload")
+    MIDDLEWARE.append("django_browser_reload.middleware.BrowserReloadMiddleware")
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'krm3.config.urls'
@@ -123,9 +131,18 @@ ROOT_URLCONF = 'krm3.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'web/templates')],
-        'APP_DIRS': True,
         'OPTIONS': {
+            "loaders": [(
+                "django.template.loaders.cached.Loader",
+                [
+                    "django_cotton.cotton_loader.Loader",
+                    "django.template.loaders.filesystem.Loader",
+                    "django.template.loaders.app_directories.Loader",
+                ],
+            )],
+            "builtins": [
+                "django_cotton.templatetags.cotton"
+            ],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',

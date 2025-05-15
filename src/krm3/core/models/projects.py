@@ -161,7 +161,7 @@ class Task(models.Model):
     title = models.CharField(max_length=200)
     basket_title = models.CharField(max_length=200, null=True, blank=True)
     # TODO: validate this
-    color = models.TextField(null=True, blank=True)
+    color = models.CharField(null=True, blank=True)
     start_date = models.DateField(default=_DEFAULT_START_DATE)
     end_date = models.DateField(null=True, blank=True)
     # TODO: make prices currency-aware

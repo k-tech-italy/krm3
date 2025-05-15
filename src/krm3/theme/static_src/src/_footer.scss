@@ -1,0 +1,6 @@
+div.footer-signature {
+  @apply block items-center p-2 text-center text-xl;
+  span {
+    @apply m-auto text-gray-400;
+  }
+}
