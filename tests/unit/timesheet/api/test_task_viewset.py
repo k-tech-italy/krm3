@@ -514,6 +514,97 @@ class TestTimeEntryAPICreateView:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_overwrites_time_entry_if_total_hours_of_old_and_new_entry_exceeds_24_hours(self, admin_user, api_client):
+        """Regression test for Taiga issue #42.
+
+        Single task case.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': [today.isoformat()],
+                'taskId': task.id,
+                'resourceId': resource.id,
+                'dayShiftHours': 8,
+            },
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
+
+    @pytest.mark.parametrize(
+        'hours_key',
+        (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)),
+    )
+    def test_overwrites_day_entry_keeping_total_hours_under_24_hours(self, hours_key, admin_user, api_client):
+        """Regression test for Taiga issue #42.
+
+        In this case, another day entry exists.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_day_entry = TimeEntryFactory(resource=resource, task=None, date=today, day_shift_hours=0, leave_hours=18)
+        _task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=2)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'dayShiftHours': 0, hours_key: 6},
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
+
+    @pytest.mark.parametrize(
+        'hours_key',
+        (pytest.param(key, id=kind) for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True)),
+    )
+    def test_overwrites_task_entry_on_same_task_keeping_total_hours_under_24_hours(
+        self, hours_key, admin_user, api_client
+    ):
+        """Regression test for Taiga issue #42.
+
+        In this case, another day entry exists.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource, title='target')
+        other_task = TaskFactory(resource=resource, title='other')
+        _task_entry_on_other_task = TimeEntryFactory(resource=resource, task=other_task, date=today, day_shift_hours=2)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'taskId': task.id, 'dayShiftHours': 0}
+            | {hours_key: 6},
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
+
     def test_rejects_single_time_entry_with_more_than_24_hours(self, admin_user, api_client):
         task = TaskFactory()
 
