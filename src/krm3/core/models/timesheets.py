@@ -191,6 +191,7 @@ class TimeEntry(models.Model):
             self._verify_day_hours_not_logged_in_task_entry,
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
+            self._verify_at_most_24_hours_total_logged_in_a_day,
         )
 
         for validator in validators:
@@ -204,11 +205,11 @@ class TimeEntry(models.Model):
 
     def _verify_task_hours_not_logged_in_day_entry(self) -> None:
         if self.is_day_entry and self.has_task_entry_hours:
-            raise ValidationError(_('You cannot log task hours in a day entry.'), code='task_hours_in_day_entry')
+            raise ValidationError(_('You cannot log task hours in a day entry'), code='task_hours_in_day_entry')
 
     def _verify_day_hours_not_logged_in_task_entry(self) -> None:
         if self.is_task_entry and self.has_day_entry_hours:
-            raise ValidationError(_('You cannot log an absence in a task entry.'), code='day_hours_in_task_entry')
+            raise ValidationError(_('You cannot log an absence in a task entry'), code='day_hours_in_task_entry')
 
     def _verify_at_most_one_absence(self) -> None:
         has_too_many_absences_logged = (
@@ -216,14 +217,36 @@ class TimeEntry(models.Model):
         )
         if has_too_many_absences_logged:
             raise ValidationError(
-                _('You cannot log more than one kind of absence in a day.'),
+                _('You cannot log more than one kind of absence in a day'),
                 code='multiple_absence_kind',
             )
 
     # XXX: is this necessary?
     def _verify_task_and_day_hours_not_logged_together(self) -> None:
         if self.has_task_entry_hours and self.has_day_entry_hours:
-            raise ValidationError(_('You cannot log task hours and absence hours together.'), code='work_while_absent')
+            raise ValidationError(_('You cannot log task hours and absence hours together'), code='work_while_absent')
+
+    def _verify_at_most_24_hours_total_logged_in_a_day(self) -> None:
+        if self.total_hours > 24:
+            raise ValidationError(
+                _('Total hours on this time entry ({total_hours}) is over 24 hours').format(
+                    date=self.date, total_hours=self.total_hours
+                ),
+                code='too_much_total_time_logged',
+            )
+
+        # we might be overwriting an existing time entry on the same
+        # task (even None) - exclude it, as it should no longer count
+        entries_on_same_day = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(task=self.task)
+        total_hours_on_same_day = sum(entry.total_hours for entry in entries_on_same_day) + self.total_hours
+
+        if total_hours_on_same_day > 24:
+            raise ValidationError(
+                _('Total hours on all time entries on {date} ({total_hours}) is over 24 hours').format(
+                    date=self.date, total_hours=total_hours_on_same_day
+                ),
+                code='too_much_total_time_logged',
+            )
 
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
