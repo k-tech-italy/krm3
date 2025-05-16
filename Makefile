@@ -185,3 +185,7 @@ schema-serve: schema  # Runs a docker container for serving the schema
 outdated:  ## Generates .outdated.txt and .tree.txt files
 	uv tree > .tree.txt
 	uv pip list --outdated > .outdated.txt
+
+act-docs:
+	act -W '.github/workflows/docs.yml' push --job generate
+	cd .artifacts/1/github-pages && tar -xzvf github-pages.zip

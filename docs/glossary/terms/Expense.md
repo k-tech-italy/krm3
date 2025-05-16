@@ -15,7 +15,7 @@ An **Expense** is the record about a single monetary transaction executed in the
 
 ## Fields
 
-- <glossary:EpenseCategory>
+- <glossary:ExpenseCategory>
 - <glossary:PaymentType>
 - Day: the transaction date
 - Amount currency: the amount in the local currency

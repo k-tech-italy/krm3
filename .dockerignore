@@ -1,10 +1,11 @@
-./.*
-./~*
+.*
+~*
 dist
 !dist/image-requirements.txt
 ./docs
 ./tests
 ./tools
+
 
 *.egg-info
 !tools/zapdata/demo
