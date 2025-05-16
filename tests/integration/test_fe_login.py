@@ -5,7 +5,7 @@ import typing
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
 
-pytestmark = pytest.mark.ui
+pytestmark = pytest.mark.selenium
 
 
 @pytest.mark.django_db

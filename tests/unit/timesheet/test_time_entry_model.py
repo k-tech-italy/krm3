@@ -117,7 +117,7 @@ class TestTimeEntry:
         resource = ResourceFactory()
         absence_day = datetime.date(2024, 1, 1)
         _absence_entry = TimeEntryFactory(
-            date=absence_day, day_shift_hours=0, **{existing_hours_field: 8}, resource=resource
+            date=absence_day, day_shift_hours=0, resource=resource, **{existing_hours_field: 8}
         )
         assert TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource).count() == 1  # pyright: ignore
 
@@ -125,7 +125,7 @@ class TestTimeEntry:
             # the same resource should be able to log their absence on
             # a different available day
             _absence_entry_on_other_day = TimeEntryFactory(
-                date=datetime.date(2024, 1, 2), day_shift_hours=0, **{new_hours_field: 8}, resource=resource
+                date=datetime.date(2024, 1, 2), day_shift_hours=0, resource=resource, **{new_hours_field: 8}
             )
 
             # another resource should be able to log their own absence
@@ -135,7 +135,7 @@ class TestTimeEntry:
                 date=absence_day, day_shift_hours=0, **{new_hours_field: 8}, resource=other_resource
             )
 
-        _new_entry = TimeEntryFactory(date=absence_day, day_shift_hours=0, **{new_hours_field: 8}, resource=resource)
+        _new_entry = TimeEntryFactory(date=absence_day, day_shift_hours=0, resource=resource, **{new_hours_field: 8})
         day_entries = TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource)  # pyright: ignore
         assert day_entries.count() == 1
         assert getattr(day_entries.get(), new_hours_field) == 8
@@ -201,7 +201,7 @@ class TestTimeEntry:
         assert entry.holiday_hours == 8
 
     def test_is_saved_as_leave(self):
-        """Sick day with no work or task-related hours logged"""
+        """Leave hours with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
         entry.day_shift_hours = 0
         entry.leave_hours = 8
