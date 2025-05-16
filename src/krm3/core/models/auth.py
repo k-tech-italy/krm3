@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 import typing
 from django.contrib.auth.base_user import BaseUserManager
 from natural_keys import NaturalKeyModel
@@ -88,6 +89,16 @@ class Resource(models.Model):
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
+
+    @property
+    def daily_work_hours_max(self) -> Decimal:
+        """Maximum number of hours a resource should work each day.
+
+        It can be exceeded.
+
+        :return: the maximum number of hours in a work day.
+        """
+        return Decimal(8)
 
 
 @receiver(post_save, sender=User)

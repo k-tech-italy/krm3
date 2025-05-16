@@ -128,7 +128,7 @@ class TestTaskAPIListView:
 
         _early_time_entry = _make_time_entry(date=datetime.date(2023, 7, 1), comment='Too early')
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
-        task_entry_within_range = _make_time_entry(date=date_within_range, comment='Within range')
+        task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=6, comment='Within range')
         day_entry_within_range = _make_time_entry(
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
@@ -373,7 +373,12 @@ class TestTimeEntryAPICreateView:
     )
     def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
-        time_entry_data = {'dates': ['2024-01-01'], 'dayShiftHours': 0, 'resourceId': resource.pk} | hours_data
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'dayShiftHours': 0,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        } | hours_data
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -419,6 +424,7 @@ class TestTimeEntryAPICreateView:
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
             'leaveHours': leave_hours,
+            'comment': 'approved',
             'resourceId': resource.pk,
         }
 
@@ -470,6 +476,7 @@ class TestTimeEntryAPICreateView:
         time_entry_data = {
             'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
             'resourceId': resource.pk,
+            'comment': 'approved',
         } | hours_data
         # ensure we have day shift hours so we can save the new instances
         time_entry_data.setdefault('dayShiftHours', 0)
@@ -557,13 +564,14 @@ class TestTimeEntryAPICreateView:
         task = TaskFactory(resource=resource)
 
         # we made a mistake and inadvertently saved 18 hours... oops :^)
-        _wrong_day_entry = TimeEntryFactory(resource=resource, task=None, date=today, day_shift_hours=0, leave_hours=18)
-        _task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=2)
+        # NOTE: this should only be possible when tampering with the
+        # admin panel
+        _wrong_day_entry = TimeEntryFactory(resource=resource, task=None, date=today, day_shift_hours=0, sick_hours=18)
 
         # let's correct it
         response = api_client(user=admin_user).post(
             self.url(),
-            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'dayShiftHours': 0, hours_key: 6},
+            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'dayShiftHours': 0, hours_key: 8},
             format='json',
         )
         assert response.status_code == status.HTTP_201_CREATED
@@ -715,8 +723,9 @@ class TestTimeEntryAPICreateView:
         data = {
             'dates': [target_date.isoformat()],
             'resourceId': resource.pk,
+            'comment': 'approved',
             'dayShiftHours': 0,
-        } | {hours_key: 8}
+        } | {hours_key: 4 if hours_key.startswith('leave') else 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED

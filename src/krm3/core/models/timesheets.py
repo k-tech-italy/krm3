@@ -63,6 +63,13 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         """
         return self.day_entries().filter(leave_hours=0)
 
+    def leaves(self) -> Self:
+        """Select all leave entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.day_entries().filter(leave_hours__gt=0)
+
     def task_entries(self) -> Self:
         """Select all task entries in this queryset.
 
@@ -178,8 +185,9 @@ class TimeEntry(models.Model):
         Rules:
         - You cannot log more than one absence (sick, holiday, leave)
           in the same entry
-        - You cannot log task-related hours (work, overtime, etc.)
-          if the entry already has an absence logged.
+        - Logging task entries (work, night shift, etc.) removes
+          existing day entries for the related resource, and vice versa.
+        - Comment is mandatory for sick days and leave hours.
 
         :raises exceptions.ValidationError: when any of the rules above
           is violated.
@@ -192,6 +200,8 @@ class TimeEntry(models.Model):
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
             self._verify_at_most_24_hours_total_logged_in_a_day,
+            self._verify_sick_or_leave_time_entry_has_comment,
+            self._verify_no_overtime_with_leave_entry,
         )
 
         for validator in validators:
@@ -246,6 +256,38 @@ class TimeEntry(models.Model):
                     date=self.date, total_hours=total_hours_on_same_day
                 ),
                 code='too_much_total_time_logged',
+            )
+
+    def _verify_sick_or_leave_time_entry_has_comment(self) -> None:
+        if (self.is_sick_day or self.is_leave) and not self.comment:
+            raise ValidationError(
+                _('Comment is mandatory when logging sick days or leave hours'),
+                code='sick_or_on_leave_without_comment',
+            )
+
+    def _verify_no_overtime_with_leave_entry(self) -> None:
+        # we might be overwriting an existing time entry on the same
+        # task (even None) - exclude it, as it should no longer count
+        # if we're updating the model directly, the current row on the
+        # db should not count as well because we're replacing it
+        entries_on_same_day = cast(
+            'TimeEntryQuerySet',
+            TimeEntry.objects.filter(date=self.date, resource=self.resource)
+            .exclude(task=self.task)
+            .exclude(pk=self.pk),
+        )
+
+        # this check only involves leaves
+        if not self.is_leave and not entries_on_same_day.leaves().exists():
+            return
+
+        total_hours_on_same_day = sum(entry.total_hours for entry in entries_on_same_day) + self.total_hours
+        if total_hours_on_same_day > self.resource.daily_work_hours_max:
+            raise ValidationError(
+                _(
+                    'No overtime allowed when logging leave hours. Maximum allowed is {work_hours}, got {actual_hours}'
+                ).format(work_hours=self.resource.daily_work_hours_max, actual_hours=total_hours_on_same_day),
+                code='overtime_with_leave_hours',
             )
 
 

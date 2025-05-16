@@ -149,6 +149,11 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[Reimbursement]:
         return super().get_queryset(request).prefetch_related('expenses')
 
+    def get_object(self, request: HttpRequest, object_id: int, from_field=None) -> Reimbursement:
+        queryset = self.get_queryset(request)
+        # Custom logic to retrieve the object
+        return queryset.get(pk=object_id)
+
     def expense_num(self, obj: Reimbursement) -> int:
         return obj.expense_count
 
