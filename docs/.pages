@@ -1,0 +1,6 @@
+nav:
+  - Home: index.md
+  - Examples: examples
+  - Glossary: glossary/
+  - License: license
+  - tags.md

@@ -14,7 +14,7 @@ class ReimbursementSummaryEnum(Enum):
     TOTALE_RIMBORSO = 'Totale Rimborso'
     ANTICIPATO = 'Anticipato'
     SPESE_TRASFERTA = 'Spese trasferta'
-    TOTALE_SPESE = 'Totale spese'
+    TOTALE_COSTO = 'Totale costo'
 
     def __str__(self) -> str:
         return self.value
@@ -23,7 +23,7 @@ def calculate_reimbursement_summaries(qs: QuerySet[Expense]) -> tuple[dict, dict
     bypayment = {'Company': [decimal.Decimal('0.0')] * 3, 'Personal': [decimal.Decimal('0.0')] * 3}
     byexpcategory = {pc: [decimal.Decimal('0.0')] * 4 for pc in ExpenseCategory.objects.root_nodes()}
     summary = {
-        ReimbursementSummaryEnum.TOTALE_SPESE: decimal.Decimal('0.0'),
+        ReimbursementSummaryEnum.TOTALE_COSTO: decimal.Decimal('0.0'),
         ReimbursementSummaryEnum.TOTALE_RIMBORSO: decimal.Decimal('0.0'),
         ReimbursementSummaryEnum.NON_RIMBORSATE: decimal.Decimal('0.0'),
         ReimbursementSummaryEnum.DA_RESTITUIRE: decimal.Decimal('0.0'),
@@ -46,17 +46,18 @@ def calculate_reimbursement_summaries(qs: QuerySet[Expense]) -> tuple[dict, dict
             byexpcategory[exp_cat_root][2] += base - reimbursement
             byexpcategory[exp_cat_root][3] += reimbursement
             bypayment[key][2] += base - reimbursement
-            summary[ReimbursementSummaryEnum.TOTALE_SPESE] += reimbursement
+            summary[ReimbursementSummaryEnum.TOTALE_COSTO] += reimbursement
+            bypayment[key][1] += reimbursement
         else:
             key = 'Company'
             summary[exp_cat_root] += base + reimbursement
             summary[ReimbursementSummaryEnum.DA_RESTITUIRE] -= reimbursement
-            byexpcategory[exp_cat_root][2] += base
+            byexpcategory[exp_cat_root][2] -= reimbursement
             byexpcategory[exp_cat_root][3] += base + reimbursement
             bypayment[key][2] += base + reimbursement
-            summary[ReimbursementSummaryEnum.TOTALE_SPESE] += base + reimbursement
+            summary[ReimbursementSummaryEnum.TOTALE_COSTO] += base + reimbursement
+            bypayment[key][1] -= reimbursement
 
         bypayment[key][0] += base
-        bypayment[key][1] += reimbursement
 
     return byexpcategory, bypayment, summary
