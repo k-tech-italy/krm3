@@ -373,7 +373,12 @@ class TestTimeEntryAPICreateView:
     )
     def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
-        time_entry_data = {'dates': ['2024-01-01'], 'dayShiftHours': 0, 'resourceId': resource.pk} | hours_data
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'dayShiftHours': 0,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        } | hours_data
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -419,6 +424,7 @@ class TestTimeEntryAPICreateView:
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
             'leaveHours': leave_hours,
+            'comment': 'approved',
             'resourceId': resource.pk,
         }
 
@@ -470,6 +476,7 @@ class TestTimeEntryAPICreateView:
         time_entry_data = {
             'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
             'resourceId': resource.pk,
+            'comment': 'approved',
         } | hours_data
         # ensure we have day shift hours so we can save the new instances
         time_entry_data.setdefault('dayShiftHours', 0)
@@ -715,6 +722,7 @@ class TestTimeEntryAPICreateView:
         data = {
             'dates': [target_date.isoformat()],
             'resourceId': resource.pk,
+            'comment': 'approved',
             'dayShiftHours': 0,
         } | {hours_key: 8}
 

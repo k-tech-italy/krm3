@@ -178,8 +178,9 @@ class TimeEntry(models.Model):
         Rules:
         - You cannot log more than one absence (sick, holiday, leave)
           in the same entry
-        - You cannot log task-related hours (work, overtime, etc.)
-          if the entry already has an absence logged.
+        - Logging task entries (work, night shift, etc.) removes
+          existing day entries for the related resource, and vice versa.
+        - Comment is mandatory for sick days and leave hours.
 
         :raises exceptions.ValidationError: when any of the rules above
           is violated.
@@ -192,6 +193,7 @@ class TimeEntry(models.Model):
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
             self._verify_at_most_24_hours_total_logged_in_a_day,
+            self._verify_sick_or_leave_time_entry_has_comment,
         )
 
         for validator in validators:
@@ -246,6 +248,13 @@ class TimeEntry(models.Model):
                     date=self.date, total_hours=total_hours_on_same_day
                 ),
                 code='too_much_total_time_logged',
+            )
+
+    def _verify_sick_or_leave_time_entry_has_comment(self) -> None:
+        if (self.is_sick_day or self.is_leave) and not self.comment:
+            raise ValidationError(
+                _('Comment is mandatory when logging sick days or leave hours'),
+                code='sick_or_on_leave_without_comment',
             )
 
 

@@ -150,22 +150,23 @@ class TestTimeEntry:
         work_day = datetime.date(2024, 1, 1)
         _existing_time_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, day_shift_hours=2)
 
-        with does_not_raise():
-            # the resource should be able to log their time for another
-            # available day on the same task
-            _new_time_entry_on_other_day = TimeEntryFactory(
-                date=datetime.date(2024, 1, 2), task=other_task, resource=resource, **{field: 2}
-            )
+        # the resource should be able to log their time for another
+        # available day on the same task
+        _new_time_entry_on_other_day = TimeEntryFactory(
+            date=datetime.date(2024, 1, 2), task=other_task, resource=resource, **{field: 2}
+        )
+        assert TimeEntry.objects.task_entries().filter(date=work_day, resource=resource).count() == 1  # pyright: ignore
 
-            # the resource should be able to log their time for the same
-            # day on another available task
-            _new_time_entry_on_other_task = TimeEntryFactory(
-                date=work_day, task=other_task, resource=resource, **{field: 6}
-            )
+        # the resource should be able to log their time for the same
+        # day on another available task
+        _new_time_entry_on_other_task = TimeEntryFactory(
+            date=work_day, task=other_task, resource=resource, **{field: 6}
+        )
+        assert TimeEntry.objects.task_entries().filter(date=work_day, resource=resource).count() == 2  # pyright: ignore
 
-        _new_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, **{field: 2})
-        day_entries = TimeEntry.objects.task_entries().filter(date=work_day, resource=resource)  # pyright: ignore
-        assert day_entries.count() == 2
+        _overwriting_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, **{field: 2})
+        task_entries = TimeEntry.objects.task_entries().filter(date=work_day, resource=resource)  # pyright: ignore
+        assert task_entries.count() == 2
 
     def test_is_saved_as_sick_day(self):
         """Sick day with no work or task-related hours logged"""
@@ -234,3 +235,29 @@ class TestTimeEntry:
         entry.holiday_hours = 4
         with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
             entry.save()
+
+    @pytest.mark.parametrize(
+        ('hours_key', 'expected_to_raise'),
+        (
+            pytest.param('day_shift_hours', does_not_raise(), id='work'),
+            pytest.param('night_shift_hours', does_not_raise(), id='overtime'),
+            pytest.param('rest_hours', does_not_raise(), id='rest'),
+            pytest.param('travel_hours', does_not_raise(), id='travel'),
+            pytest.param('on_call_hours', does_not_raise(), id='on_call'),
+            pytest.param(
+                'sick_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='sick'
+            ),
+            pytest.param('holiday_hours', does_not_raise(), id='holiday'),
+            pytest.param(
+                'leave_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='leave'
+            ),
+        ),
+    )
+    def test_raises_if_missing_mandatory_comment(self, hours_key, expected_to_raise):
+        hours = {'day_shift_hours': 0} | {hours_key: 8}
+        with expected_to_raise:
+            TimeEntryFactory(
+                task=None if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave') else TaskFactory(),
+                comment=None,
+                **hours,
+            )
