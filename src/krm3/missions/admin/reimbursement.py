@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import site
 from django.db.models import QuerySet, When, Case, Value, BooleanField, F
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpRequest
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -26,14 +26,12 @@ from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
 from krm3.utils.tools import uniq
 
-summary_fields = ['tot_expenses', 'tot_company', 'difference', 'forfait', 'to_reimburse', 'to_return', 'tot']
+summary_fields = ['tot_expenses', 'tot_company', 'forfait', 'to_reimburse', 'to_return', 'tot']
 
 
-def prepare_resources_html(resources: dict, max_missions: int):
+def prepare_resources_html(resources: dict, max_missions: int) -> dict:
     """Prepare data for reimbursement report template."""
     expense_categories = {str(x): x for x in ExpenseCategory.objects.all()}
-    # payment_categories = {x: 'Personal' if x.personal_expense==True else 'Company' for x in PaymentCategory.objects.all()}
-
 
     results = {}
     for resource_obj, mission_summaries in resources.items():
@@ -43,17 +41,15 @@ def prepare_resources_html(resources: dict, max_missions: int):
             missions.append(
                 {
                     'n_mission': mission_num,
-                    'tot_expenses': summary['summary'][ReimbursementSummaryEnum.TOTALE_SPESE],
+                    'tot_expenses': summary['summary'][ReimbursementSummaryEnum.TOTALE_COSTO],
                     'tot_company': summary['bypayment']['Company'][0],
-                    # we suspect difference is n: needed anymore as identical to tot, but we keep it for now
                     'forfait': summary['byexpcategory'][expense_categories['Forfait']][0],
                     'to_reimburse': summary['bypayment']['Personal'][1],
-                    'to_return': summary['bypayment']['Company'][1] * -1,
+                    'to_return': summary['bypayment']['Company'][1],
                 }
             )
             missions[-1].update(
                 {
-                    'difference': missions[-1]['tot_expenses'] - missions[-1]['tot_company'],
                     'tot': missions[-1]['to_reimburse'] - missions[-1]['to_return'],
                 }
             )
@@ -150,18 +146,10 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         ('paid_date', admin.EmptyFieldListFilter),
     ]
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Reimbursement]:
         return super().get_queryset(request).prefetch_related('expenses')
 
-    # def get_queryset_(self, request):
-    #     return Reimbursement.objects.prefetch_related('expenses').all()
-
-    def get_object(self, request, object_id: int, from_field=None) -> Reimbursement:
-        queryset = self.get_queryset(request)
-        # Custom logic to retrieve the object
-        return queryset.get(pk=object_id)
-
-    def expense_num(self, obj: Reimbursement):
+    def expense_num(self, obj: Reimbursement) -> int:
         return obj.expense_count
 
     expense_num.short_description = 'Num expenses'
@@ -169,14 +157,14 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     @button(
         html_attrs=NORMAL, visible=lambda btn: bool(Mission.objects.filter(expenses__reimbursement_id=btn.original.id))
     )
-    def view_linked_missions(self, request, pk):
+    def view_linked_missions(self, request: HttpRequest, pk: int) -> HttpResponse:
         rids = map(str, Mission.objects.filter(expenses__reimbursement_id=pk).values_list('id', flat=True))
         return redirect(reverse('admin:core_mission_changelist') + f"?id__in={','.join(rids)}")
 
     @button(
         html_attrs=NORMAL,
     )
-    def overview(self, request, pk):
+    def overview(self, request: HttpRequest, pk: int) -> TemplateResponse:
         reimbursement = self.get_object(request, pk)
 
         qs: QuerySet[Expense] = reimbursement.expenses.all()
@@ -190,7 +178,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
         byexpcategory, bypayment, summary = calculate_reimbursement_summaries(qs)
 
-        missions = set([x.mission for x in qs])
+        missions = {x.mission for x in qs}
 
         return TemplateResponse(
             request,
@@ -209,9 +197,9 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         )
 
     def export_table(
-        self, reimbursement: Reimbursement, table_data: list, export_format, request
+        self, reimbursement: Reimbursement, table_data: list, export_format: str, request: HttpRequest
     ) -> HttpResponse | None:
-        """Function to export django table data."""
+        """Export django table data."""
         from django_tables2.config import RequestConfig
 
         RequestConfig(request).configure(table_data)
@@ -222,7 +210,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         return None
 
     @admin.action(description='Reimbursement report')
-    def report(self, request, queryset) -> TemplateResponse:
+    def report(self, request: HttpRequest, queryset: QuerySet[Reimbursement]) -> TemplateResponse:
         """View reimbursement report."""
         context = {'data': prepare_reimbursement_report_context(queryset)}
         return TemplateResponse(

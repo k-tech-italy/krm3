@@ -19,6 +19,7 @@ def parse_emails(value):
 DEFAULTS = dict(
     DATABASE_URL=(str, 'psql://postgres:@127.0.0.1:5432/krm3_db', "The database URl"),
     DEBUG=(bool, False),
+    RELOAD=(bool, False),
     DEV_FOOTER_INFO=(str, uuid.uuid4()),
     CV2_SHOW_IMAGES=(bool, False),
 

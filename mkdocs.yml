@@ -1,0 +1,134 @@
+copyright: Copyright &copy; 2020-2024 K-Tech srl.
+dev_addr: 127.0.0.1:8001
+docs_dir: docs
+edit_uri: 'blob/develop/docs/'
+repo_url: "https://github.com/k-tech-italy/krm3"
+site_author: "KRM3 Team"
+site_description: "KRM3"
+site_dir: ./~build/docs
+site_name: "KRM3"
+site_url: https://krm3-io.github.io/
+strict: false
+extra_css:
+  - _theme/css/style.css
+extra_javascript:
+  - _theme/js/js.cookie.js
+  - _theme/js/address.js
+exclude_docs: |
+  ~*
+  .m_templates
+  .templates
+  _scripts
+  _guidelines
+
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.snippets:
+      base_path: '.'
+      check_paths: true
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: #
+      baselevel: 1
+
+
+extra:
+  generator: true
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/krm3-io
+
+
+theme:
+  name: "material"
+  color_mode: auto
+  custom_dir: docs/_theme/overrides
+  favicon: _theme/img/favicon.ico
+  logo: _theme/img/logo.png
+  user_color_mode_toggle: true
+  features:
+    - content.code.copy
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: red
+      media: "(prefers-color-scheme: light)"
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: red
+      media: "(prefers-color-scheme: dark)"
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+
+plugins:
+  - autorefs
+  - awesome-pages
+  - ezglossary:
+      templates: docs/_theme/glossary
+      inline_refs: short
+      list_definitions: true
+      list_references: true
+  - link-marker
+  - macros
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+      cache_safe: true
+      js_files:
+        - _theme/js/address.js
+      css_files:
+        - _theme/css/style.css
+  - redirects:
+      redirect_maps:
+        'help/epic.md': 'glossary/terms/epic.md'
+  - include-markdown:
+      encoding: ascii
+      preserve_includer_indent: false
+      dedent: false
+      trailing_newlines: true
+      comments: false
+      rewrite_relative_urls: true
+      heading_offset: 0
+      recursive: true
+  - privacy
+  - search
+  - social
+  - tags:
+      tags_file: tags.md
+
+watch:
+  - docs/
+
+hooks:
+  - docs/_hooks/hooks.py

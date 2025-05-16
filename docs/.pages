@@ -1,0 +1,7 @@
+nav:
+  - Home: index.md
+  - Missions: missions
+  - Examples: examples
+  - Glossary: glossary/
+  - License: license
+  - tags.md

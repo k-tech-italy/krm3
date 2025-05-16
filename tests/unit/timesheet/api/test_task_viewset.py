@@ -19,8 +19,8 @@ if typing.TYPE_CHECKING:
 _day_entry_kinds = ('sick', 'holiday', 'leave')
 _day_entry_keys = tuple(f'{key}Hours' for key in _day_entry_kinds)
 
-_task_entry_kinds = ('work', 'overtime', 'rest', 'travel')
-_task_entry_keys = tuple(f'{key}Hours' for key in _task_entry_kinds)
+_task_entry_kinds = ('day_shift', 'night_shift', 'rest', 'travel')
+_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'restHours', 'travelHours')
 
 _computed_hours_kinds = (*_day_entry_kinds, *_task_entry_kinds)
 _computed_hours_keys = (*_day_entry_keys, *_task_entry_keys)
@@ -130,7 +130,7 @@ class TestTaskAPIListView:
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
         task_entry_within_range = _make_time_entry(date=date_within_range, comment='Within range')
         day_entry_within_range = _make_time_entry(
-            date=date_within_range, task=None, work_hours=0, leave_hours=2, comment='Within range (day)'
+            date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
 
         response = api_client(user=admin_user).get(
@@ -163,11 +163,11 @@ class TestTaskAPIListView:
                     'id': task_entry_within_range.id,
                     'date': date_within_range.isoformat(),
                     'lastModified': task_entry_within_range.last_modified.isoformat(),
-                    'workHours': _as_quantized_decimal(task_entry_within_range.work_hours),
+                    'dayShiftHours': _as_quantized_decimal(task_entry_within_range.day_shift_hours),
                     'sickHours': _as_quantized_decimal(task_entry_within_range.sick_hours),
                     'holidayHours': _as_quantized_decimal(task_entry_within_range.holiday_hours),
                     'leaveHours': _as_quantized_decimal(task_entry_within_range.leave_hours),
-                    'overtimeHours': _as_quantized_decimal(task_entry_within_range.overtime_hours),
+                    'nightShiftHours': _as_quantized_decimal(task_entry_within_range.night_shift_hours),
                     'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
@@ -179,11 +179,11 @@ class TestTaskAPIListView:
                     'id': day_entry_within_range.id,
                     'date': date_within_range.isoformat(),
                     'lastModified': day_entry_within_range.last_modified.isoformat(),
-                    'workHours': _as_quantized_decimal(day_entry_within_range.work_hours),
+                    'dayShiftHours': _as_quantized_decimal(day_entry_within_range.day_shift_hours),
                     'sickHours': _as_quantized_decimal(day_entry_within_range.sick_hours),
                     'holidayHours': _as_quantized_decimal(day_entry_within_range.holiday_hours),
                     'leaveHours': _as_quantized_decimal(day_entry_within_range.leave_hours),
-                    'overtimeHours': _as_quantized_decimal(day_entry_within_range.overtime_hours),
+                    'nightShiftHours': _as_quantized_decimal(day_entry_within_range.night_shift_hours),
                     'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
@@ -337,24 +337,24 @@ class TestTimeEntryAPICreateView:
         return reverse('timesheet-api:api-time-entry-list')
 
     @pytest.mark.parametrize(
-        ('work_hours', 'optional_data'),
+        ('day_shift_hours', 'optional_data'),
         (
             pytest.param(0, {}, id='no_work'),
-            pytest.param(8, {}, id='only_work_hours'),
+            pytest.param(8, {}, id='only_day_shift_hours'),
             pytest.param(
                 1,
-                {'overtimeHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
+                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
                 id='task_entry_with_optional_hours',
             ),
         ),
     )
-    def test_creates_single_valid_task_entry(self, work_hours, optional_data, admin_user, api_client):
+    def test_creates_single_valid_task_entry(self, day_shift_hours, optional_data, admin_user, api_client):
         task = TaskFactory()
         assert not TimeEntry.objects.filter(task=task).exists()
 
         time_entry_data = {
             'dates': ['2024-01-01'],
-            'workHours': work_hours,
+            'dayShiftHours': day_shift_hours,
             'taskId': task.pk,
             'resourceId': task.resource.pk,
         } | optional_data
@@ -373,7 +373,7 @@ class TestTimeEntryAPICreateView:
     )
     def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
-        time_entry_data = {'dates': ['2024-01-01'], 'workHours': 0, 'resourceId': resource.pk} | hours_data
+        time_entry_data = {'dates': ['2024-01-01'], 'dayShiftHours': 0, 'resourceId': resource.pk} | hours_data
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -382,12 +382,12 @@ class TestTimeEntryAPICreateView:
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
-    def test_rejects_time_entries_with_work_and_absence_hours(self, hours_key, admin_user, api_client):
+    def test_rejects_time_entries_with_day_shift_and_absence_hours(self, hours_key, admin_user, api_client):
         task = TaskFactory()
 
         time_entry_data = {
             'dates': ['2024-01-01'],
-            'workHours': 8,
+            'dayShiftHours': 8,
             'taskId': task.pk,
             'resourceId': task.resource.pk,
             hours_key: 2,
@@ -415,7 +415,7 @@ class TestTimeEntryAPICreateView:
         resource = ResourceFactory()
         time_entry_data = {
             'dates': ['2024-01-01'],
-            'workHours': 0,
+            'dayShiftHours': 0,
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
             'leaveHours': leave_hours,
@@ -430,9 +430,9 @@ class TestTimeEntryAPICreateView:
     @pytest.mark.parametrize(
         'hours_data',
         (
-            pytest.param({'workHours': 8}, id='work'),
+            pytest.param({'dayShiftHours': 8}, id='day_shift'),
             pytest.param(
-                {'workHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'overtimeHours': 1},
+                {'dayShiftHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
                 id='all_task_hours',
             ),
         ),
@@ -445,9 +445,10 @@ class TestTimeEntryAPICreateView:
             'taskId': task.pk,
             'resourceId': task.resource.pk,
         } | hours_data
-        # sanity check: ensure we have work hours so we can save the new instances
+        # sanity check: ensure we have day shift hours so we can save
+        # the new instances
         # NOTE: dict.setdefault() only sets a new value if the key is missing
-        time_entry_data.setdefault('workHours', 0)
+        time_entry_data.setdefault('dayShiftHours', 0)
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -470,8 +471,8 @@ class TestTimeEntryAPICreateView:
             'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
             'resourceId': resource.pk,
         } | hours_data
-        # ensure we have work hours so we can save the new instances
-        time_entry_data.setdefault('workHours', 0)
+        # ensure we have day shift hours so we can save the new instances
+        time_entry_data.setdefault('dayShiftHours', 0)
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -494,9 +495,9 @@ class TestTimeEntryAPICreateView:
         )
 
         # we made some work on the first task
-        TimeEntryFactory(resource=resource, task=first_task, date=today, work_hours=6)
-        # ... but had to do lots of overtime on the second
-        TimeEntryFactory(resource=resource, task=second_task, date=today, work_hours=2, overtime_hours=6)
+        TimeEntryFactory(resource=resource, task=first_task, date=today, day_shift_hours=6)
+        # ... but had to do lots of night time work on the second
+        TimeEntryFactory(resource=resource, task=second_task, date=today, day_shift_hours=2, night_shift_hours=6)
 
         # to hell with it, let's log some paid leave to get back at the
         # company! Take that, company! :^)
@@ -505,13 +506,104 @@ class TestTimeEntryAPICreateView:
             data={
                 'dates': [today.isoformat()],
                 'resourceId': resource.id,
-                'workHours': 0,
+                'dayShiftHours': 0,
                 # we are now over 24h
                 'leaveHours': 12,
             },
             format='json',
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_overwrites_time_entry_if_total_hours_of_old_and_new_entry_exceeds_24_hours(self, admin_user, api_client):
+        """Regression test for Taiga issue #42.
+
+        Single task case.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': [today.isoformat()],
+                'taskId': task.id,
+                'resourceId': resource.id,
+                'dayShiftHours': 8,
+            },
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
+
+    @pytest.mark.parametrize(
+        'hours_key',
+        (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)),
+    )
+    def test_overwrites_day_entry_keeping_total_hours_under_24_hours(self, hours_key, admin_user, api_client):
+        """Regression test for Taiga issue #42.
+
+        In this case, another day entry exists.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_day_entry = TimeEntryFactory(resource=resource, task=None, date=today, day_shift_hours=0, leave_hours=18)
+        _task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=2)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'dayShiftHours': 0, hours_key: 6},
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
+
+    @pytest.mark.parametrize(
+        'hours_key',
+        (pytest.param(key, id=kind) for key, kind in zip(_task_entry_keys, _task_entry_kinds, strict=True)),
+    )
+    def test_overwrites_task_entry_on_same_task_keeping_total_hours_under_24_hours(
+        self, hours_key, admin_user, api_client
+    ):
+        """Regression test for Taiga issue #42.
+
+        In this case, another day entry exists.
+        """
+        today = datetime.date(2024, 1, 1)
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource, title='target')
+        other_task = TaskFactory(resource=resource, title='other')
+        _task_entry_on_other_task = TimeEntryFactory(resource=resource, task=other_task, date=today, day_shift_hours=2)
+
+        # we made a mistake and inadvertently saved 18 hours... oops :^)
+        _wrong_task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+
+        # let's correct it
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={'dates': [today.isoformat()], 'resourceId': resource.id, 'taskId': task.id, 'dayShiftHours': 0}
+            | {hours_key: 6},
+            format='json',
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        total_hours_today = sum(
+            entry.total_hours for entry in TimeEntry.objects.filter(date=today, resource=resource, task=task)
+        )
+        assert total_hours_today < 24
 
     def test_rejects_single_time_entry_with_more_than_24_hours(self, admin_user, api_client):
         task = TaskFactory()
@@ -522,7 +614,7 @@ class TestTimeEntryAPICreateView:
                 'dates': ['2024-01-01'],
                 'taskId': task.id,
                 'resourceId': task.resource.id,
-                'workHours': 30,
+                'dayShiftHours': 30,
             },
             format='json',
         )
@@ -538,7 +630,7 @@ class TestTimeEntryAPICreateView:
             'taskId': None if any(key.startswith(prefix) for prefix in ('sick', 'holiday', 'leave')) else task.id,
             'resourceId': task.resource.id,
         } | {key: -1}
-        data.setdefault('workHours', 0)
+        data.setdefault('dayShiftHours', 0)
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -555,12 +647,12 @@ class TestTimeEntryAPICreateView:
     ):
         resource = ResourceFactory()
         target_date = datetime.date(2024, 1, 1)
-        existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, work_hours=0)
+        existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, day_shift_hours=0)
 
         data = {
             'dates': [target_date.isoformat()],
             'resourceId': resource.pk,
-            'workHours': 0,
+            'dayShiftHours': 0,
             # NOTE: make sure to reset sick hours before updating
             'sickHours': 0,
         } | {hours_key: 8}
@@ -585,23 +677,23 @@ class TestTimeEntryAPICreateView:
         target_task = TaskFactory(title='target', resource=resource)
         other_task = TaskFactory(title='other', resource=resource)
         existing_entry_on_target_task = TimeEntryFactory(
-            resource=resource, date=target_date, task=target_task, work_hours=4
+            resource=resource, date=target_date, task=target_task, day_shift_hours=4
         )
 
         # we can accept a new time entry on an "empty" task
         data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': other_task.pk, hours_key: 4}
-        data.setdefault('workHours', 0)
+        data.setdefault('dayShiftHours', 0)
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
         # we MUST override any existing entry
         data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': target_task.pk, hours_key: 4}
-        data.setdefault('workHours', 0)
+        data.setdefault('dayShiftHours', 0)
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         existing_entry_on_target_task.refresh_from_db()
-        if hours_field != 'work_hours':
-            assert existing_entry_on_target_task.work_hours == 0
+        if hours_field != 'day_shift_hours':
+            assert existing_entry_on_target_task.day_shift_hours == 0
         assert getattr(existing_entry_on_target_task, hours_field) == 4
 
     @pytest.mark.parametrize(
@@ -617,13 +709,13 @@ class TestTimeEntryAPICreateView:
         resource = ResourceFactory()
         target_date = datetime.date(2024, 1, 1)
         task = TaskFactory(title='Should end up without task entries', resource=resource)
-        existing_task_entry = TimeEntryFactory(resource=resource, date=target_date, task=task, work_hours=4)
+        existing_task_entry = TimeEntryFactory(resource=resource, date=target_date, task=task, day_shift_hours=4)
         existing_task_entry_id = existing_task_entry.pk
 
         data = {
             'dates': [target_date.isoformat()],
             'resourceId': resource.pk,
-            'workHours': 0,
+            'dayShiftHours': 0,
         } | {hours_key: 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
@@ -648,14 +740,14 @@ class TestTimeEntryAPICreateView:
         target_date = datetime.date(2024, 1, 1)
 
         existing_day_entry = TimeEntryFactory(
-            resource=resource, date=target_date, work_hours=0, **{existing_hours_field: 4}
+            resource=resource, date=target_date, day_shift_hours=0, **{existing_hours_field: 4}
         )
         existing_day_entry_id = existing_day_entry.pk
 
         target_task = TaskFactory(resource=resource)
 
         data = {'dates': [target_date.isoformat()], 'resourceId': resource.pk, 'taskId': target_task.pk, hours_key: 4}
-        data.setdefault('workHours', 0)
+        data.setdefault('dayShiftHours', 0)
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -688,7 +780,7 @@ class TestTimeEntryAPICreateView:
         other_resource = ResourceFactory(user=other_user)
         other_task = TaskFactory(resource=other_resource)
 
-        entry_data = {'dates': ['2024-01-01'], 'workHours': 4}
+        entry_data = {'dates': ['2024-01-01'], 'dayShiftHours': 4}
 
         client = api_client(user=regular_user)
         # you should be able to create entries for your own tasks
@@ -715,21 +807,21 @@ class TestTimeEntryClearAPIAction:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_rejects_time_entry_ids_not_in_a_list(self, admin_user, api_client):
-        entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
+        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
         response = api_client(user=admin_user).post(self.url(), data={'ids': entry.id}, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
-        open_entry = TimeEntryFactory(work_hours=8, task=TaskFactory())
-        closed_entry = TimeEntryFactory(work_hours=8, task=TaskFactory(), state=TimeEntryState.CLOSED)
+        open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        closed_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), state=TimeEntryState.CLOSED)
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_admin_can_clear_any_time_entry(self, admin_user, api_client):
-        day_entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8)
-        task_entry = TimeEntryFactory(date=datetime.date(2024, 1, 2), work_hours=8, task=TaskFactory())
+        day_entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8)
+        task_entry = TimeEntryFactory(date=datetime.date(2024, 1, 2), day_shift_hours=8, task=TaskFactory())
         assert TimeEntry.objects.exists()
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [day_entry.pk, task_entry.pk]}, format='json'
@@ -756,9 +848,11 @@ class TestTimeEntryClearAPIAction:
         if permission:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
-        entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8, resource=user_resource)
+        entry = TimeEntryFactory(
+            date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8, resource=user_resource
+        )
         other_entry = TimeEntryFactory(
-            date=datetime.date(2024, 1, 1), work_hours=0, sick_hours=8, resource=other_user_resource
+            date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8, resource=other_user_resource
         )
 
         response = api_client(user=regular_user).post(

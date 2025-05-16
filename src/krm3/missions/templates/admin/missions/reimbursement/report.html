@@ -49,12 +49,6 @@
                     {% endfor %}
                 </tr>
                 <tr>
-                    <th>Differenza</th>
-                    {% for mission in missions %}
-                        <td style="text-align: right">{{ mission.difference|floatformat:2 }}</td>
-                    {% endfor %}
-                </tr>
-                <tr>
                     <th>Forfait</th>
                     {% for mission in missions %}
                         <td style="text-align: right">{{ mission.forfait|floatformat:2 }}</td>
