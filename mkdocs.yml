@@ -54,7 +54,7 @@ extra:
 
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/krm3-io
+      link: https://k-tech-italy.github.io
 
 
 theme:
@@ -111,7 +111,7 @@ plugins:
         - _theme/css/style.css
   - redirects:
       redirect_maps:
-        'help/epic.md': 'glossary/terms/epic.md'
+        'help/Mission.md': 'glossary/terms/Mission.md'
   - include-markdown:
       encoding: ascii
       preserve_includer_indent: false
@@ -124,8 +124,7 @@ plugins:
   - privacy
   - search
   - social
-  - tags:
-      tags_file: tags.md
+  - tags
 
 watch:
   - docs/

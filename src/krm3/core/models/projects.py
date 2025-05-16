@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Self, override
+from typing import TYPE_CHECKING, Self, override, Iterable
 
 # from django.contrib.auth import get_user_model  # noqa - see below
 from django.db import models
@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
     from django.db.models.fields.related_descriptors import RelatedManager
 
-
-_DEFAULT_START_DATE = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 
 # FIXME: we cannot use a variable as a type hint
 # User = get_user_model()  # noqa
@@ -58,6 +56,17 @@ class Project(NaturalKeyModel):
             return True
         return self.mission_set.filter(resource__profile__user=user).count() > 0
 
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str = None,
+        update_fields: Iterable[str] = None,
+    ) -> None:
+        if self.start_date is None:
+            self.start_date = datetime.date.today()
+        super().save(force_insert, force_update, using, update_fields)
+
     class Meta:
         permissions = [
             ('view_any_project', "Can view(only) everybody's projects"),
@@ -76,7 +85,7 @@ class PO(models.Model):
     ref = models.CharField(max_length=50)
     is_billable = models.BooleanField(default=True)
     state = models.TextField(choices=POState, default=POState.OPEN)  # pyright: ignore[reportArgumentType]
-    start_date = models.DateField(default=_DEFAULT_START_DATE)
+    start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -162,7 +171,7 @@ class Task(models.Model):
     basket_title = models.CharField(max_length=200, null=True, blank=True)
     # TODO: validate this
     color = models.CharField(null=True, blank=True)
-    start_date = models.DateField(default=_DEFAULT_START_DATE)
+    start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     # TODO: make prices currency-aware
     work_price = models.DecimalField(max_digits=10, decimal_places=2)
