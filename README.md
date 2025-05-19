@@ -61,9 +61,27 @@
   pre-commit install
   ```
 
-- Now create you database according to your _.env_ entry *KRM3_DATABASE_URL*, apply migrations and create a superuser with:
+- Now create your database according to your _.env_ entry *KRM3_DATABASE_URL*, apply migrations and create a superuser with:
   ```bash
   ./manage.py migrate
   ./manage.py createsuperuser
+  ```
+
+- As we are using [django-tailwind](https://django-tailwind.readthedocs.io/en/latest/) you will need to run in one
+terminal the watcher process for building the theme ...
+
+  ```bash
+  ./manage.py tailwind start
+  ```
+
+... and then the runserver in another terminal
+
+  ```bash
   ./manage.py runserver localhost:8000
   ```
+
+Hint: See
+- src/krm3/web/templates/example.html as an example page with some cotton components
+- src/krm3/templates/cotton/card.html for the cotton card component
+- src/krm3/theme/static_src/src/styles.scss for the master theme styles.css
+(NB: `@source "../../../**/*.{html,js}"` to capture styles from Django apps)
