@@ -24,7 +24,7 @@ class TestBasket:
         task = TaskFactory(basket_title=basket.title)
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)
-            TimeEntryFactory(date=target_day.date(), task=task)
+            TimeEntryFactory(date=target_day, task=task)
         capacity_after_invoices_and_time_entries = basket.current_capacity()
         assert capacity_after_invoices_and_time_entries == capacity_after_invoices
 
@@ -43,7 +43,7 @@ class TestBasket:
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)
             # 40h in total
-            TimeEntryFactory(date=target_day.date(), task=task, resource=task.resource, day_shift_hours=8)
+            TimeEntryFactory(date=target_day, task=task, resource=task.resource, day_shift_hours=8)
         capacity_after_invoices_and_open_time_entries = basket.current_projected_capacity()
         assert capacity_after_invoices_and_open_time_entries < capacity_after_invoices
         assert capacity_after_invoices_and_open_time_entries == 385
@@ -55,7 +55,7 @@ class TestBasket:
             target_day = task.start_date + datetime.timedelta(days=days)
             # 40h in total
             TimeEntryFactory(
-                date=target_day.date(),
+                date=target_day,
                 task=other_task,
                 resource=other_task.resource,
                 day_shift_hours=8,

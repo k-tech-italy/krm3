@@ -1,5 +1,6 @@
 import logging
 
+from django.http import HttpRequest
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic import RedirectView
@@ -13,5 +14,5 @@ class HomeView(RedirectView):
         return reverse('admin:index')
 
 
-def social_login(request):
+def social_login(request: HttpRequest):
     return render(request, 'social_login.html')

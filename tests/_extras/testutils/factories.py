@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from factory import PostGenerationMethodCall
 from factory.base import FactoryMetaClass
-from datetime import date
+from datetime import date, timedelta
 
 import factory
 from dateutil.relativedelta import relativedelta
@@ -110,6 +110,9 @@ class ClientFactory(factory.django.DjangoModelFactory):
 class ProjectFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('job')
     client = factory.SubFactory(ClientFactory)
+    start_date = factory.fuzzy.FuzzyDate(
+        date(2020, 1, 1), date.today() - timedelta(days=60)
+    )
 
     class Meta:
         model = 'core.Project'
@@ -195,6 +198,9 @@ class ReimbursementFactory(factory.django.DjangoModelFactory):
 class POFactory(factory.django.DjangoModelFactory):
     ref = factory.Sequence(lambda n: f'Ext_{n + 1:04}')
     project = factory.SubFactory(ProjectFactory)
+    start_date = factory.fuzzy.FuzzyDate(
+        date(2022, 1, 1), date.today() - timedelta(days=60)
+    )
 
     class Meta:
         model = 'core.PO'
@@ -214,6 +220,9 @@ class TaskFactory(factory.django.DjangoModelFactory):
     work_price = factory.Faker('random_int', min=100, max=1000)
     project = factory.SubFactory(ProjectFactory)
     resource = factory.SubFactory(ResourceFactory)
+    start_date = factory.fuzzy.FuzzyDate(
+        date(2022, 1, 1), date.today() - timedelta(days=60)
+    )
 
     class Meta:
         model = 'core.Task'
