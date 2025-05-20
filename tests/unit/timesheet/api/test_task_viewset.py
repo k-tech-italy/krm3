@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Permission
-from testutils.factories import ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
+from testutils.factories import ProjectFactory, ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
 from rest_framework import status
 from rest_framework.reverse import reverse
 
@@ -113,13 +113,17 @@ class TestTaskAPIListView:
         (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
     )
     def test_returns_valid_time_entry_data(self, task_end_date, admin_user, api_client):
+        project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
+
         task_start_date = datetime.date(2023, 1, 1)
 
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
 
         resource: Resource = ResourceFactory()
-        task: 'Task' = TaskFactory(resource=resource, start_date=task_start_date, end_date=task_end_date)
+        task: 'Task' = TaskFactory(
+            resource=resource, project=project, start_date=task_start_date, end_date=task_end_date
+        )
 
         def _make_time_entry(**kwargs):
             return TimeEntryFactory(task=kwargs.pop('task', task), resource=resource, **kwargs)
@@ -195,13 +199,18 @@ class TestTaskAPIListView:
         }
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
+        project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
+
         time_entry_start_date = datetime.date(2024, 1, 1)
         time_entry_end_date = datetime.date(2024, 1, 7)
 
         resource: 'Resource' = ResourceFactory()
 
         _expired_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2022, 1, 1), end_date=datetime.date(2023, 12, 31)
+            resource=resource,
+            project=project,
+            start_date=datetime.date(2022, 1, 1),
+            end_date=datetime.date(2023, 12, 31),
         )
         # NOTE: tasks expiring within the given range are considered ongoing
         expiring_task = TaskFactory(
@@ -253,8 +262,12 @@ class TestTaskAPIListView:
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
 
-        user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
-        other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
+        project = ProjectFactory(start_date=start_date)
+
+        user_task = TaskFactory(resource=user_resource, project=project, start_date=start_date, end_date=end_date)
+        other_user_task = TaskFactory(
+            resource=other_user_resource, project=project, start_date=start_date, end_date=end_date
+        )
 
         client = api_client(user=admin_user)
 
@@ -302,8 +315,11 @@ class TestTaskAPIListView:
         start_date = datetime.date(2024, 1, 1)
         end_date = datetime.date(2025, 1, 1)
 
-        user_task = TaskFactory(resource=user_resource, start_date=start_date, end_date=end_date)
-        other_user_task = TaskFactory(resource=other_user_resource, start_date=start_date, end_date=end_date)
+        project = ProjectFactory(start_date=start_date)
+        user_task = TaskFactory(resource=user_resource, project=project, start_date=start_date, end_date=end_date)
+        other_user_task = TaskFactory(
+            resource=other_user_resource, project=project, start_date=start_date, end_date=end_date
+        )
 
         client = api_client(user=regular_user)
 
@@ -490,13 +506,20 @@ class TestTimeEntryAPICreateView:
     def test_rejects_new_time_entries_summing_up_to_more_than_24_hours(self, admin_user, api_client):
         today = datetime.date(2024, 1, 1)
         resource = ResourceFactory()
+        start_date = datetime.date(2023, 1, 1)
 
+        project = ProjectFactory(start_date=start_date)
         first_task = TaskFactory(
-            title='First', resource=resource, start_date=datetime.date(2023, 1, 1), end_date=datetime.date(2025, 12, 31)
+            title='First',
+            resource=resource,
+            project=project,
+            start_date=start_date,
+            end_date=datetime.date(2025, 12, 31),
         )
         second_task = TaskFactory(
             title='Second',
             resource=resource,
+            project=project,
             start_date=datetime.date(2023, 1, 1),
             end_date=datetime.date(2025, 12, 31),
         )

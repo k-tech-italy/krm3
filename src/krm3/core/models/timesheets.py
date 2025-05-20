@@ -213,6 +213,8 @@ class TimeEntry(models.Model):
         if errors:
             raise ValidationError(errors)
 
+        return super().clean()
+
     def _verify_task_hours_not_logged_in_day_entry(self) -> None:
         if self.is_day_entry and self.has_task_entry_hours:
             raise ValidationError(_('You cannot log task hours in a day entry'), code='task_hours_in_day_entry')
