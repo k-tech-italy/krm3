@@ -1,7 +1,7 @@
-from django.contrib.auth import get_user_model, login as djlogin, logout as djlogout, authenticate
-from rest_framework import mixins, permissions, serializers, status
+from django.contrib.auth import get_user_model
+from rest_framework import mixins, permissions, serializers
 from rest_framework.decorators import action
-from rest_framework.generics import GenericAPIView, get_object_or_404
+from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -46,21 +46,7 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user)
-        return Response(serializer.data | {'_CID_': self.request.META['CSRF_COOKIE']})
-
-    @action(detail=False, methods=['post'])
-    def logout(self, request: Request) -> Response:
-        # invalidate the session data created from the frontend if any
-        djlogout(request)
-        return Response(status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def login(self, request: Request) -> Response:
-        user = authenticate(username=request.data['username'], password=request.data['password'])
-        if user is None:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        djlogin(request, user=user, backend='django.contrib.auth.backends.ModelBackend')
-        return Response(status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
 
 class ResourceSerializer(serializers.ModelSerializer):
