@@ -5,7 +5,14 @@ from django.core import exceptions
 from krm3.core.models.timesheets import TimeEntry
 import pytest
 
-from testutils.factories import InvoiceEntryFactory, TimeEntryFactory, TaskFactory, BasketFactory, ResourceFactory
+from testutils.factories import (
+    InvoiceEntryFactory,
+    ProjectFactory,
+    TimeEntryFactory,
+    TaskFactory,
+    BasketFactory,
+    ResourceFactory,
+)
 from krm3.core.models import TimeEntryState
 
 
@@ -145,28 +152,29 @@ class TestTimeEntry:
     @pytest.mark.parametrize('field', _task_entry_fields)
     def test_task_entry_is_saved_only_when_no_other_task_entry_exists_on_the_same_day_for_the_same_task(self, field):
         resource = ResourceFactory()
-        task = TaskFactory(title='whoops', resource=resource)
-        other_task = TaskFactory(title='good', resource=resource)
+        project = ProjectFactory()
+        task = TaskFactory(title='whoops', project=project, start_date=project.start_date, resource=resource)
+        other_task = TaskFactory(title='good', project=project, start_date=project.start_date, resource=resource)
         work_day = datetime.date(2024, 1, 1)
-        _existing_time_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, day_shift_hours=2)
+
+        def _make_time_entry(**kwargs):
+            factory_kwargs = {'date': work_day, 'task': task, 'resource': resource, 'day_shift_hours': 0} | kwargs
+            return TimeEntryFactory(**factory_kwargs)
+
+        _existing_time_entry = _make_time_entry(day_shift_hours=2)
 
         # the resource should be able to log their time for another
         # available day on the same task
-        _new_time_entry_on_other_day = TimeEntryFactory(
-            date=datetime.date(2024, 1, 2), task=other_task, resource=resource, **{field: 2}
-        )
+        _new_time_entry_on_other_day = _make_time_entry(date=datetime.date(2024, 1, 2), task=other_task, **{field: 2})
         assert TimeEntry.objects.task_entries().filter(date=work_day, resource=resource).count() == 1  # pyright: ignore
 
         # the resource should be able to log their time for the same
         # day on another available task
-        _new_time_entry_on_other_task = TimeEntryFactory(
-            date=work_day, task=other_task, resource=resource, **{field: 6}
-        )
+        _new_time_entry_on_other_task = _make_time_entry(task=other_task, **{field: 6})
         assert TimeEntry.objects.task_entries().filter(date=work_day, resource=resource).count() == 2  # pyright: ignore
 
-        _overwriting_entry = TimeEntryFactory(date=work_day, task=task, resource=resource, **{field: 2})
-        task_entries = TimeEntry.objects.task_entries().filter(date=work_day, resource=resource)  # pyright: ignore
-        assert task_entries.count() == 2
+        _overwriting_entry = _make_time_entry(**{field: 2})
+        assert TimeEntry.objects.task_entries().filter(date=work_day, resource=resource).count() == 2  # pyright: ignore
 
     def test_is_saved_as_sick_day(self):
         """Sick day with no work or task-related hours logged"""

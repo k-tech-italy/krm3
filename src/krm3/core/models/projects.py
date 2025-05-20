@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Self, override, Iterable
+from typing import TYPE_CHECKING, Any, Self, override, Iterable
 
 # from django.contrib.auth import get_user_model  # noqa - see below
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 
@@ -60,8 +62,8 @@ class Project(NaturalKeyModel):
         self,
         force_insert: bool = False,
         force_update: bool = False,
-        using: str = None,
-        update_fields: Iterable[str] = None,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
     ) -> None:
         if self.start_date is None:
             self.start_date = datetime.date.today()
@@ -169,7 +171,6 @@ class Task(models.Model):
 
     title = models.CharField(max_length=200)
     basket_title = models.CharField(max_length=200, null=True, blank=True)
-    # TODO: validate this
     color = models.CharField(null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
@@ -192,6 +193,25 @@ class Task(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    @override
+    def clean(self) -> None:
+        if self.start_date < self.project.start_date:
+            raise ValidationError(
+                _(
+                    'A task must not start before its related project - '
+                    'task "{task_title}" is supposed to start on {task_start_date}, '
+                    'but related project "{project_name}" starts on {project_start_date}'
+                ).format(
+                    task_title=self.title,
+                    task_start_date=self.start_date.isoformat(),
+                    project_name=self.project.name,
+                    project_start_date=self.project.start_date.isoformat(),
+                ),
+                code='task_starting_before_project',
+            )
+
+        return super().clean()
+
     def time_entries_between(self, start: datetime.date, end: datetime.date) -> models.QuerySet[TimeEntry]:
         """Return all time entries between the two given dates.
 
@@ -200,3 +220,8 @@ class Task(models.Model):
         :return: a `QuerySet` of time entries
         """
         return self.time_entries.filter(date__range=(start, end))
+
+
+@receiver(models.signals.pre_save, sender=Task)
+def validate_task(sender: Task, instance: Task, **kwargs: Any) -> None:
+    instance.clean()
