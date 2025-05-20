@@ -27,6 +27,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         | models.Q(travel_hours__gt=0)
         | models.Q(rest_hours__gt=0)
         | models.Q(night_shift_hours__gt=0)
+        | models.Q(on_call_hours__gt=0)
     )
 
     _DAY_ENTRY_FILTER = models.Q(sick_hours__gt=0) | models.Q(holiday_hours__gt=0) | models.Q(leave_hours__gt=0)
