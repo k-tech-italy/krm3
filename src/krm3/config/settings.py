@@ -67,7 +67,6 @@ INSTALLED_APPS = (
         'krm3.timesheet',
         'krm3.accounting',
         'krm3.projects',
-        'krm3.web',
         'krm3.fe',
         # Third party apps.
         'qr_code',
@@ -131,6 +130,7 @@ ROOT_URLCONF = 'krm3.config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'web/templates')],
         'OPTIONS': {
             "loaders": [(
                 "django.template.loaders.cached.Loader",
@@ -248,3 +248,5 @@ LOGIN_REDIRECT_URL = '/'
 
 # Shows CV2 intermediate processing images. For Local dev only
 CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')
+
+TAILWIND_APP_NAME = 'krm3.theme'

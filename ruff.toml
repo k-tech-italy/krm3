@@ -41,6 +41,8 @@ select = [
 extend-select = ["UP", ]
 ignore = [
     "A005",  # Module `???` shadows a Python standard-library module
+    "ANN002",  # Missing type annotation for `*args
+    "ANN003",  # Missing type annotation for `**kwargs`
     "ANN401",
     "B904",  # raise-without-from-inside-except: syntax not compatible with py2
     "COM812",
