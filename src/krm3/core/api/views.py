@@ -1,5 +1,5 @@
-from django.contrib.auth import get_user_model
-from rest_framework import mixins, permissions, serializers
+from django.contrib.auth import get_user_model, logout as djlogout
+from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
@@ -45,9 +45,16 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
 
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
+        if request.headers.get('Authorization') is None:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def logout(self, request: Request) -> Response:
+        # invalidate the session data created from the frontend if any
+        djlogout(request)
+        return Response(status=status.HTTP_200_OK)
 
 class ResourceSerializer(serializers.ModelSerializer):
     class Meta:
