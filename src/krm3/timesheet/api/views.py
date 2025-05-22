@@ -1,6 +1,8 @@
 import datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
@@ -27,6 +29,32 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetSerializer
 
+    @extend_schema(
+        description="Fetches a resource's time entries logged within a time interval.",
+        parameters=[
+            OpenApiParameter(
+                name='resource_id',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.INT64,
+                required=True,
+                description='ID of the resource owning the timesheet',
+            ),
+            OpenApiParameter(
+                name='start_date',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.DATE,
+                required=True,
+                description='Start date of the time interval',
+            ),
+            OpenApiParameter(
+                name='end_date',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.DATE,
+                required=True,
+                description='End date of the time interval (inclusive)',
+            ),
+        ],
+    )
     def list(self, request: Request) -> Response:
         try:
             resource_id = request.query_params['resource_id']
@@ -75,6 +103,35 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return TimeEntryCreateSerializer
         return TimeEntryReadSerializer
 
+    @extend_schema(
+        description='Creates a copy of a time entry for a resource on each of the given dates.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'resource_id': {'type': 'int64'},
+                    'task_id': {'type': 'int64'},
+                    'dates': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'string',
+                            'format': 'date',
+                        },
+                    },
+                    'day_shift_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'sick_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'holiday_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'leave_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'night_shift_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'on_call_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'travel_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'rest_hours': {'type': 'number', 'format': 'float', 'multipleOf': 0.25},
+                    'comment': {'type': 'string'},
+                },
+                'required': ['resource_id', 'task_id', 'dates', 'day_shift_hours'],
+            }
+        },
+    )
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         task_id = request.data.pop('task_id', None)
@@ -125,6 +182,24 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(status=status.HTTP_201_CREATED, headers=headers)
 
+    @extend_schema(
+        description=(
+            'Deletes all time entries whose id is contained in the given array. '
+            'If any of the time entries is closed, returns HTTP 400.'
+        ),
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                    },
+                },
+                'required': ['ids'],
+            }
+        },
+    )
     @action(methods=['post'], detail=False)
     def clear(self, request: Request) -> Response:
         requested_entry_ids = request.data.get('ids', [])
