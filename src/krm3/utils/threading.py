@@ -1,4 +1,4 @@
-"""Threadin admin panel module."""
+"""Threading admin panel module."""
 import logging
 import time
 from functools import partial
