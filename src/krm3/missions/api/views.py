@@ -13,6 +13,7 @@ from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySeriali
                                   ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,
                                   ExpenseImageUploadSerializer )
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
+from ...utils.queryset import ACLMixin
 
 
 class MissionAPIViewSet(ModelViewSet):
@@ -21,14 +22,7 @@ class MissionAPIViewSet(ModelViewSet):
     queryset = Mission.objects.all()
 
     def get_queryset(self):
-        queryset = self.queryset
-        resource_id = self.request.query_params.get('resource_id', None)
-        is_staff = self.request.query_params.get('is_staff', None)
-
-        if is_staff == 'false':
-            queryset = queryset.filter(resource__id=resource_id)
-
-        return queryset
+        return Mission.objects.filter_acl(self.request.user)
 
     def get_serializer_class(self):
         """Change serializer to MissionCreateSerializer for object creation."""
@@ -41,6 +35,9 @@ class ExpenseAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
+
+    def get_queryset(self):
+        return Expense.objects.filter_acl(self.request.user)
 
     def get_serializer_class(self):
         """Change serializer to ExpenseCreateSerializer for object creation."""
@@ -62,32 +59,6 @@ class ExpenseAPIViewSet(ModelViewSet):
     @action(detail=True, serializer_class=ExpenseRetrieveSerializer)
     def otp(self, request, pk=None):
         return super().retrieve(request, pk=pk)
-
-    # @action(
-    #     methods=['patch'],
-    #     detail=True,
-    #     permission_classes=[],
-    #     serializer_class=ExpenseImageUploadSerializer,
-    #     # parser_classes=(MultiPartParser, FormParser)
-    # )
-    # def upload_image(self, request, *args, **kwargs):
-    #     """Upload the image to the mission."""
-    #     expense: Expense = self.get_object()
-    #
-    #     serializer = self.serializer_class(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     if expense.check_otp(request.data.get('otp')):
-    #         expense.image = serializer.validated_data['image']
-    #         expense.save()
-    #
-    #         if next := request.session.pop(EXPENSE_UPLOAD_IMAGES, []):
-    #             next, others = next[0], next[1:] if len(next) > 1 else []
-    #             if others:
-    #                 request.session[EXPENSE_UPLOAD_IMAGES] = others
-    #             url = f"{reverse('admin:core_expense_changelist')}{next}/view_qr/"
-    #             return HttpResponseRedirect(reverse(url))
-    #         return Response(status=204)
-    #     raise serializers.ValidationError('OTP not matching')
 
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)

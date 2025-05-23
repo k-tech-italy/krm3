@@ -195,7 +195,7 @@ class Task(models.Model):
 
     @override
     def clean(self) -> None:
-        if self.start_date < self.project.start_date:
+        if self.start_date and self.project.start_date and self.start_date < self.project.start_date:
             raise ValidationError(
                 _(
                     'A task must not start before its related project - '
