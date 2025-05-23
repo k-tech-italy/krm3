@@ -89,7 +89,7 @@ release:  registrylogin  ## For now manual release until we fix nexus
 
 release-all: release nexus-release
 
-full-release:  build-base build save release  ## buils all and releases
+full-release:  build-base build release  ## build all and release
 	@echo "Done"
 
 .certs:
