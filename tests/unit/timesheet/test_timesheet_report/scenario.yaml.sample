@@ -1,0 +1,27 @@
+scenario:
+    day_shift: 8
+    night_shift: 5
+    sick: 0
+    holiday: 0
+    leave: 0
+    on_call: 0
+    travel: 0
+    rest: 0
+    special_leave: 0
+expected:
+    Ore ordinarie: 8
+    Ore notturne: 5
+    Ore straordinarie: 0
+    Reperibilita: 0
+    Ferie: 0
+    Permessi: 0
+    Permessi speciali: 0
+    Malattia: 0
+    Buoni pasto: 0
+
+# Documentation about scenario goes here.
+# Multi-line allowed with leading #
+
+# NB:
+#   - entries can be float (eg. 5.5)
+#   - You can omit the lines when the value is 0
