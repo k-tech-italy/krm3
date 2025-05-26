@@ -62,6 +62,7 @@ class UserFactory(factory.django.DjangoModelFactory):
         model = User
         django_get_or_create = ('username',)
 
+
 class CountryFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('country')
 
@@ -249,3 +250,10 @@ class InvoiceEntryFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.InvoiceEntry'
+
+
+class SpecialLeaveReasonFactory(factory.django.DjangoModelFactory):
+    title = factory.Faker('sentence', nb_words=2)
+
+    class Meta:
+        model = 'core.SpecialLeaveReason'
