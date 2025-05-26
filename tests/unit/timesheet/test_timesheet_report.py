@@ -1,21 +1,13 @@
-from glob import glob
-from pathlib import Path
+import pathlib
 
 import pytest
-import yaml
+
+from testutils import yaml as test_yaml
 
 
-def report_generate():
-    files = glob(f"{Path(__file__).parent / 'test_timesheet_report'}/*.yaml")
-    params = []
-    for file in files:
-        with open(file) as f:
-            data = yaml.safe_load(f.read())
-            params.append(pytest.param(data['scenario'], data['expected'], id=Path(file).stem))
-    return params
-
-
-@pytest.mark.parametrize("data, expected", report_generate())
+@pytest.mark.parametrize(
+    ('data', 'expected'), test_yaml.generate_parameters(pathlib.Path(__file__).parent / 'testcases/timesheet_report')
+)
 def test_timesheet_report_data(data, expected):
-    # do something here
+    # test logic goes here
     assert True
