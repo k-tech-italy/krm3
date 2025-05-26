@@ -14,6 +14,26 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
 
 
+class SpecialLeaveReason(models.Model):
+    """A reason for special leave."""
+
+    title = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    from_date = models.DateField(blank=True, null=True)
+    to_date = models.DateField(blank=True, null=True)
+
+    def __str__(self) -> str:
+        if self.from_date and self.to_date:
+            interval = f' ({self.from_date} - {self.to_date})'
+        elif self.from_date:
+            interval = f' ({self.from_date} - ...)'
+        elif self.to_date:
+            interval = f' (... - {self.to_date})'
+        else:
+            interval = ''
+        return f'{self.title}{interval}'
+
+
 class TimeEntryState(models.TextChoices):
     """The state of a timesheet entry."""
 
@@ -99,6 +119,8 @@ class TimeEntry(models.Model):
     sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    special_leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    special_leave_reason = models.ForeignKey(SpecialLeaveReason, on_delete=models.PROTECT, null=True, blank=True)
     night_shift_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
