@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING, cast, override, Self, Any
 
 from django.core.exceptions import ValidationError
@@ -32,6 +33,12 @@ class SpecialLeaveReason(models.Model):
         else:
             interval = ''
         return f'{self.title}{interval}'
+
+    def is_not_valid_yet(self, date: datetime.date) -> bool:
+        return self.from_date is not None and date < self.from_date
+
+    def is_expired(self, date: datetime.date) -> bool:
+        return self.to_date is not None and date > self.to_date
 
 
 class TimeEntryState(models.TextChoices):
@@ -195,6 +202,10 @@ class TimeEntry(models.Model):
         return self.leave_hours > 0.0
 
     @property
+    def is_special_leave(self) -> bool:
+        return self.special_leave_hours > 0.0 and self.special_leave_reason
+
+    @property
     def has_day_entry_hours(self) -> bool:
         return self.is_sick_day or self.is_holiday or self.is_leave
 
@@ -255,7 +266,8 @@ class TimeEntry(models.Model):
 
     def _verify_at_most_one_absence(self) -> None:
         has_too_many_absences_logged = (
-            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave) if cond]) > 1
+            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave, self.is_special_leave) if cond])
+            > 1
         )
         if has_too_many_absences_logged:
             raise ValidationError(
