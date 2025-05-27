@@ -72,8 +72,13 @@ dependencies = [
     "django-smart-env>=0.1.0",
     "django-tailwind>=4.0.1",
     "django-cotton>=2.1.2",
-    "django-smart-admin[full]>=3.0",
+    "django-admin-extra-buttons>=2.1.1",
+    "django-smart-admin[sysinfo]>=3.0",
+    "holidays>=0.73",
 ]
+
+[project.optional-dependencies]
+sysingo = []
 
 [dependency-groups]
 dev = [

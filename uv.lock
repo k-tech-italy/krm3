@@ -693,6 +693,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/c9/252aea7776f4636579de95ac427943b916efdfb12718550aaecf30e92f32/django_smart_admin-3.0-py3-none-any.whl", hash = "sha256:0605339a7e966a27ee901081cf3b41cf59a1c47f36f6dea29d3b97b82d6bcd6c", size = 47501, upload-time = "2025-04-28T17:17:24.385Z" },
 ]
 
+[package.optional-dependencies]
+sysinfo = [
+    { name = "django-sysinfo" },
+]
+
 [[package]]
 name = "django-smart-env"
 version = "0.1.0"
@@ -1027,6 +1032,18 @@ wheels = [
 ]
 
 [[package]]
+name = "holidays"
+version = "0.73"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/48/6d0ef4f014d06cde97772f5cc6bf9befdfbd5b23050014de163a5e8e6848/holidays-0.73.tar.gz", hash = "sha256:36fd6ac8c340658bed0b3cc4e0b476b3726ff0c8f2cd384f4a1adbbfc9d0cef2", size = 599529, upload-time = "2025-05-19T18:03:11.3Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/9c/01da17421bd6a0aa230839b8313fa1615c81555f94954350fca4f4b7f129/holidays-0.73-py3-none-any.whl", hash = "sha256:2baec1a0e66d89777a824be616141f9aff75fc90d9efeb2e10281bdeb2f5b965", size = 954803, upload-time = "2025-05-19T18:03:08.892Z" },
+]
+
+[[package]]
 name = "html-json-forms"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1144,6 +1161,7 @@ source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "django" },
+    { name = "django-admin-extra-buttons" },
     { name = "django-admin-rangefilter" },
     { name = "django-adminactions" },
     { name = "django-adminfilters" },
@@ -1158,7 +1176,7 @@ dependencies = [
     { name = "django-picklefield" },
     { name = "django-qr-code" },
     { name = "django-regex" },
-    { name = "django-smart-admin" },
+    { name = "django-smart-admin", extra = ["sysinfo"] },
     { name = "django-smart-env" },
     { name = "django-sysinfo" },
     { name = "django-tables2" },
@@ -1170,6 +1188,7 @@ dependencies = [
     { name = "docutils" },
     { name = "drf-extra-fields" },
     { name = "drf-spectacular" },
+    { name = "holidays" },
     { name = "lock" },
     { name = "markdown" },
     { name = "natural-keys" },
@@ -1242,6 +1261,7 @@ image = [
 requires-dist = [
     { name = "cryptography", specifier = ">=44.0.2" },
     { name = "django", specifier = ">=5.2" },
+    { name = "django-admin-extra-buttons", specifier = ">=2.1.1" },
     { name = "django-admin-rangefilter", specifier = ">=0.13.2" },
     { name = "django-adminactions", specifier = ">=2.4" },
     { name = "django-adminfilters", specifier = ">=2.6" },
@@ -1256,7 +1276,7 @@ requires-dist = [
     { name = "django-picklefield", specifier = ">=3.3" },
     { name = "django-qr-code", specifier = ">=4.1.0" },
     { name = "django-regex", specifier = ">=0.5.0" },
-    { name = "django-smart-admin", extras = ["full"], specifier = ">=3.0" },
+    { name = "django-smart-admin", extras = ["sysinfo"], specifier = ">=3.0" },
     { name = "django-smart-env", specifier = ">=0.1.0" },
     { name = "django-sysinfo", specifier = ">=2.7.0" },
     { name = "django-tables2", specifier = ">=2.7.5" },
@@ -1268,6 +1288,7 @@ requires-dist = [
     { name = "docutils", specifier = ">=0.21.2" },
     { name = "drf-extra-fields", specifier = ">=3.7.0" },
     { name = "drf-spectacular", specifier = ">=0.28.0" },
+    { name = "holidays", specifier = ">=0.73" },
     { name = "lock", specifier = ">=2018.3.25.2110" },
     { name = "markdown", specifier = ">=3.7" },
     { name = "natural-keys", specifier = ">=2.1.1" },
@@ -1282,6 +1303,7 @@ requires-dist = [
     { name = "tablib", extras = ["xlsx"], specifier = ">=3.8.0" },
     { name = "tabulate", specifier = ">=0.9.0" },
 ]
+provides-extras = ["sysingo"]
 
 [package.metadata.requires-dev]
 dev = [

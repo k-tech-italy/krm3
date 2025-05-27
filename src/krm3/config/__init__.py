@@ -5,18 +5,19 @@
 
 import uuid
 from pathlib import Path
+from typing import Any
 
 from cryptography.fernet import Fernet
 from django.utils.crypto import get_random_string
 
 
-def parse_emails(value):
+def parse_emails(value: str) -> list[tuple[Any, Any]]:
+    """Parse a list of emails separated by commas."""
     admins = value.split(',')
-    v = [(a.split('@')[0].strip(), a.strip()) for a in admins]
-    return v
+    return [(a.split('@')[0].strip(), a.strip()) for a in admins]
 
 
-DEFAULTS = dict(
+DEFAULTS = dict(  # noqa: C408
     DATABASE_URL=(str, 'psql://postgres:@127.0.0.1:5432/krm3_db', "The database URl"),
     DEBUG=(bool, False),
     RELOAD=(bool, False),
@@ -105,4 +106,5 @@ DEFAULTS = dict(
     SOCIAL_AUTH_ALLOWED_REDIRECT_URIS=(list, ['http://localhost:3000/login', 'https://localhost:3000/login']),
     SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS=(list, ['k-tech.it']),
 
+    HOLIDAYS_CALENDAR=(str, 'IT-RM')
 )
