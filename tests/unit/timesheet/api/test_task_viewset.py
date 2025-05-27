@@ -943,3 +943,66 @@ class TestTimeEntryClearAPIAction:
         if expected_status_code < 400:
             response = api_client(user=regular_user).post(self.url(), data={'ids': [entry.pk]}, format='json')
             assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+class TestSpecialLeaveReasonViewSet:
+    @staticmethod
+    def url():
+        return reverse('timesheet-api:api-special-leave-reason-list')
+
+    def test_returns_valid_reasons_in_limited_interval(self, admin_user, api_client):
+        interval_start = datetime.date(2024, 1, 1)
+        interval_end = datetime.date(2024, 1, 31)
+
+        always_valid = SpecialLeaveReasonFactory(title='always')
+        valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        encompassing_interval = SpecialLeaveReasonFactory(
+            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+        )
+        fully_contained_within_interval = SpecialLeaveReasonFactory(
+            title='contained', from_date=datetime.date(2024, 1, 10), to_date=datetime.date(2024, 1, 15)
+        )
+        valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=datetime.date(2027, 1, 1))
+        _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=datetime.date(2018, 1, 1))
+        expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
+        starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
+
+        response = api_client(user=admin_user).get(
+            self.url(), data={'from': interval_start.isoformat(), 'to': interval_end.isoformat()}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        returned_ids = [item.get('id') for item in response.json()]
+        assert returned_ids == [
+            always_valid.id,
+            valid_since_earlier_date.id,
+            encompassing_interval.id,
+            fully_contained_within_interval.id,
+            valid_until_future_date.id,
+            expiring_within_interval.id,
+            starting_within_interval.id,
+        ]
+
+    def test_returns_all_reasons_if_no_interval_provided(self, admin_user, api_client):
+        always_valid = SpecialLeaveReasonFactory(title='always')
+        with_start_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        with_end_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        limited_validity_period = SpecialLeaveReasonFactory(
+            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+        )
+
+        response = api_client(user=admin_user).get(self.url())
+        assert response.status_code == status.HTTP_200_OK
+        returned_ids = [item.get('id') for item in response.json()]
+        assert returned_ids == [
+            always_valid.id,
+            with_start_date.id,
+            with_end_date.id,
+            limited_validity_period.id,
+        ]
+
+    @pytest.mark.parametrize('query_param', ('from', 'to'))
+    def test_rejects_requests_with_only_one_of_from_and_to(self, query_param, admin_user, api_client):
+        SpecialLeaveReasonFactory(title='should not be returned')
+        response = api_client(user=admin_user).get(self.url(), data={query_param: '2024-01-01'})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

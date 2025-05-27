@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING, cast, override, Self, Any
 
 from django.core.exceptions import ValidationError
@@ -12,7 +11,24 @@ from .auth import Resource
 from decimal import Decimal
 
 if TYPE_CHECKING:
+    import datetime
     from django.contrib.auth.models import AbstractUser
+
+
+class SpecialLeaveReasonQuerySet(models.QuerySet):
+    def valid_between(self, start_date: datetime.date | None, end_date: datetime.date | None) -> Self:
+        match start_date, end_date:
+            case None, None:
+                return self
+            case start, end if start is not None and end is not None:
+                return self.filter(
+                    models.Q(from_date__isnull=True, to_date__isnull=True)
+                    | models.Q(from_date__isnull=True, to_date__gte=start)
+                    | models.Q(from_date__lte=end, to_date__isnull=True)
+                    | models.Q(from_date__lte=end, to_date__gte=start)
+                )
+            case _:
+                raise ValueError('Start and end must both be either dates or None')
 
 
 class SpecialLeaveReason(models.Model):
@@ -22,6 +38,8 @@ class SpecialLeaveReason(models.Model):
     description = models.TextField(blank=True, null=True)
     from_date = models.DateField(blank=True, null=True)
     to_date = models.DateField(blank=True, null=True)
+
+    objects = SpecialLeaveReasonQuerySet.as_manager()
 
     def __str__(self) -> str:
         if self.from_date and self.to_date:

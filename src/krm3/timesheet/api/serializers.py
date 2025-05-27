@@ -168,3 +168,9 @@ class TimesheetTaskSerializer(TaskSerializer):
 class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
+
+
+class SpecialLeaveReasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialLeaveReason
+        fields = '__all__'
