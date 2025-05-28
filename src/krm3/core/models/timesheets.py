@@ -73,7 +73,6 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     _TASK_ENTRY_FILTER = (
         models.Q(day_shift_hours__gt=0)
         | models.Q(travel_hours__gt=0)
-        | models.Q(rest_hours__gt=0)
         | models.Q(night_shift_hours__gt=0)
         | models.Q(on_call_hours__gt=0)
     )
@@ -81,6 +80,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     _DAY_ENTRY_FILTER = (
         models.Q(sick_hours__gt=0)
         | models.Q(holiday_hours__gt=0)
+        | models.Q(rest_hours__gt=0)
         | models.Q(leave_hours__gt=0)
         | models.Q(special_leave_hours__gt=0)
     )
@@ -186,12 +186,7 @@ class TimeEntry(models.Model):
         """
         # NOTE: could use sum() on a comprehension, but `sum()` may also
         #       return Literal[0], which trips up the type checker
-        return (
-            Decimal(self.day_shift_hours)
-            + Decimal(self.night_shift_hours)
-            + Decimal(self.travel_hours)
-            + Decimal(self.rest_hours)
-        )
+        return Decimal(self.day_shift_hours) + Decimal(self.night_shift_hours) + Decimal(self.travel_hours)
 
     @property
     def total_hours(self) -> Decimal:
@@ -203,7 +198,12 @@ class TimeEntry(models.Model):
         """
         # NOTE: see `total_task` hours, the same applies here
         return (
-            self.total_task_hours + Decimal(self.leave_hours) + Decimal(self.sick_hours) + Decimal(self.holiday_hours)
+            self.total_task_hours
+            + Decimal(self.leave_hours)
+            + Decimal(self.special_leave_hours)
+            + Decimal(self.sick_hours)
+            + Decimal(self.holiday_hours)
+            + Decimal(self.rest_hours)
         )
 
     @property
@@ -223,12 +223,16 @@ class TimeEntry(models.Model):
         return self.leave_hours > 0.0
 
     @property
+    def is_rest(self) -> bool:
+        return self.rest_hours > 0.0
+
+    @property
     def is_special_leave(self) -> bool:
         return self.special_leave_hours > 0.0 and self.special_leave_reason
 
     @property
     def has_day_entry_hours(self) -> bool:
-        return self.is_sick_day or self.is_holiday or self.is_leave
+        return self.is_sick_day or self.is_holiday or self.is_leave or self.is_special_leave or self.is_rest
 
     @property
     def is_task_entry(self) -> bool:
@@ -284,23 +288,23 @@ class TimeEntry(models.Model):
 
     def _verify_day_hours_not_logged_in_task_entry(self) -> None:
         if self.is_task_entry and self.has_day_entry_hours:
-            raise ValidationError(_('You cannot log an absence in a task entry'), code='day_hours_in_task_entry')
+            raise ValidationError(_('You cannot log non-task hours in a task entry'), code='day_hours_in_task_entry')
 
     def _verify_at_most_one_absence(self) -> None:
-        has_too_many_absences_logged = (
+        has_too_many_day_entry_hours_logged = (
             len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave, self.is_special_leave) if cond])
             > 1
         )
-        if has_too_many_absences_logged:
+        if has_too_many_day_entry_hours_logged:
             raise ValidationError(
-                _('You cannot log more than one kind of absence in a day'),
+                _('You cannot log more than one kind of non-task hours in a day'),
                 code='multiple_absence_kind',
             )
 
     # XXX: is this necessary?
     def _verify_task_and_day_hours_not_logged_together(self) -> None:
         if self.has_task_entry_hours and self.has_day_entry_hours:
-            raise ValidationError(_('You cannot log task hours and absence hours together'), code='work_while_absent')
+            raise ValidationError(_('You cannot log task hours and non-task hours together'), code='work_while_absent')
 
     def _verify_at_most_24_hours_total_logged_in_a_day(self) -> None:
         if self.total_hours > 24:

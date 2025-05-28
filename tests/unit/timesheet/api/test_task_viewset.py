@@ -23,11 +23,12 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
 
 
-_day_entry_kinds = ('sick', 'holiday', 'leave')
+# NOTE: special leaves are leave entries with a reason. They have their own tests.
+_day_entry_kinds = ('sick', 'holiday', 'leave', 'rest')
 _day_entry_keys = tuple(f'{key}Hours' for key in _day_entry_kinds)
 
-_task_entry_kinds = ('day_shift', 'night_shift', 'rest', 'travel')
-_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'restHours', 'travelHours')
+_task_entry_kinds = ('day_shift', 'night_shift', 'travel')
+_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'travelHours')
 
 _computed_hours_kinds = (*_day_entry_kinds, *_task_entry_kinds)
 _computed_hours_keys = (*_day_entry_keys, *_task_entry_keys)
@@ -370,7 +371,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(8, {}, id='only_day_shift_hours'),
             pytest.param(
                 1,
-                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
+                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5},
                 id='task_entry_with_optional_hours',
             ),
         ),
@@ -535,7 +536,7 @@ class TestTimeEntryAPICreateView:
         (
             pytest.param({'dayShiftHours': 8}, id='day_shift'),
             pytest.param(
-                {'dayShiftHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
+                {'dayShiftHours': 4, 'travelHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
                 id='all_task_hours',
             ),
         ),
