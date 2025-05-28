@@ -7,6 +7,7 @@ from django.http import HttpRequest
 from django.template.response import TemplateResponse
 
 from krm3.core.models import PO, Basket, TimeEntry
+from krm3.core.models.timesheets import SpecialLeaveReason
 
 
 @admin.register(PO)
@@ -31,3 +32,8 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         if request.method == 'POST':
             return TemplateResponse(request, 'timesheet/report.html')
         return TemplateResponse(request, 'timesheet/report.html')
+
+
+@admin.register(SpecialLeaveReason)
+class SpecialLeaveReasonAdmin(admin.ModelAdmin):
+    search_fields = ('title', 'description')
