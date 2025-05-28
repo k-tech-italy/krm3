@@ -11,7 +11,24 @@ from .auth import Resource
 from decimal import Decimal
 
 if TYPE_CHECKING:
+    import datetime
     from django.contrib.auth.models import AbstractUser
+
+
+class SpecialLeaveReasonQuerySet(models.QuerySet):
+    def valid_between(self, start_date: datetime.date | None, end_date: datetime.date | None) -> Self:
+        match start_date, end_date:
+            case None, None:
+                return self
+            case start, end if start is not None and end is not None:
+                return self.filter(
+                    models.Q(from_date__isnull=True, to_date__isnull=True)
+                    | models.Q(from_date__isnull=True, to_date__gte=start)
+                    | models.Q(from_date__lte=end, to_date__isnull=True)
+                    | models.Q(from_date__lte=end, to_date__gte=start)
+                )
+            case _:
+                raise ValueError('Start and end must both be either dates or None')
 
 
 class SpecialLeaveReason(models.Model):
@@ -21,6 +38,8 @@ class SpecialLeaveReason(models.Model):
     description = models.TextField(blank=True, null=True)
     from_date = models.DateField(blank=True, null=True)
     to_date = models.DateField(blank=True, null=True)
+
+    objects = SpecialLeaveReasonQuerySet.as_manager()
 
     def __str__(self) -> str:
         if self.from_date and self.to_date:
@@ -32,6 +51,12 @@ class SpecialLeaveReason(models.Model):
         else:
             interval = ''
         return f'{self.title}{interval}'
+
+    def is_not_valid_yet(self, date: datetime.date) -> bool:
+        return self.from_date is not None and date < self.from_date
+
+    def is_expired(self, date: datetime.date) -> bool:
+        return self.to_date is not None and date > self.to_date
 
 
 class TimeEntryState(models.TextChoices):
@@ -50,7 +75,12 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         | models.Q(on_call_hours__gt=0)
     )
 
-    _DAY_ENTRY_FILTER = models.Q(sick_hours__gt=0) | models.Q(holiday_hours__gt=0) | models.Q(leave_hours__gt=0)
+    _DAY_ENTRY_FILTER = (
+        models.Q(sick_hours__gt=0)
+        | models.Q(holiday_hours__gt=0)
+        | models.Q(leave_hours__gt=0)
+        | models.Q(special_leave_hours__gt=0)
+    )
 
     def open(self) -> Self:
         """Select the open time entries in this queryset.
@@ -190,6 +220,10 @@ class TimeEntry(models.Model):
         return self.leave_hours > 0.0
 
     @property
+    def is_special_leave(self) -> bool:
+        return self.special_leave_hours > 0.0 and self.special_leave_reason
+
+    @property
     def has_day_entry_hours(self) -> bool:
         return self.is_sick_day or self.is_holiday or self.is_leave
 
@@ -223,7 +257,9 @@ class TimeEntry(models.Model):
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
             self._verify_at_most_24_hours_total_logged_in_a_day,
-            self._verify_sick_or_leave_time_entry_has_comment,
+            self._verify_sick_time_entry_has_comment,
+            self._verify_leave_is_either_regular_or_special,
+            self._verify_reason_only_on_special_leave,
             self._verify_no_overtime_with_leave_entry,
         )
 
@@ -248,7 +284,8 @@ class TimeEntry(models.Model):
 
     def _verify_at_most_one_absence(self) -> None:
         has_too_many_absences_logged = (
-            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave) if cond]) > 1
+            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave, self.is_special_leave) if cond])
+            > 1
         )
         if has_too_many_absences_logged:
             raise ValidationError(
@@ -283,11 +320,25 @@ class TimeEntry(models.Model):
                 code='too_much_total_time_logged',
             )
 
-    def _verify_sick_or_leave_time_entry_has_comment(self) -> None:
-        if (self.is_sick_day or self.is_leave) and not self.comment:
+    def _verify_sick_time_entry_has_comment(self) -> None:
+        if self.is_sick_day and not self.comment:
             raise ValidationError(
                 _('Comment is mandatory when logging sick days or leave hours'),
                 code='sick_or_on_leave_without_comment',
+            )
+
+    def _verify_leave_is_either_regular_or_special(self) -> None:
+        if self.leave_hours and self.special_leave_hours:
+            raise ValidationError(
+                _('Cannot log hours on both regular and special leave'), code='regular_and_special_leave'
+            )
+
+    def _verify_reason_only_on_special_leave(self) -> None:
+        if self.special_leave_reason and not self.special_leave_hours:
+            raise ValidationError(_('Only a special leave can have a reason'), code='reason_on_non_special_leave')
+        if not self.special_leave_reason and self.special_leave_hours:
+            raise ValidationError(
+                _('Reason is required when logging a special leave'), code='no_reason_on_special_leave'
             )
 
     def _verify_no_overtime_with_leave_entry(self) -> None:

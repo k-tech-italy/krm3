@@ -8,6 +8,7 @@ import pytest
 from testutils.factories import (
     InvoiceEntryFactory,
     ProjectFactory,
+    SpecialLeaveReasonFactory,
     TimeEntryFactory,
     TaskFactory,
     BasketFactory,
@@ -78,6 +79,7 @@ class TestTimeEntry:
             pytest.param('sick_hours', does_not_raise(), id='sick'),
             pytest.param('holiday_hours', does_not_raise(), id='holiday'),
             pytest.param('leave_hours', does_not_raise(), id='leave'),
+            pytest.param('special_leave_hours', does_not_raise(), id='special_leave'),
             pytest.param('on_call_hours', pytest.raises(exceptions.ValidationError), id='on_call'),
             pytest.param('night_shift_hours', pytest.raises(exceptions.ValidationError), id='night_shift'),
             pytest.param('travel_hours', pytest.raises(exceptions.ValidationError), id='travel'),
@@ -86,7 +88,12 @@ class TestTimeEntry:
     )
     def test_day_entry_is_saved_only_with_sick_holiday_or_leave_hours(self, hour_field, expected_behavior):
         with expected_behavior:
-            entry = TimeEntryFactory(task=None, day_shift_hours=0, **{hour_field: 8})
+            entry = TimeEntryFactory(
+                task=None,
+                day_shift_hours=0,
+                special_leave_reason=SpecialLeaveReasonFactory() if hour_field == 'special_leave_hours' else None,
+                **{hour_field: 8},
+            )
             # NOTE: asserting the obvious to appease Ruff :^)
             assert entry.task is None
 
@@ -116,7 +123,7 @@ class TestTimeEntry:
         assert entry.night_shift_hours == 1
         assert entry.on_call_hours == 2
 
-    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours')
+    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'special_leave_hours')
 
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
@@ -124,7 +131,11 @@ class TestTimeEntry:
         resource = ResourceFactory()
         absence_day = datetime.date(2024, 1, 1)
         _absence_entry = TimeEntryFactory(
-            date=absence_day, day_shift_hours=0, resource=resource, **{existing_hours_field: 8}
+            date=absence_day,
+            day_shift_hours=0,
+            resource=resource,
+            special_leave_reason=SpecialLeaveReasonFactory() if existing_hours_field == 'special_leave_hours' else None,
+            **{existing_hours_field: 8},
         )
         assert TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource).count() == 1  # pyright: ignore
 
@@ -132,17 +143,31 @@ class TestTimeEntry:
             # the same resource should be able to log their absence on
             # a different available day
             _absence_entry_on_other_day = TimeEntryFactory(
-                date=datetime.date(2024, 1, 2), day_shift_hours=0, resource=resource, **{new_hours_field: 8}
+                date=datetime.date(2024, 1, 2),
+                day_shift_hours=0,
+                resource=resource,
+                special_leave_reason=SpecialLeaveReasonFactory() if new_hours_field == 'special_leave_hours' else None,
+                **{new_hours_field: 8},
             )
 
             # another resource should be able to log their own absence
             # entry on the same day...
             other_resource = ResourceFactory()
             _absence_entry_for_other_resource = TimeEntryFactory(
-                date=absence_day, day_shift_hours=0, **{new_hours_field: 8}, resource=other_resource
+                date=absence_day,
+                day_shift_hours=0,
+                resource=other_resource,
+                special_leave_reason=SpecialLeaveReasonFactory() if new_hours_field == 'special_leave_hours' else None,
+                **{new_hours_field: 8},
             )
 
-        _new_entry = TimeEntryFactory(date=absence_day, day_shift_hours=0, resource=resource, **{new_hours_field: 8})
+        _new_entry = TimeEntryFactory(
+            date=absence_day,
+            day_shift_hours=0,
+            resource=resource,
+            special_leave_reason=SpecialLeaveReasonFactory() if new_hours_field == 'special_leave_hours' else None,
+            **{new_hours_field: 8},
+        )
         day_entries = TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource)  # pyright: ignore
         assert day_entries.count() == 1
         assert getattr(day_entries.get(), new_hours_field) == 8
@@ -224,6 +249,23 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.leave_hours == 8
 
+    def test_is_saved_as_special_leave(self):
+        """Special leave hours with no work or task-related hours logged"""
+        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        entry.day_shift_hours = 0
+        entry.special_leave_hours = 8
+        entry.task = None
+        with pytest.raises(exceptions.ValidationError, match='Reason is required'):
+            entry.save()
+
+        entry.special_leave_reason = SpecialLeaveReasonFactory()
+        entry.save()
+        # NOTE: asserting the obvious to appease Ruff :^)
+        entry.refresh_from_db()
+        assert entry.day_shift_hours == 0
+        assert entry.special_leave_hours == 8
+        assert entry.special_leave_reason
+
     def test_raises_if_more_than_one_absence_fields_is_filled(self):
         entry = TimeEntryFactory(day_shift_hours=0)
         entry.sick_hours = 4
@@ -247,8 +289,8 @@ class TestTimeEntry:
     @pytest.mark.parametrize(
         ('hours_key', 'expected_to_raise'),
         (
-            pytest.param('day_shift_hours', does_not_raise(), id='work'),
-            pytest.param('night_shift_hours', does_not_raise(), id='overtime'),
+            pytest.param('day_shift_hours', does_not_raise(), id='day'),
+            pytest.param('night_shift_hours', does_not_raise(), id='night'),
             pytest.param('rest_hours', does_not_raise(), id='rest'),
             pytest.param('travel_hours', does_not_raise(), id='travel'),
             pytest.param('on_call_hours', does_not_raise(), id='on_call'),
@@ -256,16 +298,65 @@ class TestTimeEntry:
                 'sick_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='sick'
             ),
             pytest.param('holiday_hours', does_not_raise(), id='holiday'),
-            pytest.param(
-                'leave_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='leave'
-            ),
+            pytest.param('leave_hours', does_not_raise(), id='leave'),
+            pytest.param('special_leave_hours', does_not_raise(), id='leave'),
         ),
     )
     def test_raises_if_missing_mandatory_comment(self, hours_key, expected_to_raise):
         hours = {'day_shift_hours': 0} | {hours_key: 8}
+        reason = SpecialLeaveReasonFactory() if hours_key == 'special_leave_hours' else None
         with expected_to_raise:
             TimeEntryFactory(
-                task=None if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave') else TaskFactory(),
+                task=(
+                    None
+                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave', 'special_leave')
+                    else TaskFactory()
+                ),
                 comment=None,
+                special_leave_reason=reason,
+                **hours,
+            )
+
+    @pytest.mark.parametrize(
+        ('hours_key', 'expected_to_raise'),
+        (
+            pytest.param(
+                'day_shift_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='day'
+            ),
+            pytest.param(
+                'night_shift_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='night'
+            ),
+            pytest.param(
+                'rest_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='rest'
+            ),
+            pytest.param(
+                'travel_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='travel'
+            ),
+            pytest.param(
+                'on_call_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='on_call'
+            ),
+            pytest.param(
+                'sick_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='sick'
+            ),
+            pytest.param(
+                'holiday_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='holiday'
+            ),
+            pytest.param(
+                'leave_hours', pytest.raises(exceptions.ValidationError, match='Only a special leave'), id='leave'
+            ),
+            pytest.param('special_leave_hours', does_not_raise(), id='special_leave'),
+        ),
+    )
+    def test_raises_if_special_leave_reason_not_on_special_leave_entry(self, hours_key, expected_to_raise):
+        hours = {'day_shift_hours': 0} | {hours_key: 8}
+        reason = SpecialLeaveReasonFactory()
+        with expected_to_raise:
+            TimeEntryFactory(
+                task=(
+                    None
+                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave', 'special_leave')
+                    else TaskFactory()
+                ),
+                special_leave_reason=reason,
                 **hours,
             )

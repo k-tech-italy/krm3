@@ -10,10 +10,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from krm3.core.models import Resource
-from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
+from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet
 from krm3.timesheet import entities
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
+    SpecialLeaveReasonSerializer,
     TimeEntryReadSerializer,
     TimeEntryCreateSerializer,
     TimesheetSerializer,
@@ -161,3 +162,22 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             entries.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = SpecialLeaveReason.objects.all()
+    serializer_class = SpecialLeaveReasonSerializer
+
+    @override
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        start = datetime.date.fromisoformat(dstr) if (dstr := request.query_params.get('from')) else None
+        end = datetime.date.fromisoformat(dstr) if (dstr := request.query_params.get('to')) else None
+        try:
+            queryset = cast('SpecialLeaveReasonQuerySet', self.get_queryset()).valid_between(start, end)
+        except ValueError:
+            return Response(
+                data={'error': 'Providing only one of "from" and "to" is not allowed. Either provide both or none.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
