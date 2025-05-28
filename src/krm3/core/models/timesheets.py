@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, override, Self, Any
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
+from django.utils.translation import gettext_lazy as _
 
 from .auth import Resource
-from decimal import Decimal
 
 if TYPE_CHECKING:
     import datetime
+
     from django.contrib.auth.models import AbstractUser
+    from django.db.models.base import ModelBase
 
 
 class SpecialLeaveReasonQuerySet(models.QuerySet):
@@ -196,6 +198,20 @@ class TimeEntry(models.Model):
     @override
     def __str__(self) -> str:
         return f'{self.date}: {self.resource} on "{self.task}" ({self.state})'
+
+    @override
+    def save(
+        self,
+        *,
+        force_insert: bool | tuple[ModelBase, ...] = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        return super().save(
+            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
+        )
 
     @property
     def total_task_hours(self) -> Decimal:
@@ -410,11 +426,6 @@ class TimeEntry(models.Model):
                 ),
                 code='overtime_while_resting_or_on_leave',
             )
-
-
-@receiver(models.signals.pre_save, sender=TimeEntry)
-def validate_time_entry(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    instance.clean()
 
 
 @receiver(models.signals.post_save, sender=TimeEntry)

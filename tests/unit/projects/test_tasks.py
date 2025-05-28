@@ -25,4 +25,4 @@ class TestTask:
             f'task "Invalid" is supposed to start on {datetime.date(2020, 1, 1).isoformat()}, '
             f'but related project "{project.name}" starts on {project.start_date.isoformat()}'
         )
-        assert excinfo.value.message == expected_message
+        assert expected_message in excinfo.value.messages

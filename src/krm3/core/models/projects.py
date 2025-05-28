@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Any, Self, override, Iterable
+from typing import TYPE_CHECKING, Self, override, Iterable
 
 # from django.contrib.auth import get_user_model  # noqa - see below
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 
@@ -15,6 +14,7 @@ from .contacts import Client
 from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
+    from django.db.models.base import ModelBase
     from decimal import Decimal
     from krm3.core.models.auth import User
     from krm3.core.models import Project, Task, Mission, InvoiceEntry
@@ -194,6 +194,20 @@ class Task(models.Model):
         return self.title
 
     @override
+    def save(
+        self,
+        *,
+        force_insert: bool | tuple[ModelBase, ...] = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        return super().save(
+            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
+        )
+
+    @override
     def clean(self) -> None:
         if self.start_date and self.project.start_date and self.start_date < self.project.start_date:
             raise ValidationError(
@@ -220,8 +234,3 @@ class Task(models.Model):
         :return: a `QuerySet` of time entries
         """
         return self.time_entries.filter(date__range=(start, end))
-
-
-@receiver(models.signals.pre_save, sender=Task)
-def validate_task(sender: Task, instance: Task, **kwargs: Any) -> None:
-    instance.clean()
