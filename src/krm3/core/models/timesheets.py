@@ -23,9 +23,9 @@ class SpecialLeaveReasonQuerySet(models.QuerySet):
             case start, end if start is not None and end is not None:
                 return self.filter(
                     models.Q(from_date__isnull=True, to_date__isnull=True)
-                    | models.Q(from_date__isnull=True, to_date__gte=start)
-                    | models.Q(from_date__lte=end, to_date__isnull=True)
-                    | models.Q(from_date__lte=end, to_date__gte=start)
+                    | models.Q(from_date__isnull=True, to_date__gte=end)
+                    | models.Q(from_date__lte=start, to_date__isnull=True)
+                    | models.Q(from_date__lte=start, to_date__gte=end)
                 )
             case _:
                 raise ValueError('Start and end must both be either dates or None')

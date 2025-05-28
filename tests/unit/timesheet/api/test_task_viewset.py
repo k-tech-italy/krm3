@@ -954,19 +954,28 @@ class TestSpecialLeaveReasonViewSet:
         interval_start = datetime.date(2024, 1, 1)
         interval_end = datetime.date(2024, 1, 31)
 
+        # this one is obvious
         always_valid = SpecialLeaveReasonFactory(title='always')
+        # starts before our interval's start and doesn't end? it's ok
         valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        # this validity period fully contains our interval, so it's valid
         encompassing_interval = SpecialLeaveReasonFactory(
             title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
         )
-        fully_contained_within_interval = SpecialLeaveReasonFactory(
+        # on the other hand, we don't want this one, as we can accept
+        # the reason only in a part of our interval
+        _fully_contained_within_interval = SpecialLeaveReasonFactory(
             title='contained', from_date=datetime.date(2024, 1, 10), to_date=datetime.date(2024, 1, 15)
         )
+        # not expired yet, still good
         valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        # not started, we don't want it
         _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=datetime.date(2027, 1, 1))
+        # throw it away, it's long expired
         _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=datetime.date(2018, 1, 1))
-        expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
-        starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
+        # partial overlap, we don't want it - see above
+        _expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
+        _starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
 
         response = api_client(user=admin_user).get(
             self.url(), data={'from': interval_start.isoformat(), 'to': interval_end.isoformat()}
@@ -977,10 +986,7 @@ class TestSpecialLeaveReasonViewSet:
             always_valid.id,
             valid_since_earlier_date.id,
             encompassing_interval.id,
-            fully_contained_within_interval.id,
             valid_until_future_date.id,
-            expiring_within_interval.id,
-            starting_within_interval.id,
         ]
 
     def test_returns_all_reasons_if_no_interval_provided(self, admin_user, api_client):
