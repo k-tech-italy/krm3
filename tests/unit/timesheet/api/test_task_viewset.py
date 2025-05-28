@@ -436,6 +436,46 @@ class TestTimeEntryAPICreateView:
         assert special_leave.special_leave_reason == reason
 
     @pytest.mark.parametrize(
+        ('dates', 'expected_status_code'),
+        (
+            pytest.param(['2024-01-01'], status.HTTP_201_CREATED, id='one_day_at_start'),
+            pytest.param(['2024-01-15'], status.HTTP_201_CREATED, id='one_day_within_range'),
+            pytest.param(['2024-01-31'], status.HTTP_201_CREATED, id='one_day_at_end'),
+            pytest.param(['2023-12-31'], status.HTTP_400_BAD_REQUEST, id='one_day_before_start'),
+            pytest.param(['2024-02-01'], status.HTTP_400_BAD_REQUEST, id='one_day_after_end'),
+            pytest.param(['2023-12-30', '2023-12-31'], status.HTTP_400_BAD_REQUEST, id='range_before_start'),
+            pytest.param(['2023-12-31', '2024-01-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_start'),
+            pytest.param(['2024-02-01', '2024-02-02'], status.HTTP_400_BAD_REQUEST, id='range_after_end'),
+            pytest.param(['2024-01-31', '2024-02-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_end'),
+            pytest.param(
+                ['2023-12-31', *[f'2024-01-{x}' for x in range(1, 32)], '2024-02-01'],
+                status.HTTP_400_BAD_REQUEST,
+                id='range_containing_validity_period',
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(1, 32)], status.HTTP_201_CREATED, id='range_equal_to_validity_period'
+            ),
+        ),
+    )
+    def test_accepts_special_leave_only_if_reason_is_valid(self, dates, expected_status_code, api_client, admin_user):
+        resource = ResourceFactory()
+        reason = SpecialLeaveReasonFactory(from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2024, 1, 31))
+        time_entry_data = {
+            'dates': dates,
+            'dayShiftHours': 0,
+            'leaveHours': 8,
+            'specialLeaveReason': reason.pk,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        }
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == expected_status_code
+        assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
+
+    @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
     def test_rejects_time_entries_with_day_shift_and_absence_hours(self, hours_key, admin_user, api_client):

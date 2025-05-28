@@ -377,7 +377,6 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='Reason "expired" is not valid'):
             entry.save()
 
-        # ditto
         upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 1))
         entry.special_leave_reason = upcoming_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "upcoming" is not valid'):
