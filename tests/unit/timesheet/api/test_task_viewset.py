@@ -436,6 +436,46 @@ class TestTimeEntryAPICreateView:
         assert special_leave.special_leave_reason == reason
 
     @pytest.mark.parametrize(
+        ('dates', 'expected_status_code'),
+        (
+            pytest.param(['2024-01-01'], status.HTTP_201_CREATED, id='one_day_at_start'),
+            pytest.param(['2024-01-15'], status.HTTP_201_CREATED, id='one_day_within_range'),
+            pytest.param(['2024-01-31'], status.HTTP_201_CREATED, id='one_day_at_end'),
+            pytest.param(['2023-12-31'], status.HTTP_400_BAD_REQUEST, id='one_day_before_start'),
+            pytest.param(['2024-02-01'], status.HTTP_400_BAD_REQUEST, id='one_day_after_end'),
+            pytest.param(['2023-12-30', '2023-12-31'], status.HTTP_400_BAD_REQUEST, id='range_before_start'),
+            pytest.param(['2023-12-31', '2024-01-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_start'),
+            pytest.param(['2024-02-01', '2024-02-02'], status.HTTP_400_BAD_REQUEST, id='range_after_end'),
+            pytest.param(['2024-01-31', '2024-02-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_end'),
+            pytest.param(
+                ['2023-12-31', *[f'2024-01-{x}' for x in range(1, 32)], '2024-02-01'],
+                status.HTTP_400_BAD_REQUEST,
+                id='range_containing_validity_period',
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(1, 32)], status.HTTP_201_CREATED, id='range_equal_to_validity_period'
+            ),
+        ),
+    )
+    def test_accepts_special_leave_only_if_reason_is_valid(self, dates, expected_status_code, api_client, admin_user):
+        resource = ResourceFactory()
+        reason = SpecialLeaveReasonFactory(from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2024, 1, 31))
+        time_entry_data = {
+            'dates': dates,
+            'dayShiftHours': 0,
+            'leaveHours': 8,
+            'specialLeaveReason': reason.pk,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        }
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == expected_status_code
+        assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
+
+    @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
     )
     def test_rejects_time_entries_with_day_shift_and_absence_hours(self, hours_key, admin_user, api_client):
@@ -954,19 +994,28 @@ class TestSpecialLeaveReasonViewSet:
         interval_start = datetime.date(2024, 1, 1)
         interval_end = datetime.date(2024, 1, 31)
 
+        # this one is obvious
         always_valid = SpecialLeaveReasonFactory(title='always')
+        # starts before our interval's start and doesn't end? it's ok
         valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        # this validity period fully contains our interval, so it's valid
         encompassing_interval = SpecialLeaveReasonFactory(
             title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
         )
-        fully_contained_within_interval = SpecialLeaveReasonFactory(
+        # on the other hand, we don't want this one, as we can accept
+        # the reason only in a part of our interval
+        _fully_contained_within_interval = SpecialLeaveReasonFactory(
             title='contained', from_date=datetime.date(2024, 1, 10), to_date=datetime.date(2024, 1, 15)
         )
+        # not expired yet, still good
         valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        # not started, we don't want it
         _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=datetime.date(2027, 1, 1))
+        # throw it away, it's long expired
         _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=datetime.date(2018, 1, 1))
-        expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
-        starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
+        # partial overlap, we don't want it - see above
+        _expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
+        _starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
 
         response = api_client(user=admin_user).get(
             self.url(), data={'from': interval_start.isoformat(), 'to': interval_end.isoformat()}
@@ -977,10 +1026,7 @@ class TestSpecialLeaveReasonViewSet:
             always_valid.id,
             valid_since_earlier_date.id,
             encompassing_interval.id,
-            fully_contained_within_interval.id,
             valid_until_future_date.id,
-            expiring_within_interval.id,
-            starting_within_interval.id,
         ]
 
     def test_returns_all_reasons_if_no_interval_provided(self, admin_user, api_client):

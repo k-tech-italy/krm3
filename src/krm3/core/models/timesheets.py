@@ -23,9 +23,9 @@ class SpecialLeaveReasonQuerySet(models.QuerySet):
             case start, end if start is not None and end is not None:
                 return self.filter(
                     models.Q(from_date__isnull=True, to_date__isnull=True)
-                    | models.Q(from_date__isnull=True, to_date__gte=start)
-                    | models.Q(from_date__lte=end, to_date__isnull=True)
-                    | models.Q(from_date__lte=end, to_date__gte=start)
+                    | models.Q(from_date__isnull=True, to_date__gte=end)
+                    | models.Q(from_date__lte=start, to_date__isnull=True)
+                    | models.Q(from_date__lte=start, to_date__gte=end)
                 )
             case _:
                 raise ValueError('Start and end must both be either dates or None')
@@ -57,6 +57,9 @@ class SpecialLeaveReason(models.Model):
 
     def is_expired(self, date: datetime.date) -> bool:
         return self.to_date is not None and date > self.to_date
+
+    def is_valid(self, date: datetime.date) -> bool:
+        return not self.is_not_valid_yet(date) and not self.is_expired(date)
 
 
 class TimeEntryState(models.TextChoices):
@@ -260,6 +263,7 @@ class TimeEntry(models.Model):
             self._verify_sick_time_entry_has_comment,
             self._verify_leave_is_either_regular_or_special,
             self._verify_reason_only_on_special_leave,
+            self._verify_special_leave_reason_is_valid,
             self._verify_no_overtime_with_leave_entry,
         )
 
@@ -339,6 +343,17 @@ class TimeEntry(models.Model):
         if not self.special_leave_reason and self.special_leave_hours:
             raise ValidationError(
                 _('Reason is required when logging a special leave'), code='no_reason_on_special_leave'
+            )
+
+    def _verify_special_leave_reason_is_valid(self) -> None:
+        if not self.is_special_leave:
+            return
+        if not self.special_leave_reason.is_valid(self.date):
+            raise ValidationError(
+                _('Reason "{title}" is not valid on {date}').format(
+                    title=self.special_leave_reason.title, date=self.date
+                ),
+                code='invalid_special_leave_reason',
             )
 
     def _verify_no_overtime_with_leave_entry(self) -> None:

@@ -360,3 +360,24 @@ class TestTimeEntry:
                 special_leave_reason=reason,
                 **hours,
             )
+
+    def test_raises_if_special_leave_has_invalid_reason(self):
+        valid_reason = SpecialLeaveReasonFactory(title='valid')
+
+        with does_not_raise():
+            entry = TimeEntryFactory(
+                date=datetime.date(2024, 1, 1),
+                day_shift_hours=0,
+                special_leave_hours=2,
+                special_leave_reason=valid_reason,
+            )
+
+        expired_reason = SpecialLeaveReasonFactory(title='expired', to_date=datetime.date(2020, 1, 1))
+        entry.special_leave_reason = expired_reason
+        with pytest.raises(exceptions.ValidationError, match='Reason "expired" is not valid'):
+            entry.save()
+
+        upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 1))
+        entry.special_leave_reason = upcoming_reason
+        with pytest.raises(exceptions.ValidationError, match='Reason "upcoming" is not valid'):
+            entry.save()
