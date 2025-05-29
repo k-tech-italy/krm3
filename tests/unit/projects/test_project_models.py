@@ -5,7 +5,7 @@ import freezegun
 import pytest
 from django.core import exceptions
 
-from testutils.factories import ProjectFactory, TaskFactory
+from testutils.factories import POFactory, ProjectFactory, TaskFactory
 
 
 class TestProject:
@@ -30,6 +30,21 @@ class TestProject:
 
         with pytest.raises(exceptions.ValidationError, match='must not be later'):
             _should_fail = ProjectFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2020, 1, 1))
+
+
+class TestPO:
+    def test_accepts_missing_end_date(self):
+        """Verify that date validation doesn't trigger if `end_date` is missing."""
+        with does_not_raise():
+            POFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
+
+    def test_raises_when_ends_before_starting(self):
+        with does_not_raise():
+            # edge case: one day long PO
+            _valid = POFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1))
+
+        with pytest.raises(exceptions.ValidationError, match='must not be later'):
+            _should_fail = POFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2020, 1, 1))
 
 
 class TestTask:

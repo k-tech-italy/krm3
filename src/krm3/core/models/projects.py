@@ -103,6 +103,26 @@ class PO(models.Model):
     def __str__(self) -> str:
         return self.ref
 
+    @override
+    def save(
+        self,
+        *,
+        force_insert: bool | tuple[ModelBase, ...] = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        return super().save(
+            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
+        )
+
+    @override
+    def clean(self) -> None:
+        if self.end_date and self.start_date > self.end_date:
+            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
+        return super().clean()
+
 
 class Basket(models.Model):
     """Defines the cumulative availability of person-hours for a PO."""
