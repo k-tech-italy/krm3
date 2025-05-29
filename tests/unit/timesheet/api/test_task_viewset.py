@@ -23,11 +23,12 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
 
 
-_day_entry_kinds = ('sick', 'holiday', 'leave')
+# NOTE: special leaves are leave entries with a reason. They have their own tests.
+_day_entry_kinds = ('sick', 'holiday', 'leave', 'rest')
 _day_entry_keys = tuple(f'{key}Hours' for key in _day_entry_kinds)
 
-_task_entry_kinds = ('day_shift', 'night_shift', 'rest', 'travel')
-_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'restHours', 'travelHours')
+_task_entry_kinds = ('day_shift', 'night_shift', 'travel')
+_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'travelHours')
 
 _computed_hours_kinds = (*_day_entry_kinds, *_task_entry_kinds)
 _computed_hours_keys = (*_day_entry_keys, *_task_entry_keys)
@@ -370,7 +371,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(8, {}, id='only_day_shift_hours'),
             pytest.param(
                 1,
-                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
+                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5},
                 id='task_entry_with_optional_hours',
             ),
         ),
@@ -535,7 +536,7 @@ class TestTimeEntryAPICreateView:
         (
             pytest.param({'dayShiftHours': 8}, id='day_shift'),
             pytest.param(
-                {'dayShiftHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
+                {'dayShiftHours': 4, 'travelHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
                 id='all_task_hours',
             ),
         ),
@@ -820,7 +821,7 @@ class TestTimeEntryAPICreateView:
             for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)
         ),
     )
-    def test_non_leave_day_entry_overwrites_task_entries_on_same_day(
+    def test_day_entry_overwrites_task_entries_on_same_day_if_not_leave_or_rest(
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
@@ -834,12 +835,12 @@ class TestTimeEntryAPICreateView:
             'resourceId': resource.pk,
             'comment': 'approved',
             'dayShiftHours': 0,
-        } | {hours_key: 4 if hours_key.startswith('leave') else 8}
+        } | {hours_key: 4 if hours_key.removesuffix('Hours') in ('leave', 'rest') else 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         should_raise_on_getting_deleted_record = (
-            does_not_raise() if hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+            does_not_raise() if hours_field in ('leave_hours', 'rest_hours') else pytest.raises(TimeEntry.DoesNotExist)
         )
         with should_raise_on_getting_deleted_record:
             TimeEntry.objects.get(pk=existing_task_entry_id)

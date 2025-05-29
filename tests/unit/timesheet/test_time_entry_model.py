@@ -83,10 +83,10 @@ class TestTimeEntry:
             pytest.param('on_call_hours', pytest.raises(exceptions.ValidationError), id='on_call'),
             pytest.param('night_shift_hours', pytest.raises(exceptions.ValidationError), id='night_shift'),
             pytest.param('travel_hours', pytest.raises(exceptions.ValidationError), id='travel'),
-            pytest.param('rest_hours', pytest.raises(exceptions.ValidationError), id='rest'),
+            pytest.param('rest_hours', does_not_raise(), id='rest'),
         ),
     )
-    def test_day_entry_is_saved_only_with_sick_holiday_or_leave_hours(self, hour_field, expected_behavior):
+    def test_day_entry_is_saved_only_with_sick_holiday_rest_or_leave_hours(self, hour_field, expected_behavior):
         with expected_behavior:
             entry = TimeEntryFactory(
                 task=None,
@@ -108,22 +108,22 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
 
     def test_is_saved_with_all_task_entry_hours_filled(self):
-        """Non-zero total hours on a task, all non-full-day absence fields filled"""
+        """Non-zero total hours on a task, all non-full-day non-task hours fields filled"""
         task = TaskFactory()
         entry = TimeEntryFactory(day_shift_hours=8, task=task, resource=task.resource)
-        entry.night_shift_hours = 1
-        entry.on_call_hours = 2
-        entry.rest_hours = 1.5
+        entry.night_shift_hours = 2.5
         entry.travel_hours = 1
-        entry.day_shift_hours = 5.5
-        entry.save()
+        entry.day_shift_hours = 4.5
+        entry.on_call_hours = 2
+        with does_not_raise():
+            entry.save()
+
         # NOTE: asserting the obvious to appease Ruff :^)
         entry.refresh_from_db()
-        assert entry.rest_hours + entry.travel_hours + entry.day_shift_hours == 8
-        assert entry.night_shift_hours == 1
+        assert entry.travel_hours + entry.day_shift_hours + entry.night_shift_hours == 8
         assert entry.on_call_hours == 2
 
-    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'special_leave_hours')
+    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'rest_hours', 'special_leave_hours')
 
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
@@ -172,7 +172,7 @@ class TestTimeEntry:
         assert day_entries.count() == 1
         assert getattr(day_entries.get(), new_hours_field) == 8
 
-    _task_entry_fields = ('day_shift_hours', 'rest_hours', 'travel_hours', 'night_shift_hours', 'on_call_hours')
+    _task_entry_fields = ('day_shift_hours', 'travel_hours', 'night_shift_hours', 'on_call_hours')
 
     @pytest.mark.parametrize('field', _task_entry_fields)
     def test_task_entry_is_saved_only_when_no_other_task_entry_exists_on_the_same_day_for_the_same_task(self, field):
@@ -207,7 +207,7 @@ class TestTimeEntry:
         entry.day_shift_hours = 0
         entry.sick_hours = 8
 
-        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+        with pytest.raises(exceptions.ValidationError, match='non-task hours in a task entry'):
             entry.save()
 
         entry.task = None
@@ -223,7 +223,7 @@ class TestTimeEntry:
         entry.day_shift_hours = 0
         entry.holiday_hours = 8
 
-        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+        with pytest.raises(exceptions.ValidationError, match='non-task hours in a task entry'):
             entry.save()
 
         entry.task = None
@@ -239,7 +239,7 @@ class TestTimeEntry:
         entry.day_shift_hours = 0
         entry.leave_hours = 8
 
-        with pytest.raises(exceptions.ValidationError, match='absence in a task entry'):
+        with pytest.raises(exceptions.ValidationError, match='non-task hours in a task entry'):
             entry.save()
 
         entry.task = None
@@ -271,19 +271,19 @@ class TestTimeEntry:
         entry.sick_hours = 4
         entry.holiday_hours = 4
         entry.leave_hours = 1
-        with pytest.raises(exceptions.ValidationError, match='more than one kind of absence in a day'):
+        with pytest.raises(exceptions.ValidationError, match='more than one kind of non-task hours in a day'):
             entry.save()
 
     def test_raises_if_logging_work_during_sick_days(self):
         entry = TimeEntryFactory(day_shift_hours=4, task=TaskFactory())
         entry.sick_hours = 4
-        with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
+        with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
     def test_raises_if_logging_work_during_holidays(self):
         entry = TimeEntryFactory(day_shift_hours=4, task=TaskFactory())
         entry.holiday_hours = 4
-        with pytest.raises(exceptions.ValidationError, match='task hours and absence hours together'):
+        with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
     @pytest.mark.parametrize(
@@ -309,7 +309,7 @@ class TestTimeEntry:
             TimeEntryFactory(
                 task=(
                     None
-                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave', 'special_leave')
+                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'rest', 'leave', 'special_leave')
                     else TaskFactory()
                 ),
                 comment=None,
