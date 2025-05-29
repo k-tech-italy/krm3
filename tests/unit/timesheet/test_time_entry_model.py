@@ -381,3 +381,13 @@ class TestTimeEntry:
         entry.special_leave_reason = upcoming_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "upcoming" is not valid'):
             entry.save()
+
+    def test_raises_if_ends_before_starting(self):
+        with does_not_raise():
+            # edge case: one day long special leave reason
+            _valid = SpecialLeaveReasonFactory(from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2024, 1, 1))
+
+        with pytest.raises(exceptions.ValidationError, match='must not be later'):
+            _should_fail = SpecialLeaveReasonFactory(
+                from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2020, 1, 1)
+            )

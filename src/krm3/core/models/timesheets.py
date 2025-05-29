@@ -54,6 +54,26 @@ class SpecialLeaveReason(models.Model):
             interval = ''
         return f'{self.title}{interval}'
 
+    @override
+    def save(
+        self,
+        *,
+        force_insert: bool | tuple[ModelBase, ...] = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        return super().save(
+            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
+        )
+
+    @override
+    def clean(self) -> None:
+        if self.from_date and self.to_date and self.from_date > self.to_date:
+            raise ValidationError(_('"from_date" must not be later than "to_date"'), code='invalid_date_interval')
+        return super().clean()
+
     def is_not_valid_yet(self, date: datetime.date) -> bool:
         return self.from_date is not None and date < self.from_date
 
