@@ -821,7 +821,7 @@ class TestTimeEntryAPICreateView:
             for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)
         ),
     )
-    def test_non_leave_day_entry_overwrites_task_entries_on_same_day(
+    def test_day_entry_overwrites_task_entries_on_same_day_if_not_leave_or_rest(
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
@@ -835,12 +835,12 @@ class TestTimeEntryAPICreateView:
             'resourceId': resource.pk,
             'comment': 'approved',
             'dayShiftHours': 0,
-        } | {hours_key: 4 if hours_key.startswith('leave') else 8}
+        } | {hours_key: 4 if hours_key.removesuffix('Hours') in ('leave', 'rest') else 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         should_raise_on_getting_deleted_record = (
-            does_not_raise() if hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+            does_not_raise() if hours_field in ('leave_hours', 'rest_hours') else pytest.raises(TimeEntry.DoesNotExist)
         )
         with should_raise_on_getting_deleted_record:
             TimeEntry.objects.get(pk=existing_task_entry_id)
