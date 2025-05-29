@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Self, override, Iterable
 
-# from django.contrib.auth import get_user_model  # noqa - see below
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -23,12 +22,8 @@ if TYPE_CHECKING:
     from django.db.models.fields.related_descriptors import RelatedManager
 
 
-# FIXME: we cannot use a variable as a type hint
-# User = get_user_model()  # noqa
-
-
 class ProjectManager(NaturalKeyModelManager):
-    def filter_acl(self, user: User) -> models.QuerySet['Project']:
+    def filter_acl(self, user: User) -> models.QuerySet[Project]:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -50,16 +45,19 @@ class Project(NaturalKeyModel):
 
     mission_set: RelatedManager[Mission]
 
+    class Meta:
+        permissions = [
+            ('view_any_project', "Can view(only) everybody's projects"),
+            ('manage_any_project', "Can view, and manage everybody's projects"),
+        ]
+
     def __str__(self) -> str:
         return str(self.name)
 
-    def is_accessible(self, user: User) -> bool:
-        if user.can_manage_and_view_any_project():
-            return True
-        return self.mission_set.filter(resource__profile__user=user).count() > 0
-
+    @override
     def save(
         self,
+        *,
         force_insert: bool = False,
         force_update: bool = False,
         using: str | None = None,
@@ -67,13 +65,17 @@ class Project(NaturalKeyModel):
     ) -> None:
         if self.start_date is None:
             self.start_date = datetime.date.today()
-        super().save(force_insert, force_update, using, update_fields)
+        self.full_clean()
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
-    class Meta:
-        permissions = [
-            ('view_any_project', "Can view(only) everybody's projects"),
-            ('manage_any_project', "Can view, and manage everybody's projects"),
-        ]
+    @override
+    def clean(self) -> None:
+        if self.end_date and (self.start_date > self.end_date):
+            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
+        return super().clean()
+
+    def is_accessible(self, user: User) -> bool:
+        return user.can_manage_and_view_any_project() or self.mission_set.filter(resource__profile__user=user).exists()
 
 
 class POState(models.TextChoices):
