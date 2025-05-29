@@ -231,7 +231,10 @@ class Task(models.Model):
 
     @override
     def clean(self) -> None:
-        if self.start_date and self.project.start_date and self.start_date < self.project.start_date:
+        if self.end_date and self.start_date > self.end_date:
+            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
+
+        if self.project.start_date and self.start_date < self.project.start_date:
             raise ValidationError(
                 _(
                     'A task must not start before its related project - '

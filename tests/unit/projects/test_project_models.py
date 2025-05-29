@@ -66,3 +66,16 @@ class TestTask:
             f'but related project "{project.name}" starts on {project.start_date.isoformat()}'
         )
         assert expected_message in excinfo.value.messages
+
+    def test_accepts_missing_end_date(self):
+        """Verify that date validation doesn't trigger if `end_date` is missing."""
+        with does_not_raise():
+            TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
+
+    def test_raises_when_ends_before_starting(self):
+        with does_not_raise():
+            # edge case: one day long task
+            _valid = TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1))
+
+        with pytest.raises(exceptions.ValidationError, match='must not be later'):
+            _should_fail = TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2020, 1, 1))
