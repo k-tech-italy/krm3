@@ -33,7 +33,7 @@ SMART_ADMIN_SECTIONS = {
         'core.PO',
     ],
     'Timesheets': [
-        'core.SpecialLeaveReason'
+        'core.SpecialLeaveReason',
         'core.TimeEntry',
     ],
     '_hidden_': ['sites'],

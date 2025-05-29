@@ -3,6 +3,7 @@ import datetime
 from typing import Self
 
 import holidays
+from dateutil.relativedelta import relativedelta
 
 from krm3.config.environ import env
 
@@ -10,7 +11,6 @@ from krm3.config.environ import env
 def dt(dat: str) -> datetime.date:
     """Just converts a YYYY-MM-DD string."""
     return datetime.datetime.strptime(dat, '%Y-%m-%d').date()
-
 
 
 class KrmDay:
@@ -62,6 +62,12 @@ class KrmDay:
     def month_name_short(self) -> str:
         return self.date.strftime('%b')
 
+    def reladd(self, days: int = None, **kwargs):
+        """Add a relativedelta to the KrmDay."""
+        if days:
+            kwargs['days'] = days
+        return KrmDay(self.date + relativedelta(**kwargs))
+
     def __eq__(self, __value: Self) -> bool:
         return self.date == __value
 
@@ -77,7 +83,14 @@ class KrmDay:
     def __sub__(self, __value: Self) -> int:
         return (self.date - __value.date).days
 
+    def __add__(self, days: int) -> Self:
+        return (self.date + relativedelta(days=days))
 
+    def __repr__(self):
+        return self.date.strftime('K%Y-%m-%d')
+
+    def __str__(self):
+        return self.date.strftime('%Y-%m-%d')
 
 class KrmCalendar(Calendar):
     """A custom calendar class for KRM that generates KrmDays."""

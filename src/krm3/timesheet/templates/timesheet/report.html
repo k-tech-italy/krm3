@@ -5,21 +5,52 @@
 {% block body %}
     {{ block.super }}
 
-    <div class="container mx-auto">
-        <section class="flex items-center justify-center h-screen">
-            <h1 class="text-5xl">Django + Tailwind + Django Cotton = ❤️</h1>
-        </section>
-        <button class="btn w-64 rounded-full">Button with DaisyUi + tw4</button>
-    </div>
-    <c-card title="Trees" url="home">
-        We have the best trees
-    </c-card>
+    <div class="w-full mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-base-content">{{ title }} Report</h1>
 
-    <c-card title="Spades" url="home">
-        The best spades in the land
-    </c-card>
-    <p class="text-center">
-        <a href="{% url 'admin:index' %}">Go to admin</a>
-    </p>
+        <div class="overflow-x-auto rounded-md shadow">
+            <table class="min-w-full leading-normal text-right border">
+                <thead class="bg-gray-50">
+                <tr>
+                    <td class="text-left p-1">Mike Tyson</td>
+                    <td class="p-1">Tot HH</td>
+                    <td class="p-1">X</td>
+                    <td class="p-1"></td>
+                    <td class="p-1"></td>
+                    <td class="p-1">X</td>
+                </tr>
+                <tr>
+                    <td class="text-left p-1" colspan="2">Giorni</td>
+                    <td class="bg-gray-50 p-1"><p>Thu</p>
+                        <p>1</p></td>
+                    <td class="p-1"><p>Fri</p>
+                        <p>2</p></td>
+                    <td class="bg-gray-50 p-1"><p>Sat</p>
+                        <p>3</p></td>
+                    <td class="bg-gray-50 p-1"><p>Sun</p>
+                        <p>4</p></td>
+                </tr>
+                </thead>
+                <tr>
+                    <td class="text-left p-1">Ore Ordinarie</td>
+                    <td class="p-1">108.0</td>
+                    <td class="bg-gray-50 p-1"></td>
+                    <td class="p-1">8</td>
+                    <td class="bg-gray-50 p-1">4</td>
+                    <td class="bg-gray-50 p-1"></td>
+                </tr>
+                <tr>
+                    <td class="text-left p-1">Ore Notturne</td>
+                    <td class="p-1">108.0</td>
+                    <td class="bg-gray-50 p-1"></td>
+                    <td class="p-1">8</td>
+                    <td class="bg-gray-50 p-1">4</td>
+                    <td class="bg-gray-50 p-1"></td>
+                </tr>
+            </table>
+        </div>
+
+
+    </div>
 
 {% endblock body %}
