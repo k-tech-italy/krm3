@@ -410,10 +410,7 @@ class TimeEntry(models.Model):
 
     def _verify_sick_time_entry_has_comment(self) -> None:
         if self.is_sick_day and not self.comment:
-            raise ValidationError(
-                _('Comment is mandatory when logging sick days or leave hours'),
-                code='sick_without_comment',
-            )
+            raise ValidationError(_('Comment is mandatory when logging sick days'), code='sick_without_comment')
 
     def _verify_leave_is_either_regular_or_special(self) -> None:
         if self.leave_hours and self.special_leave_hours:
