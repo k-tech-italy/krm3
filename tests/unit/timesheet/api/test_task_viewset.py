@@ -640,8 +640,8 @@ class TestTimeEntryAPICreateView:
         resource = ResourceFactory()
         task = TaskFactory(resource=resource)
 
-        # we made a mistake and inadvertently saved 18 hours... oops :^)
-        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+        # we made a mistake and inadvertently saved too many hours... oops :^)
+        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=16)
 
         # let's correct it
         response = api_client(user=admin_user).post(
@@ -650,7 +650,7 @@ class TestTimeEntryAPICreateView:
                 'dates': [today.isoformat()],
                 'taskId': task.id,
                 'resourceId': resource.id,
-                'dayShiftHours': 8,
+                'dayShiftHours': 10,
             },
             format='json',
         )
@@ -708,13 +708,15 @@ class TestTimeEntryAPICreateView:
         _task_entry_on_other_task = TimeEntryFactory(resource=resource, task=other_task, date=today, day_shift_hours=2)
 
         # we made a mistake and inadvertently saved 18 hours... oops :^)
-        _wrong_task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+        _wrong_task_entry = TimeEntryFactory(
+            resource=resource, task=task, date=today, day_shift_hours=2, travel_hours=18
+        )
 
         # let's correct it
         response = api_client(user=admin_user).post(
             self.url(),
             data={'dates': [today.isoformat()], 'resourceId': resource.id, 'taskId': task.id, 'dayShiftHours': 0}
-            | {hours_key: 6},
+            | {hours_key: 8},
             format='json',
         )
         assert response.status_code == status.HTTP_201_CREATED
