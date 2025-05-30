@@ -90,6 +90,7 @@ dev = [
     "django-tailwind[reload]>=4.0.1",
     "django-webtest>=1.9.13",
     "djangorestframework-stubs>=3.15.3",
+    "freezegun>=1.5.2",
     "opencv-python>=4.11.0.86",
     "pdbpp>=0.10.3",
     "pre-commit>=4.2.0",
