@@ -164,7 +164,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     )
     def view_linked_missions(self, request: HttpRequest, pk: int) -> HttpResponse:
         rids = map(str, Mission.objects.filter(expenses__reimbursement_id=pk).values_list('id', flat=True))
-        return redirect(reverse('admin:core_mission_changelist') + f"?id__in={','.join(rids)}")
+        return redirect(reverse('admin:core_mission_changelist') + f"?id__in={','.join(rids)}&recent=False")
 
     @button(
         html_attrs=NORMAL,

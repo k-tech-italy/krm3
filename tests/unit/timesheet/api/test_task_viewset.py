@@ -5,7 +5,14 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Permission
-from testutils.factories import ProjectFactory, ResourceFactory, TaskFactory, TimeEntryFactory, UserFactory
+from testutils.factories import (
+    ProjectFactory,
+    ResourceFactory,
+    SpecialLeaveReasonFactory,
+    TaskFactory,
+    TimeEntryFactory,
+    UserFactory,
+)
 from rest_framework import status
 from rest_framework.reverse import reverse
 
@@ -16,11 +23,12 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
 
 
-_day_entry_kinds = ('sick', 'holiday', 'leave')
+# NOTE: special leaves are leave entries with a reason. They have their own tests.
+_day_entry_kinds = ('sick', 'holiday', 'leave', 'rest')
 _day_entry_keys = tuple(f'{key}Hours' for key in _day_entry_kinds)
 
-_task_entry_kinds = ('day_shift', 'night_shift', 'rest', 'travel')
-_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'restHours', 'travelHours')
+_task_entry_kinds = ('day_shift', 'night_shift', 'travel')
+_task_entry_keys = ('dayShiftHours', 'nightShiftHours', 'travelHours')
 
 _computed_hours_kinds = (*_day_entry_kinds, *_task_entry_kinds)
 _computed_hours_keys = (*_day_entry_keys, *_task_entry_keys)
@@ -171,6 +179,8 @@ class TestTaskAPIListView:
                     'sickHours': _as_quantized_decimal(task_entry_within_range.sick_hours),
                     'holidayHours': _as_quantized_decimal(task_entry_within_range.holiday_hours),
                     'leaveHours': _as_quantized_decimal(task_entry_within_range.leave_hours),
+                    'specialLeaveHours': _as_quantized_decimal(task_entry_within_range.leave_hours),
+                    'specialLeaveReason': task_entry_within_range.special_leave_reason,
                     'nightShiftHours': _as_quantized_decimal(task_entry_within_range.night_shift_hours),
                     'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
@@ -187,6 +197,8 @@ class TestTaskAPIListView:
                     'sickHours': _as_quantized_decimal(day_entry_within_range.sick_hours),
                     'holidayHours': _as_quantized_decimal(day_entry_within_range.holiday_hours),
                     'leaveHours': _as_quantized_decimal(day_entry_within_range.leave_hours),
+                    'specialLeaveHours': _as_quantized_decimal(day_entry_within_range.special_leave_hours),
+                    'specialLeaveReason': day_entry_within_range.special_leave_reason,
                     'nightShiftHours': _as_quantized_decimal(day_entry_within_range.night_shift_hours),
                     'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
@@ -359,7 +371,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(8, {}, id='only_day_shift_hours'),
             pytest.param(
                 1,
-                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5, 'restHours': 1},
+                {'nightShiftHours': 1, 'onCallHours': 1, 'travelHours': 0.5},
                 id='task_entry_with_optional_hours',
             ),
         ),
@@ -398,7 +410,71 @@ class TestTimeEntryAPICreateView:
 
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
-        assert TimeEntry.objects.filter(resource=resource).exists()
+        entries = TimeEntry.objects.filter(resource=resource)
+        assert entries.exists()
+        day_entry = entries.get()
+        assert day_entry.special_leave_hours == 0
+        assert day_entry.special_leave_reason is None
+
+    def test_creates_single_valid_special_leave_entry(self, api_client, admin_user):
+        resource = ResourceFactory()
+        reason = SpecialLeaveReasonFactory()
+        time_entry_data = {
+            'dates': ['2024-01-01'],
+            'dayShiftHours': 0,
+            'leaveHours': 8,
+            'specialLeaveReason': reason.pk,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        }
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        entries = TimeEntry.objects.filter(resource=resource)
+        assert entries.exists()
+        special_leave = entries.get()
+        assert special_leave.leave_hours == 0
+        assert special_leave.special_leave_hours == 8
+        assert special_leave.special_leave_reason == reason
+
+    @pytest.mark.parametrize(
+        ('dates', 'expected_status_code'),
+        (
+            pytest.param(['2024-01-01'], status.HTTP_201_CREATED, id='one_day_at_start'),
+            pytest.param(['2024-01-15'], status.HTTP_201_CREATED, id='one_day_within_range'),
+            pytest.param(['2024-01-31'], status.HTTP_201_CREATED, id='one_day_at_end'),
+            pytest.param(['2023-12-31'], status.HTTP_400_BAD_REQUEST, id='one_day_before_start'),
+            pytest.param(['2024-02-01'], status.HTTP_400_BAD_REQUEST, id='one_day_after_end'),
+            pytest.param(['2023-12-30', '2023-12-31'], status.HTTP_400_BAD_REQUEST, id='range_before_start'),
+            pytest.param(['2023-12-31', '2024-01-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_start'),
+            pytest.param(['2024-02-01', '2024-02-02'], status.HTTP_400_BAD_REQUEST, id='range_after_end'),
+            pytest.param(['2024-01-31', '2024-02-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_end'),
+            pytest.param(
+                ['2023-12-31', *[f'2024-01-{x}' for x in range(1, 32)], '2024-02-01'],
+                status.HTTP_400_BAD_REQUEST,
+                id='range_containing_validity_period',
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
+            ),
+            pytest.param(
+                [f'2024-01-{x}' for x in range(1, 32)], status.HTTP_201_CREATED, id='range_equal_to_validity_period'
+            ),
+        ),
+    )
+    def test_accepts_special_leave_only_if_reason_is_valid(self, dates, expected_status_code, api_client, admin_user):
+        resource = ResourceFactory()
+        reason = SpecialLeaveReasonFactory(from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2024, 1, 31))
+        time_entry_data = {
+            'dates': dates,
+            'dayShiftHours': 0,
+            'leaveHours': 8,
+            'specialLeaveReason': reason.pk,
+            'resourceId': resource.pk,
+            'comment': 'approved',
+        }
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == expected_status_code
+        assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
 
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
@@ -419,27 +495,33 @@ class TestTimeEntryAPICreateView:
         assert not TimeEntry.objects.filter(task=task).exists()
 
     @pytest.mark.parametrize(
-        ('sick_hours', 'holiday_hours', 'leave_hours', 'expected_status_code'),
+        ('sick_hours', 'holiday_hours', 'leave_hours', 'with_reason', 'expected_status_code'),
         (
-            pytest.param(8, 0, 0, status.HTTP_201_CREATED, id='sick'),
-            pytest.param(0, 8, 0, status.HTTP_201_CREATED, id='holiday'),
-            pytest.param(0, 0, 4, status.HTTP_201_CREATED, id='leave'),
-            pytest.param(8, 8, 0, status.HTTP_400_BAD_REQUEST, id='sick_and_holiday'),
-            pytest.param(8, 0, 4, status.HTTP_400_BAD_REQUEST, id='sick_and_leave'),
-            pytest.param(0, 8, 4, status.HTTP_400_BAD_REQUEST, id='holiday_and_leave'),
-            pytest.param(8, 8, 4, status.HTTP_400_BAD_REQUEST, id='all'),
+            pytest.param(8, 0, 0, None, status.HTTP_201_CREATED, id='sick'),
+            pytest.param(0, 8, 0, None, status.HTTP_201_CREATED, id='holiday'),
+            pytest.param(0, 0, 4, False, status.HTTP_201_CREATED, id='leave'),
+            pytest.param(0, 0, 4, True, status.HTTP_201_CREATED, id='special_leave'),
+            pytest.param(8, 8, 0, None, status.HTTP_400_BAD_REQUEST, id='sick_and_holiday'),
+            pytest.param(8, 0, 4, False, status.HTTP_400_BAD_REQUEST, id='sick_and_leave'),
+            pytest.param(8, 0, 4, True, status.HTTP_400_BAD_REQUEST, id='sick_and_special_leave'),
+            pytest.param(0, 8, 4, False, status.HTTP_400_BAD_REQUEST, id='holiday_and_leave'),
+            pytest.param(0, 8, 4, True, status.HTTP_400_BAD_REQUEST, id='holiday_and_special_leave'),
+            pytest.param(8, 8, 4, False, status.HTTP_400_BAD_REQUEST, id='all_non_special'),
+            pytest.param(8, 8, 4, True, status.HTTP_400_BAD_REQUEST, id='all_special'),
         ),
     )
     def test_accepts_time_entries_with_only_one_absence_kind(
-        self, sick_hours, holiday_hours, expected_status_code, leave_hours, admin_user, api_client
+        self, sick_hours, holiday_hours, leave_hours, with_reason, expected_status_code, admin_user, api_client
     ):
         resource = ResourceFactory()
+        reason = SpecialLeaveReasonFactory()
         time_entry_data = {
             'dates': ['2024-01-01'],
             'dayShiftHours': 0,
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
             'leaveHours': leave_hours,
+            'specialLeaveReason': reason.pk if with_reason else None,
             'comment': 'approved',
             'resourceId': resource.pk,
         }
@@ -454,7 +536,7 @@ class TestTimeEntryAPICreateView:
         (
             pytest.param({'dayShiftHours': 8}, id='day_shift'),
             pytest.param(
-                {'dayShiftHours': 4, 'travelHours': 2, 'restHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
+                {'dayShiftHours': 4, 'travelHours': 2, 'onCallHours': 3, 'nightShiftHours': 1},
                 id='all_task_hours',
             ),
         ),
@@ -484,10 +566,15 @@ class TestTimeEntryAPICreateView:
             pytest.param({'sickHours': 8}, id='sick'),
             pytest.param({'holidayHours': 8}, id='holiday'),
             pytest.param({'leaveHours': 4}, id='leave'),
+            pytest.param({'leaveHours': 4, 'specialLeaveReason': 'Add a reason'}, id='special_leave'),
         ),
     )
     def test_accepts_day_entries_for_multiple_days(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
+
+        # replace the placeholder for special leaves with a valid reason
+        if hours_data.get('specialLeaveReason'):
+            hours_data['specialLeaveReason'] = SpecialLeaveReasonFactory(title='Test reason').pk
 
         time_entry_data = {
             'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
@@ -734,7 +821,7 @@ class TestTimeEntryAPICreateView:
             for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True)
         ),
     )
-    def test_non_leave_day_entry_overwrites_task_entries_on_same_day(
+    def test_day_entry_overwrites_task_entries_on_same_day_if_not_leave_or_rest(
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
@@ -748,12 +835,12 @@ class TestTimeEntryAPICreateView:
             'resourceId': resource.pk,
             'comment': 'approved',
             'dayShiftHours': 0,
-        } | {hours_key: 4 if hours_key.startswith('leave') else 8}
+        } | {hours_key: 4 if hours_key.removesuffix('Hours') in ('leave', 'rest') else 8}
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         should_raise_on_getting_deleted_record = (
-            does_not_raise() if hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+            does_not_raise() if hours_field in ('leave_hours', 'rest_hours') else pytest.raises(TimeEntry.DoesNotExist)
         )
         with should_raise_on_getting_deleted_record:
             TimeEntry.objects.get(pk=existing_task_entry_id)
@@ -897,3 +984,72 @@ class TestTimeEntryClearAPIAction:
         if expected_status_code < 400:
             response = api_client(user=regular_user).post(self.url(), data={'ids': [entry.pk]}, format='json')
             assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+class TestSpecialLeaveReasonViewSet:
+    @staticmethod
+    def url():
+        return reverse('timesheet-api:api-special-leave-reason-list')
+
+    def test_returns_valid_reasons_in_limited_interval(self, admin_user, api_client):
+        interval_start = datetime.date(2024, 1, 1)
+        interval_end = datetime.date(2024, 1, 31)
+
+        # this one is obvious
+        always_valid = SpecialLeaveReasonFactory(title='always')
+        # starts before our interval's start and doesn't end? it's ok
+        valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        # this validity period fully contains our interval, so it's valid
+        encompassing_interval = SpecialLeaveReasonFactory(
+            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+        )
+        # on the other hand, we don't want this one, as we can accept
+        # the reason only in a part of our interval
+        _fully_contained_within_interval = SpecialLeaveReasonFactory(
+            title='contained', from_date=datetime.date(2024, 1, 10), to_date=datetime.date(2024, 1, 15)
+        )
+        # not expired yet, still good
+        valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        # not started, we don't want it
+        _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=datetime.date(2027, 1, 1))
+        # throw it away, it's long expired
+        _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=datetime.date(2018, 1, 1))
+        # partial overlap, we don't want it - see above
+        _expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
+        _starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
+
+        response = api_client(user=admin_user).get(
+            self.url(), data={'from': interval_start.isoformat(), 'to': interval_end.isoformat()}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        returned_ids = [item.get('id') for item in response.json()]
+        assert returned_ids == [
+            always_valid.id,
+            valid_since_earlier_date.id,
+            encompassing_interval.id,
+            valid_until_future_date.id,
+        ]
+
+    def test_returns_all_reasons_if_no_interval_provided(self, admin_user, api_client):
+        always_valid = SpecialLeaveReasonFactory(title='always')
+        with_start_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        with_end_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        limited_validity_period = SpecialLeaveReasonFactory(
+            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+        )
+
+        response = api_client(user=admin_user).get(self.url())
+        assert response.status_code == status.HTTP_200_OK
+        returned_ids = [item.get('id') for item in response.json()]
+        assert returned_ids == [
+            always_valid.id,
+            with_start_date.id,
+            with_end_date.id,
+            limited_validity_period.id,
+        ]
+
+    @pytest.mark.parametrize('query_param', ('from', 'to'))
+    def test_rejects_requests_with_only_one_of_from_and_to(self, query_param, admin_user, api_client):
+        SpecialLeaveReasonFactory(title='should not be returned')
+        response = api_client(user=admin_user).get(self.url(), data={query_param: '2024-01-01'})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

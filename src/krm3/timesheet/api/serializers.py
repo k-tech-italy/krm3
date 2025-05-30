@@ -1,6 +1,8 @@
+import datetime
 from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
+from krm3.core.models.timesheets import SpecialLeaveReason
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
@@ -25,6 +27,8 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'sick_hours',
             'holiday_hours',
             'leave_hours',
+            'special_leave_hours',
+            'special_leave_reason',
             'night_shift_hours',
             'on_call_hours',
             'travel_hours',
@@ -47,6 +51,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'sick_hours',
             'holiday_hours',
             'leave_hours',
+            'special_leave_reason',
             'night_shift_hours',
             'on_call_hours',
             'travel_hours',
@@ -101,15 +106,39 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'sick_hours': 0,
             'holiday_hours': 0,
             'leave_hours': 0,
+            'special_leave_hours': 0,
         }
+
+        leave_hours = validated_data.get('leave_hours', 0)
+        if reason := self._verify_reason_is_valid(validated_data.pop('special_leave_reason', None), date):
+            validated_data['leave_hours'], validated_data['special_leave_hours'] = 0, leave_hours
 
         entry, _created = TimeEntry.objects.update_or_create(
             date=date,
             resource=resource,
             task=task,
+            special_leave_reason=reason,
             defaults=default_hours | validated_data,
         )
         return entry
+
+    def _verify_reason_is_valid(
+        self, reason: SpecialLeaveReason | None, date: datetime.date
+    ) -> SpecialLeaveReason | None:
+        if not reason:
+            return None
+
+        if reason.is_not_valid_yet(date=date):
+            raise serializers.ValidationError(
+                _('Reason for special leave is not valid yet: "{value}"').format(value=reason.title)
+            )
+
+        if reason.is_expired(date=date):
+            raise serializers.ValidationError(
+                _('Reason for special leave is expired: "{value}"').format(value=reason.title)
+            )
+
+        return reason
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -139,3 +168,9 @@ class TimesheetTaskSerializer(TaskSerializer):
 class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
+
+
+class SpecialLeaveReasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialLeaveReason
+        fields = '__all__'

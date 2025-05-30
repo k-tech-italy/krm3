@@ -60,6 +60,7 @@ class UserFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = User
+        django_get_or_create = ('username',)
 
 
 class CountryFactory(factory.django.DjangoModelFactory):
@@ -219,6 +220,7 @@ class TaskFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Task'
+        django_get_or_create = ('title', 'project', 'resource')
 
 
 class TimeEntryFactory(factory.django.DjangoModelFactory):
@@ -248,3 +250,10 @@ class InvoiceEntryFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.InvoiceEntry'
+
+
+class SpecialLeaveReasonFactory(factory.django.DjangoModelFactory):
+    title = factory.Faker('sentence', nb_words=2)
+
+    class Meta:
+        model = 'core.SpecialLeaveReason'

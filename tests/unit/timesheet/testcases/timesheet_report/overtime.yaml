@@ -1,0 +1,8 @@
+scenario:
+  day_shift: 12
+expected:
+  Ore ordinarie: 8
+  Ore straordinarie: 4
+
+# Example with day_shift hours > 8
+# ...
