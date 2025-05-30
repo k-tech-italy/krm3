@@ -23,7 +23,7 @@ class TestProject:
         with does_not_raise():
             ProjectFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
 
-    def test_raises_when_ends_before_starting(self):
+    def test_raises_if_ends_before_starting(self):
         with does_not_raise():
             # edge case: one day long project
             _valid = ProjectFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1))
@@ -38,7 +38,7 @@ class TestPO:
         with does_not_raise():
             POFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
 
-    def test_raises_when_ends_before_starting(self):
+    def test_raises_if_ends_before_starting(self):
         with does_not_raise():
             # edge case: one day long PO
             _valid = POFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1))
@@ -72,10 +72,16 @@ class TestTask:
         with does_not_raise():
             TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
 
-    def test_raises_when_ends_before_starting(self):
+    def test_raises_if_ends_before_starting(self):
+        project = ProjectFactory(start_date=datetime.date(2024, 1, 1))
+
         with does_not_raise():
             # edge case: one day long task
-            _valid = TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1))
+            _valid = TaskFactory(
+                project=project, start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2024, 1, 1)
+            )
 
         with pytest.raises(exceptions.ValidationError, match='must not be later'):
-            _should_fail = TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2020, 1, 1))
+            _should_fail = TaskFactory(
+                project=project, start_date=datetime.date(2024, 1, 1), end_date=datetime.date(2020, 1, 1)
+            )
