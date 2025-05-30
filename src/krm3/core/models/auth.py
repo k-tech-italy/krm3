@@ -86,6 +86,7 @@ class Resource(models.Model):
     last_name = models.CharField(
         max_length=50, help_text='Overwritten by profile.last_name if profile is provided', blank=True
     )
+    active = models.BooleanField(default=True)
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'

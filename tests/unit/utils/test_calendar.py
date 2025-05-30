@@ -1,5 +1,5 @@
 from contextlib import nullcontext as does_not_raise
-
+import datetime
 import pytest
 
 from krm3.utils.dates import KrmDay, dt, KrmCalendar
@@ -67,6 +67,14 @@ class TestKrmDay:
         assert KrmDay('2024-02-28').reladd(2) == KrmDay('2024-03-01')
         assert KrmDay('2024-02-28').reladd(months=1) == KrmDay('2024-03-28')
         assert KrmDay('2024-02-28').reladd(years=1, months=-1, days=+1) == KrmDay('2025-01-29')
+
+    def test_range_to(self):
+        assert list(KrmDay('2024-02-28').range_to(datetime.date(2024, 3, 1))) == [
+            KrmDay('2024-02-28'), KrmDay('2024-02-29'), KrmDay('2024-03-01')
+        ]
+        assert list(KrmDay('2024-02-28').range_to(KrmDay('2024-03-01'))) == [
+            KrmDay('2024-02-28'), KrmDay('2024-02-29'), KrmDay('2024-03-01')
+        ]
 
 
 class TestKrmCalendar:

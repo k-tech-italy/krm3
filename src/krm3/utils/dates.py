@@ -1,6 +1,6 @@
 from calendar import Calendar
 import datetime
-from typing import Self
+from typing import Self, Iterator
 
 import holidays
 from dateutil.relativedelta import relativedelta
@@ -62,11 +62,21 @@ class KrmDay:
     def month_name_short(self) -> str:
         return self.date.strftime('%b')
 
-    def reladd(self, days: int = None, **kwargs):
+    def reladd(self, days: int = None, **kwargs) -> Self:
         """Add a relativedelta to the KrmDay."""
         if days:
             kwargs['days'] = days
         return KrmDay(self.date + relativedelta(**kwargs))
+
+    def range_to(self, target: datetime.date | Self) -> Iterator[Self]:
+        """Iterate over all days between this day and the target day."""
+        if isinstance(target, datetime.date):
+            target = KrmDay(target)
+        if self.date > target.date:
+            raise ValueError("Start date cannot be after end date.")
+        delta_days = (target.date - self.date).days
+        for i in range(delta_days + 1):
+            yield self + i
 
     def __eq__(self, __value: Self) -> bool:
         return self.date == __value
@@ -86,10 +96,10 @@ class KrmDay:
     def __add__(self, days: int) -> Self:
         return (self.date + relativedelta(days=days))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.date.strftime('K%Y-%m-%d')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.date.strftime('%Y-%m-%d')
 
 class KrmCalendar(Calendar):

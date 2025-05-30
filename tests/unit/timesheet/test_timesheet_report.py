@@ -3,11 +3,11 @@ Hint: keep the file ./test_timesheet_report.xlsx aligned with fixture report_res
 """
 
 import pathlib
-from decimal import Decimal as D
+from decimal import Decimal as D  # noqa: N817
 
 import pytest
 
-from krm3.timesheet.report import timesheet_report_raw_data, calculate_overtime
+from krm3.timesheet.report import timesheet_report_raw_data, calculate_overtime, timeentry_key_mapping
 from krm3.utils.dates import dt
 from testutils import yaml as test_yaml
 from testutils.factories import TimeEntryFactory, TaskFactory, SpecialLeaveReasonFactory
@@ -32,7 +32,6 @@ def report_resource():
         TimeEntryFactory(
             resource=r1, date='2025-06-03', task=t2, day_shift_hours=4, night_shift_hours=3, on_call_hours=10
         ),
-        # TimeEntryFactory(resource=r1, date='2025-06-03', day_shift_hours=0, rest_hours=3),
         TimeEntryFactory(resource=r1, date='2025-06-04', day_shift_hours=0, leave_hours=1.5),
         TimeEntryFactory(
             resource=r1, date='2025-06-05', day_shift_hours=0, special_leave_hours=0.5, special_leave_reason=sl1
@@ -54,21 +53,43 @@ def _raw_results():
         'leave': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('1.50'), D('0.00'), D('0.00')],
         'rest': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
-        'special_leave|2': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.0')],
+        'special_leave|2': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.00')],
         'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'overtime': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     }
 
 
+_overtime_results = {
+    'day_shift': [D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('7.00'), D('0.00'), D('0.00'), D('0.00')],
+    'night_shift': [D('0.00'), D('2.50'), D('0.00'), D('0.00'), D('3.00'), D('0.00'), D('0.00'), D('0.00')],
+    'on_call': [D('0.00'), D('0.00'), D('0.00'), D('1.00'), D('10.00'), D('0.00'), D('0.00'), D('0.00')],
+    'travel': [D('0.00'), D('2.00'), D('0.00'), D('2.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
+    'holiday': [D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
+    'leave': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('1.50'), D('0.00'), D('0.00')],
+    'rest': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
+    'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
+    'special_leave|2': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.0')],
+    'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
+    'overtime': [D('0.00'), D('3.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
+}
+
+
 class TestTimesheetReport:
-    # @pytest.mark.parametrize(
-    #     ('data', 'expected'), test_yaml.generate_parameters(pathlib.Path(__file__).parent / 'testcases/timesheet_report')
-    # )
-    # def test_report_daysum(self, data, expected):
-    #     # test logic goes here
-    #     print(data, expected)
-    #     # TODO
-    #     assert False
+    @pytest.mark.parametrize(
+        ('data', 'expected'),
+        test_yaml.generate_parameters(pathlib.Path(__file__).parent / 'testcases/timesheet_report'),
+    )
+    def test_report_daysum(self, data: dict, expected):
+        data = {k: [D(f'{float(v):02}')] for k, v in data.items()}
+        expected = {k: [D(f'{float(v):02}')] for k, v in expected.items()}
+        result_base = {k: [D('0.00')] for k in _overtime_results if not k.startswith('special')}
+        data = result_base | data
+        expected_dict = {timeentry_key_mapping.get(k, k): v for k, v in result_base.items()} | expected
+
+        data = {'<resource>': data}
+        calculate_overtime(data)
+        result = {timeentry_key_mapping.get(k, k): v for k, v in data['<resource>'].items()}
+        assert result == expected_dict
 
     def test_report_raw_data(self, report_resource):
         from krm3.core.models import TimeEntry
@@ -77,7 +98,7 @@ class TestTimesheetReport:
         result = timesheet_report_raw_data(dt('2025-05-30'), dt('2025-06-06'))
         assert result == {report_resource: _raw_results()}
 
-    # def test_calculate_overtime(self):
-    #     results = calculate_overtime({"<resource>": _raw_results()})
-    #     # TODO
-    #     assert False
+    def test_calculate_overtime(self):
+        results = {'<resource>': _raw_results()}
+        calculate_overtime(results)
+        assert results['<resource>'] == _overtime_results

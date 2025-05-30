@@ -1,12 +1,12 @@
 import datetime
 import typing
-from decimal import Decimal
+from decimal import Decimal as D  # noqa: N817
 
-from krm3.core.models import TimeEntry
+from dateutil.relativedelta import relativedelta
+
+from krm3.core.models import TimeEntry, Resource
+
 from krm3.utils.dates import KrmDay
-
-if typing.TYPE_CHECKING:
-    from krm3.core.models import Resource
 
 
 _fields = [
@@ -21,9 +21,22 @@ _fields = [
 ]
 
 
+timeentry_key_mapping = {
+    'day_shift': 'Ore ordinarie',
+    'night_shift': 'Ore notturne',
+    'on_call': 'Reperibilità',
+    'travel': 'Viaggio',
+    'holiday': 'Ferie',
+    'leave': 'Permessi',
+    'rest': 'Riposo',
+    'sick': 'Malattia',
+    'overtime': 'Ore straordinarie',
+}
+
+
 def timesheet_report_raw_data(
-    from_date: datetime.date, to_date: datetime.date, resource: 'Resource' = None
-) -> dict["Resource", dict[str, list[Decimal]]]:
+    from_date: datetime.date, to_date: datetime.date, resource: Resource = None
+) -> dict['Resource', dict[str, list[D]]]:
     """
     Prepare the data for the timesheet report.
 
@@ -34,7 +47,9 @@ def timesheet_report_raw_data(
         Decimals summing up hours for each day.
 
     """
-    qs = TimeEntry.objects.filter(date__gte=from_date, date__lte=to_date).order_by('resource', 'date')
+    qs = TimeEntry.objects.filter(date__gte=from_date, date__lte=to_date, resource__active=True).order_by(
+        'resource', 'date'
+    )
 
     if resource:
         qs = qs.filter(resource=resource)
@@ -49,49 +64,65 @@ def timesheet_report_raw_data(
         index = date - start_date
         if entry.special_leave_reason:
             key = f'special_leave|{entry.special_leave_reason_id}'
-            hours_types = resource_stats.setdefault(key, [Decimal('0.00')] * days_interval)
+            hours_types = resource_stats.setdefault(key, [D('0.00')] * days_interval)
             hours_types[index] += entry.special_leave_hours
         else:
             for field in _fields:
-                hours_types = resource_stats.setdefault(field, [Decimal('0.00')] * days_interval)
-                # z = getattr(entry, f'{field}_hours')
-                # if z > Decimal('0.0'):
-                #     print(f'{field}: adding {z} to {hours_types[index]} from day {entry.date}')
+                hours_types = resource_stats.setdefault(field, [D('0.00')] * days_interval)
                 hours_types[index] += getattr(entry, f'{field}_hours')
 
-    for resource, stats in results.items():
-        stats['overtime'] = [Decimal('0.00')] * days_interval
+    for stats in results.values():
+        stats['overtime'] = [D('0.00')] * days_interval
 
     return results
 
 
-def add_report_summaries(results):
-    for resource, stats in results.items():
-        for key, result_list in stats.items():
+def add_report_summaries(results: dict) -> None:
+    """Insert summary fields to the results at the beginning of each list."""
+    for stats in results.values():
+        for result_list in stats.values():
             result_list.insert(0, sum(result_list))
             for i in range(1, len(result_list)):
-                if result_list[i] == Decimal('0.00'):
+                if result_list[i] == D('0.00'):
                     result_list[i] = None
 
 
-def timesheet_report_sum():
-    pass
-
-
-def calculate_overtime(resource_stats):
-    for resource, stats in resource_stats.items():
+def calculate_overtime(resource_stats: dict) -> None:
+    """Calculate overtime for each day."""
+    for stats in resource_stats.values():
         num_days = len(stats['day_shift'])
 
-        day_keys = [
-            x for x in stats.keys() if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime']
-        ]
+        day_keys = [x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime']]
 
         for i in range(num_days):
-            if sum([stats[x][i] for x in day_keys]) == Decimal(0.0):
-                day_shift = min(8, stats['day_shift'][i] + stats['night_shift'][i])
-                extra_from_night_shift = max(stats['night_shift'][i] - (8 - stats[day_shift][i]), 0)
+            if sum([stats[x][i] for x in day_keys]) == D(0.0):
+                tot_hours = stats['day_shift'][i] + stats['night_shift'][i] + stats['travel'][i]
+                day_shift = min(D('8.00'), stats['day_shift'][i] + stats['night_shift'][i])
+                stats['day_shift'][i] = day_shift
+                stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
-            hours_to_shift_from_night = min(8 - stats['day_shift'][i], stats['night_shift'][i])
-            ord_hours = stats['day_shift'][i] + stats['night_shift'][i]
 
-            # stats['overtime'][i] = stats['overtime'][i] / num_days
+def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
+    """Prepare the data for the timesheet report."""
+    if current_month is None:
+        current_month = datetime.date.today().replace(day=1)
+    else:
+        current_month = datetime.datetime.strptime(current_month, '%Y%m').date()
+    prev_month = current_month - relativedelta(months=1)
+    next_month = current_month + relativedelta(months=1)
+
+    end_of_month = current_month + relativedelta(months=1, days=-1)
+    data = timesheet_report_raw_data(current_month, end_of_month)
+    calculate_overtime(data)
+    add_report_summaries(data)
+
+    data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
+
+    return {
+        'prev_month': prev_month.strftime('%Y%m'),
+        'next_month': next_month.strftime('%Y%m'),
+        'title': current_month.strftime('%B %Y'),
+        'days': list(KrmDay(current_month).range_to(end_of_month)),
+        'data': data,
+        'keymap': timeentry_key_mapping,
+    }
