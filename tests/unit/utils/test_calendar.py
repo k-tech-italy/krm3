@@ -1,5 +1,7 @@
 from contextlib import nullcontext as does_not_raise
 import datetime
+
+import freezegun
 import pytest
 
 from krm3.utils.dates import KrmDay, dt, KrmCalendar
@@ -76,6 +78,14 @@ class TestKrmDay:
             KrmDay('2024-02-28'), KrmDay('2024-02-29'), KrmDay('2024-03-01')
         ]
 
+    @freezegun.freeze_time("2025-03-02")
+    def test_today(self):
+        assert KrmDay() == KrmDay('2025-03-02')
+
+    def test_init(self):
+        assert KrmDay('2025-06-02') == KrmDay(dt('2025-06-02'))
+        assert KrmDay('2025-06-02') == KrmDay(KrmDay('2025-06-02'))
+
 
 class TestKrmCalendar:
     def test_itermonthdates(self):
@@ -95,7 +105,26 @@ class TestKrmCalendar:
             ('2024-02-28', '2024-03-01', does_not_raise(), ['2024-02-28', '2024-02-29', '2024-03-01']),
         ]
     )
-    def test_between(self, start, end, expectation, result):
+    def test_iter_dates(self, start, end, expectation, result):
         cal = KrmCalendar()
         with expectation:
-            assert cal.between(start, end) == [KrmDay(x) for x in result]
+            assert list(cal.iter_dates(start, end)) == [KrmDay(x) for x in result]
+
+    @pytest.mark.parametrize(
+        "krm_day, expected", [
+            ('2024-02-28', (KrmDay('2024-02-26'), KrmDay('2024-03-03'))),
+            (None, (KrmDay('2024-02-26'), KrmDay('2024-03-03'))),
+        ])
+    @freezegun.freeze_time("2024-02-26")
+    def test_week_for(self, krm_day, expected):
+        assert KrmCalendar().week_for(KrmDay(krm_day)) == expected
+
+
+    @pytest.mark.parametrize(
+        "krm_day, expected", [
+            ('2024-02-28', [KrmDay('2024-02-26') + i for i in range(7)]),
+            (None, [KrmDay('2024-02-26') + i for i in range(7)]),
+        ])
+    @freezegun.freeze_time("2024-02-26")
+    def test_iter_week(self, krm_day, expected):
+        assert list(KrmCalendar().iter_week(krm_day)) == expected

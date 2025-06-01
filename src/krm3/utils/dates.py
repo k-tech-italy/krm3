@@ -3,7 +3,7 @@ import datetime
 from typing import Self, Iterator
 
 import holidays
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta, SU, MO
 
 from krm3.config.environ import env
 
@@ -15,8 +15,15 @@ def dt(dat: str) -> datetime.date:
 
 class KrmDay:
 
-    def __init__(self, day: datetime.date | str) -> None:
-        self.date = day if isinstance(day, datetime.date) else dt(day)
+    def __init__(self, day: datetime.date | str = None) -> None:
+        if day is None:
+            day = datetime.date.today()
+        if isinstance(day, KrmDay):
+            self.date = day.date
+        elif isinstance(day, datetime.date):
+            self.date = day
+        else:
+            self.date = dt(day)
 
     @property
     def day(self) -> int:
@@ -94,7 +101,7 @@ class KrmDay:
         return (self.date - __value.date).days
 
     def __add__(self, days: int) -> Self:
-        return (self.date + relativedelta(days=days))
+        return KrmDay(self.date + relativedelta(days=days))
 
     def __repr__(self) -> str:
         return self.date.strftime('K%Y-%m-%d')
@@ -115,16 +122,34 @@ class KrmCalendar(Calendar):
     def itermonthdays(self, year: int, month: int) -> list[KrmDay]:
         return [KrmDay(datetime.date(year, month, x)) if x else None for x in super().itermonthdays(year, month)]
 
-    def between(self, from_date: datetime.date | str, to_date: datetime.date | str) -> list[KrmDay]:
-        if isinstance(from_date, str):
-            from_date = dt(from_date)
-        if isinstance(to_date, str):
-            to_date = dt(to_date)
+    def iter_dates(self, from_date: datetime.date | str, to_date: datetime.date | str) -> Iterator[KrmDay]:
+        """Iterate over all dates between from_date and to_date."""
+        from_date = KrmDay(from_date)
+        to_date = KrmDay(to_date)
         if from_date > to_date:
             raise ValueError("Start date cannot be after end date.")
-        delta_days = (to_date - from_date).days
+        delta_days = (to_date.date - from_date.date).days
 
-        return [KrmDay(from_date + datetime.timedelta(days=i)) for i in range(delta_days + 1)]
+        for i in range(delta_days + 1):
+            yield KrmDay(from_date.date + datetime.timedelta(days=i))
+
+    def week_for(self, dat: datetime.date | str = None) -> tuple[KrmDay, KrmDay]:
+        """Return the start and end date of the week for the given date.
+
+        If no date is given, the current date is used.
+        """
+        if not isinstance(dat, KrmDay):
+            dat = KrmDay(dat)
+        dat = dat.date
+        return KrmDay(dat + relativedelta(weekday=MO(-1))), KrmDay(dat + relativedelta(weekday=SU))
+
+    def iter_week(self, dat: datetime.date | str = None) -> Iterator[KrmDay]:
+        """Iterate over all dates in the week for the given date.
+
+        If no date is given, the current date is used.
+        """
+        return self.iter_dates(*self.week_for(dat))
+
 
 
 def get_country_holidays() -> holidays.HolidayBase:
