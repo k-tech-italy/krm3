@@ -225,7 +225,8 @@ class TaskFactory(factory.django.DjangoModelFactory):
 
 class TimeEntryFactory(factory.django.DjangoModelFactory):
     date = factory.Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
-    day_shift_hours = factory.Faker('random_int', min=0, max=8)
+    # day_shift_hours = factory.Faker('random_int', min=0, max=8)
+    hours = factory.Dict({'day_shift': factory.Faker('random_int', min=0, max=8)})
     resource = factory.SubFactory(ResourceFactory)
     # NOTE: comments are defined as optional, but they can be mandatory
     # in some situations - see test suite.

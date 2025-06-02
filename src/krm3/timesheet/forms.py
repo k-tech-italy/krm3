@@ -1,3 +1,5 @@
+from django.db.utils import ProgrammingError
+
 from django import forms
 from django_jsonform.widgets import JSONFormWidget
 from django_pydantic_field.forms import SchemaField
@@ -14,9 +16,13 @@ class TimeEntryJSONFormWidget(JSONFormWidget):
         super().__init__(schema, model_name, file_handler, validate_on_submit, attrs)
         self.schema['properties']['special_leave_reason_id'] = {
             'type': 'integer', 'default': None, 'title': 'Special Leave Reason Id',
-            'choices': list(SpecialLeaveReason.objects.order_by('title').values_list('title', flat=True))
         }
-
+        try:
+            self.schema['properties']['special_leave_reason_id']['choices'] = \
+              list(SpecialLeaveReason.objects.values_list('title', flat=True))
+        except ProgrammingError:
+            pass
+            # If migration creating SpecialLeaveReason has not yet run fail silently
 
 class TimeEntryForm(forms.ModelForm):
     hours = SchemaField(Hours, widget=TimeEntryJSONFormWidget)

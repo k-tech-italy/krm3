@@ -198,7 +198,7 @@ class TimeEntry(models.Model):
     hours: Hours = SchemaField()
     special_leave_reason = models.ForeignKey(SpecialLeaveReason, on_delete=models.PROTECT, null=True, blank=True)
 
-    day_shift_hours = models.DecimalField(max_digits=4, decimal_places=2)
+    day_shift_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
@@ -246,7 +246,7 @@ class TimeEntry(models.Model):
         """
         # NOTE: could use sum() on a comprehension, but `sum()` may also
         #       return Literal[0], which trips up the type checker
-        return Decimal(self.day_shift_hours) + Decimal(self.night_shift_hours) + Decimal(self.travel_hours)
+        return Decimal(self.hours.day_shift) + Decimal(self.hours.night_shift) + Decimal(self.hours.travel)
 
     @property
     def total_hours(self) -> Decimal:
@@ -259,11 +259,11 @@ class TimeEntry(models.Model):
         # NOTE: see `total_task` hours, the same applies here
         return (
             self.total_task_hours
-            + Decimal(self.leave_hours)
-            + Decimal(self.special_leave_hours)
-            + Decimal(self.sick_hours)
-            + Decimal(self.holiday_hours)
-            + Decimal(self.rest_hours)
+            + Decimal(self.hours.leave)
+            + Decimal(self.hours.special_leave)
+            + Decimal(self.hours.sick)
+            + Decimal(self.hours.holiday)
+            + Decimal(self.hours.rest)
         )
 
     @property
@@ -272,23 +272,23 @@ class TimeEntry(models.Model):
 
     @property
     def is_sick_day(self) -> bool:
-        return self.sick_hours > 0.0
+        return self.hours.sick > 0.0
 
     @property
     def is_holiday(self) -> bool:
-        return self.holiday_hours > 0.0
+        return self.hours.holiday > 0.0
 
     @property
     def is_leave(self) -> bool:
-        return self.leave_hours > 0.0
+        return self.hours.leave > 0.0
 
     @property
     def is_rest(self) -> bool:
-        return self.rest_hours > 0.0
+        return self.hours.rest > 0.0
 
     @property
     def is_special_leave(self) -> bool:
-        return self.special_leave_hours > 0.0 and self.special_leave_reason
+        return self.hours.special_leave > 0.0 and self.hours.special_leave_reason_id
 
     @property
     def has_day_entry_hours(self) -> bool:
@@ -300,7 +300,7 @@ class TimeEntry(models.Model):
 
     @property
     def has_task_entry_hours(self) -> bool:
-        return self.total_task_hours > 0.0 or self.on_call_hours > 0.0
+        return self.total_task_hours > 0.0 or self.hours.on_call > 0.0
 
     @property
     def prevents_overtime_on_same_day(self) -> bool:

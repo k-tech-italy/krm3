@@ -6,7 +6,7 @@ import django_pydantic_field.fields
 
 import krm3
 from krm3.core.pyd_models import Hours
-from django.db import migrations
+from django.db import migrations, models
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import TimeEntry
@@ -54,6 +54,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterField(
+            model_name='timeentry',
+            name='day_shift_hours',
+            field=models.DecimalField(blank=True, decimal_places=2, max_digits=4, null=True),
+        ),
         migrations.AddField(
             model_name='timeentry',
             name='hours',
