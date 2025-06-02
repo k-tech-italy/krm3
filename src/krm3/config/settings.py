@@ -86,6 +86,7 @@ INSTALLED_APPS = (
         "tailwind",
         "krm3.theme.apps.ThemeConfig",
         "django_cotton.apps.SimpleAppConfig",
+        "django_jsonform",
     ]
 )
 

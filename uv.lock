@@ -625,6 +625,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-jsonform"
+version = "2.23.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/a8/83c57acbc153b86615be279cee5a194ce1163b578f29a9f6d658f267785e/django_jsonform-2.23.2.tar.gz", hash = "sha256:6fa2ba7c082be51d738e6c66e35075a3cb9ebc2f941e3a477c988900a7fe3269", size = 108182, upload-time = "2025-01-29T22:31:34.093Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/8e/8766f4bc535917ccbc6b3dcb57caf82210a6bacd613c3d9dbaec81018935/django_jsonform-2.23.2-py3-none-any.whl", hash = "sha256:1b7f94c5a2bd22c844e035a9940a9c8586f7b8fc3346ef2a6a13ba608e0059d7", size = 109148, upload-time = "2025-01-29T22:31:31.186Z" },
+]
+
+[[package]]
 name = "django-mptt"
 version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -658,6 +670,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a6/70/11411d4f528e4fad57a17dae81c85da039feba90c001b64e677fc0925a97/django-picklefield-3.3.tar.gz", hash = "sha256:4e76dd20f2e95ffdaf18d641226ccecc169ff0473b0d6bec746f3ab97c26b8cb", size = 9559, upload-time = "2025-03-13T03:34:12.784Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/34/e1/988fa6ded7275bb11e373ccd4b708af477f12027d3ee86b7cb5fc5779412/django_picklefield-3.3-py3-none-any.whl", hash = "sha256:d6f6fd94a17177fe0d16b0b452a9860b8a1da97b6e70633ab53ade4975f1ce9a", size = 9565, upload-time = "2025-03-13T03:34:11.209Z" },
+]
+
+[[package]]
+name = "django-pydantic-field"
+version = "0.3.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/d4/8be5efc5dc2784a5c662744221a8e8ffc1df6d5866237b5e30c8f92e7d0c/django_pydantic_field-0.3.12.tar.gz", hash = "sha256:510af19d2813c32a2529234a70eb6b6bd8e75fcc4f53baee520f797cba3420d0", size = 38316, upload-time = "2025-01-14T19:48:06.276Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/92/bd13828e0d50dbbec496618471dd07727a645b8464f2431d2cbf2a126952/django_pydantic_field-0.3.12-py3-none-any.whl", hash = "sha256:57aeb055583e7ae82732cfaa36afd01166c7000a67502a9922dca1ce9b3e76a5", size = 42401, upload-time = "2025-01-14T19:48:03.582Z" },
 ]
 
 [[package]]
@@ -1184,8 +1210,10 @@ dependencies = [
     { name = "django-crispy-forms" },
     { name = "django-debug-toolbar" },
     { name = "django-filter" },
+    { name = "django-jsonform" },
     { name = "django-mptt-admin" },
     { name = "django-picklefield" },
+    { name = "django-pydantic-field" },
     { name = "django-qr-code" },
     { name = "django-regex" },
     { name = "django-smart-admin", extra = ["sysinfo"] },
@@ -1285,8 +1313,10 @@ requires-dist = [
     { name = "django-crispy-forms", specifier = ">=2.3" },
     { name = "django-debug-toolbar", specifier = ">=5.1.0" },
     { name = "django-filter", specifier = ">=25.1" },
+    { name = "django-jsonform", specifier = ">=2.23.2" },
     { name = "django-mptt-admin", specifier = ">=2.7.2" },
     { name = "django-picklefield", specifier = ">=3.3" },
+    { name = "django-pydantic-field", specifier = ">=0.3.12" },
     { name = "django-qr-code", specifier = ">=4.1.0" },
     { name = "django-regex", specifier = ">=0.5.0" },
     { name = "django-smart-admin", extras = ["sysinfo"], specifier = ">=3.0" },

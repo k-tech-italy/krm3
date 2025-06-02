@@ -7,6 +7,7 @@ from django.http import HttpRequest
 from django.template.response import TemplateResponse
 
 from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry
+from krm3.timesheet.forms import TimeEntryForm
 from krm3.timesheet.report import timesheet_report_data
 
 
@@ -26,6 +27,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     list_fields = ('date', 'resource', 'task', 'category', 'hours_worked', 'state')
     search_fields = ('date', 'category', 'state')
     list_filter = [('resource', AutoCompleteFilter), ('task', AutoCompleteFilter)]
+    form = TimeEntryForm
 
     @button()
     def report(self, request: HttpRequest) -> TemplateResponse:

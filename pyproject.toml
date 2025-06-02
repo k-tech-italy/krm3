@@ -75,6 +75,8 @@ dependencies = [
     "django-admin-extra-buttons>=2.1.1",
     "django-smart-admin[sysinfo]>=3.0",
     "holidays>=0.73",
+    "django-pydantic-field>=0.3.12",
+    "django-jsonform>=2.23.2",
 ]
 
 [project.optional-dependencies]

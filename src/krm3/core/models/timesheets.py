@@ -7,8 +7,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from django_pydantic_field import SchemaField
 
 from .auth import Resource
+from ..pyd_models import Hours
 
 if TYPE_CHECKING:
     import datetime
@@ -189,19 +191,22 @@ class TimeEntry(models.Model):
 
     date = models.DateField()
     last_modified = models.DateTimeField(auto_now=True)
+    state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # pyright: ignore[reportArgumentType]
+    comment = models.TextField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, null=True, blank=True)
+
+    hours: Hours = SchemaField()
+    special_leave_reason = models.ForeignKey(SpecialLeaveReason, on_delete=models.PROTECT, null=True, blank=True)
+
     day_shift_hours = models.DecimalField(max_digits=4, decimal_places=2)
     sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     special_leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    special_leave_reason = models.ForeignKey(SpecialLeaveReason, on_delete=models.PROTECT, null=True, blank=True)
     night_shift_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # pyright: ignore[reportArgumentType]
-    comment = models.TextField(null=True, blank=True)
-    metadata = models.JSONField(default=dict, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries', null=True, blank=True)
