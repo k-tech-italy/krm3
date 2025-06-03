@@ -1,5 +1,6 @@
 import datetime
 from contextlib import nullcontext as does_not_raise
+from decimal import Decimal
 
 from django.core import exceptions
 from krm3.core.models.timesheets import TimeEntry
@@ -96,6 +97,94 @@ class TestTimeEntry:
             )
             # NOTE: asserting the obvious to appease Ruff :^)
             assert entry.task is None
+
+    @pytest.mark.parametrize(
+        'hour_field',
+        (
+            pytest.param('day_shift_hours', id='day_shift'),
+            pytest.param('sick_hours', id='sick'),
+            pytest.param('holiday_hours', id='holiday'),
+            pytest.param('leave_hours', id='leave'),
+            pytest.param('special_leave_hours', id='special_leave'),
+            pytest.param('on_call_hours', id='on_call'),
+            pytest.param('night_shift_hours', id='night_shift'),
+            pytest.param('travel_hours', id='travel'),
+            pytest.param('rest_hours', id='rest'),
+        ),
+    )
+    def test_rejects_negative_hours(self, hour_field):
+        resource = ResourceFactory()
+        time_logged = {'day_shift_hours': 0} | {hour_field: -1}
+        with pytest.raises(exceptions.ValidationError):
+            TimeEntryFactory(
+                task=(
+                    TaskFactory(
+                        project=ProjectFactory(start_date=datetime.date(2020, 1, 1)),
+                        resource=resource,
+                        start_date=datetime.date(2020, 1, 1),
+                    )
+                    if hour_field in ('day_shift_hours', 'night_shift_hours', 'travel_hours', 'on_call_hours')
+                    else None
+                ),
+                special_leave_reason=SpecialLeaveReasonFactory() if hour_field == 'special_leave_hours' else None,
+                **time_logged,
+            )
+
+    @pytest.mark.parametrize(
+        'hour_field',
+        (
+            pytest.param('day_shift_hours', id='day_shift'),
+            pytest.param('sick_hours', id='sick'),
+            pytest.param('holiday_hours', id='holiday'),
+            pytest.param('leave_hours', id='leave'),
+            pytest.param('special_leave_hours', id='special_leave'),
+            pytest.param('on_call_hours', id='on_call'),
+            pytest.param('night_shift_hours', id='night_shift'),
+            pytest.param('travel_hours', id='travel'),
+            pytest.param('rest_hours', id='rest'),
+        ),
+    )
+    def test_rejects_too_many_hours(self, hour_field):
+        resource = ResourceFactory()
+        time_logged = {'day_shift_hours': 0} | {hour_field: 25}
+        with pytest.raises(exceptions.ValidationError):
+            TimeEntryFactory(
+                date=datetime.date(2024, 1, 1),
+                task=(
+                    TaskFactory(
+                        project=ProjectFactory(start_date=datetime.date(2020, 1, 1)),
+                        resource=resource,
+                        start_date=datetime.date(2020, 1, 1),
+                    )
+                    if hour_field in ('day_shift_hours', 'night_shift_hours', 'travel_hours', 'on_call_hours')
+                    else None
+                ),
+                special_leave_reason=SpecialLeaveReasonFactory() if hour_field == 'special_leave_hours' else None,
+                **time_logged,
+            )
+
+    def test_rejects_too_many_day_shift_hours(self):
+        project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
+        resource = ResourceFactory()
+        with pytest.raises(exceptions.ValidationError):
+            TimeEntryFactory(
+                date=datetime.date(2024, 1, 1),
+                resource=resource,
+                task=TaskFactory(project=project, resource=resource, start_date=datetime.date(2020, 1, 1)),
+                day_shift_hours=Decimal(16.25),
+            )
+
+    def test_rejects_too_many_night_shift_hours(self):
+        project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
+        resource = ResourceFactory()
+        with pytest.raises(exceptions.ValidationError):
+            TimeEntryFactory(
+                date=datetime.date(2024, 1, 1),
+                resource=resource,
+                task=TaskFactory(project=project, resource=resource, start_date=datetime.date(2020, 1, 1)),
+                day_shift_hours=0,
+                night_shift_hours=Decimal(8.25),
+            )
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
