@@ -42,13 +42,23 @@ class User(AbstractUser):
     def get_natural_key_fields() -> list[str]:
         return ['username']
 
-    def can_manage_and_view_any_project(self) -> bool:
+    def can_manage_or_view_any_project(self) -> bool:
         """Check visibility and edit rights for privileged users.
 
-        :return: `True` if the user is allowed to view and edit data on
+        :return: `True` if the user is allowed to view or edit data on
             any project, `False` otherwise.
         """
         return self.has_any_perm('core.manage_any_project', 'core.view_any_project')
+
+    def can_manage_or_view_any_timesheet(self) -> bool:
+        """Check visibility and edit rights for privileged users.
+
+        :return: `True` if the user is allowed to view or edit data on
+            any timesheet, `False` otherwise.
+        """
+        return self.can_manage_or_view_any_project() and self.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        )
 
     def has_any_perm(self, *perms: str) -> bool:
         """Check that the user has at least one of the given permissions.

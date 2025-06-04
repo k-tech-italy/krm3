@@ -37,7 +37,8 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
             return Response(data={'error': 'Required query parameter(s) missing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         resource = Resource.objects.get(pk=resource_id)
-        if resource.user != request.user and not cast('User', request.user).can_manage_and_view_any_project():
+        user = cast('User', request.user)
+        if resource.user != request.user and not user.can_manage_or_view_any_timesheet():
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         try:

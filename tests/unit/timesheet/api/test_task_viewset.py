@@ -306,22 +306,46 @@ class TestTaskAPIListView:
         assert other_user_response.json().get('tasks', [])[0].get('id') == other_user_task.id
 
     @pytest.mark.parametrize(
-        ('permission', 'expected_status_code'),
+        ('permissions', 'expected_status_code'),
         [
-            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
-            pytest.param('manage_any_project', status.HTTP_200_OK, id='project_manager'),
-            pytest.param('manage_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_manager'),
-            pytest.param('view_any_project', status.HTTP_200_OK, id='project_viewer'),
-            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+            pytest.param([], status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param(
+                ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
+            ),
+            pytest.param(
+                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
+            ),
+            pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
+            pytest.param(
+                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
+            ),
+            pytest.param(
+                ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
+            ),
+            pytest.param(
+                ['view_any_project', 'manage_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_viewer_and_timesheet_manager',
+            ),
+            pytest.param(
+                ['manage_any_project', 'view_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_manager_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['manage_any_project', 'manage_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_manager_and_timesheet_manager',
+            ),
         ],
     )
     def test_regular_user_can_see_tasks_based_on_permissions(
-        self, permission, expected_status_code, regular_user, api_client
+        self, permissions, expected_status_code, regular_user, api_client
     ):
         user_resource = ResourceFactory(user=regular_user)
         other_user_resource = ResourceFactory()
 
-        if permission:
+        for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
         start_date = datetime.date(2024, 1, 1)
