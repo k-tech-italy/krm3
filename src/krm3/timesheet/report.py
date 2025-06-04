@@ -101,6 +101,12 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['day_shift'][i] = day_shift
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
+def format_data(value: int) -> int | None | D:
+    return value if value is None or value % 1 != 0 else int(value)
+
+def num_to_weekday(num: int) -> str:
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    return days[num]
 
 def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
@@ -116,13 +122,26 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     calculate_overtime(data)
     add_report_summaries(data)
 
+    for shifts in data.values():
+        for key, values in shifts.items():
+            shifts[key] = [format_data(v) for v in values]
+
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
+
+
+    weekdays_in_current_month = \
+        [datetime.date(current_month.year, current_month.month, day).weekday()
+         for day in range(1, end_of_month.day + 1)]
+
+    weekdays_in_current_month = [num_to_weekday(day) for day in weekdays_in_current_month]
+
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
         'title': start_of_month.strftime('%B %Y'),
         'days': list(KrmDay(current_month).range_to(end_of_month)),
+        'weekdays': weekdays_in_current_month,
         'data': data,
         'keymap': timeentry_key_mapping,
     }

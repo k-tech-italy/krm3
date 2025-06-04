@@ -6,51 +6,83 @@
     {{ block.super }}
 
     <div class="w-9/10 mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-8 text-base-content">{{ title }} Report</h1>
+
+          <div class="flex flex-row justify-between mt-2">
+              <a href="{% querystring month=prev_month %}"
+                 class="flex p-2 mb-8 bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
+              <div class="flex flex-col">
+                  <h1 class="text-3xl font-bold text-center mb-1 text-base-content">{{ title }} Report</h1>
+                  <button id="download-excel"
+                          class="flex bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
+                      Download report</button>
+              </div>
+              <a href="{% querystring month=next_month %}"
+                 class="flex items-center p-2 mb-8 bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600">Next month</a>
+            </div>
 
     {% for resource, stats in data.items %}
         {% if stats %}
+
             <div class="overflow-x-auto rounded-md shadow">
-                <table class="min-w-full leading-normal text-right border">
-                    <thead class="bg-gray-50">
+
+
+                <table class="min-w-full leading-normal text-right border bg-blue-100 font-semibold border-separate">
+                    <thead class="bg-blue-400">
                     <tr>
                         <td class="text-left p-1">{{ resource }}</td>
                         <td class="p-1">Tot HH</td>
-                        {% for day in days %}
-                            <td class="p-1">{{ day.is_holiday }}</td>
-                        {% endfor %}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td class="text-left p-1" colspan="2">Giorni</td>
-                        {% for day in days %}
-                            <td class="p-1 text-center">
-                                <p>{{ day.date|date:"D" }}</p>
-                                <p>{{ day.date|date:"j" }}</p>
-                            </td>
+                        {% for day in weekdays %}
+                        <td class="p-1 text-center">
+                            <p>{{ day }}</p>
+
+                        </td>
                         {% endfor %}
                     </tr>
 
+                    </thead>
+                    <tbody>
+
+
+                   <tr>
+                       <td class="text-left p-1" colspan="2">Giorni</td>
+                       {% for day in days %}
+                       <td class="p-1 text-center">
+                           <p>{{ day.date|date:"D" }}</p>
+                           <p>{{ day.date|date:"j" }}</p>
+                       </td>
+                       {% endfor %}
+
+                   </tr>
+                   <tr class="bg-blue-200">
+                       <td class="text-left p-1" colspan="2">Is holiday</td>
+                       {% for day in days %}
+                       <td class="p-1"> {% if day.is_holiday %}
+                           x
+                            {% endif %}</td>
+                        {% endfor %}
+                   </tr>
+
+
                     {% for key, label in keymap.items %}
-                        {% report_line key label stats %}
+                        {% report_line key label stats forloop.counter0|divisibleby:"2" %}
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
             <div class="overflow-x-auto rounded-md shadow">
-            <table class="min-w-full leading-normal text-right border">
-                <thead class="bg-gray-50">
-                <tr>
-                    <td class="text-left p-1 w-1/6" colspan="2">{{ resource }}</td>
-                    <td class="text-left" colspan="{{ days|length }}">No data available</td>
-                </tr>
-                </thead>
-            </table>
+                <table class="min-w-full leading-normal text-right border">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <td class="text-left p-1 w-1/6" colspan="2">{{ resource }}</td>
+                        <td class="text-left" colspan="{{ days|length }}">No data available</td>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
         {% endif %}
     {% endfor %}
 
-</div>
+    </div>
 
 {% endblock body %}
