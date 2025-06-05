@@ -201,7 +201,7 @@ class ReportViewSet(viewsets.ViewSet):
         wb.remove(wb.active)
 
         for resource, data in report_data['data'].items():
-            headers = [str(resource), 'Tot HH', *report_data['weekdays']]
+            headers = [str(resource), 'Tot HH', *[day.day_of_week_short for day in report_data['days']]]
             ws = wb.create_sheet(title=str(resource))
             ws.append(headers)
 
