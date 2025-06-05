@@ -60,6 +60,15 @@ class User(AbstractUser):
             'core.manage_any_timesheet', 'core.view_any_timesheet'
         )
 
+    def can_manage_any_timesheet(self) -> bool:
+        """Check visibility and edit rights for privileged users.
+
+        :return: `True` if the user is allowed to edit data on
+            any timesheet, `False` otherwise.
+        """
+        # NOTE: `self.has_any_perm()` always checks the superuser flag
+        return self.can_manage_or_view_any_project() and self.has_any_perm('core.manage_any_timesheet')
+
     def has_any_perm(self, *perms: str) -> bool:
         """Check that the user has at least one of the given permissions.
 
