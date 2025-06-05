@@ -31,9 +31,9 @@
                     <tr>
                         <td class="text-left p-1">{{ resource }}</td>
                         <td class="p-1">Tot HH</td>
-                        {% for day in weekdays %}
+                        {% for day in days %}
                         <td class="p-1 text-center">
-                            <p>{{ day }}</p>
+                            <p>{{ day.day_of_week_short }}</p>
 
                         </td>
                         {% endfor %}

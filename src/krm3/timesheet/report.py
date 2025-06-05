@@ -104,9 +104,6 @@ def calculate_overtime(resource_stats: dict) -> None:
 def format_data(value: int) -> int | None | D:
     return value if value is None or value % 1 != 0 else int(value)
 
-def num_to_weekday(num: int) -> str:
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    return days[num]
 
 def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
@@ -128,21 +125,12 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
 
-
-    weekdays_in_current_month = \
-        [datetime.date(current_month.year, current_month.month, day).weekday()
-         for day in range(1, end_of_month.day + 1)]
-
-    weekdays_in_current_month = [num_to_weekday(day) for day in weekdays_in_current_month]
-
-
     return {
         'prev_month': prev_month.strftime('%Y%m'),
-        'current_month': current_month.strftime('%Y%m'),
+        'current_month': start_of_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
         'title': start_of_month.strftime('%B %Y'),
-        'days': list(KrmDay(current_month).range_to(end_of_month)),
-        'weekdays': weekdays_in_current_month,
+        'days': list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)),
         'data': data,
         'keymap': timeentry_key_mapping,
     }
