@@ -69,8 +69,9 @@ class TestTask:
 
     def test_accepts_missing_end_date(self):
         """Verify that date validation doesn't trigger if `end_date` is missing."""
+        project = ProjectFactory(start_date=datetime.date(2024, 1, 1))
         with does_not_raise():
-            TaskFactory(start_date=datetime.date(2024, 1, 1), end_date=None)
+            TaskFactory(project=project, start_date=datetime.date(2024, 1, 1), end_date=None)
 
     def test_raises_if_ends_before_starting(self):
         project = ProjectFactory(start_date=datetime.date(2024, 1, 1))

@@ -37,7 +37,8 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
             return Response(data={'error': 'Required query parameter(s) missing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         resource = Resource.objects.get(pk=resource_id)
-        if resource.user != request.user and not cast('User', request.user).can_manage_and_view_any_project():
+        user = cast('User', request.user)
+        if resource.user != request.user and not user.can_manage_or_view_any_timesheet():
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         try:
@@ -78,8 +79,6 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        task_id = request.data.pop('task_id', None)
-
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
@@ -93,21 +92,20 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     raise
             return Response(data={'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
-        request.data['task'] = task_id
-        request.data['resource'] = resource_id
-
         try:
             resource = Resource.objects.get(pk=resource_id)
         except Resource.DoesNotExist:
             return Response('Resource not found.', status=status.HTTP_404_NOT_FOUND)
 
-        if resource.user != request.user and not cast('User', request.user).has_any_perm(
-            'core.manage_any_project', 'core.manage_any_timesheet'
-        ):
+        if resource.user != request.user and not cast('User', request.user).can_manage_any_timesheet():
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         if not isinstance(dates, list):
             return Response(data={'error': 'List of dates required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # normalize keys for the serializer
+        request.data['task'] = request.data.pop('task_id', None)
+        request.data['resource'] = resource_id
 
         with transaction.atomic():
             try:
@@ -136,7 +134,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         entries: TimeEntryQuerySet = self.get_queryset().filter(pk__in=requested_entry_ids)  # pyright: ignore[reportAssignmentType]
 
-        if not cast('User', request.user).has_any_perm('core.manage_any_project', 'core.manage_any_timesheet'):
+        if not cast('User', request.user).can_manage_any_timesheet():
             # since we already ACL-filtered the queryset, we need to
             # know if we have fetched every single one of the objects
             # we requested
