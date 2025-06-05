@@ -120,6 +120,7 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
+        'current_month': current_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
         'title': start_of_month.strftime('%B %Y'),
         'days': list(KrmDay(start_of_month).range_to(end_of_month)),

@@ -1,13 +1,17 @@
 import datetime
+import openpyxl
+
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
+from django.http import HttpResponse
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
+
 
 from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet
@@ -19,6 +23,8 @@ from krm3.timesheet.api.serializers import (
     TimeEntryCreateSerializer,
     TimesheetSerializer,
 )
+
+from src.krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
     from krm3.core.models import User
@@ -179,3 +185,40 @@ class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ReportViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(
+        detail=False,
+        methods=['get'],
+        url_path=r"(?P<date>\d{6})"
+    )
+    def monthly_report(self, request: Request, date: str) -> Response:
+        report_data = timesheet_report_data(date)
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        for resource, data in report_data['data'].items():
+            headers = [str(resource), 'Tot HH', *report_data['weekdays']]
+            ws = wb.create_sheet(title=str(resource))
+            ws.append(headers)
+
+            giorni = ['Giorni', '', *[day.day for day in report_data['days']]]
+            ws.append(giorni)
+
+            is_holiday = ['Is holiday', '', *[day.is_holiday for day in report_data['days']]]
+            ws.append(is_holiday)
+
+            if data:
+                for key, value in data.items():
+                    row = [report_data['keymap'][key], *value]
+                    ws.append(row)
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"report_{date[0:4]}-{date[4:6]}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response

@@ -12,9 +12,9 @@
                  class="flex p-2 mb-8 bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
               <div class="flex flex-col">
                   <h1 class="text-3xl font-bold text-center mb-1 text-base-content">{{ title }} Report</h1>
-                  <button id="download-excel"
+                  <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
                           class="flex bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
-                      Download report</button>
+                      Download report</a>
               </div>
               <a href="{% querystring month=next_month %}"
                  class="flex items-center p-2 mb-8 bg-blue-500 text-white border-2 border-black rounded-xl text-md hover:bg-blue-600">Next month</a>
