@@ -26,8 +26,8 @@
                         <td class="text-left p-1" colspan="2">Giorni</td>
                         {% for day in days %}
                             <td class="p-1 text-center">
-                                <p>{{ day|date:"D" }}</p>
-                                <p>{{ day|date:"j" }}</p>
+                                <p>{{ day.date|date:"D" }}</p>
+                                <p>{{ day.date|date:"j" }}</p>
                             </td>
                         {% endfor %}
                     </tr>

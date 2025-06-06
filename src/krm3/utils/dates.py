@@ -92,8 +92,17 @@ class KrmDay:
     def __ge__(self, __value: Self) -> bool:
         return hash(self) >= hash(__value)
 
-    def __sub__(self, __value: Self) -> int:
-        return (self.date - __value.date).days
+    def __sub__(self, other: Self | int | datetime.timedelta | relativedelta) -> int | KrmDay:
+        """Subtract a number of days or a time period from this day."""
+        if isinstance(other, KrmDay):
+            return (self.date - other.date).days
+        if isinstance(other, int):
+            delta = relativedelta(days=other)
+        elif isinstance(other, datetime.timedelta):
+            delta = relativedelta(days=other.days)
+        elif isinstance(other, relativedelta):
+            delta = relativedelta(years=other.years, months=other.months, days=other.days)
+        return KrmDay(self.date - delta)
 
     def __add__(self, other: int | datetime.timedelta | relativedelta) -> KrmDay:
         """Add a number of days or a time period to this day.
