@@ -59,7 +59,7 @@ def timesheet() -> None:  # noqa: PLR0912, C901
 
     today = KrmDay()
     for i in range(12):
-        for day in KrmCalendar(today - 7 * i).iter_week():
+        for day in KrmCalendar().iter_week(today - 7 * i):
             match i:
                 case 0:  # Sick
                     if not day.is_holiday:
@@ -103,7 +103,7 @@ def timesheet() -> None:  # noqa: PLR0912, C901
                         TimeEntry.objects.create(
                             resource=resources[0], date=day.date, day_shift_hours=0, leave_hours=i % 3 + 0.5
                         )
-
+    click.secho(f'Created {TimeEntry.objects.filter(resource=resources[0]).count()} time entries.', fg='green')
 
 def prepare_resources() -> list[Resource]:
     resources = list(Resource.objects.all())

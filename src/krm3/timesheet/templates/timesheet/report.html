@@ -33,8 +33,7 @@
                         <td class="p-1">Tot HH</td>
                         {% for day in days %}
                         <td class="p-1 text-center">
-                            <p>{{ day.day_of_week_short }}</p>
-
+                            {% if day.is_holiday %}X{% endif %}
                         </td>
                         {% endfor %}
                     </tr>
@@ -53,15 +52,6 @@
                        {% endfor %}
 
                    </tr>
-                   <tr class="bg-blue-200">
-                       <td class="text-left p-1" colspan="2">Is holiday</td>
-                       {% for day in days %}
-                       <td class="p-1"> {% if day.is_holiday %}
-                           x
-                            {% endif %}</td>
-                        {% endfor %}
-                   </tr>
-
 
                     {% for key, label in keymap.items %}
                         {% report_line key label stats forloop.counter0|divisibleby:"2" %}
