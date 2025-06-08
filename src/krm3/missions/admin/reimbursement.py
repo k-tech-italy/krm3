@@ -149,7 +149,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[Reimbursement]:
         return super().get_queryset(request).prefetch_related('expenses')
 
-    def get_object(self, request: HttpRequest, object_id: int, from_field=None) -> Reimbursement:
+    def get_object(self, request: HttpRequest, object_id: int, *args, **kwargs) -> Reimbursement:
         queryset = self.get_queryset(request)
         # Custom logic to retrieve the object
         return queryset.get(pk=object_id)
@@ -211,7 +211,9 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
         if TableExport.is_valid_format(export_format):
             exporter = TableExport(export_format, table_data)
-            return exporter.response(f'mission_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}')
+            return exporter.response(
+                f'reimbursement_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}'
+            )
         return None
 
     @admin.action(description='Reimbursement report')
