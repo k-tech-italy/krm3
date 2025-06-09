@@ -1,9 +1,20 @@
-{% extends "base2.html" %}
+{% extends "admin/base_site.html" %}
 
-{% load static report_line %}
+{% load tailwind_tags static report_line %}
 
-{% block body %}
-    {{ block.super }}
+
+
+{% block extrastyle %}
+    {% tailwind_css %}
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ admin_title }}</a></h1>
+{% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+
+{% block content %}
 
     <div class="w-9/10 mx-auto text-black dark:text-black">
 
@@ -75,4 +86,4 @@
 
     </div>
 
-{% endblock body %}
+{% endblock content %}

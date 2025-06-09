@@ -6,7 +6,6 @@ from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin import site
 from django.db.models import QuerySet, When, Case, Value, BooleanField, F
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import redirect
@@ -188,7 +187,6 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         return TemplateResponse(
             request,
             context={
-                'site_header': site.site_header,
                 'reimbursement': reimbursement,
                 'missions': missions,
                 'expenses': expenses,
