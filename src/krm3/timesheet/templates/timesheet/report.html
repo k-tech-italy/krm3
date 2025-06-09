@@ -3,9 +3,13 @@
 {% load tailwind_tags static report_line %}
 
 
-
 {% block extrastyle %}
     {% tailwind_css %}
+    <style>
+      html {
+        background-color: transparent;
+      }
+    </style>
 {% endblock %}
 
 {% block branding %}
@@ -13,7 +17,7 @@
 {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
-
+{% block content_title %}{% endblock %}
 {% block content %}
     <div class="w-9/10 mx-auto">
           <div class="flex flex-row justify-between mt-2">
@@ -23,11 +27,11 @@
                   <h1 class="text-3xl font-bold text-center mb-1">{{ title }} Report</h1>
               </div>
               <a href="{% querystring month=next_month %}"
-                 class="flex items-center p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600">Next month</a>
+                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600">Next month</a>
             </div>
             <div class="flex justify-center">
                 <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
-                          class=" p-2 mb-4 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
+                          class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
                       Download report</a>
             </div>
 
@@ -35,13 +39,13 @@
         {% if stats %}
 
             <div class="overflow-x-auto rounded-md shadow mb-4">
-                <table class="min-w-full leading-normal text-right border font-semibold border-separate">
-                    <thead class="">
+                <table class="min-w-full leading-normal text-right border-2 font-semibold border-separate">
+                    <thead>
                     <tr>
-                        <td class="text-left p-1">{{ resource }}</td>
-                        <td class="p-1">Tot HH</td>
+                        <td class="text-left p-1 ">{{ resource }}</td>
+                        <td class="p-1"> HH</td>
                         {% for day in days %}
-                        <td class="p-1 text-center">
+                        <td class="p-1 text-center dark:bg-gray-200">
                             {% if day.is_holiday %}X{% endif %}
                         </td>
                         {% endfor %}
@@ -51,7 +55,7 @@
                     <tbody>
 
 
-                   <tr class="bg-gray-300! dark:bg-gray-700!">
+                   <tr class="bg-gray-300">
                        <td class="text-left p-1" colspan="2">Giorni</td>
                        {% for day in days %}
                        <td class="p-1 text-center  ">
