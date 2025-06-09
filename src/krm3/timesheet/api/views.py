@@ -201,15 +201,13 @@ class ReportViewSet(viewsets.ViewSet):
         wb.remove(wb.active)
 
         for resource, data in report_data['data'].items():
-            headers = [str(resource), 'Tot HH', *[day.day_of_week_short for day in report_data['days']]]
+            headers = [str(resource), 'Tot HH', *['X' if day.is_holiday else '' for day in report_data['days']]]
+
             ws = wb.create_sheet(title=str(resource))
             ws.append(headers)
 
-            giorni = ['Giorni', '', *[day.day for day in report_data['days']]]
+            giorni = ['Giorni', '', *[f'{day.day_of_week_short}\n{day.day}' for day in report_data['days']]]
             ws.append(giorni)
-
-            is_holiday = ['Is holiday', '', *[day.is_holiday for day in report_data['days']]]
-            ws.append(is_holiday)
 
             if data:
                 for key, value in data.items():

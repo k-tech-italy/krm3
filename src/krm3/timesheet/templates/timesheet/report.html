@@ -5,7 +5,7 @@
 {% block body %}
     {{ block.super }}
 
-    <div class="w-9/10 mx-auto">
+    <div class="w-9/10 mx-auto text-black dark:text-black">
 
           <div class="flex flex-row justify-between mt-2">
               <a href="{% querystring month=prev_month %}"
@@ -26,8 +26,8 @@
             <div class="overflow-x-auto rounded-md shadow">
 
 
-                <table class="min-w-full leading-normal text-right border bg-blue-100 font-semibold border-separate">
-                    <thead class="bg-blue-400">
+                <table class="min-w-full leading-normal text-right border font-semibold border-separate">
+                    <thead class="bg-gray-400">
                     <tr>
                         <td class="text-left p-1">{{ resource }}</td>
                         <td class="p-1">Tot HH</td>
@@ -43,9 +43,9 @@
 
 
                    <tr>
-                       <td class="text-left p-1" colspan="2">Giorni</td>
+                       <td class="text-left p-1 bg-gray-200" colspan="2">Giorni</td>
                        {% for day in days %}
-                       <td class="p-1 text-center">
+                       <td class="p-1 text-center bg-gray-200">
                            <p>{{ day.date|date:"D" }}</p>
                            <p>{{ day.date|date:"j" }}</p>
                        </td>
@@ -62,7 +62,7 @@
         {% else %}
             <div class="overflow-x-auto rounded-md shadow">
                 <table class="min-w-full leading-normal text-right border">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gray-200">
                     <tr>
                         <td class="text-left p-1 w-1/6" colspan="2">{{ resource }}</td>
                         <td class="text-left" colspan="{{ days|length }}">No data available</td>

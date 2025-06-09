@@ -41,28 +41,22 @@ def test_report_creation(api_client, regular_user):
     # check row labels
     assert sheet_1['A1'].value == str(task_1.resource)
     assert sheet_1['A2'].value == 'Giorni'
-    assert sheet_1['A3'].value == 'Is holiday'
-    row_labels = [sheet_1[f'A{index}'].value for index in range(4, 13)]
+    row_labels = [sheet_1[f'A{index}'].value for index in range(3, 12)]
     assert all(value in timeentry_key_mapping.values() for value in row_labels)
 
-    # check week day labels
-    assert sheet_1['C1'].value == 'Sun'
-    assert sheet_1['AF1'].value == 'Mon'
-    assert sheet_1['AG1'].value is None
-
     # check day labels
-    assert sheet_1['C2'].value == 1
-    assert sheet_1['AF2'].value == 30
+    assert sheet_1['C2'].value == 'Sun\n1'
+    assert sheet_1['AF2'].value == 'Mon\n30'
     assert sheet_1['AG2'].value is None
 
     # check cell values
-    assert sheet_1['L4'].value == 8
-    assert sheet_1['Q4'].value is None
-    assert sheet_2['O5'].value == 7
+    assert sheet_1['L3'].value == 8
+    assert sheet_1['Q3'].value is None
+    assert sheet_2['O4'].value == 7
 
     # check total hours
-    assert sheet_1['B4'].value == 14
-    assert sheet_2['B5'].value == 7
+    assert sheet_1['B3'].value == 14
+    assert sheet_2['B4'].value == 7
 
 
 @pytest.mark.django_db
