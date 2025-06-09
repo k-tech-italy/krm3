@@ -27,7 +27,7 @@
                   <h1 class="text-3xl font-bold text-center mb-1">{{ title }} Report</h1>
               </div>
               <a href="{% querystring month=next_month %}"
-                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600">Next month</a>
+                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
             </div>
             <div class="flex justify-center">
                 <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
@@ -41,11 +41,10 @@
             <div class="overflow-x-auto rounded-md shadow mb-4">
                 <table class="min-w-full leading-normal text-right border-2 font-semibold border-separate">
                     <thead>
-                    <tr>
-                        <td class="text-left p-1 ">{{ resource }}</td>
-                        <td class="p-1"> HH</td>
+                    <tr class="bg-gray-400! dark:bg-blue-900! ">
+                        <td class="text-left p-1 border border-1" colspan="2">{{ resource }}</td>
                         {% for day in days %}
-                        <td class="p-1 text-center dark:bg-gray-200">
+                        <td class="p-1 text-center border border-1">
                             {% if day.is_holiday %}X{% endif %}
                         </td>
                         {% endfor %}
@@ -55,10 +54,11 @@
                     <tbody>
 
 
-                   <tr class="bg-gray-300">
-                       <td class="text-left p-1" colspan="2">Giorni</td>
+                   <tr class="bg-gray-400! dark:bg-blue-900!">
+                       <td class="text-left p-1 border border-1">Giorni</td>
+                       <td>HH</td>
                        {% for day in days %}
-                       <td class="p-1 text-center  ">
+                       <td class="p-1 text-center border border-1">
                            <p>{{ day.date|date:"D" }}</p>
                            <p>{{ day.date|date:"j" }}</p>
                        </td>
