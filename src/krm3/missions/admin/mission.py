@@ -223,7 +223,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     f' ({summary.pop(ReimbursementSummaryEnum.GIA_RIMBORSATE)}'
                     f' già Rimborsate, {da_rimborsare} rimanenti)'
                 )
-                result_dict[Reimbursement.objects.get(id=reimbursement)] = {
+                result_dict[Reimbursement.objects.get(id=reimbursement) if reimbursement else None] = {
                     'expenses': expenses_table,
                     'summary': summary,
                 }
