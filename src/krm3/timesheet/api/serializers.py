@@ -176,13 +176,7 @@ class TimesheetSerializer(serializers.Serializer):
     days = serializers.SerializerMethodField()
 
     def get_days(self, timesheet: entities.Timesheet) -> dict[str, dict[str, bool]]:
-        days_result = {}
-
-        for day in timesheet.days:
-            serializer = KrmDayHolidaySerializer(day)
-            days_result[str(day)] = serializer.data
-
-        return days_result
+        return {str(day): KrmDayHolidaySerializer(day).data for day in timesheet.days}
 
 
 class SpecialLeaveReasonSerializer(serializers.ModelSerializer):
