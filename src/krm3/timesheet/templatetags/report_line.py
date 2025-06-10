@@ -5,11 +5,12 @@ register = template.Library()
 
 
 @register.simple_tag
-def report_line(key: str, label:str, data: dict) -> SafeString:
-    cells = '\n'.join([f'<td class="p-1">{c if c else ""}</td>' for c in data[key]])
+def report_line(key: str, label:str, data: dict, is_alt:bool = False) -> SafeString:
+    cells = '\n'.join([f'<td class="p-1 border border-1 text-center">{c if c else ""}</td>' for c in data[key]])
+    row_color = "bg-neutral-300" if is_alt else "bg-neutral-200"
     result = f"""
-        <tr>
-            <td class="text-left p-1">{label}</td>
+        <tr class="{row_color} dark:bg-neutral-600!">
+            <td class="border border-1 text-left p-1 ">{label}</td>
             {cells}
         </tr>
     """

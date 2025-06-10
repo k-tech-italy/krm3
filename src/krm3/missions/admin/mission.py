@@ -12,7 +12,7 @@ from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin, site
+from django.contrib.admin import ModelAdmin
 from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
@@ -230,7 +230,6 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 }
 
             ctx = {
-                'site_header': site.site_header,
                 'mission': mission,
                 'reimbursement_breakdown': result_dict,
                 'base': settings.BASE_CURRENCY,

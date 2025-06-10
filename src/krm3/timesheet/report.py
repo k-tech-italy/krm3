@@ -101,6 +101,9 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['day_shift'][i] = day_shift
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
+def format_data(value: int) -> int | None | D:
+    return value if value is None or value % 1 != 0 else int(value)
+
 
 def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
@@ -116,13 +119,18 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     calculate_overtime(data)
     add_report_summaries(data)
 
+    for shifts in data.values():
+        for key, values in shifts.items():
+            shifts[key] = [format_data(v) for v in values]
+
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
+        'current_month': start_of_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
         'title': start_of_month.strftime('%B %Y'),
-        'days': list(KrmDay(start_of_month).range_to(end_of_month)),
+        'days': list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)),
         'data': data,
         'keymap': timeentry_key_mapping,
     }
