@@ -11,6 +11,6 @@ echo Deleting database "${DB_NAME}"
 psql -h ${DB_HOST} -p ${DB_PORT} -U postgres -c "DROP DATABASE IF EXISTS ${DB_NAME}"
 psql -h ${DB_HOST} -p ${DB_PORT} -U postgres -c "CREATE DATABASE ${DB_NAME}"
 
-pg_dump -p 16432 -h localhost -U postgres -d krm3 -O -x | psql -h localhost -p ${DB_PORT} -U postgres --set ON_ERROR_STOP=on -d ${DB_NAME}
+pg_dump -p 16432 -h localhost -U postgres -d krm3 -O -x | grep -v "transaction_timeout" | psql -h localhost -p ${DB_PORT} -U postgres --set ON_ERROR_STOP=on -d ${DB_NAME}
 
 DJANGO_SUPERUSER_PASSWORD=123 ./manage.py createsuperuser --username admin --email a@a.com --noinput

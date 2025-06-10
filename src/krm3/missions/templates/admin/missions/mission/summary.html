@@ -37,7 +37,13 @@
 
     {% for reimbursement, data in reimbursement_breakdown.items %}
 
-        <h2><a href="{% url "admin:core_reimbursement_change" reimbursement.id %} ">{{ reimbursement }}</a></h2>
+        <h2>
+            {% if reimbursement %}
+            <a href="{% url "admin:core_reimbursement_change" reimbursement.id %} ">{{ reimbursement }}</a>
+            {% else %}
+                Not yet reimbursed
+            {% endif %}
+        </h2>
         <p>Summaries in {{ base }}:</p>
         <ul>
         {% for key, value in data.summary.items %}
