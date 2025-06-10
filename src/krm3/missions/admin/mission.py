@@ -215,8 +215,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     ) or decimal.Decimal(0.0)
 
                 da_rimborsare = (
-                    summary[ReimbursementSummaryEnum.SPESE_TRASFERTA]
-                    - summary[ReimbursementSummaryEnum.ANTICIPATO]
+                    summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO]
                     - summary[ReimbursementSummaryEnum.GIA_RIMBORSATE]
                 )
                 summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] = (
