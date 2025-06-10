@@ -24,7 +24,7 @@ from krm3.timesheet.api.serializers import (
     TimesheetSerializer,
 )
 
-from src.krm3.timesheet.report import timesheet_report_data
+from krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
     from krm3.core.models import User
