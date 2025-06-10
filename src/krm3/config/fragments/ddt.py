@@ -13,6 +13,9 @@ from ..environ import env as _env
 
 TESTING = "test" in sys.argv or "PYTEST_VERSION" in os.environ
 
+DDT_APPS = []
+DDT_MIDDLEWARES = []
+
 if (ddt_key := _env('DDT_KEY')) and not TESTING:
     logger = _logging.getLogger(__name__)
     try:
