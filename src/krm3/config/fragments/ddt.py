@@ -4,19 +4,23 @@ Add DDT_MIDDLEWARES to settings.MIDDLEWARES
 Add DDT_APPS to settings.INSTALLED_APPS
 """
 import logging as _logging
+import os
+import sys
 
 from django_regex.utils import RegexList as _RegexList
 
 from ..environ import env as _env
 
-if ddt_key := _env('DDT_KEY'):
+TESTING = "test" in sys.argv or "PYTEST_VERSION" in os.environ
+
+if (ddt_key := _env('DDT_KEY')) and not TESTING:
     logger = _logging.getLogger(__name__)
     try:
         ignored = _RegexList(('/api/.*',))
 
         def show_ddt(request):
             """Runtime check for showing debug toolbar."""
-            if not _env('DEBUG'):
+            if not _env('DEBUG') or request.path.startswith('/api/'):
                 return False
             # use https://bewisse.com/modheader/ to set custom header
             # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)
