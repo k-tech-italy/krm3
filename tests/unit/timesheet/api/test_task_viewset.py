@@ -208,6 +208,13 @@ class TestTaskAPIListView:
                     'task': None,
                 },
             ],
+            'days': {'2024-01-01': {'hol': True, 'nwd': True},
+                     '2024-01-02': {'hol': False, 'nwd': False},
+                     '2024-01-03': {'hol': False, 'nwd': False},
+                     '2024-01-04': {'hol': False, 'nwd': False},
+                     '2024-01-05': {'hol': False, 'nwd': False},
+                     '2024-01-06': {'hol': True, 'nwd': True},
+                     '2024-01-07': {'hol': True, 'nwd': True}}
         }
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):

@@ -55,6 +55,10 @@ class KrmDay:
         return not get_country_holidays().is_working_day(self.date)
 
     @property
+    def is_non_working_day(self) -> bool:
+        return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday
+
+    @property
     def day_of_week(self) -> str:
         return self.date.strftime('%A')
 
