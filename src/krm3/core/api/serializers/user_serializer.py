@@ -1,13 +1,14 @@
-from django.contrib.auth import get_user_model
-from rest_framework.serializers import ModelSerializer
+from krm3.core.models.auth import User
+from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
 from krm3.core.models import Resource, UserProfile
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
-User = get_user_model()
 
-
-class ResourceSerializer(metaclass=ModelDefaultSerializerMetaclass):
+# XXX: why is this not a BaseSerializer? The metaclass implicitly
+#      setting the base class in __new__() is making the type checker
+#      go insane
+class UserResourceSerializer(metaclass=ModelDefaultSerializerMetaclass):
     class Meta:
         model = Resource
         fields = '__all__'
@@ -19,9 +20,15 @@ class ProfileSerializer(ModelSerializer):
         fields = '__all__'
 
 
+# XXX: why is this not a BaseSerializer? The metaclass implicitly
+#      setting the base class in __new__() is making the type checker
+#      go insane
 class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
     profile = ProfileSerializer(required=False, read_only=True, allow_null=True)
-    resource = ResourceSerializer(required=False, read_only=True, allow_null=True)
+    # XXX: since this is NOT a serializer according to the type checker,
+    #      all the kwargs passed to __init__() are flagged as unknown
+    resource = UserResourceSerializer(required=False, read_only=True, allow_null=True)
+    permissions = SerializerMethodField()
 
     class Meta:
         model = User
@@ -37,4 +44,8 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
             'last_login',
             'resource',
             'profile',
+            'permissions',
         )
+
+    def get_permissions(self, obj: User) -> list[str] | None:
+        return None if obj.is_superuser else sorted(obj.get_all_permissions())

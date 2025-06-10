@@ -23,4 +23,4 @@ def test_login_nok(browser: 'AppTestBrowser', regular_user):
     browser.type('#username', regular_user.username)
     browser.type('#password', 'wrong')
     browser.click('button[type="submit"]')
-    browser.assert_text('Login failed. Please try again.', selector='span', timeout=2)
+    browser.assert_text('No active account found with the given credentials', selector='span', timeout=2)

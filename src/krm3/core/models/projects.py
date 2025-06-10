@@ -28,7 +28,7 @@ class ProjectManager(NaturalKeyModelManager):
 
         Superuser gets them all.
         """
-        if user.can_manage_and_view_any_project():
+        if user.can_manage_or_view_any_project():
             return self.all()
         return self.filter(mission__resource__profile__user=user)
 
@@ -75,7 +75,7 @@ class Project(NaturalKeyModel):
         return super().clean()
 
     def is_accessible(self, user: User) -> bool:
-        return user.can_manage_and_view_any_project() or self.mission_set.filter(resource__profile__user=user).exists()
+        return user.can_manage_or_view_any_project() or self.mission_set.filter(resource__profile__user=user).exists()
 
 
 class POState(models.TextChoices):

@@ -1,13 +1,17 @@
 import datetime
+import openpyxl
+
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
+from django.http import HttpResponse
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
+
 
 from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet
@@ -19,6 +23,8 @@ from krm3.timesheet.api.serializers import (
     TimeEntryCreateSerializer,
     TimesheetSerializer,
 )
+
+from src.krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
     from krm3.core.models import User
@@ -37,7 +43,8 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
             return Response(data={'error': 'Required query parameter(s) missing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         resource = Resource.objects.get(pk=resource_id)
-        if resource.user != request.user and not cast('User', request.user).can_manage_and_view_any_project():
+        user = cast('User', request.user)
+        if resource.user != request.user and not user.can_manage_or_view_any_timesheet():
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         try:
@@ -78,8 +85,6 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        task_id = request.data.pop('task_id', None)
-
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
@@ -93,21 +98,20 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     raise
             return Response(data={'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
-        request.data['task'] = task_id
-        request.data['resource'] = resource_id
-
         try:
             resource = Resource.objects.get(pk=resource_id)
         except Resource.DoesNotExist:
             return Response('Resource not found.', status=status.HTTP_404_NOT_FOUND)
 
-        if resource.user != request.user and not cast('User', request.user).has_any_perm(
-            'core.manage_any_project', 'core.manage_any_timesheet'
-        ):
+        if resource.user != request.user and not cast('User', request.user).can_manage_any_timesheet():
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         if not isinstance(dates, list):
             return Response(data={'error': 'List of dates required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # normalize keys for the serializer
+        request.data['task'] = request.data.pop('task_id', None)
+        request.data['resource'] = resource_id
 
         with transaction.atomic():
             try:
@@ -136,7 +140,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         entries: TimeEntryQuerySet = self.get_queryset().filter(pk__in=requested_entry_ids)  # pyright: ignore[reportAssignmentType]
 
-        if not cast('User', request.user).has_any_perm('core.manage_any_project', 'core.manage_any_timesheet'):
+        if not cast('User', request.user).can_manage_any_timesheet():
             # since we already ACL-filtered the queryset, we need to
             # know if we have fetched every single one of the objects
             # we requested
@@ -181,3 +185,38 @@ class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ReportViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(
+        detail=False,
+        methods=['get'],
+        url_path=r"(?P<date>\d{6})"
+    )
+    def monthly_report(self, request: Request, date: str) -> Response:
+        report_data = timesheet_report_data(date)
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        for resource, data in report_data['data'].items():
+            headers = [str(resource), 'Tot HH', *['X' if day.is_holiday else '' for day in report_data['days']]]
+
+            ws = wb.create_sheet(title=str(resource))
+            ws.append(headers)
+
+            giorni = ['Giorni', '', *[f'{day.day_of_week_short}\n{day.day}' for day in report_data['days']]]
+            ws.append(giorni)
+
+            if data:
+                for key, value in data.items():
+                    row = [report_data['keymap'][key], *value]
+                    ws.append(row)
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        filename = f"report_{date[0:4]}-{date[4:6]}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response

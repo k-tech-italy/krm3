@@ -17,6 +17,10 @@ if TYPE_CHECKING:
     from django.db.models.base import ModelBase
 
 
+DAYTIME_WORK_HOURS_MAX = 16
+NIGHTTIME_WORK_HOURS_MAX = 8
+
+
 class SpecialLeaveReasonQuerySet(models.QuerySet):
     def valid_between(self, start_date: datetime.date | None, end_date: datetime.date | None) -> Self:
         match start_date, end_date:
@@ -214,6 +218,24 @@ class TimeEntry(models.Model):
             ('view_any_timesheet', "Can view(only) everybody's timesheets"),
             ('manage_any_timesheet', "Can view, and manage everybody's timesheets"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(day_shift_hours__range=(0, DAYTIME_WORK_HOURS_MAX)), name='day_shift_hours_range'
+            ),
+            models.CheckConstraint(condition=models.Q(sick_hours__range=(0, 24)), name='sick_hours_range'),
+            models.CheckConstraint(condition=models.Q(holiday_hours__range=(0, 24)), name='holiday_hours_range'),
+            models.CheckConstraint(condition=models.Q(leave_hours__range=(0, 24)), name='leave_hours_range'),
+            models.CheckConstraint(
+                condition=models.Q(special_leave_hours__range=(0, 24)), name='special_leave_hours_range'
+            ),
+            models.CheckConstraint(
+                condition=models.Q(night_shift_hours__range=(0, NIGHTTIME_WORK_HOURS_MAX)),
+                name='night_shift_hours_range',
+            ),
+            models.CheckConstraint(condition=models.Q(on_call_hours__range=(0, 24)), name='on_call_hours_range'),
+            models.CheckConstraint(condition=models.Q(travel_hours__range=(0, 24)), name='travel_hours_range'),
+            models.CheckConstraint(condition=models.Q(rest_hours__range=(0, 24)), name='rest_hours_range'),
+        ]
 
     @override
     def __str__(self) -> str:
@@ -323,7 +345,7 @@ class TimeEntry(models.Model):
             self._verify_day_hours_not_logged_in_task_entry,
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
-            self._verify_at_most_24_hours_total_logged_in_a_day,
+            self._verify_honors_total_hours_restrictions,
             self._verify_sick_time_entry_has_comment,
             self._verify_leave_is_either_regular_or_special,
             self._verify_reason_only_on_special_leave,
@@ -364,7 +386,7 @@ class TimeEntry(models.Model):
         if self.has_task_entry_hours and self.has_day_entry_hours:
             raise ValidationError(_('You cannot log task hours and non-task hours together'), code='work_while_absent')
 
-    def _verify_at_most_24_hours_total_logged_in_a_day(self) -> None:
+    def _verify_honors_total_hours_restrictions(self) -> None:
         if self.total_hours > 24:
             raise ValidationError(
                 _('Total hours on this time entry ({total_hours}) is over 24 hours').format(
@@ -376,9 +398,9 @@ class TimeEntry(models.Model):
         # we might be overwriting an existing time entry on the same
         # task (even None) - exclude it, as it should no longer count
         entries_on_same_day = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(task=self.task)
-        total_hours_on_same_day = sum(entry.total_hours for entry in entries_on_same_day) + self.total_hours
 
-        if total_hours_on_same_day > 24:
+        total_hours_on_same_day = sum(entry.total_hours for entry in entries_on_same_day) + self.total_hours
+        if total_hours_on_same_day > (DAYTIME_WORK_HOURS_MAX + NIGHTTIME_WORK_HOURS_MAX):
             raise ValidationError(
                 _('Total hours on all time entries on {date} ({total_hours}) is over 24 hours').format(
                     date=self.date, total_hours=total_hours_on_same_day
@@ -388,10 +410,7 @@ class TimeEntry(models.Model):
 
     def _verify_sick_time_entry_has_comment(self) -> None:
         if self.is_sick_day and not self.comment:
-            raise ValidationError(
-                _('Comment is mandatory when logging sick days or leave hours'),
-                code='sick_without_comment',
-            )
+            raise ValidationError(_('Comment is mandatory when logging sick days'), code='sick_without_comment')
 
     def _verify_leave_is_either_regular_or_special(self) -> None:
         if self.leave_hours and self.special_leave_hours:

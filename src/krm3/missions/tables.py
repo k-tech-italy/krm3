@@ -14,37 +14,36 @@ from krm3.core.models import Expense
 class ExpenseTableMixin:
     attachment = tables.Column(empty_values=())
 
-    def render_amount_currency(self, record):
+    def render_amount_currency(self, record: Expense) -> str:
 
         value = f'{record.amount_currency} {record.currency.iso3}'
-        return mark_safe(value)
+        return mark_safe(value)  # noqa: S308
 
-    def render_amount_base(self, value):
-        if value:
-            if value < decimal.Decimal(0):
-                value = f'{value} {settings.BASE_CURRENCY}'
-                return mark_safe('<span style="color: red;">%s</span>' % value)
+    @classmethod
+    def render_amount_base(cls, value: Decimal) -> Decimal | str:
+        if getattr(cls, 'export', False) is True:
+            return value
+        if value and value < decimal.Decimal(0):
+            value = f'{value} {settings.BASE_CURRENCY}'
+            return mark_safe('<span style="color: red;">%s</span>' % value)  # noqa: S308
         return f'{value} {settings.BASE_CURRENCY}'
 
-    def render_amount_reimbursement(self, value):
+    @classmethod
+    def render_amount_reimbursement(cls, value: Decimal) -> Decimal | str:
+        if getattr(cls, 'export', False) is True:
+            return value
         if value and value < decimal.Decimal(0):
-            return mark_safe('<span style="color: red;">%s</span>' % value)
+            return mark_safe('<span style="color: red;">%s</span>' % value)  # noqa: S308
         return value
 
-    def render_day(self, value):
+    def render_day(self, value: datetime.date) -> str:
         return datetime.strftime(value, '%Y-%m-%d')
 
-    def render_image(self, value):
-        file_type = value.name.split('.')[-1]
-        # url = reverse('admin:core_expense_change', args=[value])
-        return mark_safe(f'<a href="{value.url}">{file_type}</a>')
-
-    def render_attachment(self, record):
+    def render_attachment(self, record: Expense) -> str:
         if record.image:
             return self.render_image(record.image)
-        else:
-            url = reverse('admin:core_expense_changelist')
-            return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')
+        url = reverse('admin:core_expense_changelist')
+        return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')  # noqa: S308
 
 
 class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
@@ -56,39 +55,40 @@ class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
         footer=lambda table: sum(x.amount_reimbursement or Decimal(0.0) for x in table.data)
     )
 
-    class Meta:
-        model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
-
 
 class MissionExpenseTable(MissionExpenseBaseTable):
 
-    def render_image(self, record):
+    def render_image(self, record: Expense) -> str:
         if record.image:
-            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')
-        else:
-            return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')
+            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')  # noqa: S308
+        return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')  # noqa: S308
 
-    def render_reimbursement(self, record):
+    def render_reimbursement(self, record: Expense) -> str:
         if record.reimbursement:
             url = reverse('admin:core_reimbursement_change', args=[record.reimbursement.id])
-            return mark_safe(f'<a href="{url}">{record.reimbursement}</a>')
-        else:
-            return '--'
+            return mark_safe(f'<a href="{url}">{record.reimbursement}</a>')  # noqa: S308
+        return '--'
 
-    def render_id(self, value):
+    def render_id(self, value: int) -> str:
         url = reverse('admin:core_expense_change', args=[value])
-        return mark_safe(f'<a href="{url}">{value}</a>')
+        return mark_safe(f'<a href="{url}">{value}</a>')  # noqa: S308
 
+    class Meta:
+        model = Expense
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement')
 
 class MissionExpenseExportTable(MissionExpenseBaseTable):
+    export = True
 
-    def render_image(self, record):
+    def render_image(self, record: Expense) -> str:
         return 'yes' if record.image else 'no'
 
-    def render_reimbursement(self, record):
+    def render_reimbursement(self, record: Expense) -> str:
         return record.reimbursement if record.reimbursement else '--'
 
+    class Meta:
+        model = Expense
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
 
 class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
@@ -103,29 +103,30 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
         model = Expense
         exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
 
-    def render_id(self, record):
-        url = reverse('admin:core_expense_change', args=[record.id])
-        return mark_safe(f'<a href="{url}">{record.id}</a>')
-
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
-    def render_image(self, record):
-        if record.image:
-            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')
-        else:
-            return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')
 
-    def render_mission(self, record):
+    def render_id(self, record: Expense) -> str:
+        url = reverse('admin:core_expense_change', args=[record.id])
+        return mark_safe(f'<a href="{url}">{record.id}</a>')  # noqa: S308
+
+    def render_image(self, record: Expense) -> str:
+        if record.image:
+            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')  # noqa: S308
+        return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')  # noqa: S308
+
+    def render_mission(self, record: Expense) -> str:
         if record.mission:
             url = reverse('admin:core_mission_change', args=[record.mission.id])
-            return mark_safe(f'<a href="{url}">{record.mission}</a>')
-        else:
-            return '--'
+            return mark_safe(f'<a href="{url}">{record.mission}</a>')  # noqa: S308
+        return '--'
 
 
 class ReimbursementExpenseExportTable(ReimbursementExpenseBaseTable):
-    def render_image(self, record):
+    export = True
+
+    def render_image(self, record: Expense) -> str:
         return 'yes' if record.image else 'no'
 
-    def render_mission(self, record):
+    def render_mission(self, record: Expense) -> str:
         return record.mission if record.mission else '--'

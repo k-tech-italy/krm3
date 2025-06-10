@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model, logout as djlogout
+from typing import cast
+from django.contrib.auth import logout as djlogout
 from rest_framework import mixins, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
@@ -10,9 +11,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSetMixin
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from krm3.core.api.serializers import UserSerializer
-from krm3.core.models import City, Client, Country, Project, Resource
-
-User = get_user_model()
+from krm3.core.models import City, Client, Country, Project, Resource, User
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):
@@ -22,7 +21,7 @@ class RefreshTokenSerializer(serializers.ModelSerializer):
 
 
 class BlacklistRefreshAPIViewSet(ViewSetMixin, GenericAPIView):
-    serializer_class = [RefreshTokenSerializer]
+    serializer_class = RefreshTokenSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     @action(
@@ -56,6 +55,7 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         djlogout(request)
         return Response(status=status.HTTP_200_OK)
 
+
 class ResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resource
@@ -66,6 +66,15 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     permission_classes = [IsAuthenticated]
     serializer_class = ResourceSerializer
     queryset = Resource.objects.all()
+
+    @action(methods=['get'], detail=False)
+    def active(self, request: Request) -> Response:
+        user = cast('User', request.user)
+        if not user.can_manage_or_view_any_timesheet():
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        active_resources = self.get_queryset().filter(active=True)
+        serializer = ResourceSerializer(active_resources, many=True)
+        return Response(serializer.data)
 
 
 class CitySerializer(serializers.ModelSerializer):

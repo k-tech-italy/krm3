@@ -35,7 +35,7 @@ timeentry_key_mapping = {
 
 
 def timesheet_report_raw_data(
-    from_date: datetime.date, to_date: datetime.date, resource: Resource = None
+    from_date: datetime.date, to_date: datetime.date, resource: Resource | None = None
 ) -> dict['Resource', dict[str, list[D]]]:
     """
     Prepare the data for the timesheet report.
@@ -63,7 +63,7 @@ def timesheet_report_raw_data(
 
         index = date - start_date
         if entry.special_leave_reason:
-            key = f'special_leave|{entry.special_leave_reason_id}'
+            key = f'special_leave|{entry.special_leave_reason.id}'
             hours_types = resource_stats.setdefault(key, [D('0.00')] * days_interval)
             hours_types[index] += entry.special_leave_hours
         else:
@@ -101,28 +101,36 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['day_shift'][i] = day_shift
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
+def format_data(value: int) -> int | None | D:
+    return value if value is None or value % 1 != 0 else int(value)
+
 
 def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
-        current_month = datetime.date.today().replace(day=1)
+        start_of_month = datetime.date.today().replace(day=1)
     else:
-        current_month = datetime.datetime.strptime(current_month, '%Y%m').date()
-    prev_month = current_month - relativedelta(months=1)
-    next_month = current_month + relativedelta(months=1)
+        start_of_month = datetime.datetime.strptime(current_month, '%Y%m').date()
+    prev_month = start_of_month - relativedelta(months=1)
+    next_month = start_of_month + relativedelta(months=1)
 
-    end_of_month = current_month + relativedelta(months=1, days=-1)
-    data = timesheet_report_raw_data(current_month, end_of_month)
+    end_of_month = start_of_month + relativedelta(months=1, days=-1)
+    data = timesheet_report_raw_data(start_of_month, end_of_month)
     calculate_overtime(data)
     add_report_summaries(data)
+
+    for shifts in data.values():
+        for key, values in shifts.items():
+            shifts[key] = [format_data(v) for v in values]
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
+        'current_month': start_of_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
-        'title': current_month.strftime('%B %Y'),
-        'days': list(KrmDay(current_month).range_to(end_of_month)),
+        'title': start_of_month.strftime('%B %Y'),
+        'days': list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)),
         'data': data,
         'keymap': timeentry_key_mapping,
     }

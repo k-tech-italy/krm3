@@ -6,7 +6,6 @@ from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin import site
 from django.db.models import QuerySet, When, Case, Value, BooleanField, F
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import redirect
@@ -149,7 +148,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[Reimbursement]:
         return super().get_queryset(request).prefetch_related('expenses')
 
-    def get_object(self, request: HttpRequest, object_id: int, from_field=None) -> Reimbursement:
+    def get_object(self, request: HttpRequest, object_id: int, *args, **kwargs) -> Reimbursement:
         queryset = self.get_queryset(request)
         # Custom logic to retrieve the object
         return queryset.get(pk=object_id)
@@ -188,7 +187,6 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         return TemplateResponse(
             request,
             context={
-                'site_header': site.site_header,
                 'reimbursement': reimbursement,
                 'missions': missions,
                 'expenses': expenses,
@@ -211,7 +209,9 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
 
         if TableExport.is_valid_format(export_format):
             exporter = TableExport(export_format, table_data)
-            return exporter.response(f'mission_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}')
+            return exporter.response(
+                f'reimbursement_{reimbursement.year}_{reimbursement.number}_expenses.{export_format}'
+            )
         return None
 
     @admin.action(description='Reimbursement report')

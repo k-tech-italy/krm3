@@ -306,22 +306,46 @@ class TestTaskAPIListView:
         assert other_user_response.json().get('tasks', [])[0].get('id') == other_user_task.id
 
     @pytest.mark.parametrize(
-        ('permission', 'expected_status_code'),
+        ('permissions', 'expected_status_code'),
         [
-            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
-            pytest.param('manage_any_project', status.HTTP_200_OK, id='project_manager'),
-            pytest.param('manage_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_manager'),
-            pytest.param('view_any_project', status.HTTP_200_OK, id='project_viewer'),
-            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+            pytest.param([], status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param(
+                ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
+            ),
+            pytest.param(
+                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
+            ),
+            pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
+            pytest.param(
+                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
+            ),
+            pytest.param(
+                ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
+            ),
+            pytest.param(
+                ['view_any_project', 'manage_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_viewer_and_timesheet_manager',
+            ),
+            pytest.param(
+                ['manage_any_project', 'view_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_manager_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['manage_any_project', 'manage_any_timesheet'],
+                status.HTTP_200_OK,
+                id='project_manager_and_timesheet_manager',
+            ),
         ],
     )
     def test_regular_user_can_see_tasks_based_on_permissions(
-        self, permission, expected_status_code, regular_user, api_client
+        self, permissions, expected_status_code, regular_user, api_client
     ):
         user_resource = ResourceFactory(user=regular_user)
         other_user_resource = ResourceFactory()
 
-        if permission:
+        for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
         start_date = datetime.date(2024, 1, 1)
@@ -640,8 +664,8 @@ class TestTimeEntryAPICreateView:
         resource = ResourceFactory()
         task = TaskFactory(resource=resource)
 
-        # we made a mistake and inadvertently saved 18 hours... oops :^)
-        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+        # we made a mistake and inadvertently saved too many hours... oops :^)
+        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=16)
 
         # let's correct it
         response = api_client(user=admin_user).post(
@@ -650,7 +674,7 @@ class TestTimeEntryAPICreateView:
                 'dates': [today.isoformat()],
                 'taskId': task.id,
                 'resourceId': resource.id,
-                'dayShiftHours': 8,
+                'dayShiftHours': 10,
             },
             format='json',
         )
@@ -708,13 +732,15 @@ class TestTimeEntryAPICreateView:
         _task_entry_on_other_task = TimeEntryFactory(resource=resource, task=other_task, date=today, day_shift_hours=2)
 
         # we made a mistake and inadvertently saved 18 hours... oops :^)
-        _wrong_task_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=18)
+        _wrong_task_entry = TimeEntryFactory(
+            resource=resource, task=task, date=today, day_shift_hours=2, travel_hours=18
+        )
 
         # let's correct it
         response = api_client(user=admin_user).post(
             self.url(),
             data={'dates': [today.isoformat()], 'resourceId': resource.id, 'taskId': task.id, 'dayShiftHours': 0}
-            | {hours_key: 6},
+            | {hours_key: 8},
             format='json',
         )
         assert response.status_code == status.HTTP_201_CREATED
@@ -877,22 +903,56 @@ class TestTimeEntryAPICreateView:
             TimeEntry.objects.get(pk=existing_day_entry_id)
 
     @pytest.mark.parametrize(
-        ('permission', 'expected_status_code'),
+        ('permissions', 'expected_status_code'),
         [
-            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
-            pytest.param('manage_any_project', status.HTTP_201_CREATED, id='project_manager'),
-            pytest.param('manage_any_timesheet', status.HTTP_201_CREATED, id='timesheet_manager'),
-            pytest.param('view_any_project', status.HTTP_403_FORBIDDEN, id='project_viewer'),
-            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+            pytest.param([], status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param(
+                ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
+            ),
+            pytest.param(
+                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
+            ),
+            pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
+            pytest.param(
+                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
+            ),
+            pytest.param(
+                ['view_any_project', 'view_any_timesheet'],
+                status.HTTP_403_FORBIDDEN,
+                id='project_viewer_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['view_any_project', 'manage_any_timesheet'],
+                status.HTTP_201_CREATED,
+                id='project_viewer_and_timesheet_manager',
+            ),
+            pytest.param(
+                ['manage_any_project', 'view_any_timesheet'],
+                status.HTTP_403_FORBIDDEN,
+                id='project_manager_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['manage_any_project', 'manage_any_timesheet'],
+                status.HTTP_201_CREATED,
+                id='project_manager_and_timesheet_manager',
+            ),
         ],
     )
     def test_regular_user_has_restricted_write_access_to_time_entries(
-        self, permission, expected_status_code, regular_user, api_client
+        self, permissions, expected_status_code, regular_user, api_client
     ):
+        """Verify that users can only write time entries on their own timesheet.
+
+        Also verify that users can write time entries on someeone else's
+        timesheet if they have:
+        - at least read-only permissions on projects (so they can see
+          tasks);
+        - read/write permissions on timesheets.
+        """
         own_resource = ResourceFactory(user=regular_user)
         own_task = TaskFactory(resource=own_resource)
 
-        if permission:
+        for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
         other_user = UserFactory()
@@ -949,22 +1009,48 @@ class TestTimeEntryClearAPIAction:
         assert not TimeEntry.objects.exists()
 
     @pytest.mark.parametrize(
-        ('permission', 'expected_status_code'),
+        ('permissions', 'expected_status_code'),
         [
-            pytest.param(None, status.HTTP_403_FORBIDDEN, id='no_perms'),
-            pytest.param('manage_any_project', status.HTTP_204_NO_CONTENT, id='project_manager'),
-            pytest.param('manage_any_timesheet', status.HTTP_204_NO_CONTENT, id='timesheet_manager'),
-            pytest.param('view_any_project', status.HTTP_403_FORBIDDEN, id='project_viewer'),
-            pytest.param('view_any_timesheet', status.HTTP_403_FORBIDDEN, id='timesheet_viewer'),
+            pytest.param([], status.HTTP_403_FORBIDDEN, id='no_perms'),
+            pytest.param(
+                ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
+            ),
+            pytest.param(
+                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
+            ),
+            pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
+            pytest.param(
+                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
+            ),
+            pytest.param(
+                ['view_any_project', 'view_any_timesheet'],
+                status.HTTP_403_FORBIDDEN,
+                id='project_viewer_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['view_any_project', 'manage_any_timesheet'],
+                status.HTTP_204_NO_CONTENT,
+                id='project_viewer_and_timesheet_manager',
+            ),
+            pytest.param(
+                ['manage_any_project', 'view_any_timesheet'],
+                status.HTTP_403_FORBIDDEN,
+                id='project_manager_and_timesheet_viewer',
+            ),
+            pytest.param(
+                ['manage_any_project', 'manage_any_timesheet'],
+                status.HTTP_204_NO_CONTENT,
+                id='project_manager_and_timesheet_manager',
+            ),
         ],
     )
     def test_regular_user_can_only_clear_allowed_time_entries(
-        self, permission, expected_status_code, regular_user, api_client
+        self, permissions, expected_status_code, regular_user, api_client
     ):
         user_resource = ResourceFactory(user=regular_user)
         other_user_resource = ResourceFactory()
 
-        if permission:
+        for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
         entry = TimeEntryFactory(

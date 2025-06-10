@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration')}}</a></h1>
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ admin_title }}</a></h1>
 {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
@@ -34,16 +34,22 @@
     <p>Project: <a href="{% url 'admin:core_project_change' mission.project_id %}">{{ mission.project }}</a></p>
     <p>Period: {{ mission.from_date }} - {{ mission.to_date }}</p>
     <p>Mission currency: {{ mission.default_currency.iso3 }}</p>
-    <p>Summaries in {{ base }}:</p>
-    <ul>
-    {% for key, value in summary.items %}
-      <li>{{key}}: {{value}}</li>
-    {% endfor %}
-    </ul>
 
-    {% if expenses %}
-        {% render_table expenses %}
-    {% else %}
-        <li>No expenses for this mission.</li>
-    {% endif %}
+    {% for reimbursement, data in reimbursement_breakdown.items %}
+
+        <h2><a href="{% url "admin:core_reimbursement_change" reimbursement.id %} ">{{ reimbursement }}</a></h2>
+        <p>Summaries in {{ base }}:</p>
+        <ul>
+        {% for key, value in data.summary.items %}
+          <li>{{key}}: {{value}}</li>
+        {% endfor %}
+        </ul>
+
+        {% if data.expenses %}
+            {% render_table data.expenses %}
+        {% else %}
+            <li>No expenses for this mission / reimbursement.</li>
+        {% endif %}
+    {% endfor %}
+
 {% endblock %}
