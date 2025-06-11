@@ -10,9 +10,11 @@ from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
+from django.db import models
 from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
@@ -93,12 +95,12 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return ret
 
     @admin.action(description='Export selected missions')
-    def export(self, request: 'HttpRequest', queryset: "QuerySet[Mission]") -> FileResponse:
+    def export(self, request: 'HttpRequest', queryset: 'QuerySet[Mission]') -> FileResponse:
         pathname = MissionExporter(queryset).export()
         with open(pathname, 'rb') as f:
             return FileResponse(f)
 
-    def get_queryset(self, request: 'HttpRequest') -> "QuerySet[Mission]":
+    def get_queryset(self, request: 'HttpRequest') -> 'QuerySet[Mission]':
         return super().get_queryset(request).prefetch_related('expenses')
 
     def expense_num(self, obj: Reimbursement) -> int:
@@ -106,7 +108,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     expense_num.short_description = 'Num expenses'
 
-    def formfield_for_foreignkey(self, db_field, request: 'HttpRequest' = None, **kwargs):
+    def formfield_for_foreignkey(
+        self, db_field: models.ForeignKey, request: 'HttpRequest' = None, **kwargs
+    ) -> forms.Field:
         if db_field.name == 'default_currency':
             kwargs['queryset'] = Currency.objects.actives()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -169,7 +173,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 expenses_table = build_mission_expenses_table(qs, sorting, True)
                 return self.export_table(mission, expenses_table, export_format, request)
 
-            reimbursements = qs.values_list('reimbursement', flat=True).distinct()
+            reimbursements = qs.values_list('reimbursement', flat=True).order_by('id').distinct()
             for reimbursement in reimbursements:
                 exp_re = qs.filter(reimbursement_id=reimbursement)
 
@@ -215,8 +219,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     ) or decimal.Decimal(0.0)
 
                 da_rimborsare = (
-                    summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO]
-                    - summary[ReimbursementSummaryEnum.GIA_RIMBORSATE]
+                    summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] - summary[ReimbursementSummaryEnum.GIA_RIMBORSATE]
                 )
                 summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] = (
                     f'{summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO]}'
