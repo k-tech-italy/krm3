@@ -10,17 +10,12 @@ pytestmark = pytest.mark.selenium
 
 @pytest.mark.django_db
 def test_login_ok(browser: 'AppTestBrowser', regular_user):
-    browser.open('/')
-    browser.type('#username', regular_user.username)
-    browser.type('#password', 'password')
-    browser.click('button[type="submit"]')
+    browser.login_as_user(regular_user)
     browser.assert_text(regular_user.email, selector='strong', timeout=2)
 
 
 @pytest.mark.django_db
 def test_login_nok(browser: 'AppTestBrowser', regular_user):
-    browser.open('/')
-    browser.type('#username', regular_user.username)
-    browser.type('#password', 'wrong')
-    browser.click('button[type="submit"]')
+    regular_user._password = 'wrong'
+    browser.login_as_user(regular_user)
     browser.assert_text('No active account found with the given credentials', selector='span', timeout=2)
