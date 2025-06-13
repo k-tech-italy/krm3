@@ -213,7 +213,7 @@ class Task(models.Model):
 
     @override
     def __str__(self) -> str:
-        return self.title
+        return f'{self.project}: {self.title}'
 
     @override
     def save(

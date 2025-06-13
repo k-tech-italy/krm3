@@ -31,7 +31,7 @@ class ProjectAdmin(ExtraButtonsMixin, ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ExtraButtonsMixin, admin.ModelAdmin):
-    list_fields = ('title', 'project', 'resource', 'basket_title')
+    list_display = ('title', 'project', 'resource', 'basket_title', 'work_price')
     search_fields = ('title', 'project', 'resource', 'basket_title')
     form = TaskForm
     fieldsets = (

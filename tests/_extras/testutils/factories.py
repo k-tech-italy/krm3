@@ -58,6 +58,11 @@ class UserFactory(factory.django.DjangoModelFactory):
     email = factory.Sequence(lambda n: 'u%02d@example.com' % n)
     password = factory.PostGenerationMethodCall('set_password', 'password')
 
+    @classmethod
+    def _after_postgeneration(cls, instance, create, results=None):
+        super()._after_postgeneration(instance, create, results)
+        instance._password = 'password'
+
     class Meta:
         model = User
         django_get_or_create = ('username',)

@@ -23,7 +23,7 @@ class BasketAdmin(admin.ModelAdmin):
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
-    list_fields = ('date', 'resource', 'task', 'category', 'hours_worked', 'state')
+    list_display = ('date', 'resource', 'task', 'state')
     search_fields = ('date', 'category', 'state')
     list_filter = [('resource', AutoCompleteFilter), ('task', AutoCompleteFilter)]
 
