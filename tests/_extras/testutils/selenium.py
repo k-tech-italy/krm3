@@ -54,7 +54,6 @@ class AppSeleniumTC(BaseCase):
         self.open('/login')
         self.type('input[name=username]', f'{self.admin_user.username}')
         self.type('input[name=password]', f'{self.admin_user._password}')
-        #self.submit('input[value="Login"]')
         self.click('button[type="submit"]')
         self.wait_for_ready_state_complete()
 
