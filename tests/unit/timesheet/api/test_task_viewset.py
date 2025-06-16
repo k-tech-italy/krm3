@@ -12,12 +12,12 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
+    TimesheetFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
 
 from krm3.core.models import TimeEntry
-from krm3.core.models.timesheets import TimeEntryState
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
@@ -185,7 +185,6 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
-                    'state': str(task_entry_within_range.state),
                     'comment': 'Within range',
                     'task': task.pk,
                 },
@@ -203,18 +202,19 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
-                    'state': str(day_entry_within_range.state),
                     'comment': 'Within range (day)',
                     'task': None,
                 },
             ],
-            'days': {'2024-01-01': {'hol': True, 'nwd': True},
-                     '2024-01-02': {'hol': False, 'nwd': False},
-                     '2024-01-03': {'hol': False, 'nwd': False},
-                     '2024-01-04': {'hol': False, 'nwd': False},
-                     '2024-01-05': {'hol': False, 'nwd': False},
-                     '2024-01-06': {'hol': True, 'nwd': True},
-                     '2024-01-07': {'hol': True, 'nwd': True}}
+            'days': {
+                '2024-01-01': {'hol': True, 'nwd': True, 'closed': False},
+                '2024-01-02': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-03': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-04': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-05': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-06': {'hol': True, 'nwd': True, 'closed': False},
+                '2024-01-07': {'hol': True, 'nwd': True, 'closed': False},
+            },
         }
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
@@ -999,7 +999,8 @@ class TestTimeEntryClearAPIAction:
 
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
         open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
-        closed_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), state=TimeEntryState.CLOSED)
+        timesheet = TimesheetFactory(resource=open_entry.task.resource)
+        closed_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), timesheet=timesheet)
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
         )

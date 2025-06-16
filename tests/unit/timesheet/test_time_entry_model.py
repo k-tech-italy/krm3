@@ -2,20 +2,20 @@ import datetime
 from contextlib import nullcontext as does_not_raise
 from decimal import Decimal
 
-from django.core import exceptions
-from krm3.core.models.timesheets import TimeEntry
 import pytest
-
+from django.core import exceptions
 from testutils.factories import (
+    BasketFactory,
     InvoiceEntryFactory,
     ProjectFactory,
-    SpecialLeaveReasonFactory,
-    TimeEntryFactory,
-    TaskFactory,
-    BasketFactory,
     ResourceFactory,
+    SpecialLeaveReasonFactory,
+    TaskFactory,
+    TimeEntryFactory,
+    TimesheetFactory,
 )
-from krm3.core.models import TimeEntryState
+
+from krm3.core.models.timesheets import TimeEntry
 
 
 class TestBasket:
@@ -59,6 +59,7 @@ class TestBasket:
 
         # closed time entries should be considered invoiced and
         # as such should be ignored
+        timesheet = TimesheetFactory(resource=task.resource)
         other_task = TaskFactory(basket_title=basket.title)
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)
@@ -68,7 +69,7 @@ class TestBasket:
                 task=other_task,
                 resource=other_task.resource,
                 day_shift_hours=8,
-                state=TimeEntryState.CLOSED,
+                timesheet=timesheet,
             )
         assert basket.current_projected_capacity() == capacity_after_invoices_and_open_time_entries
 

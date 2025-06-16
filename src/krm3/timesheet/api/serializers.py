@@ -6,7 +6,7 @@ from krm3.core.models.timesheets import SpecialLeaveReason
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
-from krm3.timesheet import entities
+from krm3.timesheet import dto
 
 type Hours = Decimal | float | int
 
@@ -34,7 +34,7 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'on_call_hours',
             'travel_hours',
             'rest_hours',
-            'state',
+            # 'state',
             'comment',
             'task',
         )
@@ -170,13 +170,15 @@ class KrmDayHolidaySerializer(serializers.Serializer):
     hol = serializers.BooleanField(source='is_holiday')
     nwd = serializers.BooleanField(source='is_non_working_day')
 
+
 class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
 
-    def get_days(self, timesheet: entities.Timesheet) -> dict[str, dict[str, bool]]:
-        return {str(day): KrmDayHolidaySerializer(day).data for day in timesheet.days}
+    def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
+        # TODO: fix this
+        return {str(day): KrmDayHolidaySerializer(day).data | {"closed": False} for day in timesheet.days}
 
 
 class SpecialLeaveReasonSerializer(serializers.ModelSerializer):

@@ -1,4 +1,4 @@
-"""Non-model domain entities for the timesheet."""
+"""Non-model domain data-transfer-objects for the timesheet."""
 
 import datetime
 from typing import Self
@@ -9,7 +9,7 @@ from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
 from krm3.utils.dates import KrmCalendar
 
 
-class Timesheet:
+class TimesheetDTO:
     def __init__(self, requested_by: User) -> None:
         self.tasks = TaskQuerySet().none()
         self.time_entries = TimeEntryQuerySet().none()
@@ -25,6 +25,10 @@ class Timesheet:
             resource=resource, date__range=(start_date, end_date)
         )
         calendar = KrmCalendar()
+
+        # TODO: Krzys
+        # search existing overlapping timesheets for the resource
+        # then add the "closed" element to the following....
         self.days = calendar.iter_dates(start_date, end_date)
 
         return self

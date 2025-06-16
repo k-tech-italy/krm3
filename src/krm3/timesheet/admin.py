@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.http import HttpRequest
 from django.template.response import TemplateResponse
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, Timesheet
 from krm3.timesheet.report import timesheet_report_data
 
 
@@ -21,10 +21,19 @@ class BasketAdmin(admin.ModelAdmin):
     search_fields = ('title',)
 
 
+@admin.register(Timesheet)
+class TimesheetAdmin(AdminFiltersMixin, admin.ModelAdmin):
+    list_display = ('period', 'get_period', 'resource', 'closed')
+    list_filter = [('resource', AutoCompleteFilter)]
+
+    def get_period(self, obj: Timesheet) -> str:
+        return str(obj)
+
+
 @admin.register(TimeEntry)
 class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
-    list_display = ('date', 'resource', 'task', 'state')
-    search_fields = ('date', 'category', 'state')
+    list_display = ('date', 'resource', 'task')
+    search_fields = ('date', 'category')
     list_filter = [('resource', AutoCompleteFilter), ('task', AutoCompleteFilter)]
 
     @button()

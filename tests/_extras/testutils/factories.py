@@ -228,6 +228,20 @@ class TaskFactory(factory.django.DjangoModelFactory):
         django_get_or_create = ('title', 'project', 'resource')
 
 
+def generate_month_period(start_date, offset):
+    start_dt = start_date + relativedelta(months=offset)
+    end_dt = start_dt + relativedelta(months=1, days=-1)
+    return start_dt, end_dt
+
+
+class TimesheetFactory(factory.django.DjangoModelFactory):
+    period = factory.Sequence(
+        lambda n: generate_month_period(date(2020, 1, 1), n),
+    )
+    class Meta:
+        model = 'core.Timesheet'
+
+
 class TimeEntryFactory(factory.django.DjangoModelFactory):
     date = factory.Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
     day_shift_hours = factory.Faker('random_int', min=0, max=8)
