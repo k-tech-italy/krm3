@@ -1,12 +1,15 @@
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
+from adminfilters.autocomplete import AutoCompleteFilter
+from adminfilters.dates import DateRangeFilter
+from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from krm3.core.models import Task, Project
+from krm3.core.models import Project, Task
 from krm3.projects.forms import TaskForm
 from krm3.styles.buttons import NORMAL
 
@@ -18,8 +21,15 @@ class TaskInline(admin.TabularInline):  # noqa: D101
 
 
 @admin.register(Project)
-class ProjectAdmin(ExtraButtonsMixin, ModelAdmin):
-    search_fields = ['name']
+class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    search_fields = ('name',)
+    list_display = ('client', 'name', 'start_date', 'end_date')
+    list_filter = (
+        ('client', AutoCompleteFilter),
+        ('start_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
+        ('end_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
+
+    )
     autocomplete_fields = ['client']
     inlines = [TaskInline]
 
@@ -28,26 +38,19 @@ class ProjectAdmin(ExtraButtonsMixin, ModelAdmin):
         return redirect(reverse('admin:core_task_changelist') + f'?project_id={pk}')
 
 
-
 @admin.register(Task)
-class TaskAdmin(ExtraButtonsMixin, admin.ModelAdmin):
-    list_display = ('title', 'project', 'resource', 'basket_title', 'work_price')
-    search_fields = ('title', 'project', 'resource', 'basket_title')
+class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     form = TaskForm
+    list_display = ('project', 'title', 'resource', 'basket_title')
+    search_fields = ('title', 'project', 'resource', 'basket_title')
+    list_filter = [
+        ('project', AutoCompleteFilter),
+        ('resource', AutoCompleteFilter),
+        ('basket_title', AutoCompleteFilter),
+    ]
     fieldsets = (
-        (None, {
-            'fields': (
-                ('title', 'project', 'resource'),
-                ('start_date', 'end_date'),
-                ('basket_title', 'color')
-            )
-        }),
-        ('Costs', {
-            'fields': (
-                ('work_price', 'overtime_price'),
-                ('travel_price', 'on_call_price')
-            )
-        }),
+        (None, {'fields': (('title', 'project', 'resource'), ('start_date', 'end_date'), ('basket_title', 'color'))}),
+        ('Costs', {'fields': (('work_price', 'overtime_price'), ('travel_price', 'on_call_price'))}),
     )
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))

@@ -211,6 +211,9 @@ class Task(models.Model):
     if TYPE_CHECKING:
         time_entries: RelatedManager[TimeEntry]
 
+    class Meta:
+        ordering = ['project__name', 'title']
+
     @override
     def __str__(self) -> str:
         return f'{self.project}: {self.title}'

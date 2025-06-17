@@ -182,7 +182,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 class Timesheet(models.Model):
     """A submitted timesheet."""
 
-    period = DateRangeField()
+    period = DateRangeField(help_text="NB: End date is the day after the actual end date")
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
 
