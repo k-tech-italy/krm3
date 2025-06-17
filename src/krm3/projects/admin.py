@@ -57,3 +57,8 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     def goto_project(self, request: HttpRequest, pk: int) -> HttpResponseRedirect:
         task = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:core_project_change', args=[task.project_id]))
+
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
+    def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
+        url = reverse('admin:core_timeentry_changelist') + f'?task_id={pk}'
+        return HttpResponseRedirect(url)

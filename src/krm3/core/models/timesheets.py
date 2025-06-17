@@ -182,7 +182,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
 
-    period = DateRangeField(help_text="NB: End date is the day after the actual end date")
+    period = DateRangeField(help_text='NB: End date is the day after the actual end date')
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
 
@@ -507,3 +507,21 @@ def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwa
     else:
         overwritten = TimeEntry.objects.none()
     overwritten.delete()
+
+
+@receiver(models.signals.post_save, sender=Timesheet)
+def link_entries(sender: Timesheet, instance: Timesheet, **kwargs: Any) -> None:
+    instance.timeentry_set.update(timesheet=None)
+    if isinstance(instance.period, (list | tuple)):
+        lower, upper = instance.period[0], instance.period[1]
+    else:
+        lower, upper = instance.period.lower, instance.period.upper
+    TimeEntry.objects.filter(
+        resource=instance.resource, date__gte=lower, date__lt=upper
+    ).update(timesheet=instance)
+
+
+@receiver(models.signals.pre_save, sender=TimeEntry)
+def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    timesheet = Timesheet.objects.filter(resource=instance.resource, period__contains = instance.date).first()
+    instance.timesheet = timesheet

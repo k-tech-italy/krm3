@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 from django.core import exceptions
+
 from testutils.factories import (
     BasketFactory,
     InvoiceEntryFactory,
@@ -59,7 +60,8 @@ class TestBasket:
 
         # closed time entries should be considered invoiced and
         # as such should be ignored
-        timesheet = TimesheetSubmissionFactory(resource=task.resource)
+        timesheet = TimesheetSubmissionFactory(resource=task.resource,
+                                               period=(task.start_date, task.start_date + datetime.timedelta(days=10)))
         other_task = TaskFactory(basket_title=basket.title)
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)
@@ -481,3 +483,78 @@ class TestTimeEntry:
             _should_fail = SpecialLeaveReasonFactory(
                 from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2020, 1, 1)
             )
+
+    @pytest.mark.parametrize('time_entry_date, expected_assigned_timesheet_index',
+                             [
+                                 (datetime.date(2020, 5, 15), 0),
+                                 (datetime.date(2020, 6, 15), 1),
+                                 (datetime.date(2020, 7, 15), 2),
+                                 (datetime.date(2020, 5, 31), 0),
+                                 (datetime.date(2020, 6, 1), 1),
+                                 (datetime.date(2020, 8, 15), None),
+                                 (datetime.date(2020, 4, 15), None),
+                             ])
+    def test_time_entry_should_be_assigned_to_appropriate_timesheet(
+            self, time_entry_date, expected_assigned_timesheet_index):
+        resource = ResourceFactory()
+        task = TaskFactory()
+        TimeEntryFactory(date=time_entry_date, resource=resource, task=task)
+
+        timesheets = []
+
+        timesheets.append(TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+        ))
+        timesheets.append(TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 6, 1), datetime.date(2020, 7, 1))
+        ))
+        timesheets.append(TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 7, 1), datetime.date(2020, 8, 1))
+        ))
+
+        for i, timesheet in enumerate(timesheets):
+            expected_count = 1 if i == expected_assigned_timesheet_index else 0
+            assert timesheet.timeentry_set.count() == expected_count
+
+    def test_deleting_timesheet_should_set_key_to_none(self):
+        resource = ResourceFactory()
+        task = TaskFactory()
+        time_entry = TimeEntryFactory(date=datetime.date(2020, 5, 15), resource=resource, task=task)
+
+        timesheet = TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+        )
+
+        time_entry.refresh_from_db()
+        assert timesheet.timeentry_set.count() == 1
+        assert time_entry.timesheet == timesheet
+        timesheet.delete()
+        time_entry.refresh_from_db()
+        assert time_entry.timesheet is None
+
+    def updating_timeentry_date_should_update_assigned_timesheet(self):
+        resource = ResourceFactory()
+        task = TaskFactory()
+        time_entry = TimeEntryFactory(date=datetime.date(2020, 5, 15), resource=resource, task=task)
+        timesheet_1 = TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+        )
+        timesheet_2 = TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 6, 1), datetime.date(2020, 6, 1))
+        )
+        assert time_entry.timesheet == timesheet_1
+        time_entry.date = datetime.date(2020, 6, 15)
+        time_entry.save()
+        assert time_entry.timesheet == timesheet_2

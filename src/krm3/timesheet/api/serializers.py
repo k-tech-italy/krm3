@@ -180,8 +180,18 @@ class TimesheetSerializer(serializers.Serializer):
     days = serializers.SerializerMethodField()
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
-        # TODO: fix this
-        return {str(day): KrmDayHolidaySerializer(day).data | {'closed': False} for day in timesheet.days}
+        days_with_closed_attr = {}
+
+        timesheets = TimesheetSubmission.objects.filter(resource=timesheet.resource)
+        for day in timesheet.days:
+            timesheet = timesheets.filter(period__contains=day.date).first()
+
+            if timesheet and timesheet.closed:
+                days_with_closed_attr[day] = {'closed': True}
+            else:
+                days_with_closed_attr[day] = {'closed': False}
+
+        return {str(day): KrmDayHolidaySerializer(day).data | value for day, value in days_with_closed_attr.items()}
 
 
 class StartEndDateRangeField(serializers.Field):

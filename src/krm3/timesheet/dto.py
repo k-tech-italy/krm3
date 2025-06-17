@@ -14,7 +14,7 @@ class TimesheetDTO:
         self.tasks = TaskQuerySet().none()
         self.time_entries = TimeEntryQuerySet().none()
         self._requested_by = requested_by
-
+        self.resource = None
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         self.tasks = (
             Task.objects.filter_acl(self._requested_by)  # pyright: ignore[reportAttributeAccessIssue]
@@ -26,9 +26,7 @@ class TimesheetDTO:
         )
         calendar = KrmCalendar()
 
-        # TODO: Krzys
-        # search existing overlapping timesheets for the resource
-        # then add the "closed" element to the following....
         self.days = calendar.iter_dates(start_date, end_date)
+        self.resource = resource
 
         return self

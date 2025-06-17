@@ -239,13 +239,13 @@ class TaskFactory(factory.django.DjangoModelFactory):
 
 def generate_month_period(start_date, offset):
     start_dt = start_date + relativedelta(months=offset)
-    end_dt = start_dt + relativedelta(months=1, days=-1)
+    end_dt = start_dt + relativedelta(months=1)
     return start_dt, end_dt
 
 
 class TimesheetSubmissionFactory(factory.django.DjangoModelFactory):
     period = factory.Sequence(
-        lambda n: generate_month_period(date(2020, 1, 1), n),
+        lambda n: generate_month_period(date(2020, 1, 1), n)
     )
     resource = factory.SubFactory(ResourceFactory)
 
