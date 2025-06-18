@@ -2,7 +2,10 @@ import datetime
 from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
-from krm3.core.models.timesheets import SpecialLeaveReason
+from drf_extra_fields.fields import DateRangeField
+from psycopg.types.range import DateRange
+
+from krm3.core.models.timesheets import SpecialLeaveReason, Timesheet
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
@@ -179,6 +182,47 @@ class TimesheetSerializer(serializers.Serializer):
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         # TODO: fix this
         return {str(day): KrmDayHolidaySerializer(day).data | {"closed": False} for day in timesheet.days}
+
+
+class StartEndDateRangeField(serializers.Field):
+    def to_representation(self, value):
+        if value is None:
+            return None
+        return (
+            value.lower.isoformat(),
+            value.upper.isoformat()
+        )
+
+    def to_internal_value(self, data):
+        if not isinstance(data, (list, tuple)):
+            raise serializers.ValidationError("Expected a list or a tuple.")
+
+        lower, upper = data
+
+        try:
+            lower_date = datetime.date.fromisoformat(lower)
+            upper_date = datetime.date.fromisoformat(upper)
+        except ValueError:
+            raise serializers.ValidationError("Dates must be in ISO format (YYYY-MM-DD).")
+
+        return DateRange(lower_date, upper_date)
+
+
+class TimesheetModelSerializer(serializers.ModelSerializer):
+    period = StartEndDateRangeField()
+
+    def is_valid(self, *, raise_exception=...):
+        user = self.context['request'].user
+        if user.is_superuser or user.has_perm('core.manage_any_timesheet') or (
+            user.resource and user.resource.id == self.initial_data['resource']
+        ):
+            return super().is_valid(raise_exception=raise_exception)
+        else:
+            raise serializers.PermissionDenied()
+
+    class Meta:
+        model = Timesheet
+        fields = '__all__'
 
 
 class SpecialLeaveReasonSerializer(serializers.ModelSerializer):

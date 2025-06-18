@@ -14,20 +14,34 @@ from rest_framework.response import Response
 
 
 from krm3.core.models import Resource
-from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet
+from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet, \
+    Timesheet
 from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
     TimeEntryReadSerializer,
     TimeEntryCreateSerializer,
-    TimesheetSerializer,
+    TimesheetSerializer, TimesheetModelSerializer,
 )
 
 from krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
     from krm3.core.models import User
+
+
+class TimesheetModelAPIViewSet(viewsets.ModelViewSet):
+    queryset = Timesheet.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TimesheetModelSerializer
+
+    def get_queryset(self):
+        user = cast('User', self.request.user)
+        ret = super().get_queryset()
+        if not user.can_manage_or_view_any_timesheet():
+            ret.filter(resource_id=user.id)
+        return ret
 
 
 class TimesheetAPIViewSet(viewsets.GenericViewSet):
