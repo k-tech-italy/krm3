@@ -36,11 +36,15 @@ class TimesheetModelAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetModelSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Timesheet]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
-        if not user.can_manage_or_view_any_timesheet():
-            ret.filter(resource_id=user.id)
+        if not (user.is_superuser or user.has_perm('core.manage_any_timesheet')):
+            try:
+                resource = user.resource
+            except user.__class__.resource.RelatedObjectDoesNotExist:
+                return ret.none()
+            ret = ret.filter(resource_id=resource.id)
         return ret
 
 

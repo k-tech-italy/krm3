@@ -238,6 +238,8 @@ class TimesheetFactory(factory.django.DjangoModelFactory):
     period = factory.Sequence(
         lambda n: generate_month_period(date(2020, 1, 1), n),
     )
+    resource = factory.SubFactory(ResourceFactory)
+
     class Meta:
         model = 'core.Timesheet'
 
