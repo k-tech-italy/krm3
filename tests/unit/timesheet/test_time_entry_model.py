@@ -12,7 +12,7 @@ from testutils.factories import (
     SpecialLeaveReasonFactory,
     TaskFactory,
     TimeEntryFactory,
-    TimesheetFactory,
+    TimesheetSubmissionFactory,
 )
 
 from krm3.core.models.timesheets import TimeEntry
@@ -59,7 +59,7 @@ class TestBasket:
 
         # closed time entries should be considered invoiced and
         # as such should be ignored
-        timesheet = TimesheetFactory(resource=task.resource)
+        timesheet = TimesheetSubmissionFactory(resource=task.resource)
         other_task = TaskFactory(basket_title=basket.title)
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)

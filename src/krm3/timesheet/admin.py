@@ -10,7 +10,7 @@ from django.http import HttpRequest
 from django.template.response import TemplateResponse
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, Timesheet
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission
 from krm3.timesheet.report import timesheet_report_data
 
 @admin.register(PO)
@@ -24,8 +24,8 @@ class BasketAdmin(admin.ModelAdmin):
     search_fields = ('title',)
 
 
-@admin.register(Timesheet)
-class TimesheetAdmin(AdminFiltersMixin, admin.ModelAdmin):
+@admin.register(TimesheetSubmission)
+class TimesheetSubmissionAdmin(AdminFiltersMixin, admin.ModelAdmin):
     list_display = ('period', 'get_period', 'resource', 'closed')
     list_filter = [('resource', AutoCompleteFilter)]
 
@@ -34,7 +34,7 @@ class TimesheetAdmin(AdminFiltersMixin, admin.ModelAdmin):
         DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
     }
 
-    def get_period(self, obj: Timesheet) -> str:
+    def get_period(self, obj: TimesheetSubmission) -> str:
         return str(obj)
 
 

@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import factory
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from factory import PostGenerationMethodCall
 from factory.base import FactoryMetaClass
 from factory.fuzzy import FuzzyDecimal
@@ -51,6 +52,14 @@ class SuperUserFactory(UserFactory):
     is_superuser = True
     is_staff = True
     is_active = True
+
+
+class GroupFactory(factory.django.DjangoModelFactory):
+    name = factory.Sequence(lambda n: 'Group %02d' % n)
+
+    class Meta:
+        model = Group
+        django_get_or_create = ('name',)
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -234,14 +243,14 @@ def generate_month_period(start_date, offset):
     return start_dt, end_dt
 
 
-class TimesheetFactory(factory.django.DjangoModelFactory):
+class TimesheetSubmissionFactory(factory.django.DjangoModelFactory):
     period = factory.Sequence(
         lambda n: generate_month_period(date(2020, 1, 1), n),
     )
     resource = factory.SubFactory(ResourceFactory)
 
     class Meta:
-        model = 'core.Timesheet'
+        model = 'core.TimesheetSubmission'
 
 
 class TimeEntryFactory(factory.django.DjangoModelFactory):

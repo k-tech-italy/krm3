@@ -179,7 +179,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         return self.filter(resource__user=user)
 
 
-class Timesheet(models.Model):
+class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
 
     period = DateRangeField(help_text="NB: End date is the day after the actual end date")
@@ -219,7 +219,7 @@ class TimeEntry(models.Model):
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
-    timesheet = models.ForeignKey(Timesheet, on_delete=models.SET_NULL, null=True, blank=True)
+    timesheet = models.ForeignKey(TimesheetSubmission, on_delete=models.SET_NULL, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries', null=True, blank=True)

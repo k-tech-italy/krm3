@@ -12,8 +12,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSetMixin
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from krm3.core.api.serializers import UserSerializer
-from krm3.core.models import City, Client, Country, Project, Resource, User, Timesheet
-from krm3.timesheet.api.serializers import TimesheetModelSerializer
+from krm3.core.models import City, Client, Country, Project, Resource, User, TimesheetSubmission
+from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):
@@ -72,7 +72,9 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     @action(methods=['get'], detail=False)
     def active(self, request: Request) -> Response:
         user = cast('User', request.user)
-        if not user.can_manage_or_view_any_timesheet():
+        if not user.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
         active_resources = self.get_queryset().filter(active=True)
         serializer = ResourceSerializer(active_resources, many=True)
@@ -127,18 +129,17 @@ class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Generic
     queryset = Client.objects.all()
 
 
-class TimesheetModelAPIViewSet(viewsets.ModelViewSet):
-    queryset = Timesheet.objects.all()
+class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
+    queryset = TimesheetSubmission.objects.all()
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = TimesheetModelSerializer
+    serializer_class = TimesheetSubmissionSerializer
 
-    def get_queryset(self) -> QuerySet[Timesheet]:
+    def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
         if not (user.is_superuser or user.has_perm('core.manage_any_timesheet')):
-            try:
-                resource = user.resource
-            except user.__class__.resource.RelatedObjectDoesNotExist:
+            resource = user.get_resource()
+            if resource is None:
                 return ret.none()
             ret = ret.filter(resource_id=resource.id)
         return ret

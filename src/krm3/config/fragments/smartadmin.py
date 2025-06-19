@@ -35,6 +35,7 @@ SMART_ADMIN_SECTIONS = {
     'Timesheets': [
         'core.SpecialLeaveReason',
         'core.TimeEntry',
+        'core.TimesheetSubmission',
     ],
     '_hidden_': ['sites'],
     'Security': [

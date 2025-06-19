@@ -28,13 +28,7 @@ class TestActiveResourcesList:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
             ),

@@ -5,13 +5,13 @@ import pytest
 from testutils.factories import (
     ResourceFactory,
     UserFactory,
-    TimesheetFactory,
+    TimesheetSubmissionFactory, GroupFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
 
-from krm3.core.models import Timesheet
-from testutils.permissions import add_permissions
+from krm3.core.models import TimesheetSubmission
+from testutils.permissions import add_permissions, add_group_permissions
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
@@ -22,6 +22,15 @@ def manager():
     manager = UserFactory()
     add_permissions(manager, 'core.manage_any_timesheet')
     return manager
+
+
+@pytest.fixture
+def group_manager():
+    role = GroupFactory(name='manager')
+    user = UserFactory()
+    user.groups.add(role)
+    add_group_permissions(role, 'core.manage_any_timesheet')
+    return user
 
 
 class TestTimesheetModelAPIListView:
@@ -36,10 +45,11 @@ class TestTimesheetModelAPIListView:
         [
             pytest.param('regular', 'own', id='regular'),
             pytest.param('manager', 'full', id='manager'),
+            pytest.param('group-manager', 'full', id='group-manager'),
             pytest.param('admin', 'full', id='admin'),
         ],
     )
-    def test_write(self, who, result, api_client, regular_user, manager, admin_user):
+    def test_write(self, who, result, api_client, regular_user, manager, admin_user, group_manager):
         match who:
             case 'manager':
                 user = manager
@@ -47,6 +57,8 @@ class TestTimesheetModelAPIListView:
                 user = admin_user
             case 'regular':
                 user = regular_user
+            case 'group-manager':
+                user = group_manager
 
         resource: Resource = ResourceFactory(user=regular_user)
         response = api_client(user=user).post(
@@ -54,17 +66,17 @@ class TestTimesheetModelAPIListView:
         )
         obj_id = response.data['id']
         assert response.status_code == status.HTTP_201_CREATED
-        assert list(Timesheet.objects.values_list('id', flat=True)) == [obj_id]
+        assert list(TimesheetSubmission.objects.values_list('id', flat=True)) == [obj_id]
 
         response = api_client(user=user).put(
             self.url(obj_id), data={'resource': resource.pk, 'period': ('2024-01-08', '2024-01-14')}, format='json'
         )
         assert response.status_code == status.HTTP_200_OK
-        assert Timesheet.objects.count() == 1
+        assert TimesheetSubmission.objects.count() == 1
 
         response = api_client(user=user).delete(self.url(obj_id))
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert Timesheet.objects.count() == 0
+        assert TimesheetSubmission.objects.count() == 0
 
     def test_unauthorised_other(self, api_client, regular_user):
         user = UserFactory()
@@ -75,7 +87,7 @@ class TestTimesheetModelAPIListView:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-        timesheet: Timesheet = TimesheetFactory()
+        timesheet: TimesheetSubmission = TimesheetSubmissionFactory()
         ResourceFactory(user=user)
         response = api_client(user=user).put(
             self.url(timesheet.resource_id),
@@ -89,10 +101,11 @@ class TestTimesheetModelAPIListView:
         [
             pytest.param('regular', 'own', id='regular'),
             pytest.param('manager', 'full', id='manager'),
+            pytest.param('group-manager', 'full', id='group-manager'),
             pytest.param('admin', 'full', id='admin'),
         ],
     )
-    def test_retrieve(self, who, result, api_client, regular_user, manager, admin_user):
+    def test_retrieve(self, who, result, api_client, regular_user, manager, admin_user, group_manager):
         match who:
             case 'manager':
                 user = manager
@@ -100,10 +113,12 @@ class TestTimesheetModelAPIListView:
                 user = admin_user
             case 'regular':
                 user = regular_user
+            case 'group-manager':
+                user = group_manager
 
         resource: Resource = ResourceFactory(user=regular_user)
-        own_ts = TimesheetFactory(resource=resource)
-        other_ts = TimesheetFactory()
+        own_ts = TimesheetSubmissionFactory(resource=resource)
+        other_ts = TimesheetSubmissionFactory()
         expected = [own_ts.id] if result == 'own' else [own_ts.id, other_ts.id]
 
         response = api_client(user=user).get(self.url())

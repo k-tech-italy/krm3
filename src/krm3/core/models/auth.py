@@ -42,32 +42,21 @@ class User(AbstractUser):
     def get_natural_key_fields() -> list[str]:
         return ['username']
 
-    def can_manage_or_view_any_project(self) -> bool:
-        """Check visibility and edit rights for privileged users.
+    def get_resource(self) -> 'Resource':
+        """Return the associated resource or None if not available."""
+        try:
+            resource = self.resource
+        except self.__class__.resource.RelatedObjectDoesNotExist:
+            resource = None
+        return resource
 
-        :return: `True` if the user is allowed to view or edit data on
-            any project, `False` otherwise.
+    def can_manage_or_view_any_project(self) -> bool:
+        """Check if user has RO/RW permissions for any project.
+
+        :return: `True` if the user is allowed to view or edit data on projects for any resource,
+           `False` otherwise.
         """
         return self.has_any_perm('core.manage_any_project', 'core.view_any_project')
-
-    def can_manage_or_view_any_timesheet(self) -> bool:
-        """Check visibility and edit rights for privileged users.
-
-        :return: `True` if the user is allowed to view or edit data on
-            any timesheet, `False` otherwise.
-        """
-        return self.can_manage_or_view_any_project() and self.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        )
-
-    def can_manage_any_timesheet(self) -> bool:
-        """Check visibility and edit rights for privileged users.
-
-        :return: `True` if the user is allowed to edit data on
-            any timesheet, `False` otherwise.
-        """
-        # NOTE: `self.has_any_perm()` always checks the superuser flag
-        return self.can_manage_or_view_any_project() and self.has_any_perm('core.manage_any_timesheet')
 
     def has_any_perm(self, *perms: str) -> bool:
         """Check that the user has at least one of the given permissions.
@@ -76,7 +65,7 @@ class User(AbstractUser):
         :return: `True` if the user has at least one of the given
           `perms`, `False` otherwise.
         """
-        return self.is_superuser or any(self.has_perm(perm) for perm in perms)
+        return any(self.has_perm(perm) for perm in perms)
 
 
 class UserProfile(NaturalKeyModel):

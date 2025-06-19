@@ -4,7 +4,7 @@ from typing import Any, override
 from django.utils.translation import gettext_lazy as _
 from psycopg.types.range import DateRange
 
-from krm3.core.models.timesheets import SpecialLeaveReason, Timesheet
+from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
@@ -205,18 +205,14 @@ class StartEndDateRangeField(serializers.Field):
         return DateRange(lower_date, upper_date)
 
 
-class TimesheetModelSerializer(serializers.ModelSerializer):
+class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     period = StartEndDateRangeField()
 
     def is_valid(self, *, raise_exception: bool = False) -> bool:
         user = self.context['request'].user
-        try:
-            resource = user.resource
-        except user.__class__.resource.RelatedObjectDoesNotExist:
-            resource = None
+        resource = user.get_resource()
         if (
-            user.is_superuser
-            or user.has_perm('core.manage_any_timesheet')
+            user.has_perm('core.manage_any_timesheet')
             or (resource and user.resource.id == self.initial_data['resource'])
         ):
             return super().is_valid(raise_exception=raise_exception)
@@ -225,7 +221,7 @@ class TimesheetModelSerializer(serializers.ModelSerializer):
         return False
 
     class Meta:
-        model = Timesheet
+        model = TimesheetSubmission
         fields = '__all__'
 
 

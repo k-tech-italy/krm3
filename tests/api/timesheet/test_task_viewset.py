@@ -12,7 +12,7 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
-    TimesheetFactory,
+    TimesheetSubmissionFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -319,13 +319,7 @@ class TestTaskAPIListView:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
             ),
@@ -916,13 +910,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'],
                 status.HTTP_403_FORBIDDEN,
@@ -999,7 +987,7 @@ class TestTimeEntryClearAPIAction:
 
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
         open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
-        timesheet = TimesheetFactory(resource=open_entry.task.resource)
+        timesheet = TimesheetSubmissionFactory(resource=open_entry.task.resource)
         closed_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), timesheet=timesheet)
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
@@ -1023,13 +1011,7 @@ class TestTimeEntryClearAPIAction:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'],
                 status.HTTP_403_FORBIDDEN,
