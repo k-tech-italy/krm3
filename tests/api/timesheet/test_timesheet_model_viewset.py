@@ -28,8 +28,8 @@ class TestTimesheetModelAPIListView:
     @staticmethod
     def url(*args):
         if args:
-            return reverse('timesheet-api:api-timesheet-model-detail', args=args)
-        return reverse('timesheet-api:api-timesheet-model-list')
+            return reverse('core-api:api-timesheet-model-detail', args=args)
+        return reverse('core-api:api-timesheet-model-list')
 
     @pytest.mark.parametrize(
         'who, result',

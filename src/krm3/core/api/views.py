@@ -1,6 +1,7 @@
 from typing import cast
 from django.contrib.auth import logout as djlogout
-from rest_framework import mixins, permissions, serializers, status
+from django.db.models import QuerySet
+from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
@@ -11,7 +12,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSetMixin
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from krm3.core.api.serializers import UserSerializer
-from krm3.core.models import City, Client, Country, Project, Resource, User
+from krm3.core.models import City, Client, Country, Project, Resource, User, Timesheet
+from krm3.timesheet.api.serializers import TimesheetModelSerializer
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):
@@ -123,3 +125,20 @@ class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Generic
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
     queryset = Client.objects.all()
+
+
+class TimesheetModelAPIViewSet(viewsets.ModelViewSet):
+    queryset = Timesheet.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TimesheetModelSerializer
+
+    def get_queryset(self) -> QuerySet[Timesheet]:
+        user = cast('User', self.request.user)
+        ret = super().get_queryset()
+        if not (user.is_superuser or user.has_perm('core.manage_any_timesheet')):
+            try:
+                resource = user.resource
+            except user.__class__.resource.RelatedObjectDoesNotExist:
+                return ret.none()
+            ret = ret.filter(resource_id=resource.id)
+        return ret
