@@ -71,7 +71,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
     @admin.display(description='Timesheet', ordering='timesheet')
     def get_timesheet(self, obj: TimeEntry) -> str:
-        url = reverse('admin:core_timesheet_change', args=[obj.timesheet_id])
+        url = reverse('admin:core_timesheetsubmission_change', args=[obj.timesheet_id])
         txt = f'<a href="{url}">{str(obj.timesheet)}</a>'
         return mark_safe(txt)  # noqa: S308
 
