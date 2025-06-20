@@ -509,8 +509,8 @@ def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwa
     overwritten.delete()
 
 
-@receiver(models.signals.post_save, sender=Timesheet)
-def link_entries(sender: Timesheet, instance: Timesheet, **kwargs: Any) -> None:
+@receiver(models.signals.post_save, sender=TimesheetSubmission)
+def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission | list | tuple, **kwargs: Any) -> None:
     instance.timeentry_set.update(timesheet=None)
     if isinstance(instance.period, (list | tuple)):
         lower, upper = instance.period[0], instance.period[1]
@@ -523,5 +523,5 @@ def link_entries(sender: Timesheet, instance: Timesheet, **kwargs: Any) -> None:
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    timesheet = Timesheet.objects.filter(resource=instance.resource, period__contains = instance.date).first()
+    timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains = instance.date).first()
     instance.timesheet = timesheet
