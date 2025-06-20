@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
 from .auth import Resource
 
 if TYPE_CHECKING:
-    import datetime
-
     from django.contrib.auth.models import AbstractUser
     from django.db.models.base import ModelBase
 
@@ -88,13 +90,6 @@ class SpecialLeaveReason(models.Model):
         return not self.is_not_valid_yet(date) and not self.is_expired(date)
 
 
-class TimeEntryState(models.TextChoices):
-    """The state of a timesheet entry."""
-
-    OPEN = 'OPEN', _('Open')
-    CLOSED = 'CLOSED', _('Closed')
-
-
 class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     _TASK_ENTRY_FILTER = (
         models.Q(day_shift_hours__gt=0)
@@ -119,18 +114,14 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 
         :return: the filtered queryset.
         """
-        from .projects import POState
-
-        return self.filter(state=POState.OPEN)
+        return self.filter(Q(timesheet__isnull=True) | Q(timesheet__closed=False))
 
     def closed(self) -> Self:
         """Select the closed time entries in this queryset.
 
         :return: the filtered queryset.
         """
-        from .projects import POState
-
-        return self.filter(state=POState.CLOSED)
+        return self.filter(timesheet__isnull=False, timesheet__closed=True)
 
     def day_entries(self) -> Self:
         """Select all day entries in this queryset.
@@ -188,6 +179,29 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         return self.filter(resource__user=user)
 
 
+class TimesheetSubmission(models.Model):
+    """A submitted timesheet."""
+
+    period = DateRangeField(help_text='NB: End date is the day after the actual end date')
+    closed = models.BooleanField(default=True)
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            ExclusionConstraint(
+                name='exclude_overlapping_timesheets',
+                expressions=[
+                    ('period', RangeOperators.OVERLAPS),
+                    ('resource', RangeOperators.EQUAL),
+                ],
+            )
+        ]
+
+    def __str__(self) -> str:
+        end_dt = self.period.upper - datetime.timedelta(days=1)
+        return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}'
+
+
 class TimeEntry(models.Model):
     """A timesheet entry."""
 
@@ -203,9 +217,9 @@ class TimeEntry(models.Model):
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    state = models.TextField(choices=TimeEntryState, default=TimeEntryState.OPEN)  # pyright: ignore[reportArgumentType]
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
+    timesheet = models.ForeignKey(TimesheetSubmission, on_delete=models.SET_NULL, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries', null=True, blank=True)
@@ -239,7 +253,7 @@ class TimeEntry(models.Model):
 
     @override
     def __str__(self) -> str:
-        return f'{self.date}: {self.resource} on "{self.task}" ({self.state})'
+        return f'{self.date}: {self.resource} on "{self.task}"'
 
     @override
     def save(
@@ -467,33 +481,47 @@ class TimeEntry(models.Model):
             )
 
 
-@receiver(models.signals.post_save, sender=TimeEntry)
+@receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    open_entries = (
-        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
-    )
+    entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
     if instance.is_task_entry:
-        overwritten = open_entries.sick_days_and_holidays()
+        overwritten = entries.sick_days_and_holidays()
     elif instance.is_day_entry:
         # just to be safe: remove any other existing day entry
-        overwritten = open_entries.day_entries().exclude(pk=instance.pk)
+        overwritten = entries.day_entries().exclude(pk=instance.pk)
     else:
         # we should never get there
         overwritten = TimeEntry.objects.none()
     overwritten.delete()
 
 
-@receiver(models.signals.post_save, sender=TimeEntry)
+@receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    open_entries = (
-        cast('TimeEntryQuerySet', TimeEntry.objects).open().filter(date=instance.date, resource=instance.resource)
-    )
+    entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
     if instance.is_sick_day or instance.is_holiday:
-        overwritten = open_entries.task_entries()
+        overwritten = entries.task_entries()
     elif instance.is_task_entry:
         # just to be safe: remove any other existing task entry for the
         # `instance`'s task
-        overwritten = open_entries.filter(task=instance.task).exclude(pk=instance.pk)
+        overwritten = entries.filter(task=instance.task).exclude(pk=instance.pk)
     else:
         overwritten = TimeEntry.objects.none()
     overwritten.delete()
+
+
+@receiver(models.signals.post_save, sender=TimesheetSubmission)
+def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission | list | tuple, **kwargs: Any) -> None:
+    instance.timeentry_set.update(timesheet=None)
+    if isinstance(instance.period, (list | tuple)):
+        lower, upper = instance.period[0], instance.period[1]
+    else:
+        lower, upper = instance.period.lower, instance.period.upper
+    TimeEntry.objects.filter(
+        resource=instance.resource, date__gte=lower, date__lt=upper
+    ).update(timesheet=instance)
+
+
+@receiver(models.signals.pre_save, sender=TimeEntry)
+def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains = instance.date).first()
+    instance.timesheet = timesheet

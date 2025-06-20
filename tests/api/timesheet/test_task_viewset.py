@@ -12,12 +12,12 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
+    TimesheetSubmissionFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
 
 from krm3.core.models import TimeEntry
-from krm3.core.models.timesheets import TimeEntryState
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
@@ -144,6 +144,12 @@ class TestTaskAPIListView:
         day_entry_within_range = _make_time_entry(
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
+        # Timesheets are assigned to closed entry via 'link_entries' - Timesheet post-save signal
+        TimesheetSubmissionFactory(resource=resource, closed=True,
+                         period=((datetime.date(2024, 1, 3), datetime.date(2024, 1, 5))))
+        TimesheetSubmissionFactory(resource=resource, closed=False,
+                         period=((datetime.date(2024, 1, 5), datetime.date(2024, 1, 7))))
+
 
         response = api_client(user=admin_user).get(
             self.url(),
@@ -185,7 +191,6 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
-                    'state': str(task_entry_within_range.state),
                     'comment': 'Within range',
                     'task': task.pk,
                 },
@@ -203,18 +208,19 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
-                    'state': str(day_entry_within_range.state),
                     'comment': 'Within range (day)',
                     'task': None,
                 },
             ],
-            'days': {'2024-01-01': {'hol': True, 'nwd': True},
-                     '2024-01-02': {'hol': False, 'nwd': False},
-                     '2024-01-03': {'hol': False, 'nwd': False},
-                     '2024-01-04': {'hol': False, 'nwd': False},
-                     '2024-01-05': {'hol': False, 'nwd': False},
-                     '2024-01-06': {'hol': True, 'nwd': True},
-                     '2024-01-07': {'hol': True, 'nwd': True}}
+            'days': {
+                '2024-01-01': {'hol': True, 'nwd': True, 'closed': False},
+                '2024-01-02': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-03': {'hol': False, 'nwd': False, 'closed': True},
+                '2024-01-04': {'hol': False, 'nwd': False, 'closed': True},
+                '2024-01-05': {'hol': False, 'nwd': False, 'closed': False},
+                '2024-01-06': {'hol': True, 'nwd': True, 'closed': False},
+                '2024-01-07': {'hol': True, 'nwd': True, 'closed': False},
+            },
         }
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
@@ -319,13 +325,7 @@ class TestTaskAPIListView:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
             ),
@@ -916,13 +916,7 @@ class TestTimeEntryAPICreateView:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'],
                 status.HTTP_403_FORBIDDEN,
@@ -998,8 +992,14 @@ class TestTimeEntryClearAPIAction:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
-        open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
-        closed_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), state=TimeEntryState.CLOSED)
+        open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 6, 1))
+
+        TimesheetSubmissionFactory(resource=open_entry.task.resource,
+                                     period=(datetime.date(2020, 4, 1), datetime.date(2020, 5, 1)))
+        # Timesheet is being assigned to closed entry via 'link_to_timesheet' - Timeentry pre-save signal
+        closed_entry = TimeEntryFactory(resource=open_entry.task.resource,
+                                        day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 4, 15))
+
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
         )
@@ -1022,13 +1022,7 @@ class TestTimeEntryClearAPIAction:
             pytest.param(
                 ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
             ),
-            pytest.param(
-                ['manage_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_manager_without_project_perms'
-            ),
             pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_timesheet'], status.HTTP_403_FORBIDDEN, id='timesheet_viewer_without_project_perms'
-            ),
             pytest.param(
                 ['view_any_project', 'view_any_timesheet'],
                 status.HTTP_403_FORBIDDEN,

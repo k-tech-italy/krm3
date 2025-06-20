@@ -1,6 +1,7 @@
 from typing import cast
 from django.contrib.auth import logout as djlogout
-from rest_framework import mixins, permissions, serializers, status
+from django.db.models import QuerySet
+from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
@@ -11,7 +12,8 @@ from rest_framework.viewsets import GenericViewSet, ViewSetMixin
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from krm3.core.api.serializers import UserSerializer
-from krm3.core.models import City, Client, Country, Project, Resource, User
+from krm3.core.models import City, Client, Country, Project, Resource, User, TimesheetSubmission
+from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
 
 class RefreshTokenSerializer(serializers.ModelSerializer):
@@ -70,7 +72,9 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     @action(methods=['get'], detail=False)
     def active(self, request: Request) -> Response:
         user = cast('User', request.user)
-        if not user.can_manage_or_view_any_timesheet():
+        if not user.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
         active_resources = self.get_queryset().filter(active=True)
         serializer = ResourceSerializer(active_resources, many=True)
@@ -123,3 +127,19 @@ class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Generic
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
     queryset = Client.objects.all()
+
+
+class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
+    queryset = TimesheetSubmission.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TimesheetSubmissionSerializer
+
+    def get_queryset(self) -> QuerySet[TimesheetSubmission]:
+        user = cast('User', self.request.user)
+        ret = super().get_queryset()
+        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            resource = user.get_resource()
+            if resource is None:
+                return ret.none()
+            ret = ret.filter(resource_id=resource.id)
+        return ret

@@ -14,8 +14,8 @@ from rest_framework.response import Response
 
 
 from krm3.core.models import Resource
-from krm3.core.models.timesheets import SpecialLeaveReason, SpecialLeaveReasonQuerySet, TimeEntry, TimeEntryQuerySet
-from krm3.timesheet import entities
+from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
+from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -27,6 +27,7 @@ from krm3.timesheet.api.serializers import (
 from krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
+    from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
     from krm3.core.models import User
 
 
@@ -44,7 +45,9 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
 
         resource = Resource.objects.get(pk=resource_id)
         user = cast('User', request.user)
-        if resource.user != request.user and not user.can_manage_or_view_any_timesheet():
+        if resource.user != request.user and not user.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         try:
@@ -62,7 +65,7 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
                 data={'error': 'Start date must be earlier than end date.'}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        timesheet = entities.Timesheet(requested_by=cast('User', request.user)).fetch(resource, start_date, end_date)
+        timesheet = dto.TimesheetDTO(requested_by=cast('User', request.user)).fetch(resource, start_date, end_date)
         serializer = TimesheetSerializer(timesheet)
         return Response(serializer.data)
 
@@ -103,7 +106,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         except Resource.DoesNotExist:
             return Response('Resource not found.', status=status.HTTP_404_NOT_FOUND)
 
-        if resource.user != request.user and not cast('User', request.user).can_manage_any_timesheet():
+        if resource.user != request.user and not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         if not isinstance(dates, list):
@@ -140,7 +143,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         entries: TimeEntryQuerySet = self.get_queryset().filter(pk__in=requested_entry_ids)  # pyright: ignore[reportAssignmentType]
 
-        if not cast('User', request.user).can_manage_any_timesheet():
+        if not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             # since we already ACL-filtered the queryset, we need to
             # know if we have fetched every single one of the objects
             # we requested
@@ -190,11 +193,7 @@ class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 class ReportViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    @action(
-        detail=False,
-        methods=['get'],
-        url_path=r"(?P<date>\d{6})"
-    )
+    @action(detail=False, methods=['get'], url_path=r'(?P<date>\d{6})')
     def monthly_report(self, request: Request, date: str) -> Response:
         report_data = timesheet_report_data(date)
         wb = openpyxl.Workbook()
@@ -215,7 +214,7 @@ class ReportViewSet(viewsets.ViewSet):
                     ws.append(row)
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        filename = f"report_{date[0:4]}-{date[4:6]}.xlsx"
+        filename = f'report_{date[0:4]}-{date[4:6]}.xlsx'
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
         wb.save(response)

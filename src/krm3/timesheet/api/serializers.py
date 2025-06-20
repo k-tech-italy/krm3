@@ -2,11 +2,14 @@ import datetime
 from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
-from krm3.core.models.timesheets import SpecialLeaveReason
+from psycopg.types.range import DateRange
+
+from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission
 from rest_framework import serializers
 
 from krm3.core.models import Task, TimeEntry
-from krm3.timesheet import entities
+from krm3.timesheet import dto
+from rest_framework import exceptions
 
 type Hours = Decimal | float | int
 
@@ -34,7 +37,7 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'on_call_hours',
             'travel_hours',
             'rest_hours',
-            'state',
+            # 'state',
             'comment',
             'task',
         )
@@ -170,13 +173,66 @@ class KrmDayHolidaySerializer(serializers.Serializer):
     hol = serializers.BooleanField(source='is_holiday')
     nwd = serializers.BooleanField(source='is_non_working_day')
 
+
 class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
 
-    def get_days(self, timesheet: entities.Timesheet) -> dict[str, dict[str, bool]]:
-        return {str(day): KrmDayHolidaySerializer(day).data for day in timesheet.days}
+    def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
+        days_with_closed_attr = {}
+
+        timesheets = TimesheetSubmission.objects.filter(resource=timesheet.resource)
+        for day in timesheet.days:
+            timesheet = timesheets.filter(period__contains=day.date).first()
+
+            if timesheet and timesheet.closed:
+                days_with_closed_attr[day] = {'closed': True}
+            else:
+                days_with_closed_attr[day] = {'closed': False}
+
+        return {str(day): KrmDayHolidaySerializer(day).data | value for day, value in days_with_closed_attr.items()}
+
+
+class StartEndDateRangeField(serializers.Field):
+    def to_representation(self, value: Any) -> tuple[datetime.date, datetime.date] | None:
+        if value is None:
+            return None
+        return (value.lower.isoformat(), value.upper.isoformat())
+
+    def to_internal_value(self, data: Any) -> Any:
+        if not isinstance(data, list | tuple):
+            raise serializers.ValidationError('Expected a list or a tuple.')
+
+        lower, upper = data
+
+        try:
+            lower_date = datetime.date.fromisoformat(lower)
+            upper_date = datetime.date.fromisoformat(upper)
+        except ValueError:
+            raise serializers.ValidationError('Dates must be in ISO format (YYYY-MM-DD).')
+
+        return DateRange(lower_date, upper_date)
+
+
+class TimesheetSubmissionSerializer(serializers.ModelSerializer):
+    period = StartEndDateRangeField()
+
+    def is_valid(self, *, raise_exception: bool = False) -> bool:
+        user = self.context['request'].user
+        resource = user.get_resource()
+        if (
+            user.has_perm('core.manage_any_timesheet')
+            or (resource and user.resource.id == self.initial_data['resource'])
+        ):
+            return super().is_valid(raise_exception=raise_exception)
+        if raise_exception:
+            raise exceptions.PermissionDenied()
+        return False
+
+    class Meta:
+        model = TimesheetSubmission
+        fields = '__all__'
 
 
 class SpecialLeaveReasonSerializer(serializers.ModelSerializer):
