@@ -25,6 +25,13 @@ def manager():
 
 
 @pytest.fixture
+def viewer():
+    viewer = UserFactory()
+    add_permissions(viewer, 'core.view_any_timesheet')
+    return viewer
+
+
+@pytest.fixture
 def group_manager():
     role = GroupFactory(name='manager')
     user = UserFactory()
@@ -78,9 +85,22 @@ class TestTimesheetModelAPIListView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert TimesheetSubmission.objects.count() == 0
 
-    def test_unauthorised_other(self, api_client, regular_user):
-        user = UserFactory()
-        resource: Resource = ResourceFactory(user=regular_user)
+
+    @pytest.mark.parametrize(
+        'who',
+        [
+            pytest.param('regular', id='regular'),
+            pytest.param('viewer', id='viewer')
+        ],
+    )
+    def test_unauthorised_other(self, who, api_client, regular_user, viewer):
+        match who:
+            case 'regular':
+                user = regular_user
+            case 'viewer':
+                user = viewer
+
+        resource: Resource = ResourceFactory()
 
         response = api_client(user=user).post(
             self.url(), data={'resource': resource.pk, 'period': ('2024-01-01', '2024-01-07')}, format='json'
@@ -103,9 +123,10 @@ class TestTimesheetModelAPIListView:
             pytest.param('manager', 'full', id='manager'),
             pytest.param('group-manager', 'full', id='group-manager'),
             pytest.param('admin', 'full', id='admin'),
+            pytest.param('viewer', 'full', id='viewer')
         ],
     )
-    def test_retrieve(self, who, result, api_client, regular_user, manager, admin_user, group_manager):
+    def test_retrieve(self, who, result, api_client, regular_user, manager, admin_user, group_manager, viewer):
         match who:
             case 'manager':
                 user = manager
@@ -115,6 +136,8 @@ class TestTimesheetModelAPIListView:
                 user = regular_user
             case 'group-manager':
                 user = group_manager
+            case 'viewer':
+                user = viewer
 
         resource: Resource = ResourceFactory(user=regular_user)
         own_ts = TimesheetSubmissionFactory(resource=resource)
