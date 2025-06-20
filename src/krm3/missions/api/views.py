@@ -1,19 +1,13 @@
-from django.http import HttpResponseRedirect
-from django.shortcuts import reverse
-from rest_framework import mixins, serializers
+from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
-
-from ..session import EXPENSE_UPLOAD_IMAGES
 from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseCreateSerializer,
-                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,
-                                  ExpenseImageUploadSerializer )
+                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer )
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
-from ...utils.queryset import ACLMixin
 
 
 class MissionAPIViewSet(ModelViewSet):
@@ -59,9 +53,6 @@ class ExpenseAPIViewSet(ModelViewSet):
     @action(detail=True, serializer_class=ExpenseRetrieveSerializer)
     def otp(self, request, pk=None):
         return super().retrieve(request, pk=pk)
-
-    def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
 
 
 class ExpenseCategoryAPIViewSet(

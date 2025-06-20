@@ -7,6 +7,7 @@ from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -43,7 +44,7 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
         except KeyError:
             return Response(data={'error': 'Required query parameter(s) missing.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        resource = Resource.objects.get(pk=resource_id)
+        resource = get_object_or_404(Resource, pk=resource_id)
         user = cast('User', request.user)
         if resource.user != request.user and not user.has_any_perm(
             'core.manage_any_timesheet', 'core.view_any_timesheet'
@@ -66,7 +67,7 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
             )
 
         timesheet = dto.TimesheetDTO(requested_by=cast('User', request.user)).fetch(resource, start_date, end_date)
-        serializer = TimesheetSerializer(timesheet)
+        serializer = self.get_serializer(timesheet)
         return Response(serializer.data)
 
 
