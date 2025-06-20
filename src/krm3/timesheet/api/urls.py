@@ -1,6 +1,5 @@
 from rest_framework import routers
 
-import krm3.core.api.views
 from krm3.timesheet.api import views as api_views
 
 
