@@ -137,7 +137,7 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
-        if not (user.is_superuser or user.has_perm('core.manage_any_timesheet')):
+        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             resource = user.get_resource()
             if resource is None:
                 return ret.none()
