@@ -1,3 +1,4 @@
+import datetime
 from typing import Generator
 
 import pytest
@@ -47,3 +48,31 @@ def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
         if sb._needs_tearDown:
             sb.tearDown()
             sb._needs_tearDown = False
+
+@pytest.fixture
+def freeze_frontend_time(browser):
+    def _freeze(iso_date: str):
+        dt = datetime.datetime.fromisoformat(iso_date.replace('Z', '+00:00'))
+        timestamp_ms = int(dt.timestamp() * 1000)
+        browser.driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": f"""
+                           const fixedTime = {timestamp_ms};
+                           const OriginalDate = Date;
+                           class FakeDate extends OriginalDate {{
+                               constructor(...args) {{
+                                   if (args.length === 0) {{
+                                       return new OriginalDate(fixedTime);
+                                   }}
+                                   return new OriginalDate(...args);
+                               }}
+                               static now() {{
+                                   return fixedTime;
+                               }}
+                           }}
+                           Date = FakeDate;
+                       """
+            }
+        )
+    return _freeze
