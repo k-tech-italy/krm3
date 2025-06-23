@@ -63,6 +63,18 @@ def regular_user(db):
 
 
 @pytest.fixture
+def admin_user(db):
+    from testutils.factories import UserFactory
+    return UserFactory(is_staff=True, is_superuser=True)
+
+
+@pytest.fixture
+def staff_user(db):
+    from testutils.factories import UserFactory
+    return UserFactory(is_staff=True)
+
+
+@pytest.fixture
 def payment_types(db):
     results = []
     from krm3.core.models import PaymentCategory
