@@ -96,6 +96,9 @@ class Resource(models.Model):
     )
     active = models.BooleanField(default=True)
 
+    class Meta:
+        ordering = ['first_name', 'last_name']
+
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
 
