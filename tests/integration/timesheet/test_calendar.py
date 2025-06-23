@@ -117,3 +117,4 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     actions.click_and_hold(entry_tile).pause(1).release().perform()
     browser.click('//*[contains(text(), "More")]')
     browser.assert_element('//button/span[contains(text(), "Save")]')
+

@@ -58,6 +58,25 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     ]
     list_select_related = ('task__project', 'resource', 'timesheet')
 
+    def get_queryset(self, request):
+        qs = TimeEntry.objects.all()
+        if request.user.has_perm('core.view_any_timesheet'):
+            return qs
+        return qs.filter(resource__user=request.user)
+
+    # def has_view_permission(self, request, obj=None):
+    #     if request.user.is_staff or request.user.is_superuser:
+    #         return True
+    #     return False
+    #
+    # def get_model_perms(self, request):
+    #     if self.has_view_permission(request):
+    #         return {'view': True}
+    #     return {}
+    #
+    # def has_module_permission(self, request):
+    #     return self.has_view_permission(request)
+
     @button()
     def report(self, request: HttpRequest) -> TemplateResponse:
         current_month = request.GET.get('month')
