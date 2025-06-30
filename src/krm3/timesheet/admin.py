@@ -1,7 +1,9 @@
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
+from django.db.models import QuerySet
 from django.contrib import admin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
@@ -12,9 +14,11 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission, Resource
 from krm3.styles.buttons import NORMAL
 from krm3.timesheet.report import timesheet_report_data
+from django import forms
+
 
 @admin.register(PO)
 class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
@@ -57,6 +61,64 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         ('date', DateRangeFilter),
     ]
     list_select_related = ('task__project', 'resource', 'timesheet')
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[TimeEntry]:
+        qs = TimeEntry.objects.all()
+        if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            return qs
+        return qs.filter(resource__user=request.user)
+
+    def has_view_permission(self,  request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+        if obj is None:
+            return True
+        if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            return True
+        return obj.resource.user == request.user
+
+    def has_change_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+        if obj is None:
+            return True
+        if request.user.has_perm('core.manage_any_timesheet'):
+            return True
+        return obj.resource.user == request.user
+
+    def has_delete_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+        if obj is None:
+            return True
+        if request.user.has_perm('core.manage_any_timesheet'):
+            return True
+        return obj.resource.user == request.user
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        if request.user.has_perm('core.manage_any_timesheet'):
+            return True
+        return super().has_add_permission(request)
+
+    def get_form(
+            self,
+            request: HttpRequest,
+            obj: TimeEntry | None = None,
+            **kwargs
+    ) -> type[forms.ModelForm]:
+        form = super().get_form(request, obj, **kwargs)
+
+        is_add_view = obj is None
+        user = request.user
+
+        if not user.has_perm("core.manage_any_timesheet"):
+            try:
+                resource = Resource.objects.get(user=user)
+                if is_add_view:
+                    if "resource" in form.base_fields:
+                        form.base_fields["resource"].queryset = Resource.objects.filter(pk=resource.pk)
+                else:
+                    pass
+            except Resource.DoesNotExist:
+                if is_add_view and "resource" in form.base_fields:
+                    form.base_fields["resource"].queryset = Resource.objects.none()
+
+        return form
+
 
     @button()
     def report(self, request: HttpRequest) -> TemplateResponse:
