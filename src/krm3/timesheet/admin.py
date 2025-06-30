@@ -99,14 +99,29 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     def has_add_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
         return True
 
-    def get_form(self, request: HttpRequest, obj: TimeEntry | None = None, **kwargs) -> type[forms.ModelForm]:
+    def get_form(
+            self,
+            request: HttpRequest,
+            obj: TimeEntry | None = None,
+            **kwargs
+    ) -> type[forms.ModelForm]:
         form = super().get_form(request, obj, **kwargs)
-        if not request.user.has_perm('core.manage_any_timesheet') and not request.user.is_superuser:
+
+        is_add_view = obj is None
+        user = request.user
+
+        if not user.has_perm("core.manage_any_timesheet") and not user.is_superuser:
             try:
-                resource = Resource.objects.get(user=request.user)
-                form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
+                resource = Resource.objects.get(user=user)
+                if is_add_view:
+                    if "resource" in form.base_fields:
+                        form.base_fields["resource"].queryset = Resource.objects.filter(pk=resource.pk)
+                else:
+                    pass
             except Resource.DoesNotExist:
-                form.base_fields['resource'].queryset = Resource.objects.none()
+                if is_add_view and "resource" in form.base_fields:
+                    form.base_fields["resource"].queryset = Resource.objects.none()
+
         return form
 
 
