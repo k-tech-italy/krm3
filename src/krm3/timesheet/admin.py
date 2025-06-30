@@ -64,23 +64,18 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[TimeEntry]:
         qs = TimeEntry.objects.all()
-        if (request.user.is_superuser or request.user.has_perm('core.manage_any_timesheet')
-                or request.user.has_perm('core.view_any_timesheet')):
+        if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return qs
         return qs.filter(resource__user=request.user)
 
     def has_view_permission(self,  request: HttpRequest, obj: TimeEntry | None = None) -> bool:
-        if request.user.is_superuser:
-            return True
         if obj is None:
             return True
-        if request.user.has_perm('core.view_any_timesheet') or request.user.has_perm('core.manage_any_timesheet'):
+        if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
     def has_change_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
-        if request.user.is_superuser:
-            return True
         if obj is None:
             return True
         if request.user.has_perm('core.manage_any_timesheet'):
@@ -88,8 +83,6 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         return obj.resource.user == request.user
 
     def has_delete_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
-        if request.user.is_superuser:
-            return True
         if obj is None:
             return True
         if request.user.has_perm('core.manage_any_timesheet'):
@@ -110,7 +103,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         is_add_view = obj is None
         user = request.user
 
-        if not user.has_perm("core.manage_any_timesheet") and not user.is_superuser:
+        if not user.has_perm("core.manage_any_timesheet"):
             try:
                 resource = Resource.objects.get(user=user)
                 if is_add_view:
