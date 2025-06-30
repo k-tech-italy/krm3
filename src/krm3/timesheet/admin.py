@@ -89,8 +89,10 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             return True
         return obj.resource.user == request.user
 
-    def has_add_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
-        return True
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        if request.user.has_perm('core.manage_any_timesheet'):
+            return True
+        return super().has_add_permission(request)
 
     def get_form(
             self,
