@@ -5,32 +5,28 @@ from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ResourceAdminForm
-from krm3.core.models import City, Client, Country, Resource
+from krm3.core.models import City, Client, Country, Resource, UserProfile
 
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
-# from django.utils.html import escape
-# from django.utils.safestring import mark_safe
-#
-# @admin.register(UserProfile)
-# class UserProfileAdmin(ModelAdmin):
-#     list_display = 'user', 'avatar', 'profile'
-#
-#     def avatar(self, obj):
-#         if obj.picture:
-#             return mark_safe('<img src="%s" />' % escape(obj.picture))
-#         else:
-#             return ''
-#     avatar.short_description = 'Profile pic'
-#     avatar.allow_tags = True
-#
-#     def profile(self, obj):
-#
-#         if obj.social_profile:
-#             return mark_safe('<a href="%s">%s</a>' % (escape(obj.social_profile), escape(obj.social_profile)))
-#         else:
-#             return ''
-#     avatar.short_description = 'Profile url'
-#     avatar.allow_tags = True
+@admin.register(UserProfile)
+class UserProfileAdmin(ModelAdmin):
+    list_display = 'user', 'avatar', 'profile'
+
+    def avatar(self, obj: UserProfile) -> str:
+        if obj.picture:
+            return mark_safe('<img src="%s" />' % escape(obj.picture))  # noqa: S308
+        return ''
+    avatar.short_description = 'Profile pic'
+    avatar.allow_tags = True
+
+    def profile(self, obj: UserProfile) -> str:
+        if obj.social_profile:
+            return mark_safe('<a href="%s">%s</a>' % (escape(obj.social_profile), escape(obj.social_profile)))  # noqa: S308
+        return ''
+    avatar.short_description = 'Profile url'
+    avatar.allow_tags = True
 
 
 class CustomUserAdmin(UserAdmin):

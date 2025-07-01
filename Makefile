@@ -189,3 +189,17 @@ outdated:  ## Generates .outdated.txt and .tree.txt files
 act-docs:
 	act -W '.github/workflows/docs.yml' push --job generate
 	cd .artifacts/1/github-pages && tar -xzvf github-pages.zip
+
+release:
+	@echo "Generating release.json with BE and FE version info"
+	@BE_BRANCH=`git branch --show-current` \
+	BE_COMMIT=`git rev-parse --short HEAD` \
+	BE_DATE=`git log -1 --pretty=%ad --date=short` && \
+	BE_VER=`python -c "import tomllib; f=open('pyproject.toml', 'rb'); print(tomllib.load(f)['project']['version'])"` \
+	cd ./krm3-fe && \
+	FE_VER=`npm pkg get version` \
+	FE_BRANCH=`git branch --show-current` \
+	FE_COMMIT=`git rev-parse --short HEAD` \
+	FE_DATE=`git log -1 --pretty=%ad --date=short` && \
+	cd .. && \
+	printf '{\n"be": {"branch": "'$$BE_BRANCH'", "commit": "'$$BE_COMMIT'", "date": "'$$BE_DATE'", "version": "'$$BE_VER'"},\n"fe": {"branch": "'$$FE_BRANCH'", "commit": "'$$FE_COMMIT'", "date": "'$$FE_DATE'", "version": '$$FE_VER'}\n}' > src/krm3/core/static/release.json
