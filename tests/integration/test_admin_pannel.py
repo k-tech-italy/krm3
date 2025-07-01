@@ -11,10 +11,9 @@ from django.contrib.auth.models import Permission
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
 
-pytestmark = pytest.mark.selenium
+pytestmark = [pytest.mark.selenium, pytest.mark.django_db]
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user):
     task_1 = TaskFactory()
     task_2 = TaskFactory()
@@ -28,8 +27,7 @@ def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
     assert len(table_rows) == 2
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTestBrowser', staff_user):
     resource_1 = ResourceFactory(user=staff_user)
     staff_user.user_permissions.add(Permission.objects.get(codename='view_any_timesheet'),
@@ -52,8 +50,7 @@ def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTes
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
     assert len(table_rows) == 3
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_without_perms_should_see_only_own_entries(browser: 'AppTestBrowser', staff_user):
     resource_1 = ResourceFactory(user=staff_user)
 
@@ -76,8 +73,7 @@ def test_staff_user_without_perms_should_see_only_own_entries(browser: 'AppTestB
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
     assert len(table_rows) == 1
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', admin_user):
     task = TaskFactory()
     time_entry = TimeEntryFactory(task=task, day_shift_hours=4)
@@ -97,8 +93,7 @@ def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', 
 
     browser.assert_element('//input[@name="day_shift_hours" and @value="7.00"]')
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_only_owned_time_entry(
         browser: 'AppTestBrowser', staff_user):
     resource = ResourceFactory(user=staff_user)
@@ -134,8 +129,7 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_onl
 
     browser.assert_element('//input[@name="day_shift_hours" and @value="3.00"]')
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_time_entry(
         browser: 'AppTestBrowser', staff_user):
 
@@ -160,8 +154,6 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_ti
     browser.assert_element('//input[@name="day_shift_hours" and @value="2.00"]')
 
 
-@pytest.mark.selenium
-@pytest.mark.django_db
 def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTestBrowser', admin_user):
     task = TaskFactory()
 
@@ -192,8 +184,7 @@ def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTe
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_entry_for_any_resource(
         browser: 'AppTestBrowser', staff_user):
     staff_user.user_permissions.add(Permission.objects.get(codename='manage_any_timesheet'),
@@ -226,8 +217,7 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_en
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
-@pytest.mark.selenium
-@pytest.mark.django_db
+
 def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time_entry_only_for_owned_resource(
         browser: 'AppTestBrowser', staff_user):
     staff_user.user_permissions.add(Permission.objects.get(codename='add_timeentry'))
