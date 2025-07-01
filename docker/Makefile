@@ -53,7 +53,7 @@ build-base: requirements  ## Builds the base image
 	docker images | grep ${DOCKER_IMAGE}/base | grep ${BASE}
 
 compile:
-	@cd krm3-fe && yarn install && yarn build
+	@cd ../krm3-fe && yarn install && yarn build
 	@./manage.py tailwind build
 
 build: compile  ## Builds the image
