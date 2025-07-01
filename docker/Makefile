@@ -54,7 +54,7 @@ build-base: requirements  ## Builds the base image
 
 compile:
 	@cd ../krm3-fe && yarn install && yarn build
-	@./manage.py tailwind build
+	@cd .. && ./manage.py tailwind build
 
 build: compile  ## Builds the image
 	cd .. && docker build \
