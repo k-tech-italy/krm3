@@ -2,12 +2,21 @@
 
 Add SOCIAL_MIDDLEWARES to settings.MIDDLEWARES
 """
+
+import typing
 from datetime import timedelta
 
 from django.contrib import messages
 from django.shortcuts import redirect
 
 from ..environ import env as _env
+
+if typing.TYPE_CHECKING:
+    from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+    from social_core.strategy import BaseStrategy
+    from social_django.models import UserSocialAuth
+    from krm3.core.models.auth import User
+
 
 AUTHENTICATION_BACKENDS = []
 if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
@@ -29,7 +38,7 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         'LOGIN_FIELD': 'email',
         'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
         'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': _env.list('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS'),
-        'SERIALIZERS': {}
+        'SERIALIZERS': {},
     }
 
     SOCIAL_AUTH_JSONFIELD_ENABLED = True
@@ -50,7 +59,8 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         'social_core.pipeline.social_auth.associate_user',
         'social_core.pipeline.social_auth.load_extra_data',
         'social_core.pipeline.user.user_details',
-        # 'krm3.config.social.update_user_social_data',
+        'krm3.config.fragments.social.update_user_social_data',
+        'krm3.config.fragments.social.associate_resource',
     )
 
     SOCIAL_AUTH_STRATEGY = 'social_django.strategy.DjangoStrategy'
@@ -60,23 +70,27 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
     SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'openid'
+        'openid',
     ]
     SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
     SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = _env('SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS')
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
     SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ['state']
 
-    def auth_allowed(backend, details, response, request, *args, **kwargs):
+    def auth_allowed(
+        backend: typing.Any, details: typing.Any, response: 'HttpResponse', request: 'HttpRequest', *args, **kwargs
+    ) -> 'HttpResponseRedirect | None':
         if not backend.auth_allowed(response, details):
             messages.error(request, 'Please Login with the Organization Account')
             return redirect('login')
+        return None
 
-    def update_user_social_data(strategy, *args, **kwargs):
+    def update_user_social_data(strategy: 'BaseStrategy', *args, **kwargs) -> None:
         response = kwargs['response']
         user = kwargs['user']
 
         from ...core.models import UserProfile
+
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
 
         modified = False
@@ -91,3 +105,27 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
 
         if modified:
             user_profile.save()
+
+    def associate_resource(
+        strategy: 'BaseStrategy',
+        user: 'User',
+        response: dict,
+        social: 'UserSocialAuth',
+        *args,
+        **kwargs,
+    ) -> None:
+        if not kwargs.get('is_new'):
+            return
+
+        from krm3.core.models import Resource
+
+        try:
+            resource = Resource.objects.get(
+                first_name=user.first_name,
+                last_name=user.last_name,
+                user__isnull=True,
+            )
+            resource.user = user
+            resource.save()
+        except Resource.DoesNotExist:
+            pass

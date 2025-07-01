@@ -14,6 +14,8 @@ dist
 !.nvmrc
 !.dockerignore
 
+src/krm3/core/static/release.json
+
 coverage.xml
 junit.xml
 
