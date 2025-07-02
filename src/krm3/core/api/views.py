@@ -8,33 +8,48 @@ from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet, ViewSetMixin
+from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.utils import extend_schema
+from rest_framework_simplejwt.exceptions import TokenError
 
 from krm3.core.api.serializers import UserSerializer
-from krm3.core.models import City, Client, Country, Project, Resource, User, TimesheetSubmission
+from krm3.core.models import (
+    City,
+    Client,
+    Country,
+    Project,
+    Resource,
+    User,
+    TimesheetSubmission,
+)
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
 
-class RefreshTokenSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RefreshToken
-        fields = '__all__'
+class InvalidateTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField(help_text="Refresh token to blacklist")
 
 
-class BlacklistRefreshAPIViewSet(ViewSetMixin, GenericAPIView):
-    serializer_class = RefreshTokenSerializer
+class BlacklistRefreshAPIViewSet(GenericViewSet, GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request=InvalidateTokenSerializer,
+        responses={200: 400},
+        description="Blacklist a refresh token",
+    )
     @action(
         methods=['post'],
-        detail=True,
+        detail=False,
         parser_classes=[JSONParser],
-        name='Invalidate refresh token',
+        name='Blacklist a refresh token',
     )
     def invalidate(self, request: Request) -> Response:
-        """Invalidate the refresh token."""
-        token = RefreshToken(request.data.get('refresh'))
+        """Blacklist a refresh token (if exists)."""
+        try:
+            token = RefreshToken(request.data.get('refresh'))
+        except TokenError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
         token.blacklist()
         return Response()
 
@@ -64,7 +79,9 @@ class ResourceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
+class ResourceAPIViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = ResourceSerializer
     queryset = Resource.objects.all()
@@ -99,7 +116,9 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CountryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
+class CountryAPIViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = CountrySerializer
     queryset = Country.objects.all()
@@ -111,7 +130,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ProjectAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
+class ProjectAPIViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
@@ -123,7 +144,9 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
+class ClientAPIViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
     queryset = Client.objects.all()
@@ -137,7 +160,9 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
-        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+        if not user.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        ):
             resource = user.get_resource()
             if resource is None:
                 return ret.none()
