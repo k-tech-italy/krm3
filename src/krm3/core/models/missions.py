@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import typing
 from decimal import Decimal
 from enum import Enum
 
@@ -24,15 +25,17 @@ from krm3.missions.media import mission_directory_path
 from krm3.utils.queryset import ActiveManagerMixin
 
 
+if typing.TYPE_CHECKING:
+    from krm3.core.models.auth import User
+
+
 class MissionManager(ActiveManagerMixin, models.Manager):
     def filter_acl(self, user):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
         """
-        if user.is_superuser or user.get_all_permissions().intersection(
-            {'core.manage_any_mission', 'core.view_any_mission'}
-        ):
+        if user.has_any_perm('core.manage_any_mission', 'core.view_any_mission'):
             return self.all()
         return self.filter(resource__user=user)
 
@@ -216,7 +219,6 @@ class Reimbursement(models.Model):
         SPESE_TRASFERTA = 'Spese trasferta'
         TOTALE_SPESE = 'Totale spese'
 
-
     number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
     year = models.PositiveIntegerField(blank=True)
     month = models.CharField(max_length=20, null=True)
@@ -262,7 +264,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
         expense_id, mission_id, ts = ref.split('|')
         return self.get(mission_id=mission_id, id=expense_id, modified_ts=ts)
 
-    def filter_acl(self, user):
+    def filter_acl(self, user: "User"):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -311,10 +313,10 @@ class Expense(models.Model):
     def __str__(self) -> str:
         return f'{self.day}, {self.amount_currency} for {self.category}'
 
-    def get_updated_millis(self):
+    def get_updated_millis(self) -> int:
         return int(self.modified_ts.timestamp() * 1000)
 
-    def is_accessible(self, user) -> bool:
+    def is_accessible(self, user: "User") -> bool:
         if user.is_superuser or user.get_all_permissions().intersection(
             {'core.manage_any_expense', 'core.view_any_expense'}
         ):
@@ -334,7 +336,7 @@ class Expense(models.Model):
         expense_id, mission_id, ts = ref.split('|')
         return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
-    def calculate_base(self, force_rates=False, force_reset=False, save=True):
+    def calculate_base(self, force_rates: bool=False, force_reset: bool=False, save: bool = True) -> Decimal:
         """(Re)calculate the base amount."""
         if force_reset or self.amount_base is None:
             # we need to recalculate it
@@ -348,7 +350,7 @@ class Expense(models.Model):
                 self.save()
         return self.amount_base
 
-    def apply_reimbursement(self, force=False, reimbursement=None) -> Decimal:
+    def apply_reimbursement(self, force: bool = False, reimbursement: Reimbursement = None) -> Decimal:
         """Calculate the reimbursement amount.
 
         Will save the record if reimbursement is provided.
@@ -377,7 +379,7 @@ class Expense(models.Model):
 
 
 @receiver(pre_save, sender=Expense)
-def recalculate_reimbursement(sender, instance: Expense, **kwargs) -> None:  # noqa: ANN003
+def recalculate_reimbursement(sender: Expense, instance: Expense, **kwargs) -> None:  # noqa: ANN003
     if instance.id:
         try:
             old_instance = Expense.objects.get(id=instance.id)
