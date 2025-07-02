@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from krm3.core.models.auth import User
     from krm3.core.models import Project, Task, Mission, InvoiceEntry
 
-    from django.contrib.auth.models import AbstractUser
     from django.db.models.fields.related_descriptors import RelatedManager
 
 
@@ -176,13 +175,13 @@ class TaskQuerySet(models.QuerySet['Task']):
     def assigned_to(self, resource: Resource | int) -> Self:
         return self.filter(resource=resource)
 
-    def filter_acl(self, user: AbstractUser) -> Self:
+    def filter_acl(self, user: User) -> Self:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
         """
-        if user.is_superuser or user.get_all_permissions().intersection(
-            {'core.manage_any_project', 'core.view_any_project'}
+        if user.has_any_perm(
+            'core.manage_any_project', 'core.view_any_project', 'core.manage_any_timesheet', 'core.view_any_timesheet'
         ):
             return self.all()
         return self.filter(resource__user=user)
@@ -213,6 +212,10 @@ class Task(models.Model):
 
     class Meta:
         ordering = ['project__name', 'title']
+        permissions = [
+            ('view_any_task_costs', "Can view(only) everybody's task costs"),
+            ('manage_any_task_costs', "Can view, and manage everybody's task costs"),
+        ]
 
     @override
     def __str__(self) -> str:

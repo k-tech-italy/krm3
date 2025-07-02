@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any, override
 from django.utils.translation import gettext_lazy as _
 from psycopg.types.range import DateRange
+from django.db import IntegrityError
 
 from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission
 from rest_framework import serializers
@@ -211,8 +212,7 @@ class StartEndDateRangeField(serializers.Field):
             upper_date = datetime.date.fromisoformat(upper)
         except ValueError:
             raise serializers.ValidationError('Dates must be in ISO format (YYYY-MM-DD).')
-
-        return DateRange(lower_date, upper_date)
+        return DateRange(lower_date, upper_date, '[]')
 
 
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
@@ -229,6 +229,13 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         if raise_exception:
             raise exceptions.PermissionDenied()
         return False
+
+    def save(self, **kwargs) -> None:
+        """Handle model constraints and return a 400 bad request if and error occurred."""
+        try:
+            super().save(**kwargs)
+        except IntegrityError  as e:
+            raise serializers.ValidationError({'error': str(e)})
 
     class Meta:
         model = TimesheetSubmission

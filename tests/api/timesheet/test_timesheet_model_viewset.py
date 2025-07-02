@@ -40,7 +40,7 @@ def group_manager():
     return user
 
 
-class TestTimesheetModelAPIListView:
+class TestTimesheetSubmissionModelAPIListView:
     @staticmethod
     def url(*args):
         if args:
@@ -147,3 +147,17 @@ class TestTimesheetModelAPIListView:
         response = api_client(user=user).get(self.url())
         assert response.status_code == status.HTTP_200_OK
         assert [r['id'] for r in response.data['results']] == expected
+
+    def test_integrity_error_on_timesheet_creation(self, api_client, regular_user):
+        resource: Resource = ResourceFactory(user=regular_user)
+        # create and existing TimesheetSubmission with the same resource and overlapping period
+        TimesheetSubmissionFactory(resource=resource, period=('2024-01-01', '2024-01-07'))
+        response = api_client(user=regular_user).post(
+            self.url(), data={'resource': resource.pk, 'period': ('2024-01-06', '2024-01-15')}, format='json'
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == {
+            'error': 'conflicting key value violates exclusion constraint "exclude_overlapping_timesheets"\n'
+            f'DETAIL:  Key (period, resource_id)=([2024-01-06,2024-01-16), {resource.pk})'
+            f' conflicts with existing key (period, resource_id)=([2024-01-01,2024-01-07), {resource.pk}).'
+        }

@@ -1,3 +1,6 @@
+import typing
+from typing import cast
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
@@ -5,13 +8,18 @@ from adminfilters.dates import DateRangeFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 
 from krm3.core.models import Project, Task
 from krm3.projects.forms import TaskForm
 from krm3.styles.buttons import NORMAL
+
+if typing.TYPE_CHECKING:
+    from django.http import HttpRequest, HttpResponse
+
+    from krm3.core.models.auth import User
 
 
 class TaskInline(admin.TabularInline):  # noqa: D101
@@ -28,13 +36,12 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('client', AutoCompleteFilter),
         ('start_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
         ('end_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
-
     )
     autocomplete_fields = ['client']
     inlines = [TaskInline]
 
     @button(html_attrs=NORMAL)
-    def view_tasks(self, request: HttpRequest, pk: int) -> HttpResponse:
+    def view_tasks(self, request: "HttpRequest", pk: int) -> "HttpResponse":
         return redirect(reverse('admin:core_task_changelist') + f'?project_id={pk}')
 
 
@@ -42,19 +49,30 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     form = TaskForm
     list_display = ('project', 'title', 'resource', 'basket_title')
-    search_fields = ('title', 'project', 'resource', 'basket_title')
+    search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket_title')
     list_filter = [
         ('project', AutoCompleteFilter),
         ('resource', AutoCompleteFilter),
         ('basket_title', AutoCompleteFilter),
     ]
-    fieldsets = (
-        (None, {'fields': (('title', 'project', 'resource'), ('start_date', 'end_date'), ('basket_title', 'color'))}),
-        ('Costs', {'fields': (('work_price', 'overtime_price'), ('travel_price', 'on_call_price'))}),
-    )
+
+    def get_fieldsets(self, request: 'HttpRequest', obj: Task = ...) -> typing.Iterable:
+        fieldsets = [
+            (
+                None,
+                {'fields': (('title', 'project', 'resource'), ('start_date', 'end_date'), ('basket_title', 'color'))},
+            ),
+        ]
+        user = cast('User', request.user)
+        if obj is None or user.has_any_perm('view_any_task_costs', 'manage_any_task_costs'):
+            fieldsets.append(
+                ('Costs', {'fields': (('work_price', 'overtime_price'), ('travel_price', 'on_call_price'))})
+            )
+
+        return fieldsets
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
-    def goto_project(self, request: HttpRequest, pk: int) -> HttpResponseRedirect:
+    def goto_project(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
         task = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:core_project_change', args=[task.project_id]))
 
