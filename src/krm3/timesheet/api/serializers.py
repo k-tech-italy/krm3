@@ -211,8 +211,7 @@ class StartEndDateRangeField(serializers.Field):
             upper_date = datetime.date.fromisoformat(upper)
         except ValueError:
             raise serializers.ValidationError('Dates must be in ISO format (YYYY-MM-DD).')
-
-        return DateRange(lower_date, upper_date)
+        return DateRange(lower_date, upper_date, '[]')
 
 
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
