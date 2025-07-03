@@ -88,12 +88,8 @@ class Resource(models.Model):
 
     profile = models.OneToOneField(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
-    first_name = models.CharField(
-        max_length=50, help_text='Overwritten by profile.first_name if profile is provided', blank=True
-    )
-    last_name = models.CharField(
-        max_length=50, help_text='Overwritten by profile.last_name if profile is provided', blank=True
-    )
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
 
     class Meta:
