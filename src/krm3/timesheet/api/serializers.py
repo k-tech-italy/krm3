@@ -22,6 +22,7 @@ class BaseTimeEntrySerializer(serializers.ModelSerializer):
 
 class TimeEntryReadSerializer(BaseTimeEntrySerializer):
     last_modified = serializers.SerializerMethodField()
+    task_title = serializers.SerializerMethodField()
 
     class Meta(BaseTimeEntrySerializer.Meta):
         fields = (
@@ -41,11 +42,17 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             # 'state',
             'comment',
             'task',
+            'task_title',
         )
         read_only_fields = fields
 
     def get_last_modified(self, obj: TimeEntry) -> str:
         return obj.last_modified.isoformat()
+
+    def get_task_title(self, obj: TimeEntry) -> str | None:
+        if not obj.task:
+            return None
+        return obj.task.title
 
 
 class TimeEntryCreateSerializer(BaseTimeEntrySerializer):

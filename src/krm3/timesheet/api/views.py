@@ -23,6 +23,7 @@ from krm3.timesheet.api.serializers import (
     TimeEntryCreateSerializer,
     TimesheetSerializer,
 )
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from krm3.timesheet.report import timesheet_report_data
 
@@ -35,6 +36,25 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetSerializer
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='resource_id',
+                type=int,
+                required=True,
+            ),
+            OpenApiParameter(
+                name='start_date',
+                type=str,
+                required=True,
+            ),
+            OpenApiParameter(
+                name='end_date',
+                type=str,
+                required=True,
+            ),
+        ]
+    )
     def list(self, request: Request) -> Response:
         try:
             resource_id = request.query_params['resource_id']
