@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - develop
+      - feature/138-setup-test-pipeline
   pull_request:
     types: [ synchronize, opened, reopened, ready_for_review ]
 
