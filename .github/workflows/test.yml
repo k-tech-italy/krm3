@@ -115,7 +115,7 @@ jobs:
 
     - name: Run Test suite
       run: |
-        ./manage.py collectstatic && uv run tox -e tests
+        uv venv && uv run manage.py collectstatic && uv run tox -e tests
 
     - name: Archive selenium results
       uses: actions/upload-artifact@v4
