@@ -193,6 +193,7 @@ class TestTaskAPIListView:
                     'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
                     'comment': 'Within range',
                     'task': task.pk,
+                    'taskTitle': task.title,
                 },
                 {
                     'id': day_entry_within_range.id,
@@ -210,6 +211,7 @@ class TestTaskAPIListView:
                     'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
                     'comment': 'Within range (day)',
                     'task': None,
+                    'taskTitle': None,
                 },
             ],
             'days': {

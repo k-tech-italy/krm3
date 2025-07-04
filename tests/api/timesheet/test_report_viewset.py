@@ -34,12 +34,14 @@ def test_report_creation(api_client, regular_user):
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
 
     # check sheet names
-    assert str(task_1.resource), str(task_2.resource) in workbook.sheetnames
-    sheet_1 = workbook[str(task_1.resource)]
-    sheet_2 = workbook[str(task_2.resource)]
+    r1_name = f'{task_1.resource.last_name.upper()} {task_1.resource.first_name}'
+    r2_name = f'{task_2.resource.last_name.upper()} {task_2.resource.first_name}'
+    assert r1_name, r2_name in workbook.sheetnames
+    sheet_1 = workbook[r1_name]
+    sheet_2 = workbook[r2_name]
 
     # check row labels
-    assert sheet_1['A1'].value == str(task_1.resource)
+    assert sheet_1['A1'].value == r1_name
     assert sheet_1['A2'].value == 'Giorni'
     row_labels = [sheet_1[f'A{index}'].value for index in range(3, 12)]
     assert all(value in timeentry_key_mapping.values() for value in row_labels)

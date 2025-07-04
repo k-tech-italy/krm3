@@ -23,6 +23,7 @@ from krm3.timesheet.api.serializers import (
     TimeEntryCreateSerializer,
     TimesheetSerializer,
 )
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from krm3.timesheet.report import timesheet_report_data
 
@@ -35,6 +36,25 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetSerializer
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='resource_id',
+                type=int,
+                required=True,
+            ),
+            OpenApiParameter(
+                name='start_date',
+                type=str,
+                required=True,
+            ),
+            OpenApiParameter(
+                name='end_date',
+                type=str,
+                required=True,
+            ),
+        ]
+    )
     def list(self, request: Request) -> Response:
         try:
             resource_id = request.query_params['resource_id']
@@ -200,9 +220,13 @@ class ReportViewSet(viewsets.ViewSet):
         wb.remove(wb.active)
 
         for resource, data in report_data['data'].items():
-            headers = [str(resource), 'Tot HH', *['X' if day.is_holiday else '' for day in report_data['days']]]
+            headers = [
+                name := f'{resource.last_name.upper()} {resource.first_name}',
+                'Tot HH',
+                *['X' if day.is_holiday else '' for day in report_data['days']],
+            ]
 
-            ws = wb.create_sheet(title=str(resource))
+            ws = wb.create_sheet(title=name)
             ws.append(headers)
 
             giorni = ['Giorni', '', *[f'{day.day_of_week_short}\n{day.day}' for day in report_data['days']]]

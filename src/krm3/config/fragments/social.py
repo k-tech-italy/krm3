@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.utils import timezone
 
 from ..environ import env as _env
 
@@ -32,6 +33,7 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
         'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
         'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+        'UPDATE_LAST_LOGIN': True,
     }
 
     DJOSER = {
@@ -61,6 +63,7 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         'social_core.pipeline.user.user_details',
         'krm3.config.fragments.social.update_user_social_data',
         'krm3.config.fragments.social.associate_resource',
+        'krm3.config.fragments.social.update_last_login',
     )
 
     SOCIAL_AUTH_STRATEGY = 'social_django.strategy.DjangoStrategy'
@@ -129,3 +132,8 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
             resource.save()
         except Resource.DoesNotExist:
             pass
+
+    def update_last_login(strategy: 'BaseStrategy', user: 'User', *args, **kwargs) -> None:
+        if user:
+            user.last_login = timezone.now()
+            user.save()

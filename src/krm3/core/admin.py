@@ -4,7 +4,6 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
-from krm3.core.forms import ResourceAdminForm
 from krm3.core.models import City, Client, Country, Resource, UserProfile
 
 from django.utils.html import escape
@@ -51,7 +50,6 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 class ResourceAdmin(ModelAdmin):
     list_display = ('first_name', 'last_name', 'user')
     search_fields = ['first_name', 'last_name']
-    form = ResourceAdminForm
 
 
 @admin.register(Client)
