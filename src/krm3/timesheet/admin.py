@@ -119,8 +119,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
         return form
 
-
-    @button()
+    @button(html_attrs=NORMAL)
     def report(self, request: HttpRequest) -> TemplateResponse:
         current_month = request.GET.get('month')
         ctx = timesheet_report_data(current_month)
