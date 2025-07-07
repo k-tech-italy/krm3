@@ -83,7 +83,7 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             ret['start_date'] = source.start_date
             ret['work_price'] = source.work_price
         else:
-            pk = ret.pop('mission_id', None)
+            pk = ret.pop('project_id', None)
             if pk:
                 ret['project'] = Project.objects.get(pk=pk)
         return ret
