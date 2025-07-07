@@ -58,12 +58,14 @@ class AppSeleniumTC(BaseCase):
         self.wait_for_ready_state_complete()
 
     def login(self):
-        self.open('/admin')
-        if self.get_current_url() == f'{self.live_server_url}/admin/login/?next=/admin/':
+        self.open('/admin/login')
+        if self.get_current_url() == f'{self.live_server_url}/admin/login/?next=/admin/login':
+
             self.type('input[name=username]', f'{self.admin_user.username}')
             self.type('input[name=password]', f'{self.admin_user._password}')
             self.submit('input[value="Log in"]')
             self.wait_for_ready_state_complete()
+
 
     def is_required(self, element: str) -> bool:
         el = self.wait_for_element_visible(element)
