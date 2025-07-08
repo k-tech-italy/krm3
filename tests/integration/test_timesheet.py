@@ -120,15 +120,15 @@ def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_f
     )
 
     browser.login_as_user(regular_user)
-    time.sleep(2)
     browser.click('[href*="/timesheet"]')
-    time.sleep(2)
 
-    element = browser.driver.find_element(By.XPATH, '//div[@role="button" and starts-with(@id, "Wed Jun 25 2025")]')
+    element = browser.wait_for_element_visible(
+        By.XPATH, '//div[@role="button" and starts-with(@id, "Wed Jun 25 2025")]'
+    )
+
     ActionChains(browser.driver).click_and_hold(element).move_by_offset(-1, 0).release().perform()
 
     browser.find_element(By.XPATH, '//button[text()="4h"]').click()
-    time.sleep(4)
 
     # id for cell = Thu Jun 19 2025-9-456
     #  ADD ASSERT
@@ -167,14 +167,12 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     )
 
     browser.login_as_user(regular_user)
-    time.sleep(2)
     browser.click('[href*="/timesheet"]')
-    time.sleep(2)
 
-    entry_tile_1 = browser.find_element('xpath','//div[contains(@id, "Mon Jun 02")]')
+    entry_tile_1 = browser.wait_for_element_visible('xpath', '//div[contains(@id, "Mon Jun 02")]')
     actions = ActionChains(browser.driver)
 
-    actions.click_and_hold(entry_tile_1).pause(1).release().perform()
+    actions.click_and_hold(entry_tile_1).release().perform()
 
     browser.click('//*[contains(text(), "More")]')
 
@@ -184,7 +182,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     time.sleep(2)
 
     entry_tile_2 = browser.find_elements('xpath','//div[starts-with(@id, "Mon Jun 02")]')[1]
-    actions.click_and_hold(entry_tile_2).pause(1).release().perform()
+    actions.click_and_hold(entry_tile_2).release().perform()
 
     browser.click('//*[contains(text(), "More")]')
     browser.fill('//input[@id="daytime-input"]', '13')
@@ -247,6 +245,6 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     # check if edit menu is being opened
     entry_tile = browser.find_element('xpath', '//div[contains(@id, "Fri May 02")]')
     actions = ActionChains(browser.driver)
-    actions.click_and_hold(entry_tile).pause(1).release().perform()
+    actions.click_and_hold(entry_tile).release().perform()
     browser.click('//*[contains(text(), "More")]')
     browser.assert_element('//button/span[contains(text(), "Save")]')
