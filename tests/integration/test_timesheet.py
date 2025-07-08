@@ -46,7 +46,8 @@ def test_timesheet_data_for_current_week(browser: 'AppTestBrowser', regular_user
     browser.login_as_user(regular_user)
     browser.click('[href*="/timesheet"]')
     browser.click('//input[@id="switch-month-on"]')
-    browser.assert_element('//div[contains(., "Jun 16") and contains(., "Jun 22") and text()="-"]')
+
+    browser.assert_element('//div[contains(., "Jun 2") and contains(., "Jun 8") and text()="-"]')
 
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
@@ -235,9 +236,9 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     browser.click('[href*="/timesheet"]')
 
     # check total hours for tasks
-    browser.assert_element(f'//div[div[div[text()="{task_1.title}"]] and following-sibling::div[text()="2"]]')
-    browser.assert_element(f'//div[div[div[text()="{task_2.title}"]] and following-sibling::div[text()="5"]]')
-    browser.assert_element(f'//div[div[div[text()="{task_3.title}"]] and following-sibling::div[text()="8"]]')
+    browser.assert_element(f'//div[div[text()="{task_1.title}"] and following-sibling::div[p[text()="2"]]]')
+    browser.assert_element(f'//div[div[text()="{task_2.title}"] and following-sibling::div[p[text()="5"]]]')
+    browser.assert_element(f'//div[div[text()="{task_3.title}"] and following-sibling::div[p[text()="8"]]]')
 
     # check total hours for days
     browser.assert_element('//div[@id="column-20"]/div/div/div/div[contains(., "14h")]')
