@@ -19,6 +19,8 @@ from krm3.styles.buttons import NORMAL
 from krm3.timesheet.report import timesheet_report_data
 from django import forms
 
+from krm3.timesheet.task_report import task_report_data
+
 
 @admin.register(PO)
 class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
@@ -124,6 +126,12 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         current_month = request.GET.get('month')
         ctx = timesheet_report_data(current_month)
         return TemplateResponse(request, 'timesheet/report.html', context=ctx)
+
+    @button(html_attrs=NORMAL)
+    def task_report(self, request: HttpRequest) -> TemplateResponse:
+        current_month = request.GET.get('month')
+        ctx = task_report_data(current_month)
+        return TemplateResponse(request, 'timesheet/task_report.html', context=ctx)
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def goto_task(self, request: HttpRequest, pk: int) -> HttpResponseRedirect:
