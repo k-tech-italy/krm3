@@ -19,6 +19,7 @@ import krm3
 from .environ import env
 from .fragments.constance import *  # noqa: F401,F403
 from .fragments.ddt import *  # noqa: F401,F403
+from .fragments.flags import *  # noqa: F401,F403
 from .fragments.security import *  # noqa: F401,F403
 from .fragments.sentry import *  # noqa: F401,F403
 from .fragments.smartadmin import *  # noqa: F401,F403
@@ -75,6 +76,7 @@ INSTALLED_APPS = (
         'drf_spectacular',
         'djoser',
         'corsheaders',
+        'flags',
         'mptt',
         'social_django',
         'crispy_forms',

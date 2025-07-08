@@ -1,0 +1,4 @@
+FLAGS = {
+    'TRASFERTE_ENABLED': [],
+    'TIMESHEET_ENABLED': [],
+}

@@ -76,6 +76,7 @@ dependencies = [
     "django-smart-admin[sysinfo]>=3.0",
     "holidays>=0.73",
     "seleniumbase>=4.39.2",
+    "django-flags>=5.0.14",
 ]
 
 [project.optional-dependencies]
