@@ -14,14 +14,13 @@ if typing.TYPE_CHECKING:
 pytestmark = [pytest.mark.selenium, pytest.mark.django_db]
 
 
-def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user):
+def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user_with_plain_password):
     task_1 = TaskFactory()
     task_2 = TaskFactory()
     TimeEntryFactory(task=task_1)
     TimeEntryFactory(task=task_2)
 
-    browser.login_as_user(admin_user)
-    browser.admin_user = admin_user
+    browser.admin_user = admin_user_with_plain_password
     browser.login()
     browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
@@ -41,7 +40,6 @@ def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTes
     TimeEntryFactory(task=task_2)
     TimeEntryFactory(task=task_3, resource=resource_1)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
 
@@ -65,7 +63,6 @@ def test_staff_user_without_perms_should_see_only_own_entries(browser: 'AppTestB
     TimeEntryFactory(task=task_2)
     TimeEntryFactory(task=task_3, resource=resource_1)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
     browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
@@ -74,12 +71,12 @@ def test_staff_user_without_perms_should_see_only_own_entries(browser: 'AppTestB
     assert len(table_rows) == 1
 
 
-def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', admin_user):
+def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', admin_user_with_plain_password):
     task = TaskFactory()
     time_entry = TimeEntryFactory(task=task, day_shift_hours=4)
 
-    browser.login_as_user(admin_user)
-    browser.admin_user = admin_user
+    browser.login_as_user(admin_user_with_plain_password)
+    browser.admin_user = admin_user_with_plain_password
     browser.login()
     browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
     browser.click(f'//a[@href="/admin/core/timeentry/{time_entry.id}/change/"]')
@@ -107,7 +104,6 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_onl
     task_2 = TaskFactory()
     not_owned_time_entry = TimeEntryFactory(task=task_2, day_shift_hours=5)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
 
@@ -138,7 +134,6 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_ti
     task = TaskFactory()
     time_entry = TimeEntryFactory(task=task, day_shift_hours=4)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
     browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
@@ -154,13 +149,13 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_ti
     browser.assert_element('//input[@name="day_shift_hours" and @value="2.00"]')
 
 
-def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTestBrowser', admin_user):
+def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTestBrowser',
+                                                                 admin_user_with_plain_password):
     task = TaskFactory()
 
-    ResourceFactory(user=admin_user)
+    ResourceFactory(user=admin_user_with_plain_password)
 
-    browser.login_as_user(admin_user)
-    browser.admin_user = admin_user
+    browser.admin_user = admin_user_with_plain_password
     browser.login()
 
     browser.click('//a[@href="/admin/core/timeentry/add/"]')
@@ -193,7 +188,6 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_en
 
     ResourceFactory(user=staff_user)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
 
@@ -225,7 +219,6 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     owned_resource = ResourceFactory(user=staff_user)
     task = TaskFactory(resource=owned_resource)
 
-    browser.login_as_user(staff_user)
     browser.admin_user = staff_user
     browser.login()
 
