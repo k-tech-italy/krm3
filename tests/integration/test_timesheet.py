@@ -127,7 +127,7 @@ def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_f
         By.XPATH, '//div[@role="button" and starts-with(@id, "Wed Jun 25 2025")]'
     )
 
-    ActionChains(browser.driver).click_and_hold(element).move_by_offset(-1, 0).release().perform()
+    ActionChains(browser.driver).drag_and_drop_by_offset(element, 0, 0).perform()
 
     browser.find_element(By.XPATH, '//button[text()="4h"]').click()
 

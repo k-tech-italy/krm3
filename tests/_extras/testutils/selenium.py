@@ -39,7 +39,7 @@ class AppSeleniumTC(BaseCase):
         pass
 
     def open(self, url: str):
-        self.maximize_window()
+        self.set_window_size(1280, 720)
         return super().open(f'{self.live_server_url}{url}')
 
     def select2_select(self, element_id: str, value: str):
