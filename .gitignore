@@ -22,7 +22,7 @@ junit.xml
 
 # SeleniumBase
 dashboard.html
-assets/
+# assets/
 
 
 *.private.env.json
