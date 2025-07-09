@@ -131,3 +131,33 @@ watch:
 
 hooks:
   - docs/_hooks/hooks.py
+
+nav:
+  - Home: index.md
+  - Missions:
+      - Overview: missions/index.md
+  - Examples:
+      - Blocks: examples/blocks.md
+      - Tagged: examples/tagged.md
+  - Glossary:
+      - index.md
+      - Terms:
+          - BaseCurrency: glossary/terms/BaseCurrency.md
+          - Expense: glossary/terms/Expense.md
+          - ExpenseCategory: glossary/terms/ExpenseCategory.md
+          - Mission: glossary/terms/Mission.md
+          - PaymentType: glossary/terms/PaymentType.md
+          - Reimbursement: glossary/terms/Reimbursement.md
+          - Resource: glossary/terms/Resource.md
+  - Guide:
+      - User:
+          - Introduzione: guides/user/index.md
+          - How add hours to the task: guides/user/add.md
+          - How remove hours to the task: guides/user/remove.md
+          - How add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
+      - Developer: guides/developer/index.md
+  - Wiki:
+      - Overview: wiki/Overview.md
+      - OS4D: wiki/domains/os4d.org.md
+  - License: license.md
+  - Tags: tags.md
