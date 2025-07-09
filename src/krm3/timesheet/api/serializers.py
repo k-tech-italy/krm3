@@ -161,6 +161,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class TimesheetTaskSerializer(TaskSerializer):
     project_name = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
         fields = (
@@ -171,7 +172,11 @@ class TimesheetTaskSerializer(TaskSerializer):
             'start_date',
             'end_date',
             'project_name',
+            'client_name'
         )
+
+    def get_client_name(self, obj: Task) -> str:
+        return obj.project.client.name
 
     def get_project_name(self, obj: Task) -> str:
         return obj.project.name

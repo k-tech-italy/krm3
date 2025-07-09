@@ -145,11 +145,12 @@ class TestTaskAPIListView:
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
         # Timesheets are assigned to closed entry via 'link_entries' - Timesheet post-save signal
-        TimesheetSubmissionFactory(resource=resource, closed=True,
-                         period=((datetime.date(2024, 1, 3), datetime.date(2024, 1, 5))))
-        TimesheetSubmissionFactory(resource=resource, closed=False,
-                         period=((datetime.date(2024, 1, 5), datetime.date(2024, 1, 7))))
-
+        TimesheetSubmissionFactory(
+            resource=resource, closed=True, period=((datetime.date(2024, 1, 3), datetime.date(2024, 1, 5)))
+        )
+        TimesheetSubmissionFactory(
+            resource=resource, closed=False, period=((datetime.date(2024, 1, 5), datetime.date(2024, 1, 7)))
+        )
 
         response = api_client(user=admin_user).get(
             self.url(),
@@ -174,6 +175,7 @@ class TestTaskAPIListView:
                     'startDate': task_start_date.isoformat(),
                     'endDate': task_end_date.isoformat() if task_end_date else None,
                     'projectName': task.project.name,
+                    'clientName': task.project.client.name,
                 }
             ],
             'timeEntries': [
@@ -996,11 +998,13 @@ class TestTimeEntryClearAPIAction:
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
         open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 6, 1))
 
-        TimesheetSubmissionFactory(resource=open_entry.task.resource,
-                                     period=(datetime.date(2020, 4, 1), datetime.date(2020, 5, 1)))
+        TimesheetSubmissionFactory(
+            resource=open_entry.task.resource, period=(datetime.date(2020, 4, 1), datetime.date(2020, 5, 1))
+        )
         # Timesheet is being assigned to closed entry via 'link_to_timesheet' - Timeentry pre-save signal
-        closed_entry = TimeEntryFactory(resource=open_entry.task.resource,
-                                        day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 4, 15))
+        closed_entry = TimeEntryFactory(
+            resource=open_entry.task.resource, day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 4, 15)
+        )
 
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
