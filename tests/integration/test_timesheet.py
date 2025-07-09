@@ -6,6 +6,9 @@ import pytest
 from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+
 
 from freezegun import freeze_time
 
@@ -242,9 +245,12 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     browser.assert_element('//div[@id="column-20"]/div/div/div/div[contains(., "14h")]')
     browser.assert_element('//div[@id="column-21"]/div/div/div/div[contains(., "1h")]')
 
-    # check if edit menu is being opened
     entry_tile = browser.find_element('xpath', '//div[contains(@id, "Fri May 02")]')
+    # Perform drag and drop with minimal offset
     actions = ActionChains(browser.driver)
-    actions.click_and_hold(entry_tile).release().perform()
+    actions.drag_and_drop_by_offset(entry_tile, 0, 0).perform()
+
+    # Wait for menu with the original xpath
+    browser.wait_for_element('//*[contains(text(), "More")]', timeout=5)
     browser.click('//*[contains(text(), "More")]')
     browser.assert_element('//button/span[contains(text(), "Save")]')
