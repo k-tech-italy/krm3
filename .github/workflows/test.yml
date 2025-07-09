@@ -71,6 +71,7 @@ jobs:
       DOCKER_DEFAULT_PLATFORM: linux/amd64
       DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       KRM3_DATABASE_URL: postgres://postgres:postgres@localhost:15432/krm3
+      KRM3_ALLOWED_HOSTS: 0.0.0.0,localhost,127.0.0.1
       RUNNER_TOOL_CACHE: /tmp/
     steps:
     - name: Checkout code
@@ -111,9 +112,17 @@ jobs:
           ./tox
         key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
 
+    - name: Build static folder
+      run: uv venv && uv run manage.py collectstatic
+
+    - name: Init Frontend Submodule
+      run: cd krm3-fe && git submodule update --init
+
+    - name: Install yarn and build frontend
+      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build && cp -a dist/. ../~static
+
     - name: Run Test suite
-      run: |
-        uv run tox -e tests
+      run: uv run tox -e tests
 
     - name: Archive selenium results
       uses: actions/upload-artifact@v4
