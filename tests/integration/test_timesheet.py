@@ -5,7 +5,6 @@ import pytest
 
 from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory
 from selenium.webdriver.common.by import By
-from selenium.webdriver import ActionChains
 
 
 from freezegun import freeze_time
@@ -127,7 +126,7 @@ def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_f
         By.XPATH, '//div[@role="button" and starts-with(@id, "Wed Jun 25 2025")]'
     )
 
-    ActionChains(browser.driver).drag_and_drop_by_offset(element, 0, 0).perform()
+    browser.click_and_release(element)
 
     browser.find_element(By.XPATH, '//button[text()="4h"]').click()
 
@@ -171,9 +170,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     browser.click('[href*="/timesheet"]')
 
     entry_tile_1 = browser.wait_for_element_visible('xpath', '//div[contains(@id, "Mon Jun 02")]')
-    actions = ActionChains(browser.driver)
-
-    actions.click_and_hold(entry_tile_1).release().perform()
+    browser.click_and_release(entry_tile_1)
 
     browser.click('//*[contains(text(), "More")]')
 
@@ -183,7 +180,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     time.sleep(2)
 
     entry_tile_2 = browser.find_elements('xpath','//div[starts-with(@id, "Mon Jun 02")]')[1]
-    actions.click_and_hold(entry_tile_2).release().perform()
+    browser.click_and_release(entry_tile_2)
 
     browser.click('//*[contains(text(), "More")]')
     browser.fill('//input[@id="daytime-input"]', '13')
@@ -246,8 +243,7 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     entry_tile = browser.find_element('xpath', '//div[contains(@id, "Fri May 02")]')
 
     # Perform drag and drop with minimal offset
-    actions = ActionChains(browser.driver)
-    actions.drag_and_drop_by_offset(entry_tile, 0, 0).perform()
+    browser.click_and_release(entry_tile)
 
     browser.wait_for_element('//*[contains(text(), "More")]', timeout=5)
     browser.click('//*[contains(text(), "More")]')

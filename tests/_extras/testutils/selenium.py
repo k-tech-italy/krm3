@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from seleniumbase import BaseCase
 
@@ -39,7 +40,7 @@ class AppSeleniumTC(BaseCase):
         pass
 
     def open(self, url: str):
-        self.set_window_size(1280, 720)
+        self.set_window_size(1280, 768)
         return super().open(f'{self.live_server_url}{url}')
 
     def select2_select(self, element_id: str, value: str):
@@ -73,6 +74,10 @@ class AppSeleniumTC(BaseCase):
 
     def get_field_error(self, element: str) -> bool:
         return self.wait_for_element_visible(f'fieldset.{element} ul.errorlist').text
+
+    def click_and_release(self, element: str):
+        actions = ActionChains(self.driver)
+        actions.drag_and_drop_by_offset(element, 0, 0).perform()
 
 
 AppTestBrowser = AppSeleniumTC
