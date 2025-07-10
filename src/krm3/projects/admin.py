@@ -71,6 +71,28 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
         return fieldsets
 
+    def get_changeform_initial_data(self, request: "HttpRequest") -> dict:
+        ret = super().get_changeform_initial_data(request)
+        like = request.session.get('_like', None)
+        if like:
+            del request.session['_like']
+            source = Task.objects.get(pk=like)
+            ret['title'] = source.title
+            ret['project'] = source.project
+            ret['basket_title'] = source.basket_title
+            ret['start_date'] = source.start_date
+            ret['work_price'] = source.work_price
+        else:
+            pk = ret.pop('project_id', None)
+            if pk:
+                ret['project'] = Project.objects.get(pk=pk)
+        return ret
+
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
+    def clone(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
+        request.session['_like'] = pk
+        return HttpResponseRedirect(reverse('admin:core_task_add'))
+
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def goto_project(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
         task = self.model.objects.get(pk=pk)

@@ -13,6 +13,7 @@ dist
 !.coveragerc
 !.nvmrc
 !.dockerignore
+!.github
 
 src/krm3/core/static/release.json
 

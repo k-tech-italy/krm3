@@ -1,0 +1,159 @@
+---
+name: Test
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    types: [ synchronize, opened, reopened, ready_for_review ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  id-token: write
+  attestations: write
+  actions: write
+
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      run_tests: ${{ steps.changes.outputs.run_tests }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+
+    - id: changes
+      name: Check for file changes
+      uses: dorny/paths-filter@0bc4621a3135347011ad047f9ecf449bf72ce2bd   # v3.0.0
+      with:
+        base: ${{ github.ref }}
+        token: ${{ github.token }}
+        filters: .github/file-filters.yml
+
+  test:
+    needs: [changes]
+    if: needs.changes.outputs.run_tests == 'true'
+    outputs:
+      commit: ${{ steps.build.outputs.commit }}
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis
+        ports:
+        - 16379:6379
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DATABASE: krm3
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USERNAME: postgres
+        ports:
+        - 15432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DOCKER_DEFAULT_PLATFORM: linux/amd64
+      DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+      KRM3_DATABASE_URL: postgres://postgres:postgres@localhost:15432/krm3
+      KRM3_ALLOWED_HOSTS: 0.0.0.0,localhost,127.0.0.1
+      RUNNER_TOOL_CACHE: /tmp/
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: latest
+        enable-cache: true
+        prune-cache: false
+        cache-local-path: ./uv-cache
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/uv.lock
+        python-version: 3.12.1
+
+    - name: Restore cached vEnv
+      id: cache-venv-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ runner.os }}-venv-3.12
+
+    - name: Install dependencies
+      run: uv sync --cache-dir ./uv-cache --frozen
+
+    - name: Save vEnv
+      id: cache-venv-save
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
+
+    - name: Build static folder
+      run: uv venv && uv run manage.py collectstatic
+
+    - name: Init Frontend Submodule
+      run: cd krm3-fe && git submodule update --init
+
+    - name: Install yarn and build frontend
+      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build && cp -a dist/. ../~static
+
+    - name: Run Test suite
+      run: uv run tox -e tests
+
+    - name: Archive selenium results
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: selenium-log-report
+        path: latest_logs
+        retention-days: 5
+
+    - name: Upload test results to Codecov
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      continue-on-error: true
+      with:
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: false
+        name: codecov-${{env.GITHUB_REF_NAME}}
+
+    - name: build
+      id: build
+      run: |
+          VERSION=$( uvx --with hatch-vcs hatchling metadata version )
+          COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "::notice title=VERSION:: Build local package $VERSION"
+          echo "::notice title=COMMIT:: Build local package $COMMIT_SHA"

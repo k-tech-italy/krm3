@@ -29,8 +29,11 @@ class UserProfileAdmin(ModelAdmin):
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'last_login', 'social_profile',
-                    'picture')  # Added last_login
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'last_login',
+                    'social_profile', 'picture')  # Added last_login
+    list_filter = (
+        ('is_active', admin.BooleanFieldListFilter),
+    )
 
 
 @admin.register(Country)

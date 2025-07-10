@@ -613,6 +613,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-flags"
+version = "5.0.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/71/aa03992e8efe87858b819979c3e6dee9878f3e1caa403db6ec441b259a1c/django_flags-5.0.14.tar.gz", hash = "sha256:4d29cc8892c23c9f58676804edccd8822a3fb34458e3ac36deb1cf499c80f55e", size = 246935, upload-time = "2025-05-01T13:21:28.58Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/32/25d78c1e3c6f0b4eb2a30bd0bd3d9e6037f05f91719822d4e9ae4d2bd01a/django_flags-5.0.14-py3-none-any.whl", hash = "sha256:0e07b715b1740a6e3f8df92d16eb743209d931ec585f8d545e040103fb7c5ed2", size = 42431, upload-time = "2025-05-01T13:21:27.21Z" },
+]
+
+[[package]]
 name = "django-js-asset"
 version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1168,7 +1180,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "1.5.6"
+version = "1.5.7"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -1184,6 +1196,7 @@ dependencies = [
     { name = "django-crispy-forms" },
     { name = "django-debug-toolbar" },
     { name = "django-filter" },
+    { name = "django-flags" },
     { name = "django-mptt-admin" },
     { name = "django-picklefield" },
     { name = "django-qr-code" },
@@ -1286,6 +1299,7 @@ requires-dist = [
     { name = "django-crispy-forms", specifier = ">=2.3" },
     { name = "django-debug-toolbar", specifier = ">=5.1.0" },
     { name = "django-filter", specifier = ">=25.1" },
+    { name = "django-flags", specifier = ">=5.0.14" },
     { name = "django-mptt-admin", specifier = ">=2.7.2" },
     { name = "django-picklefield", specifier = ">=3.3" },
     { name = "django-qr-code", specifier = ">=4.1.0" },
