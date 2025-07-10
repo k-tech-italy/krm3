@@ -1,5 +1,5 @@
 
-# # How add hours to the task
+# # How to add hours to the task
 
 Now you're ready to add hours to your task, to do so, click on "+" symbol under the designated day and you will see a popup:
 
@@ -11,7 +11,7 @@ You can choose how many hours to add: 2h, 4h, 8h or custom clicking on "More" (Y
 
 
 
-# # How add hours to all the week
+# # How to add hours to all the week
 
 If you want to add 8 hours for all the week for the same task, you can put mouse on July 1:
 

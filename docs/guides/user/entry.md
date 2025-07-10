@@ -1,5 +1,5 @@
 
-# # How add Day Entry as Holiday, Sick Day, Leave, Rest.
+# # How to add Day Entry as Holiday, Sick Day, Leave, Rest.
 
 If you click on the number of the day, for example "14 M" you will see the following menu (If you want select more days as said in the previous chapter):
 

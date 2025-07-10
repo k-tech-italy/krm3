@@ -152,9 +152,9 @@ nav:
   - Guide:
       - User:
           - Introduzione: guides/user/index.md
-          - How add hours to the task: guides/user/add.md
-          - How remove hours to the task: guides/user/remove.md
-          - How add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
+          - How to add hours to the task: guides/user/add.md
+          - How to remove hours to the task: guides/user/remove.md
+          - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
       - Developer: guides/developer/index.md
   - Wiki:
       - Overview: wiki/Overview.md
