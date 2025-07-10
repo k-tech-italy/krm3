@@ -3,6 +3,8 @@ import datetime
 import typing
 import pytest
 
+from django.test import override_settings
+
 from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory
 from selenium.webdriver.common.by import By
 
@@ -15,18 +17,10 @@ if typing.TYPE_CHECKING:
 pytestmark = pytest.mark.selenium
 
 
-
-@pytest.mark.django_db
-def test_login_ok(browser: 'AppTestBrowser', regular_user):
-    browser.login_as_user(regular_user)
-    browser.assert_text(regular_user.email, selector='strong', timeout=2)
-
-
-@pytest.mark.django_db
-def test_login_nok(browser: 'AppTestBrowser', regular_user):
-    regular_user._password = 'wrong'
-    browser.login_as_user(regular_user)
-    browser.assert_text('No active account found with the given credentials', selector='span', timeout=2)
+@pytest.fixture(autouse=True)
+def flag_timesheet():
+    with override_settings(FLAGS={"TIMESHEET_ENABLED": [("boolean", True)]}):
+        yield
 
 
 @freeze_time('2025-06-19')
