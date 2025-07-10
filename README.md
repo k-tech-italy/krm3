@@ -21,6 +21,19 @@
     # switch to your working branch - use the `-c` flag to create a new one
     git switch <your working branch>
     ```
+* Initialise the frontend
+
+```shell
+    git submodule init
+    git submodule update
+    
+    # go into the FE repo and install dependencies and build
+    cd krm3-fe
+    yarn install
+    yarn build
+    
+    git switch <your working branch>
+  ```
 
 * Prepare the Python environment for the project.
 
