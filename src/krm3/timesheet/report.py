@@ -105,15 +105,33 @@ def calculate_overtime(resource_stats: dict) -> None:
 def format_data(value: int) -> int | None | D:
     return value if value is None or value % 1 != 0 else int(value)
 
+def get_submitted_dates(from_date: datetime.date, to_date: datetime.date, resource: 'Resource'):
+        calendar = KrmCalendar()
+        submissions = TimesheetSubmission.objects.get_closed_in_period(from_date, to_date, resource).values('period')
+        submitted_dates = set()
+
+        for submission in submissions:
+            period_start = submission['period'].lower
+            period_end = submission['period'].upper - datetime.timedelta(days=1)
+            actual_start = max(period_start, from_date)
+            actual_end = min(period_end, to_date)
+
+            submitted_dates.update(
+                krm_day.date
+                for krm_day in calendar.iter_dates(actual_start, actual_end)
+            )
+
+        return submitted_dates
+
 def get_days_submission(
     from_date: datetime.date,
     to_date: datetime.date,
-    resource: Resource | None = None
+    resource: Resource
 ) -> dict[datetime.date, bool]:
     """Return dictionary of all days in a period with their submission status for a specific resource."""
     calendar = KrmCalendar()
 
-    submitted_days = TimesheetSubmission.objects.get_submitted_dates(
+    submitted_days = get_submitted_dates(
         from_date, to_date, resource
     )
 
@@ -123,8 +141,9 @@ def get_days_submission(
     }
 
 
-def timesheet_report_data(current_month: str | None, resource: Resource) -> dict[str, typing.Any]:
+def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
+    data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None)
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
     else:
@@ -134,12 +153,12 @@ def timesheet_report_data(current_month: str | None, resource: Resource) -> dict
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
 
-    days_range = KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)
+    days_range = list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month))
     days_status = [
         get_days_submission(start_of_month, end_of_month, resource).get(day.date, False)
         for day in days_range
     ]
-    days = list(zip(list(days_range), days_status, strict=True))
+    days = list(zip(days_range, days_status, strict=True))
 
     data = timesheet_report_raw_data(start_of_month, end_of_month)
     calculate_overtime(data)

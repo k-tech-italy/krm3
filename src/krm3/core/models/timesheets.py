@@ -195,30 +195,6 @@ class TimesheetSubmissionManager(models.Manager):
             resource=resource
         )
 
-    def get_submitted_dates(
-        self,
-        from_date: datetime.date,
-        to_date: datetime.date,
-        resource:'Resource',
-    )-> set[datetime.date]:
-        """Get all dates within the period that have submitted timesheets."""
-        calendar = KrmCalendar()
-        submissions = self.get_closed_in_period(from_date, to_date, resource).values('period')
-        submitted_dates = set()
-
-        for submission in submissions:
-            period_start = submission['period'].lower
-            period_end = submission['period'].upper - datetime.timedelta(days=1)
-            actual_start = max(period_start, from_date)
-            actual_end = min(period_end, to_date)
-
-            submitted_dates.update(
-                krm_day.date
-                for krm_day in calendar.iter_dates(actual_start, actual_end)
-            )
-
-        return submitted_dates
-
 
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
