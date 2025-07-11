@@ -23,7 +23,7 @@ from krm3.timesheet.api.serializers import (
     TimeEntryCreateSerializer,
     TimesheetSerializer,
 )
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 from krm3.timesheet.report import timesheet_report_data
 
@@ -107,6 +107,53 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return TimeEntryReadSerializer
 
     @override
+    @extend_schema(
+        summary="Create new Time Entry",
+        responses={
+            201: OpenApiResponse(
+                description="Task assignment created successfully"
+            ),
+            400: OpenApiResponse(
+                description="Bad request - Invalid data"
+            ),
+            403: OpenApiResponse(
+                description="Forbidden - Insufficient permissions"
+            ),
+            404: OpenApiResponse(
+                description="Not found - Task or resource not found"
+            ),
+        },
+        examples=[
+            OpenApiExample(
+                "Create TaskEntry Example",
+                value={
+                    "task_id": 1,
+                    "dates": ["2025-09-01"],
+                    "night_shift_hours": 0,
+                    "day_shift_hours": 4,
+                    "on_call_hours": 0,
+                    "travel_hours": 0,
+                    "comment": "some comment",
+                    "resource_id": 4
+                },
+                request_only=True
+            ),
+            OpenApiExample(
+                "Multiple Dates TaskEntry Example",
+                value={
+                    "task_id": 2,
+                    "dates": ["2025-09-01", "2025-09-02", "2025-09-03"],
+                    "night_shift_hours": 8,
+                    "day_shift_hours": 0,
+                    "on_call_hours": 2,
+                    "travel_hours": 1,
+                    "comment": "Task Entry for three days",
+                    "resource_id": 5
+                },
+                request_only=True
+            )
+        ],
+    )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         try:
             resource_id = request.data.pop('resource_id')
