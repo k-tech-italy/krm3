@@ -20,7 +20,7 @@ def dt(dat: str) -> datetime.date:
 
 
 class KrmDay:
-    def __init__(self, day: _MaybeDate = None) -> None:
+    def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
         if day is None:
             day = datetime.date.today()
         if isinstance(day, KrmDay):
@@ -29,6 +29,7 @@ class KrmDay:
             self.date = day
         else:
             self.date = dt(day)
+        self.__dict__.update(kwargs)
 
     @property
     def day(self) -> int:
