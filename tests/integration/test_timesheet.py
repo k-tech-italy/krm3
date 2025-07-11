@@ -38,7 +38,7 @@ def test_timesheet_data_for_current_week(browser: 'AppTestBrowser', regular_user
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
     browser.click('//input[@id="switch-month-on"]')
 
     browser.assert_element('//div[contains(., "Jun 2") and contains(., "Jun 8") and text()="-"]')
@@ -59,7 +59,7 @@ def test_timesheet_no_data_only_next_month(browser: 'AppTestBrowser', regular_us
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
 @freeze_time('2025-06-06')
@@ -78,7 +78,7 @@ def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', regular_us
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
 
@@ -97,7 +97,7 @@ def test_timesheet_no_data_for_current_period(browser: 'AppTestBrowser', regular
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
 
@@ -114,7 +114,7 @@ def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_f
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
 
     element = browser.wait_for_element_visible(
         By.XPATH, '//div[@role="button" and starts-with(@id, "Wed Jun 25 2025")]'
@@ -138,7 +138,7 @@ def test_timesheet_no_tasks_defined(browser: 'AppTestBrowser', regular_user, res
     # Nessun task creato
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
 @freeze_time('2025-06-13')
@@ -161,7 +161,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     )
 
     browser.login_as_user(regular_user)
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
 
     entry_tile_1 = browser.wait_for_element_visible('xpath', '//div[contains(@id, "Mon Jun 02")]')
     browser.click_and_release(entry_tile_1)
@@ -223,7 +223,7 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
 
     browser.login_as_user(regular_user)
 
-    browser.click('[href*="/timesheet"]')
+    browser.click('[href*="timesheet"]')
 
     # check total hours for tasks
     browser.assert_element(f'//div[div[text()="{task_1.title}"] and following-sibling::div[p[text()="2"]]]')
