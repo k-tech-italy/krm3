@@ -6,7 +6,8 @@ from dateutil.relativedelta import relativedelta
 
 from krm3.core.models import TimeEntry, Resource
 
-from krm3.utils.dates import KrmDay
+from krm3.core.models.timesheets import TimesheetSubmission
+from krm3.utils.dates import KrmCalendar, KrmDay
 
 
 _fields = [
@@ -104,8 +105,25 @@ def calculate_overtime(resource_stats: dict) -> None:
 def format_data(value: int) -> int | None | D:
     return value if value is None or value % 1 != 0 else int(value)
 
+def get_days_submission(
+    from_date: datetime.date,
+    to_date: datetime.date,
+    resource: Resource | None = None
+) -> dict[datetime.date, bool]:
+    """Return dictionary of all days in a period with their submission status for a specific resource."""
+    calendar = KrmCalendar()
 
-def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
+    submitted_days = TimesheetSubmission.objects.get_submitted_dates(
+        from_date, to_date, resource
+    )
+
+    return {
+        krm_day.date: krm_day.date in submitted_days
+        for krm_day in calendar.iter_dates(from_date, to_date)
+    }
+
+
+def timesheet_report_data(current_month: str | None, resource: Resource) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
@@ -115,6 +133,14 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     next_month = start_of_month + relativedelta(months=1)
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
+
+    days_range = KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)
+    days_status = [
+        get_days_submission(start_of_month, end_of_month, resource).get(day.date, False)
+        for day in days_range
+    ]
+    days = list(zip(list(days_range), days_status, strict=True))
+
     data = timesheet_report_raw_data(start_of_month, end_of_month)
     calculate_overtime(data)
     add_report_summaries(data)
@@ -130,7 +156,7 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
         'current_month': start_of_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
         'title': start_of_month.strftime('%B %Y'),
-        'days': list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)),
+        'days': days,
         'data': data,
         'keymap': timeentry_key_mapping,
     }

@@ -11,6 +11,8 @@ from django.db import models
 from django.db.models import Q
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from krm3.utils.dates import KrmCalendar
+from django.db.models import QuerySet
 
 from .auth import Resource
 
@@ -178,6 +180,45 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
             return self.all()
         return self.filter(resource__user=user)
 
+class TimesheetSubmissionManager(models.Manager):
+    """Custom Manager for TimesheetSubmission with utility methods."""
+
+    def get_closed_in_period(self, from_date: datetime.date, to_date: datetime.date, resource: 'Resource') -> QuerySet:
+        """
+        Get all timesheet submissions that are closed within the given date range.
+
+        Returns QuerySet of TimesheetSubmission objects.
+        """
+        return self.filter(
+            period__overlap=(from_date, to_date + datetime.timedelta(days=1)),
+            closed=True,
+            resource=resource
+        )
+
+    def get_submitted_dates(
+        self,
+        from_date: datetime.date,
+        to_date: datetime.date,
+        resource:'Resource',
+    )-> set[datetime.date]:
+        """Get all dates within the period that have submitted timesheets."""
+        calendar = KrmCalendar()
+        submissions = self.get_closed_in_period(from_date, to_date, resource).values('period')
+        submitted_dates = set()
+
+        for submission in submissions:
+            period_start = submission['period'].lower
+            period_end = submission['period'].upper - datetime.timedelta(days=1)
+            actual_start = max(period_start, from_date)
+            actual_end = min(period_end, to_date)
+
+            submitted_dates.update(
+                krm_day.date
+                for krm_day in calendar.iter_dates(actual_start, actual_end)
+            )
+
+        return submitted_dates
+
 
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
@@ -185,6 +226,8 @@ class TimesheetSubmission(models.Model):
     period = DateRangeField(help_text='NB: End date is the day after the actual end date')
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+
+    objects = TimesheetSubmissionManager()
 
     class Meta:
         constraints = [
