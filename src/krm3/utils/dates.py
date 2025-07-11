@@ -168,6 +168,12 @@ class KrmCalendar(Calendar):
         for i in range(delta_days + 1):
             yield KrmDay(start.date + datetime.timedelta(days=i))
 
+    def get_work_days(self, from_date: _Date, to_date: _Date) -> list[KrmDay]:
+
+        days_between = self.iter_dates(from_date, to_date)
+
+        return [day for day in days_between if not day.is_non_working_day]
+
     def week_for(self, date: _MaybeDate = None) -> tuple[KrmDay, KrmDay]:
         """Return the start and end date of the week for the given date.
 
