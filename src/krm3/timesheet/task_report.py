@@ -37,8 +37,12 @@ def _initialize_report_data(tasks: typing.Iterable[Task], days_interval: int) ->
     return results
 
 
-def _calculate_work_days_for_resources\
-                (results: dict, tasks: 'QuerySet[Task]', from_date: datetime.date, to_date: datetime.date) -> None:
+def _calculate_work_days_for_resources(
+    results: dict,
+    tasks: 'QuerySet[Task]',
+    from_date: datetime.date,
+    to_date: datetime.date,
+) -> None:
     """Calculate NUM GIORNI and TOT HH for each resource."""
     calendar = KrmCalendar()
     work_days = calendar.get_work_days(from_date, to_date)
@@ -47,12 +51,24 @@ def _calculate_work_days_for_resources\
         work_days_without_task = [*work_days]
         for task in owned_tasks:
             work_days_without_task = [
-                day for day in work_days_without_task
+                day
+                for day in work_days_without_task
                 if not (task.start_date <= day.date <= task.end_date)
             ]
 
         data['NUM GIORNI'] = len(work_days) - len(work_days_without_task)
         data['TOT HH'] = data['NUM GIORNI'] * 8
+
+def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) -> None:
+    """Handle leaves and special leaves."""
+    if isinstance(resource_data['Assenze'][index], D):
+        if entry.leave_hours > 0:
+            resource_data['Assenze'][index] += entry.leave_hours
+            resource_data['Assenze'][1] += entry.leave_hours
+        if entry.special_leave_hours > 0:
+            resource_data['Assenze'][index] += entry.special_leave_hours
+            resource_data['Assenze'][1] += entry.special_leave_hours
+
 
 
 def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_date: KrmDay) -> None:
@@ -76,9 +92,8 @@ def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_d
         elif entry.is_sick_day:
             resource_data['Assenze'][index] = 'M'
             resource_data['Assenze'][1] += 8
-        elif entry.leave_hours > 0 and isinstance(resource_data['Assenze'][index], D):
-            resource_data['Assenze'][index] += entry.leave_hours
-            resource_data['Assenze'][1] += entry.leave_hours
+        elif entry.leave_hours > 0 or entry.special_leave_hours > 0:
+            _handles_leaves(entry, resource_data, index)
 
         # Other time entries
         for attr_name, label in timeentry_key_mapping.items():
