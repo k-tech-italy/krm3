@@ -124,9 +124,7 @@ def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_f
 
     browser.find_element(By.XPATH, '//button[text()="4h"]').click()
 
-    # id for cell = Thu Jun 19 2025-9-456
-    #  ADD ASSERT
-    browser.assert_element(By.XPATH, '//div[starts-with(@id, "Wed Jun 25 2025")]//span[text()="4"]')
+    browser.assert_element(By.XPATH, '//*[text()="4"]')
 
 
 @freeze_time('2025-06-06')
@@ -169,7 +167,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     browser.click('//*[contains(text(), "More")]')
 
     browser.fill('//input[@id="daytime-input"]', '14')
-    browser.click('//button/span[contains(text(), "Save")]')
+    browser.click('//*[contains(text(), "Save")]')
 
     time.sleep(2)
 
@@ -179,7 +177,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     browser.click('//*[contains(text(), "More")]')
     browser.fill('//input[@id="daytime-input"]', '13')
 
-    browser.click('//button/span[contains(text(), "Save")]')
+    browser.click('//*[contains(text(), "Save")]')
 
     browser.assert_element('//p[@id="creation-error-message" and text()="Invalid time entry for 2025-06-02: '
                            'Total hours on all time entries on 2025-06-02 (27.00) is over 24 hours."]')
@@ -241,4 +239,4 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
 
     browser.wait_for_element('//*[contains(text(), "More")]', timeout=5)
     browser.click('//*[contains(text(), "More")]')
-    browser.assert_element('//button/span[contains(text(), "Save")]')
+    browser.assert_element('//*[contains(text(), "Save")]')

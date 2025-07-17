@@ -36,7 +36,7 @@ timeentry_key_mapping = {
 
 def timesheet_report_raw_data(
     from_date: datetime.date, to_date: datetime.date, resource: Resource | None = None
-) -> dict['Resource', dict[str, list[D]]]:
+) -> tuple[dict['Resource', dict[str, list[D]]], dict[str, str]]:
     """
     Prepare the data for the timesheet report.
 
@@ -56,25 +56,25 @@ def timesheet_report_raw_data(
 
     start_date = KrmDay(from_date)
     days_interval = (to_date - from_date).days + 1
-    results = {}
+    results, special_leave_mapping_dict = {}, {}
     for entry in qs:
         date = KrmDay(entry.date)
         resource_stats = results.setdefault(entry.resource, {})
 
         index = date - start_date
         if entry.special_leave_reason:
-            key = f'special_leave|{entry.special_leave_reason.id}'
+            key = f'special_leave|{entry.special_leave_reason.title}'
+            special_leave_mapping_dict[key] = f'Perm. speciale ({entry.special_leave_reason.title})'
             hours_types = resource_stats.setdefault(key, [D('0.00')] * days_interval)
             hours_types[index] += entry.special_leave_hours
-        else:
-            for field in _fields:
-                hours_types = resource_stats.setdefault(field, [D('0.00')] * days_interval)
-                hours_types[index] += getattr(entry, f'{field}_hours')
+        for field in _fields:
+            hours_types = resource_stats.setdefault(field, [D('0.00')] * days_interval)
+            hours_types[index] += getattr(entry, f'{field}_hours')
 
     for stats in results.values():
         stats['overtime'] = [D('0.00')] * days_interval
 
-    return results
+    return results, special_leave_mapping_dict
 
 
 def add_report_summaries(results: dict) -> None:
@@ -115,7 +115,7 @@ def timesheet_report_data(current_month: str | None, json_serializable: bool = F
     next_month = start_of_month + relativedelta(months=1)
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    data = timesheet_report_raw_data(start_of_month, end_of_month)
+    data, additional_mapping = timesheet_report_raw_data(start_of_month, end_of_month)
     calculate_overtime(data)
     add_report_summaries(data)
 
@@ -137,5 +137,5 @@ def timesheet_report_data(current_month: str | None, json_serializable: bool = F
         'title': start_of_month.strftime('%B %Y'),
         'days': days,
         'data': data,
-        'keymap': timeentry_key_mapping,
+        'keymap': timeentry_key_mapping | additional_mapping,
     }

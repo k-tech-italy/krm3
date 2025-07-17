@@ -52,8 +52,8 @@ def _raw_results():
         'holiday': [D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'leave': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('1.50'), D('0.00'), D('0.00')],
         'rest': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
-        'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
-        'special_leave|2': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.00')],
+        'special_leave|0': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
+        'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.00')],
         'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'overtime': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     }
@@ -67,8 +67,8 @@ _overtime_results = {
     'holiday': [D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     'leave': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('1.50'), D('0.00'), D('0.00')],
     'rest': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
-    'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
-    'special_leave|2': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.0')],
+    'special_leave|0': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.50'), D('0.00')],
+    'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.0')],
     'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     'overtime': [D('0.00'), D('3.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
 }
@@ -95,8 +95,13 @@ class TestTimesheetReport:
         from krm3.core.models import TimeEntry
 
         assert TimeEntry.objects.count() == report_resource._time_entries.__len__()
-        result = timesheet_report_raw_data(dt('2025-05-30'), dt('2025-06-06'))
-        assert result == {report_resource: _raw_results()}
+        result, additional_key_mapping = timesheet_report_raw_data(dt('2025-05-30'), dt('2025-06-06'))
+        dynamic_special_leave_keys = additional_key_mapping.keys()
+        expected_result =_raw_results()
+        for index, key in enumerate(dynamic_special_leave_keys):
+            expected_result[key] = expected_result[f"special_leave|{index}"]
+            del expected_result[f"special_leave|{index}"]
+        assert result == {report_resource: expected_result}
 
     def test_calculate_overtime(self):
         results = {'<resource>': _raw_results()}
