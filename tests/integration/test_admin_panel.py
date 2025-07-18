@@ -5,7 +5,7 @@ import pytest
 import typing
 
 from selenium.webdriver.common.by import By
-from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory
+from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
 from django.contrib.auth.models import Permission
 
 if typing.TYPE_CHECKING:
@@ -241,3 +241,37 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
 
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
+
+def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
+
+    resource = ResourceFactory(user=admin_user_with_plain_password)
+
+    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    special_leave_reason_1 = SpecialLeaveReasonFactory()
+    special_leave_reason_2 = SpecialLeaveReasonFactory()
+    TimeEntryFactory(resource=resource, special_leave_hours=1, date='2025-07-04',
+                     special_leave_reason=special_leave_reason_1, day_shift_hours=0)
+    TimeEntryFactory(resource=resource, special_leave_hours=3, date='2025-07-06',
+                     special_leave_reason=special_leave_reason_1, day_shift_hours=0)
+    TimeEntryFactory(resource=resource, special_leave_hours=3, date='2025-07-05',
+                     special_leave_reason=special_leave_reason_2, day_shift_hours=0)
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+
+    browser.click('//a[@href="/admin/core/timeentry/"]')
+    browser.click('//a[@href="/admin/core/timeentry/report/?"]')
+
+    reason_1_row = browser.find_elements(
+        By.XPATH,
+        f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_1.title})")]]/td'
+    )
+
+    assert reason_1_row[1].text == '4'
+    assert reason_1_row[5].text == '1'
+    assert reason_1_row[7].text == '3'
+    reason_2_row = browser.find_elements(
+        By.XPATH,
+        f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_2.title})")]]/td'
+    )
+    assert reason_2_row[1].text == '3'
+    assert reason_2_row[6].text == '3'
