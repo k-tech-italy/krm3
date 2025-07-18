@@ -60,7 +60,7 @@
                        <td class="text-left p-1 border border-1">Giorni</td>
                        <td>HH</td>
                        {% for day in stats.days %}
-                       <td class="p-1 text-center border border-1 {% if day.submitted %}bg-yellow-600{% endif %}">
+                       <td class="p-1 text-center border border-1 {% if not day.submitted %}bg-yellow-600{% endif %}">
                            <p>{{ day.date|date:"D" }}</p>
                            <p>{{ day.date|date:"j" }}</p>
                        </td>

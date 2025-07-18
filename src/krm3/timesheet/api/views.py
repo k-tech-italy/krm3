@@ -291,8 +291,8 @@ class ReportViewSet(viewsets.ViewSet):
             ws = wb.create_sheet(title=name)
             ws.append(headers)
 
-            giorni = ['Giorni', '', *[f'{"**" if day.submitted else ""}{day.day_of_week_short}\n{day.day}'
-                                      f'{"**" if day.submitted else ""}' for day in data['days']]]
+            giorni = ['Giorni', '', *[f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
+                                      f'{"**" if not day.submitted else ""}' for day in data['days']]]
             ws.append(giorni)
 
             if data:
