@@ -45,7 +45,7 @@
                         <td class="text-left p-1 border border-1" colspan="2">
                             <strong>{{ resource.last_name }}</strong> {{ resource.first_name }}
                         </td>
-                        {% for day in days %}
+                        {% for day in stats.days %}
                         <td class="p-1 text-center border border-1">
                             {% if day.is_holiday %}X{% endif %}
                         </td>
@@ -59,13 +59,12 @@
                    <tr class="bg-gray-400! dark:bg-blue-900!">
                        <td class="text-left p-1 border border-1">Giorni</td>
                        <td>HH</td>
-                       {% for day in days %}
-                       <td class="p-1 text-center border border-1">
+                       {% for day in stats.days %}
+                       <td class="p-1 text-center border border-1 {% if not day.submitted %}bg-yellow-600{% endif %}">
                            <p>{{ day.date|date:"D" }}</p>
                            <p>{{ day.date|date:"j" }}</p>
                        </td>
                        {% endfor %}
-
                    </tr>
 
                     {% for key, label in keymap.items %}

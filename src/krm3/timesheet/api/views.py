@@ -285,19 +285,21 @@ class ReportViewSet(viewsets.ViewSet):
             headers = [
                 name := f'{resource.last_name.upper()} {resource.first_name}',
                 'Tot HH',
-                *['X' if day.is_holiday else '' for day in report_data['days']],
+                *['X' if day.is_holiday else '' for day in data['days']],
             ]
 
             ws = wb.create_sheet(title=name)
             ws.append(headers)
 
-            giorni = ['Giorni', '', *[f'{day.day_of_week_short}\n{day.day}' for day in report_data['days']]]
+            giorni = ['Giorni', '', *[f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
+                                      f'{"**" if not day.submitted else ""}' for day in data['days']]]
             ws.append(giorni)
 
             if data:
                 for key, value in data.items():
-                    row = [report_data['keymap'][key], *value]
-                    ws.append(row)
+                    if key in report_data['keymap']:
+                        row = [report_data['keymap'][key], *value]
+                        ws.append(row)
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         filename = f'report_{date[0:4]}-{date[4:6]}.xlsx'
