@@ -13,6 +13,12 @@ omit =
     src/krm3/web/loaders.py
     src/krm3/web/templatetags/file_status.py
     src/krm3/config/asgi.py
+    src/krm3/config/admin_extras/panels/sentry.py
+    src/krm3/config/admin_extras/panels/sql.py
+    src/krm3/currencies/impexp.py
+    src/krm3/utils/reflect.py
+    src/krm3/utils/sysinfo.py
+    src/krm3/utils/threading.py
 
 [report]
 # Regexes for lines to exclude from consideration
