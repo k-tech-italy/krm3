@@ -63,8 +63,8 @@ def test_report_creation(api_client, regular_user):
     assert all(value in timeentry_key_mapping.values() for value in row_labels)
 
     # check day labels
-    assert sheet_1['C2'].value == 'Sun\n1'
-    assert sheet_1['AF2'].value == 'Mon\n30'
+    assert sheet_1['C2'].value == '**Sun\n1**'
+    assert sheet_1['AF2'].value == '**Mon\n30**'
     assert sheet_1['AG2'].value is None
 
     # check cell values
