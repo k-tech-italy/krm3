@@ -69,6 +69,17 @@ build: compile  ## Builds the image
 		-f docker/Dockerfile .
 	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
 
+final-build: compile
+	cd .. && docker build \
+		${BUILD_OPTIONS} \
+		--platform linux/amd64 \
+		--progress plain \
+		--build-arg VERSION="${VERSION}" \
+		--build-arg DOCKER_REGISTRY="${DOCKER_REGISTRY}" \
+		-t ${DOCKER_IMAGE_FULLNAME} \
+		-f docker/finalDockerfile .
+	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
+
 registrylogin:  ## Log in to docker
 	@echo "${DOCKER_PWD}" | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USR} --password-stdin
 
@@ -119,6 +130,7 @@ full-release:  build-base build save release  ## buils all and releases
             --platform linux/amd64 \
 			--rm \
 	 		--name=${CONTAINER_NAME} \
+			--network host \
 			-p ${LOCAL_PORT}:8000 \
 			-p ${LOCAL_HTTPS_PORT}:8443 \
 			--env-file ../.env \
