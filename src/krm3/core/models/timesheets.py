@@ -11,6 +11,8 @@ from django.db import models
 from django.db.models import Q
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from krm3.utils.dates import KrmCalendar
+from django.db.models import QuerySet
 
 from .auth import Resource
 
@@ -106,8 +108,8 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         | models.Q(special_leave_hours__gt=0)
     )
 
-    _REGULAR_LEAVE_ENTRY_FILTER = models.Q(leave_hours__gt=0, special_leave_hours=0, special_leave_reason__isnull=True)
-    _SPECIAL_LEAVE_ENTRY_FILTER = models.Q(leave_hours=0, special_leave_hours__gt=0, special_leave_reason__isnull=False)
+    _REGULAR_LEAVE_ENTRY_FILTER = models.Q(leave_hours__gt=0)
+    _SPECIAL_LEAVE_ENTRY_FILTER = models.Q(special_leave_hours__gt=0, special_leave_reason__isnull=False)
 
     def open(self) -> Self:
         """Select the open time entries in this queryset.
@@ -178,6 +180,21 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
             return self.all()
         return self.filter(resource__user=user)
 
+class TimesheetSubmissionManager(models.Manager):
+    """Custom Manager for TimesheetSubmission with utility methods."""
+
+    def get_closed_in_period(self, from_date: datetime.date, to_date: datetime.date, resource: 'Resource') -> QuerySet:
+        """
+        Get all timesheet submissions that are closed within the given date range.
+
+        Returns QuerySet of TimesheetSubmission objects.
+        """
+        return self.filter(
+            period__overlap=(from_date, to_date + datetime.timedelta(days=1)),
+            closed=True,
+            resource=resource
+        )
+
 
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
@@ -185,6 +202,8 @@ class TimesheetSubmission(models.Model):
     period = DateRangeField(help_text='NB: End date is the day after the actual end date')
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+
+    objects = TimesheetSubmissionManager()
 
     class Meta:
         constraints = [
@@ -361,7 +380,6 @@ class TimeEntry(models.Model):
             self._verify_at_most_one_absence,
             self._verify_honors_total_hours_restrictions,
             self._verify_sick_time_entry_has_comment,
-            self._verify_leave_is_either_regular_or_special,
             self._verify_reason_only_on_special_leave,
             self._verify_special_leave_reason_is_valid,
             self._verify_no_overtime_with_leave_or_rest_entry,
@@ -385,8 +403,9 @@ class TimeEntry(models.Model):
             raise ValidationError(_('You cannot log non-task hours in a task entry'), code='day_hours_in_task_entry')
 
     def _verify_at_most_one_absence(self) -> None:
+        is_one_of_the_leave_types = self.is_leave or self.is_special_leave
         has_too_many_day_entry_hours_logged = (
-            len([cond for cond in (self.is_sick_day, self.is_holiday, self.is_leave, self.is_special_leave) if cond])
+            len([cond for cond in (self.is_sick_day, self.is_holiday, is_one_of_the_leave_types) if cond])
             > 1
         )
         if has_too_many_day_entry_hours_logged:
@@ -425,12 +444,6 @@ class TimeEntry(models.Model):
     def _verify_sick_time_entry_has_comment(self) -> None:
         if self.is_sick_day and not self.comment:
             raise ValidationError(_('Comment is mandatory when logging sick days'), code='sick_without_comment')
-
-    def _verify_leave_is_either_regular_or_special(self) -> None:
-        if self.leave_hours and self.special_leave_hours:
-            raise ValidationError(
-                _('Cannot log hours on both regular and special leave'), code='regular_and_special_leave'
-            )
 
     def _verify_reason_only_on_special_leave(self) -> None:
         if self.special_leave_reason and not self.special_leave_hours:

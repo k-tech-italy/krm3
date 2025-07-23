@@ -1,10 +1,13 @@
+from typing import Any
+
 from flags.state import flag_enabled
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
-from krm3.config.fragments.flags import FLAGS
+from krm3.config.environ import env
 from krm3.core.models import Resource, UserProfile
 from krm3.core.models.auth import User
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
+
 
 # XXX: why is this not a BaseSerializer? The metaclass implicitly
 #      setting the base class in __new__() is making the type checker
@@ -30,7 +33,8 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
     #      all the kwargs passed to __init__() are flagged as unknown
     resource = UserResourceSerializer(required=False, read_only=True, allow_null=True)
     permissions = SerializerMethodField()
-    flags =  SerializerMethodField()
+    flags = SerializerMethodField()
+    config = SerializerMethodField()
 
     class Meta:
         model = User
@@ -47,8 +51,27 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
             'resource',
             'profile',
             'permissions',
-            'flags'
+            'flags',
+            'config',
         )
+
+    def get_config(self, *args) -> dict[str, Any]:
+        """Return a dictionary of configuration values."""
+        config = {
+            'modules': sorted(
+                [
+                    k
+                    for k, flag in {'trasferte': 'TRASFERTE_ENABLED', 'timesheet': 'TIMESHEET_ENABLED'}.items()
+                    if flag_enabled(flag, request=self.context['request'])
+                ]
+            )
+        }
+
+        default = env('DEFAULT_MODULE')
+        if default and default in config['modules']:
+            config['default_module'] = default
+
+        return config
 
     def get_permissions(self, obj: User) -> list[str] | None:
         """Return the permissions of the user, or None if the user is a superuser."""
@@ -58,5 +81,5 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
         """Return a dictionary of feature flags and their enabled status."""
         return {
             key: flag_enabled(key, request=self.context['request'])
-            for key in FLAGS
+            for key in ['TRASFERTE_ENABLED', 'TIMESHEET_ENABLED']
         }

@@ -1,7 +1,7 @@
 nav:
   - Home: index.md
-  - Missions: missions.md
-  - Examples: examples.md
+  - Missions: missions
+  - Examples: examples
   - Glossary: glossary/
   - Guide:
       - User: guides/user/

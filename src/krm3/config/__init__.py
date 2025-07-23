@@ -106,5 +106,6 @@ DEFAULTS = dict(  # noqa: C408
     SOCIAL_AUTH_ALLOWED_REDIRECT_URIS=(list, ['http://localhost:3000/login', 'http://localhost:8000/login']),
     SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS=(list, ['k-tech.it']),
 
-    HOLIDAYS_CALENDAR=(str, 'IT-RM')
+    HOLIDAYS_CALENDAR=(str, 'IT-RM'),
+    DEFAULT_MODULE=(str, None)
 )

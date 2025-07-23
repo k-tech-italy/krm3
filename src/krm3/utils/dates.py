@@ -20,7 +20,7 @@ def dt(dat: str) -> datetime.date:
 
 
 class KrmDay:
-    def __init__(self, day: _MaybeDate = None) -> None:
+    def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
         if day is None:
             day = datetime.date.today()
         if isinstance(day, KrmDay):
@@ -29,6 +29,7 @@ class KrmDay:
             self.date = day
         else:
             self.date = dt(day)
+        self.__dict__.update(kwargs)
 
     @property
     def day(self) -> int:
@@ -167,6 +168,12 @@ class KrmCalendar(Calendar):
 
         for i in range(delta_days + 1):
             yield KrmDay(start.date + datetime.timedelta(days=i))
+
+    def get_work_days(self, from_date: _Date, to_date: _Date) -> list[KrmDay]:
+
+        days_between = self.iter_dates(from_date, to_date)
+
+        return [day for day in days_between if not day.is_non_working_day]
 
     def week_for(self, date: _MaybeDate = None) -> tuple[KrmDay, KrmDay]:
         """Return the start and end date of the week for the given date.

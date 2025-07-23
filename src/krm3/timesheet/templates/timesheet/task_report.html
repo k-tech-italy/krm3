@@ -1,7 +1,7 @@
 {% extends "admin/base_site.html" %}
 
 {% load tailwind_tags static report_line %}
-
+{% load timesheet_filters %}
 
 {% block extrastyle %}
     {% tailwind_css %}
@@ -29,47 +29,39 @@
               <a href="{% querystring month=next_month %}"
                  class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
             </div>
-            <div class="flex justify-center">
-                <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
-                          class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
-                      Download report</a>
-            </div>
 
-    {% for resource, stats in data.items %}
+    {% for resource, stats in table_data.items %}
         {% if stats %}
 
             <div class="overflow-x-auto rounded-md shadow mb-4">
                 <table class="min-w-full leading-normal text-right border-2 font-semibold border-separate">
                     <thead>
-                    <tr class="bg-gray-400! dark:bg-blue-900! ">
-                        <td class="text-left p-1 border border-1" colspan="2">
-                            <strong>{{ resource.last_name }}</strong> {{ resource.first_name }}
-                        </td>
-                        {% for day in stats.days %}
-                        <td class="p-1 text-center border border-1">
-                            {% if day.is_holiday %}X{% endif %}
-                        </td>
-                        {% endfor %}
-                    </tr>
-
+                        <tr class="bg-gray-400! dark:bg-blue-900! ">
+                            <td class="text-left p-1 border border-1" >
+                                <strong>{{ resource.last_name }}</strong> {{ resource.first_name }}
+                            </td>
+                            <td class="p-1 border border-1 text-center">
+                                <strong>NUM GIORNI</strong>
+                                <strong><p class="mt-3">{{ stats|get:"NUM GIORNI" }}</p></strong>
+                            </td>
+                            <td class="text-left p-1 border border-1">
+                                <strong>TOT HH</strong>
+                                <strong><p class="mt-3">{{ stats|get:"TOT HH" }}</p></strong>
+                            </td>
+                            {% for day in days %}
+                               <td class="p-1 text-center border border-1">
+                                   <p>{{ day.date|weekday_short_it }}</p>
+                                   <p>{{ day.date|date:"j" }}</p>
+                               </td>
+                            {% endfor %}
+                        </tr>
                     </thead>
                     <tbody>
-
-
-                   <tr class="bg-gray-400! dark:bg-blue-900!">
-                       <td class="text-left p-1 border border-1">Giorni</td>
-                       <td>HH</td>
-                       {% for day in stats.days %}
-                       <td class="p-1 text-center border border-1 {% if not day.submitted %}bg-yellow-600{% endif %}">
-                           <p>{{ day.date|date:"D" }}</p>
-                           <p>{{ day.date|date:"j" }}</p>
-                       </td>
-                       {% endfor %}
-                   </tr>
-
-                    {% for key, label in keymap.items %}
-                        {% report_line key label stats forloop.counter0|divisibleby:"2" %}
-                    {% endfor %}
+                        {% for key, data in stats.items %}
+                            {% if data|is_list %}
+                                {% report_line key key stats forloop.counter0|divisibleby:"2" %}
+                            {% endif %}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>

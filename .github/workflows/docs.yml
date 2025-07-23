@@ -25,7 +25,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install mdBook
         run: |
-          sudo apt-get install libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+          sudo apt install -y --no-install-recommends \
+              libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
           pip install \
               "cairosvg>=2.7.1"\
               "markupsafe>=2.1.5"\

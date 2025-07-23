@@ -39,7 +39,6 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'on_call_hours',
             'travel_hours',
             'rest_hours',
-            # 'state',
             'comment',
             'task',
             'task_title',
@@ -63,6 +62,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'sick_hours',
             'holiday_hours',
             'leave_hours',
+            'special_leave_hours',
             'special_leave_reason',
             'night_shift_hours',
             'on_call_hours',
@@ -84,6 +84,9 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
 
     def validate_leave_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='leave_hours')
+
+    def validate_special_leave_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='special_leave_hours')
 
     def validate_night_shift_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='night_shift_hours')
@@ -109,28 +112,13 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
         date = validated_data.pop('date')
         resource = validated_data.pop('resource')
         task = validated_data.pop('task', None)
-        default_hours = {
-            'day_shift_hours': 0,
-            'night_shift_hours': 0,
-            'travel_hours': 0,
-            'rest_hours': 0,
-            'on_call_hours': 0,
-            'sick_hours': 0,
-            'holiday_hours': 0,
-            'leave_hours': 0,
-            'special_leave_hours': 0,
-        }
-
-        leave_hours = validated_data.get('leave_hours', 0)
-        if reason := self._verify_reason_is_valid(validated_data.pop('special_leave_reason', None), date):
-            validated_data['leave_hours'], validated_data['special_leave_hours'] = 0, leave_hours
-
+        reason = self._verify_reason_is_valid(validated_data.pop('special_leave_reason', None), date)
         entry, _created = TimeEntry.objects.update_or_create(
             date=date,
             resource=resource,
             task=task,
             special_leave_reason=reason,
-            defaults=default_hours | validated_data,
+            defaults=validated_data,
         )
         return entry
 
