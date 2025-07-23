@@ -143,12 +143,17 @@ nav:
       - index.md
       - Terms:
           - BaseCurrency: glossary/terms/BaseCurrency.md
+          - ClosedEntry: glossary/terms/ClosedEntry.md
+          - DayEntry: glossary/terms/DayEntry.md
           - Expense: glossary/terms/Expense.md
           - ExpenseCategory: glossary/terms/ExpenseCategory.md
           - Mission: glossary/terms/Mission.md
+          - OpenEntry: glossary/terms/OpenEntry.md
           - PaymentType: glossary/terms/PaymentType.md
           - Reimbursement: glossary/terms/Reimbursement.md
           - Resource: glossary/terms/Resource.md
+          - TaskEntry: glossary/terms/TaskEntry.md
+          - TimeEntry: glossary/terms/TimeEntry.md
   - Guide:
       - User:
           - Introduzione: guides/user/index.md
