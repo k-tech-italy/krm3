@@ -2,6 +2,7 @@
 ~*
 dist
 !dist/image-requirements.txt
+!dist/test-requirements.txt
 ./docs
 ./tests
 ./tools

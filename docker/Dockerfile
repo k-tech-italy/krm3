@@ -1,10 +1,42 @@
-ARG BASE_IMAGE
-ARG DOCKER_REGISTRY
+# --- Stage 1: Building stage ---
+FROM python:3.12-slim-bookworm AS builder
 
-FROM ${DOCKER_REGISTRY}/kt/krm3/base:${BASE_IMAGE}
+ARG BUILD_DATE
+ARG PIPENV_ARGS
+ARG VERSION
+ARG TEST
+ARG REPO_NAME
+
+ENV CPLUS_INCLUDE_PATH=/usr/include/libxml2/
+ENV C_INCLUDE_PATH=/usr/include/libxml2/
+ENV TEST=${TEST}
+
+RUN apt-get update && \
+    apt-get install -y --no-install-suggests --no-install-recommends \
+    cpp gcc git libc6-dev libffi-dev libjpeg-dev libmaxminddb-dev libpq-dev \
+    libsasl2-dev libssl-dev libcurl4-openssl-dev libxml2-dev libxmlsec1-dev \
+    libxslt-dev libyaml-dev libzmq3-dev pkg-config python3-dev libpcre3-dev \
+    gosu libpcre3 libxml2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /code
+
+COPY pyproject.toml dist/image-requirements.txt ./
+RUN pip install --no-cache-dir -U pip uwsgi && \
+    pip install --no-cache-dir -r image-requirements.txt
+
+ADD . /code
+RUN rm -rf src/krm3/fe/static node_modules package*.* && \
+    mv krm3-fe/dist src/krm3/fe/static && \
+    pip install --no-cache-dir . --no-deps && \
+    rm -rf src dist docker build *.egg-info
+
+
+# --- Stage 2: Final Image ---
+FROM python:3.12-slim-bookworm AS final
 
 ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
-	KRM3_MEDIA_ROOT="/tmp/media" \
+    KRM3_MEDIA_ROOT="/tmp/media" \
     KRM3_ADMIN_EMAIL="" \
     KRM3_ADMIN_PASSWORD="" \
     KRM3_ADMIN_USERNAME="" \
@@ -14,19 +46,41 @@ ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
     KRM3_SECRET_KEY="" \
     KRM3_STATIC_ROOT="/tmp/static"
 
+RUN apt-get update && \
+    apt-get install -y --no-install-suggests --no-install-recommends \
+    gosu libpcre3 libxml2 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1024 -r ktech && \
+    useradd -m -g ktech krm3 && \
+    mkdir -p /code /krm3 /data && \
+    chown krm3:ktech /code /krm3 /data
+
+COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY docker/etc/circus.conf /etc/circus.conf
+COPY docker/etc/mime.types /etc/mime.types
 
 WORKDIR /code
 
-#RUN sha1sum -c /CHECKSUM
+COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-ADD . /code
-
-RUN rm -rf /code/src/krm3/fe/static /code/node_modules /code/package*.* && mv krm3-fe/dist /code/src/krm3/fe/static
-RUN chown -R krm3:ktech /code/*
-
-USER krm3
-
-SHELL ["/bin/bash", "-c"]
+COPY --from=builder --chown=krm3:ktech /code/ ./
 
 ADD tools/zapdata/demo tools/zapdata/demo
-RUN pip install . --no-deps -vv && rm -fr src dist docker
+
+USER krm3
+SHELL ["/bin/bash", "-c"]
+
+VOLUME /etc/certs
+EXPOSE 8000 8443
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["stack"]
+
+
+# --- Stage 3: Test stage ---
+FROM final AS test
+USER root
+COPY dist/test-requirements.txt ./
+RUN pip install --no-cache-dir -r test-requirements.txt
+USER krm3
