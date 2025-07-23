@@ -11,7 +11,8 @@ VERSION=1.5.8
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
-DOCKER_IMAGE=kt/krm3
+IMAGE_PREFIX=k-tech-italy
+DOCKER_IMAGE=${IMAGE_PREFIX}/krm3
 DOCKER_IMAGE_NAME=${DOCKER_IMAGE}:${VERSION}
 DOCKER_IMAGE_FULLNAME=${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${VERSION}
 STACK_PROTOCOL?=https
@@ -81,6 +82,10 @@ release:  registrylogin  ## For now manual release until we fix nexus
 #	@echo "Now you can run on  the server:"
 #	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"
 	@docker push ${DOCKER_IMAGE_FULLNAME}
+	@docker tag ${DOCKER_IMAGE_FULLNAME} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
+	@docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
+
+
 
 #release: registrylogin  ## Release the image
 #	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}

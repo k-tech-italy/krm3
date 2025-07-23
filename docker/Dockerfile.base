@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim
 
 ARG BUILD_DATE
 ARG PIPENV_ARGS
@@ -7,9 +7,11 @@ ARG TEST
 
 ARG REPO_NAME
 
-ENV CPLUS_INCLUDE_PATH /usr/include/libxml2/
-ENV C_INCLUDE_PATH /usr/include/libxml2/
-ENV TEST ${TEST}
+ENV CPLUS_INCLUDE_PATH=/usr/include/libxml2/
+ENV C_INCLUDE_PATH=/usr/include/libxml2/
+ENV TEST=${TEST}
+
+RUN apt-get update
 
 RUN set -x \
     && echo " \
