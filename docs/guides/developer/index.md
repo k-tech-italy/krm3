@@ -10,4 +10,4 @@ title: Documentation
 ...
 
 
-See the [Glossary](./glossary/index.md) for a list of common KRM3 terminology
+See the [Glossary](./../../glossary/index.md) for a list of common KRM3 terminology
