@@ -26,12 +26,12 @@
 ```shell
     git submodule init
     git submodule update
-    
+
     # go into the FE repo and install dependencies and build
     cd krm3-fe
     yarn install
     yarn build
-    
+
     git switch <your working branch>
   ```
 
