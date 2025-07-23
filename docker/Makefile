@@ -42,43 +42,36 @@ help:
 requirements:  ## Builds the /dist/image-requirements.txt
 	@cd .. && uv build --sdist
 	@uv export --no-dev --no-emit-project --group image --format requirements-txt > ../dist/image-requirements.txt
-
-build-base: requirements  ## Builds the base image
-	@cd .. && docker build \
-			${BUILD_OPTIONS} \
-			--platform linux/amd64 \
-			--build-arg REPO_NAME="${REPO_NAME}" \
-			-t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE} \
-			-f docker/Dockerfile.base  .
-	#docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
-	docker images | grep ${DOCKER_IMAGE}/base | grep ${BASE}
+	@uv export --no-emit-project --group dev --format requirements-txt --prune opencv-python > ../dist/test-requirements.txt
 
 compile:
 	@cd ../krm3-fe && yarn install && yarn build
 	@cd .. && ./manage.py tailwind build
 
-build: compile  ## Builds the image
+build: compile requirements
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
 		--platform linux/amd64 \
 		--progress plain \
+		--target final \
 		--build-arg VERSION="${VERSION}" \
-		--build-arg BASE_IMAGE="${BASE}" \
 		--build-arg DOCKER_REGISTRY="${DOCKER_REGISTRY}" \
 		-t ${DOCKER_IMAGE_FULLNAME} \
 		-f docker/Dockerfile .
 	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
 
-final-build: compile
+build-test: compile  requirements## Builds the test image with dev dependencies
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
 		--platform linux/amd64 \
 		--progress plain \
+		--target test \
 		--build-arg VERSION="${VERSION}" \
+		--build-arg BASE_IMAGE="${BASE}" \
 		--build-arg DOCKER_REGISTRY="${DOCKER_REGISTRY}" \
-		-t ${DOCKER_IMAGE_FULLNAME} \
-		-f docker/finalDockerfile .
-	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
+		-t ${DOCKER_IMAGE_FULLNAME}-test \
+		-f docker/Dockerfile .
+	@docker images | grep ${DOCKER_IMAGE} | grep test
 
 registrylogin:  ## Log in to docker
 	@echo "${DOCKER_PWD}" | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USR} --password-stdin
@@ -124,7 +117,6 @@ full-release:  build-base build save release  ## buils all and releases
 	fi
 
 
-
 .run: .certs
 	@docker run \
             --platform linux/amd64 \
@@ -138,6 +130,23 @@ full-release:  build-base build save release  ## buils all and releases
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			${RUN_OPTIONS} \
 			${DOCKER_IMAGE_FULLNAME} \
+			${CMD}
+
+.run-test: .certs
+	@docker run \
+            --platform linux/amd64 \
+			--rm \
+	 		--name=${CONTAINER_NAME} \
+			--network host \
+			-p ${LOCAL_PORT}:8000 \
+			-p ${LOCAL_HTTPS_PORT}:8443 \
+			--env-file ../.env \
+			-v "`pwd`/certs:/etc/certs:ro" \
+			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
+			-v "`pwd`/../tests:/code/tests:ro" \
+			-v "`pwd`/../src:/code/src:ro" \
+			${RUN_OPTIONS} \
+			${DOCKER_IMAGE_FULLNAME}-test \
 			${CMD}
 
 run: ## run docker container locally with http
@@ -155,6 +164,9 @@ shell: ## run shell container
 test: ## run 'django-admin check --deploy' into container
 	RUN_OPTIONS=-it CMD='django-admin check --deploy' $(MAKE) .run
 	RUN_OPTIONS=-it CMD='uwsgi' $(MAKE) .run
+
+test-coverage: ## Run tests with coverage report
+	@RUN_OPTIONS=-it CMD='pytest --create-db --cov=krm3 --cov-report=html --cov-report=term --ignore=tests/integration/test_gui_auth.py' $(MAKE) .run-test
 
 stack:  ## run containder with both web/celery services
 	RUN_OPTIONS=-it CMD='stack' $(MAKE) .run
