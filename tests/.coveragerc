@@ -8,6 +8,9 @@ omit =
     */migrations/*
     src/krm3/apps.py
     src/krm3/config/wsgi.py
+    src/krm3/config/fragments/sentry.py
+    src/krm3/utils/sysinfo.py
+    src/krm3/utils/threading.py
     # Unused, might be removed
     src/krm3/config/context_processors.py
     src/krm3/web/loaders.py
@@ -35,6 +38,7 @@ exclude_lines =
     except ValidationError
     #except Exception
     if settings.DEBUG:
+    if typing.TYPE_CHECKING:
 
 
 ignore_errors = True
