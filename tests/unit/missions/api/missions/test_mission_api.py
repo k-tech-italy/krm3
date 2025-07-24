@@ -49,3 +49,16 @@ class TestMissionApiPermissions:
             other_mission.resource.id,
             mission.resource.id,
         }
+
+
+    def test_api_view_mission_response(self, api_client, regular_user, resource):
+        url = reverse('missions-api:mission-list')
+
+        resource.user = regular_user
+        resource.save()
+        _ = MissionFactory(resource=resource)
+
+        client = api_client(user=regular_user)
+        response = client.get(url)
+
+        assert response.status_code == 200

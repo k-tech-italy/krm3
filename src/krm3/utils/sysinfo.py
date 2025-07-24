@@ -2,7 +2,7 @@ import logging
 
 from sentry_sdk import capture_exception
 
-from krm3.utils.sysinfo_masker import NO_MATCH
+NO_MATCH = object()
 
 logger = logging.getLogger(__name__)
 

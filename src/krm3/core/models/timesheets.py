@@ -145,13 +145,6 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         """
         return self.day_entries().filter(self._REGULAR_LEAVE_ENTRY_FILTER)
 
-    def special_leaves(self) -> Self:
-        """Select all leave entries in this queryset.
-
-        :return: the filtered queryset.
-        """
-        return self.day_entries().filter(self._SPECIAL_LEAVE_ENTRY_FILTER)
-
     def task_entries(self) -> Self:
         """Select all task entries in this queryset.
 
