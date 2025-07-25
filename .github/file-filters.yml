@@ -62,3 +62,6 @@ docs:
   - modified: './src/birder/config/__init__.py'
   - modified: './github/workflows/docs.yml'
   - modified: './github/file-filters.yml'
+
+version:
+  - './src/krm3/__init__.py'
