@@ -10,11 +10,11 @@ terms:
 
 _Django Model: core.Resource_
 
-An **Expense** is the record about a single monetary transaction executed in the context of a <glossary:Mission>.
-
+A **Resource** represents an employee or a consultant working for the company.
 
 ## Fields
 
-- First Name
-- Last Name
-- ...
+- `user`: The user account associated with this resource.
+- `first_name`: The first name of the resource.
+- `last_name`: The last name of the resource.
+- `active`: Whether the resource is currently active.

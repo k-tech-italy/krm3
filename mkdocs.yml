@@ -157,9 +157,12 @@ nav:
   - Guide:
       - For User:
           - Introduzione: guides/user/index.md
+          - Timesheet overview: guides/user/timesheet_overview.md
           - How to add hours to the task: guides/user/add.md
-          - How to remove hours to the task: guides/user/remove.md
+          - How to remove hours from the task: guides/user/remove.md
+          - How to remove hours from the day: guides/user/remove_from_day.md
           - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
+          - How to submit Timesheet : guides/user/submit.md
       #- For Developer: guides/developer/index.md
   - Wiki:
       - Overview: wiki/Overview.md

@@ -1,9 +1,7 @@
 ---
 title: Documentation
 ---
-<div class="align-center">
-<img src="https://upload.wikimedia.org/wikipedia/commons/8/84/Example.svg">
-</div>
+![Example SVG](https://upload.wikimedia.org/wikipedia/commons/8/84/Example.svg)
 
 # Welcome to KRM3 for User
 
