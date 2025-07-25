@@ -15,6 +15,8 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.db import models
+from django.db.models import Q
+from django.db.models.aggregates import Count
 from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
@@ -63,6 +65,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'default_currency',
         'city',
         'expense_num',
+        'to_reimburse'
     )
     list_filter = [
         'status',
@@ -101,12 +104,16 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             return FileResponse(f)
 
     def get_queryset(self, request: 'HttpRequest') -> 'QuerySet[Mission]':
-        return super().get_queryset(request).prefetch_related('expenses')
+        return (super().get_queryset(request).prefetch_related('expenses').annotate(expenses_count=Count('expenses'))
+                .annotate(to_reimburse_count=Count('expenses', filter=Q(expenses__reimbursement_id__isnull=True))))
 
+    @admin.display(description="Num expenses", ordering='expenses_count')
     def expense_num(self, obj: Reimbursement) -> int:
         return obj.expense_count
 
-    expense_num.short_description = 'Num expenses'
+    @admin.display(description="To Reimburse", ordering='to_reimburse_count')
+    def to_reimburse(self, obj: Reimbursement) -> int:
+        return obj.expenses.filter(reimbursement_id__isnull=True).count()
 
     def formfield_for_foreignkey(
         self, db_field: models.ForeignKey, request: 'HttpRequest' = None, **kwargs

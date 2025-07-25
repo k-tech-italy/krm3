@@ -5,6 +5,8 @@ import pytest
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
 
+pytestmark = [pytest.mark.selenium, pytest.mark.django_db]
+
 
 @pytest.mark.django_db
 def test_login_ok(browser: 'AppTestBrowser', regular_user):

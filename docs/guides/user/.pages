@@ -1,3 +1,6 @@
-nav:
-  - Introduzione: index.md
-  - Installazione: install.md
+title: User Guide
+arrange:
+  - index.md
+  - add.md
+  - remove.md
+  - entry.md
