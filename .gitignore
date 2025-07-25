@@ -22,7 +22,7 @@ junit.xml
 
 # SeleniumBase
 dashboard.html
-assets/
+src/krm3/fe/static/assets
 
 
 *.private.env.json
