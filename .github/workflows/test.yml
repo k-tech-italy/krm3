@@ -30,13 +30,13 @@ jobs:
       run:
         shell: bash
     outputs:
-      run_tests: ${{ steps.changed-files.outputs.run_tests }}
-      version: ${{ steps.changed-files.outputs.version }}
+      run_tests: ${{ steps.changes.outputs.run_tests }}
+      version: ${{ steps.changes.outputs.version }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4.1.7
 
-    - id: changed-files
+    - id: changes
       name: Check for file changes
       uses: dorny/paths-filter@0bc4621a3135347011ad047f9ecf449bf72ce2bd   # v3.0.0
       with:
@@ -49,7 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: needs.changed-files.outputs.run_tests == 'true'
+    if: needs.changes.outputs.run_tests == 'true'
     outputs:
       commit: ${{ steps.build.outputs.commit }}
     runs-on: ubuntu-latest
