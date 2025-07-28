@@ -1,5 +1,6 @@
 import time
 
+from freezegun import freeze_time
 import pytest
 
 import typing
@@ -242,6 +243,7 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
+@freeze_time("2025-07-14")
 def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
 
     resource = ResourceFactory(user=admin_user_with_plain_password)

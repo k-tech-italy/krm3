@@ -2,6 +2,7 @@
 ~*
 dist
 !dist/image-requirements.txt
+!dist/test-requirements.txt
 ./docs
 ./tests
 ./tools
@@ -13,3 +14,8 @@ dist
 ./krm3-fe
 !./krm3-fe/dist
 node_modules
+
+uv-cache/
+.uv-cache/
+**/.uv-cache
+**/uv-cache
