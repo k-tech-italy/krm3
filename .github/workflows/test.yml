@@ -198,7 +198,7 @@ jobs:
         context: .
         file: docker/Dockerfile.base
         load: true
-        tags: kt/krm3/base:${{ steps.build.outputs.version }}
+        tags: local/kt/krm3/base:${{ steps.build.outputs.version }}
 
     - name: Build and push final image
       uses: docker/build-push-action@v6
@@ -209,7 +209,7 @@ jobs:
         push: true
         build-args: |
           BASE_IMAGE=${{ steps.build.outputs.version }}
-          DOCKER_REGISTRY=kt
+          DOCKER_REGISTRY=local
         tags: |
           ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
           ghcr.io/${{ github.repository }}:latest
