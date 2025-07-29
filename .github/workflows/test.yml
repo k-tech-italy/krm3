@@ -166,6 +166,7 @@ jobs:
           echo "::notice title=COMMIT:: Build local package $COMMIT_SHA"
           uv build --sdist
           uv export --no-dev --no-emit-project --group image --format requirements-txt > dist/image-requirements.txt
+          uv run manage.py tailwind install
           uv run manage.py tailwind build
 
     - name: Log in to the Container registry
