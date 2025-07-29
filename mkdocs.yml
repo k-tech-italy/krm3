@@ -160,6 +160,7 @@ nav:
           - How to add hours to the task: guides/user/add.md
           - How to remove hours to the task: guides/user/remove.md
           - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
+          - How to submit Timesheet : guides/user/submit.md
       #- For Developer: guides/developer/index.md
   - Wiki:
       - Overview: wiki/Overview.md

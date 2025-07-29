@@ -8,7 +8,7 @@ Connect to the following link: https://krm3.k-tech.it/ to see the new KRM3 proje
 
 <img src="/guides/assets/2025-07-08-12-21-33-image.png" style="width: 60%; display: block; margin: auto;">
 
-Click on "Timesheet" and you will see the project you are currently working on (If you don't have any Task, ask to Giovanni or Luca Salvator to add one for you):
+Click on Timesheet and you will see the project you are currently working on. If you do not ae tasks displaying, for your relevant project, then you will need to ask Giovanni, Emanuela or Luca Salvator to create one for you.
 
 <img src="/guides/assets/2025-07-08-12-23-21-image.png" style="width: 60%; display: block; margin: auto;">
 

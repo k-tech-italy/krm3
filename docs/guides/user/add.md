@@ -1,11 +1,11 @@
 
 # # How to add hours to the task
 
-Now you're ready to add hours to your task, to do so, click on "+" symbol under the designated day and you will see a popup:
+Click + symbol under the designated day and you will be presented with a popup:
 
 <img src="/guides/assets/2025-07-08-13-42-57-image.png" style="width: 60%; display: block; margin: auto;">
 
-You can choose how many hours to add: 2h, 4h, 8h or custom clicking on "More" (You can increment from discrete value of 0,25h):
+If you wish to add anything different from the, 2h, 4h or 8h selection, from the popup box, then click More. This allows you to add, in increments of 0.25 hours, you can also add a comment, for the amendment. Once you are happy, then click Save, or cancel or delete, if not.
 
 <img src="/guides/assets/2025-07-08-13-53-48-image.png" style="width: 60%; display: block; margin: auto;">
 
