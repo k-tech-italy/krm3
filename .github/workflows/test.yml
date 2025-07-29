@@ -163,8 +163,8 @@ jobs:
           echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "::notice title=VERSION:: Build local package $VERSION"
           echo "::notice title=COMMIT:: Build local package $COMMIT_SHA"
-          cd .. && uv build --sdist
-          uv export --no-dev --no-emit-project --group image --format requirements-txt > ../dist/image-requirements.txt
+          uv build --sdist
+          uv export --no-dev --no-emit-project --group image --format requirements-txt > dist/image-requirements.txt
 
     - name: Log in to the Container registry
       if: needs.changes.outputs.version == 'true'
