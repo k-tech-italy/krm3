@@ -1,3 +1,4 @@
+import json
 import re
 
 
@@ -12,6 +13,18 @@ CONSTANCE_CONFIG = {
     'COUNTRY_GROUPS': ('A, B, C', 'The country grouping list (comma-separated values)'),
     'CURRENCIES': ('GBP,EUR,USD', 'The default currencies to get the rates for', 'currencies'),
     'RECENT_DAYS': (60, 'The number of days back to show records by default'),
+    'DEFAULT_RESOURCE_SCHEDULE': (
+        json.dumps({
+            'mon': 8,
+            'tue': 8,
+            'wed': 8,
+            'thu': 8,
+            'fri': 8,
+            'sat': 0,
+            'sun': 0
+        }),
+        'Minimum hours per day'
+    ),
 }
 
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'

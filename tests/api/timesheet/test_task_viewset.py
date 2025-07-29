@@ -1,9 +1,11 @@
+import json
 from contextlib import nullcontext as does_not_raise
 import datetime
 import typing
 from decimal import Decimal
 
 import pytest
+from constance.test import override_config
 from django.contrib.auth.models import Permission
 from testutils.factories import (
     ProjectFactory,
@@ -116,6 +118,15 @@ class TestTaskAPIListView:
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+            'mon': 1,
+            'tue': 2,
+            'wed': 3,
+            'thu': 4,
+            'fri': 5,
+            'sat': 6,
+            'sun': 0
+        }))
     @pytest.mark.parametrize(
         'task_end_date',
         (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
@@ -224,6 +235,15 @@ class TestTaskAPIListView:
                 '2024-01-05': {'hol': False, 'nwd': False, 'closed': False},
                 '2024-01-06': {'hol': True, 'nwd': True, 'closed': False},
                 '2024-01-07': {'hol': True, 'nwd': True, 'closed': False},
+            },
+            'schedule': {
+                'mon': 1,
+                'tue': 2,
+                'wed': 3,
+                'thu': 4,
+                'fri': 5,
+                'sat': 6,
+                'sun': 0
             },
         }
 

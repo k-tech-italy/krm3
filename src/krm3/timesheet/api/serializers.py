@@ -179,6 +179,7 @@ class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
+    schedule = serializers.DictField(child=serializers.IntegerField())
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_with_closed_attr = {}
