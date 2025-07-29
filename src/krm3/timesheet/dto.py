@@ -1,7 +1,9 @@
 """Non-model domain data-transfer-objects for the timesheet."""
 
 import datetime
+import json
 from typing import Self
+from constance import config
 
 from krm3.core.models.auth import Resource, User
 from krm3.core.models.projects import Task, TaskQuerySet
@@ -15,6 +17,7 @@ class TimesheetDTO:
         self.time_entries = TimeEntryQuerySet().none()
         self._requested_by = requested_by
         self.resource = None
+        self.schedule = {}
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         self.tasks = (
             Task.objects.filter_acl(self._requested_by)  # pyright: ignore[reportAttributeAccessIssue]
@@ -28,5 +31,7 @@ class TimesheetDTO:
 
         self.days = calendar.iter_dates(start_date, end_date)
         self.resource = resource
+
+        self.schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
 
         return self
