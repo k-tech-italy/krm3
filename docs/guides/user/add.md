@@ -11,21 +11,14 @@ If you wish to add anything different from the, 2h, 4h or 8h selection, from the
 
 
 
-# # How to add hours to all the week
+# # How to add hours for more than one day, at a time
 
-If you want to add 8 hours for all the week for the same task, you can put mouse on July 1:
-
-<img src="./assets/2025-07-08-14-50-19-image.png" style="width: 60%; display: block; margin: auto;">
-
-Click with the left key on the first day, July 1st:
-
-<img src="./assets/2025-07-08-14-53-28-image.png" style="width: 60%; display: block; margin: auto;">
-
-Clicking and holding a cell or a column to drag it, till july 4th, you will see the blue line selecting all the days from 1st to 4th July:
+If you want to add your hours for  more than one day, at the same time, left click and drag to the relevant day.
+A blue line will appear to show the days that you are selecting
 
 <img src="./assets/2025-07-08-14-58-27-image.png" style="width: 60%; display: block; margin: auto;">
 
-When you will release the button select 8h for all the days:
+Once you release, a popup box will be displayed, this will allow you to select 2h, 4h, 8h or More - this will give you to option to input different times and reasons
 
 <img src="./assets/2025-07-08-14-56-55-image.png" style="width: 60%; display: block; margin: auto;">
 

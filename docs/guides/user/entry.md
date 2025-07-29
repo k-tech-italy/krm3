@@ -1,7 +1,7 @@
 
 # # How to add Day Entry as Holiday, Sick Day, Leave, Rest.
 
-Click on the relevant day, a Day Entry popup ox will be displayed. From here, you can select, Holiday, Sick Day (for the UK workers taking half a day sick leave, you will need to add how much time was sick in the comments section), Leave and Rest.
+Click on the relevant day, a Day Entry popup box will be displayed. From here, you can select, Holiday, Sick Day (for the UK workers taking half a day sick leave, you will need to add how much time was sick in the comments section), Leave and Rest.
 
 <img src="./assets/2025-07-08-16-51-32-image.png" style="width: 60%; display: block; margin: auto;">
 
