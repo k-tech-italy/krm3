@@ -124,7 +124,7 @@ jobs:
       run: cd krm3-fe && git submodule update --init
 
     - name: Install yarn and build frontend
-      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build && cp -a dist/. ../~static
+      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
 
     #- name: Run Test suite
     #   run: uv run tox -e tests
@@ -185,14 +185,14 @@ jobs:
         images: ghcr.io/${{ github.repository }} # Example: ghcr.io/your-username/your-repo
 
 
-    - name: Build base image
-      uses: docker/build-push-action@v6
-      if: needs.changes.outputs.version == 'true'
-      with:
-        context: .
-        file: docker/Dockerfile.base
-        load: true
-        tags: local/kt/krm3/base:${{ steps.build.outputs.version }}
+#    - name: Build base image
+#      uses: docker/build-push-action@v6
+#      if: needs.changes.outputs.version == 'true'
+#      with:
+#        context: .
+#        file: docker/Dockerfile.base
+#        load: true
+#        tags: local/kt/krm3/base:${{ steps.build.outputs.version }}
 
     - name: Build and push final image
       uses: docker/build-push-action@v6
@@ -201,6 +201,7 @@ jobs:
         context: .
         file: docker/Dockerfile
         push: true
+        target: final
         build-args: |
           BASE_IMAGE=${{ steps.build.outputs.version }}
           DOCKER_REGISTRY=local
