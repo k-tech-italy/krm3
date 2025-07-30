@@ -153,8 +153,9 @@ jobs:
         verbose: false
         name: codecov-${{env.GITHUB_REF_NAME}}
   build:
-    needs: [test]
+    needs: [changes, test]
     runs-on: ubuntu-latest
+    && (needs.changes.outputs.run_tests != 'true' || needs.test.result == 'success')
     permissions:
       contents: read
       packages: write
@@ -162,7 +163,6 @@ jobs:
     - name: build
       id: build
       # This step runs if the 'changed-files' step output 'version' is 'true'
-      if: needs.changes.outputs.version == 'true' && needs.test.result == 'success'
       run: |
           VERSION=$( uvx --with hatch-vcs hatchling metadata version )
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
