@@ -154,6 +154,7 @@ jobs:
         name: codecov-${{env.GITHUB_REF_NAME}}
   build:
     needs: [test]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
