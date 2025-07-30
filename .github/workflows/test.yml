@@ -1,5 +1,5 @@
 ---
-name: Test
+name: Test and Build
 
 on:
   push:
@@ -126,37 +126,42 @@ jobs:
     - name: Install yarn and build frontend
       run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
 
-    #- name: Run Test suite
-    #   run: uv run tox -e tests
+    - name: Run Test suite
+      run: uv run tox -e tests
 
-    #- name: Archive selenium results
-    #  uses: actions/upload-artifact@v4
-    #  if: failure()
-    #  with:
-    #    name: selenium-log-report
-    #    path: latest_logs
-    #    retention-days: 5
-#
-    #- name: Upload test results to Codecov
-    #  uses: codecov/test-results-action@v1
-    #  if: always()
-    #  with:
-    #    token: ${{ secrets.CODECOV_TOKEN }}
-#
-    #- name: Upload coverage to Codecov
-    #  uses: codecov/codecov-action@v4
-    #  continue-on-error: true
-    #  with:
-    #    env_vars: OS,PYTHON
-    #    fail_ci_if_error: true
-    #    token: ${{ secrets.CODECOV_TOKEN }}
-    #    verbose: false
-    #    name: codecov-${{env.GITHUB_REF_NAME}}
+    - name: Archive selenium results
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: selenium-log-report
+        path: latest_logs
+        retention-days: 5
 
+    - name: Upload test results to Codecov
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      continue-on-error: true
+      with:
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: false
+        name: codecov-${{env.GITHUB_REF_NAME}}
+  build:
+    needs: [test]
+    permissions:
+      contents: read
+      packages: write
+    steps:
     - name: build
       id: build
       # This step runs if the 'changed-files' step output 'version' is 'true'
-      if: needs.changes.outputs.version == 'true'
+      if: needs.changes.outputs.version == 'true' && needs.test.result == 'success'
       run: |
           VERSION=$( uvx --with hatch-vcs hatchling metadata version )
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
@@ -183,16 +188,6 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ github.repository }} # Example: ghcr.io/your-username/your-repo
-
-
-#    - name: Build base image
-#      uses: docker/build-push-action@v6
-#      if: needs.changes.outputs.version == 'true'
-#      with:
-#        context: .
-#        file: docker/Dockerfile.base
-#        load: true
-#        tags: local/kt/krm3/base:${{ steps.build.outputs.version }}
 
     - name: Build and push final image
       uses: docker/build-push-action@v6
