@@ -184,27 +184,6 @@ jobs:
           **/uv.lock
         python-version: 3.12.1
 
-    - name: Restore cached vEnv
-      id: cache-venv-restore
-      uses: actions/cache/restore@v4
-      with:
-        path: |
-          ./uv-cache
-          ./tox
-        key: ${{ runner.os }}-venv-3.12
-
-    - name: Install dependencies
-      run: uv sync --cache-dir ./uv-cache --frozen
-
-    - name: Save vEnv
-      id: cache-venv-save
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ./uv-cache
-          ./tox
-        key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
-
     - name: Download built frontend
       uses: actions/download-artifact@v4
       with:
