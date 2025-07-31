@@ -126,14 +126,14 @@ jobs:
     - name: Install yarn and build frontend
       run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
 
-    # - name: Upload built frontend
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: built-frontend
-    #     path: |
-    #       krm3-fe/dist/
-    #     retention-days: 1
-    #     if-no-files-found: warn
+    - name: Upload built frontend
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-frontend
+        path: |
+          krm3-fe/dist/
+        retention-days: 1
+        if-no-files-found: warn
 
     - name: Run Test suite
       run: uv run tox -e tests
@@ -205,11 +205,11 @@ jobs:
           ./tox
         key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
 
-    # - name: Download built frontend
-    #   uses: actions/download-artifact@v4
-    #   with:
-    #     name: built-frontend
-    #     path: krm3-fe/dist/
+    - name: Download built frontend
+      uses: actions/download-artifact@v4
+      with:
+        name: built-frontend
+        path: krm3-fe/dist/
 
     - name: build
       id: build
