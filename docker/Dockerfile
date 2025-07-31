@@ -67,6 +67,8 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY --from=builder --chown=krm3:ktech /code/ ./
 
+RUN rm -rf /uv-cache/*
+
 ADD tools/zapdata/demo tools/zapdata/demo
 
 USER krm3
