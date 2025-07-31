@@ -126,6 +126,15 @@ jobs:
     - name: Install yarn and build frontend
       run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
 
+    - name: Upload built frontend
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-frontend
+        path: |
+          krm3-fe/dist/
+        retention-days: 1
+        if-no-files-found: warn
+
     - name: Run Test suite
       run: uv run tox -e tests
 
@@ -160,6 +169,48 @@ jobs:
       contents: read
       packages: write
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: latest
+        enable-cache: true
+        prune-cache: false
+        cache-local-path: ./uv-cache
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/uv.lock
+        python-version: 3.12.1
+
+    - name: Restore cached vEnv
+      id: cache-venv-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ runner.os }}-venv-3.12
+
+    - name: Install dependencies
+      run: uv sync --cache-dir ./uv-cache --frozen
+
+    - name: Save vEnv
+      id: cache-venv-save
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
+
+    - name: Download built frontend
+      uses: actions/download-artifact@v4
+      with:
+        name: built-frontend
+        path: ./
+
     - name: build
       id: build
       # This step runs if the 'changed-files' step output 'version' is 'true'
