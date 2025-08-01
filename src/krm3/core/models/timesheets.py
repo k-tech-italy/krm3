@@ -11,7 +11,6 @@ from django.db import models
 from django.db.models import Q
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
-from krm3.utils.dates import KrmCalendar
 from django.db.models import QuerySet
 
 from .auth import Resource
@@ -137,7 +136,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 
         :return: the filtered queryset.
         """
-        return self.day_entries().filter(leave_hours=0)
+        return self.day_entries().filter(leave_hours=0, special_leave_hours=0)
 
     def leaves(self) -> Self:
         """Select all leave entries in this queryset.
