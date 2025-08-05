@@ -220,7 +220,7 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }} # Example: ghcr.io/your-username/your-repo
 
-    - name: Build and push final image
+    - name: Build Docker image
       uses: docker/build-push-action@v6
       if: needs.changes.outputs.version == 'true'
       with:
@@ -235,3 +235,79 @@ jobs:
           ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
           ghcr.io/${{ github.repository }}:latest
         labels: ${{ steps.meta.outputs.labels }}
+        outputs: type=docker,dest=/tmp/image.tar
+
+    - name: Load Docker image
+      if: needs.changes.outputs.version == 'true'
+      run: |
+        docker load --input /tmp/image.tar
+        docker image ls -a
+
+  security-scan:
+    needs: [changes, build]
+    if: needs.changes.outputs.version == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+    - name: Download Docker image
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: /tmp/
+
+    - name: Load Docker image
+      run: |
+        docker load --input /tmp/image.tar
+        docker image ls -a
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }}'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results as artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: trivy-scan-results
+        path: trivy-results.sarif
+        retention-days: 30
+
+#  push-image:
+#    needs: [changes, build, security-scan]
+#    if: needs.changes.outputs.version == 'true' && needs.security-scan.result == 'success'
+#    runs-on: ubuntu-latest
+#    permissions:
+#      contents: read
+#      packages: write
+#    steps:
+#    - name: Log in to the Container registry
+#      uses: docker/login-action@v3
+#      with:
+#        registry: ghcr.io
+#        username: ${{ github.actor }}
+#        password: ${{ secrets.GITHUB_TOKEN }}
+#
+#    - name: Download Docker image
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: docker-image
+#        path: /tmp/
+#
+#    - name: Load and push Docker image
+#      run: |
+#        docker load --input /tmp/image.tar
+#        docker push ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }}
+#        docker push ghcr.io/${{ github.repository }}:latest
