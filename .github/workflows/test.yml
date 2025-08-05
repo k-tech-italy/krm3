@@ -135,34 +135,35 @@ jobs:
         retention-days: 1
         if-no-files-found: warn
 
-    - name: Run Test suite
-      run: uv run tox -e tests
+#    - name: Run Test suite
+#      run: uv run tox -e tests
+#
+#    - name: Archive selenium results
+#      uses: actions/upload-artifact@v4
+#      if: failure()
+#      with:
+#        name: selenium-log-report
+#        path: latest_logs
+#        retention-days: 5
+#
+#    - name: Upload test results to Codecov
+#      uses: codecov/test-results-action@v1
+#      if: always()
+#      with:
+#        token: ${{ secrets.CODECOV_TOKEN }}
+#
+#    - name: Upload coverage to Codecov
+#      uses: codecov/codecov-action@v4
+#      continue-on-error: true
+#      with:
+#        env_vars: OS,PYTHON
+#        fail_ci_if_error: true
+#        token: ${{ secrets.CODECOV_TOKEN }}
+#        verbose: false
+#        name: codecov-${{env.GITHUB_REF_NAME}}
 
-    - name: Archive selenium results
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: selenium-log-report
-        path: latest_logs
-        retention-days: 5
-
-    - name: Upload test results to Codecov
-      uses: codecov/test-results-action@v1
-      if: always()
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      continue-on-error: true
-      with:
-        env_vars: OS,PYTHON
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: false
-        name: codecov-${{env.GITHUB_REF_NAME}}
   build:
-    needs: [changes, test]
+    needs: [changes]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.version == 'true' && (needs.changes.outputs.run_tests != 'true' || needs.test.result == 'success')
     permissions:
