@@ -163,7 +163,7 @@ jobs:
 #        name: codecov-${{env.GITHUB_REF_NAME}}
 
   build:
-    needs: [changes]
+    needs: [changes, test]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.version == 'true'
 #    && (needs.changes.outputs.run_tests != 'true' || needs.test.result == 'success')
