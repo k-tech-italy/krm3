@@ -212,6 +212,12 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository }} # Example: ghcr.io/your-username/your-repo
 
+    - name: Set up Docker Buildx
+      if: needs.changes.outputs.version == 'true'
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+
     - name: Build Docker image
       uses: docker/build-push-action@v6
       if: needs.changes.outputs.version == 'true'
