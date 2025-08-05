@@ -244,12 +244,14 @@ jobs:
         retention-days: 1
 
   security-scan:
-    needs: [changes, build]
+    needs: [ changes, build ]
     if: needs.changes.outputs.version == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
+    outputs:
+      scan_result: ${{ steps.scan.outcome }}
     steps:
     - name: Download Docker image
       uses: actions/download-artifact@v4
@@ -258,14 +260,20 @@ jobs:
         path: /tmp/
 
     - name: Load Docker image
+      id: load
       run: |
         docker load --input /tmp/image.tar
         docker image ls -a
+        # Get the actual image name from the loaded images
+        IMAGE_NAME=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "ghcr.io/${{ github.repository }}" | head -1)
+        echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "Loaded image: $IMAGE_NAME"
 
     - name: Run Trivy vulnerability scanner
+      id: scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }}'
+        image-ref: '${{ steps.load.outputs.image_name }}'
         format: 'sarif'
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
