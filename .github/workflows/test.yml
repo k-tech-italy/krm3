@@ -194,7 +194,6 @@ jobs:
 
     - name: build
       id: build
-      # This step runs if the 'changed-files' step output 'version' is 'true'
       run: |
           VERSION=$( uvx --with hatch-vcs hatchling metadata version )
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
@@ -212,7 +211,7 @@ jobs:
       if: needs.changes.outputs.version == 'true'
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }} # Example: ghcr.io/your-username/your-repo
+        images: ghcr.io/${{ github.repository }}
 
     - name: Set up Docker Buildx
       if: needs.changes.outputs.version == 'true'
