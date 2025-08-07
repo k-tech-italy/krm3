@@ -16,6 +16,7 @@ omit =
     src/krm3/web/loaders.py
     src/krm3/web/templatetags/file_status.py
     src/krm3/config/asgi.py
+    */admin_extras/*
 
 [report]
 # Regexes for lines to exclude from consideration
