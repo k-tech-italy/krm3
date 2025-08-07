@@ -295,9 +295,9 @@ jobs:
         path: trivy-results.sarif
         retention-days: 30
 
-  push-image:
+  merge:
     needs: [changes, build, security-scan]
-    if: needs.changes.outputs.version == 'true' && needs.security-scan.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && needs.changes.outputs.version == 'true' && needs.security-scan.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
