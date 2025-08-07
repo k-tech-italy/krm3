@@ -1,2 +1,3 @@
 # Ignore specific CVEs
+#False positive for sqlite
 CVE-2025-6965
