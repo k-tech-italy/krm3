@@ -165,7 +165,7 @@ jobs:
   build:
     needs: [changes, test]
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.version == 'true' && (needs.changes.outputs.run_tests != 'true' || needs.test.result == 'success')
+    if: (needs.changes.outputs.run_tests != 'true' || needs.test.result == 'success')
     permissions:
       contents: read
       packages: write
@@ -247,7 +247,6 @@ jobs:
 
   security-scan:
     needs: [ changes, build ]
-    if: needs.changes.outputs.version == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
