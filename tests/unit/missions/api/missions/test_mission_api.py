@@ -60,5 +60,6 @@ class TestMissionApiPermissions:
 
         client = api_client(user=regular_user)
         response = client.get(url)
-
         assert response.status_code == 200
+        assert response.json()['results'][0]['resource']['id'] == resource.id
+        assert response.json()['results'][0]['resource']['user'] == resource.user.id
