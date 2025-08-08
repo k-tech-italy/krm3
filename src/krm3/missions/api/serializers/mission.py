@@ -1,6 +1,7 @@
 from django.db.models import Max
 from rest_framework import serializers
 
+from krm3.core.api.views import ResourceSerializer
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
@@ -41,7 +42,7 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
 
 class MissionNestedSerializer(serializers.ModelSerializer):
     expenses = MissionExpenseSerializer(many=True, read_only=True)
-
+    resource = ResourceSerializer(many=False, read_only=True)
     class Meta:
         model = Mission
         fields = '__all__'
