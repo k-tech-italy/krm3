@@ -1,6 +1,7 @@
 from typing import Any
 
 from flags.state import flag_enabled
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
 from krm3.config.environ import env
@@ -83,3 +84,10 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
             key: flag_enabled(key, request=self.context['request'])
             for key in ['TRASFERTE_ENABLED', 'TIMESHEET_ENABLED']
         }
+
+
+class ResourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resource
+        fields = '__all__'
+        depth = 0

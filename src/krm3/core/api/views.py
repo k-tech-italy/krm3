@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.exceptions import TokenError
 
-from krm3.core.api.serializers import UserSerializer
+from krm3.core.api.serializers import UserSerializer, ResourceSerializer
 from krm3.core.models import (
     City,
     Client,
@@ -71,12 +71,6 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         # invalidate the session data created from the frontend if any
         djlogout(request)
         return Response(status=status.HTTP_200_OK)
-
-
-class ResourceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Resource
-        fields = '__all__'
 
 
 class ResourceAPIViewSet(
