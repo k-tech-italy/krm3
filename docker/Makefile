@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=1.5.17
+VERSION=1.5.18
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -16,6 +16,7 @@ DOCKER_IMAGE=${IMAGE_PREFIX}/krm3
 DOCKER_IMAGE_NAME=${DOCKER_IMAGE}:${VERSION}
 DOCKER_IMAGE_FULLNAME=${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${VERSION}
 STACK_PROTOCOL?=https
+SEC_TEST_FOLDER?=$(PWD)/../~sec_test
 
 LOCAL_PORT?=18000
 LOCAL_HTTPS_PORT?=18443
@@ -170,3 +171,12 @@ test-coverage: ## Run tests with coverage report
 
 stack:  ## run containder with both web/celery services
 	RUN_OPTIONS=-it CMD='stack' $(MAKE) .run
+
+security-test:
+	@if [ ! $(shell which trivy) ]; then \
+  		echo "Trivy not found please install it: \n curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin <version>"; \
+	else \
+		mkdir -p $(SEC_TEST_FOLDER); \
+		trivy image --ignorefile $(PWD)/../.trivyignore ${DOCKER_IMAGE_FULLNAME} > $(SEC_TEST_FOLDER)/${CONTAINER_NAME}:${VERSION}.txt; \
+		trivy image --severity HIGH,CRITICAL --ignorefile $(PWD)/../.trivyignore ${DOCKER_IMAGE_FULLNAME} > $(SEC_TEST_FOLDER)/${CONTAINER_NAME}:${VERSION}_critical_high.txt; \
+	fi
