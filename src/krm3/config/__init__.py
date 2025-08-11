@@ -5,16 +5,10 @@
 
 import uuid
 from pathlib import Path
-from typing import Any
 
 from cryptography.fernet import Fernet
 from django.utils.crypto import get_random_string
-
-
-def parse_emails(value: str) -> list[tuple[Any, Any]]:
-    """Parse a list of emails separated by commas."""
-    admins = value.split(',')
-    return [(a.split('@')[0].strip(), a.strip()) for a in admins]
+from krm3.utils.tools import parse_emails
 
 
 DEFAULTS = dict(  # noqa: C408

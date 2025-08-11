@@ -44,11 +44,6 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
         read_only_fields = ['amount_base']
 
 
-class ExpenseImageUploadSerializer(serializers.Serializer):
-    otp = serializers.CharField(max_length=200, required=True, validators=[token_validator])
-    image = HybridImageField(required=True)
-
-
 class ExpenseCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -84,10 +79,3 @@ class ExpenseRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['otp']
-
-
-class ExpenseNestedSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Expense
-        fields = '__all__'
-        depth = 2

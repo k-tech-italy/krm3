@@ -9,7 +9,7 @@ from testutils.factories import (
     TimeEntryFactory,
 )
 
-from src.krm3.timesheet.report import timeentry_key_mapping
+from krm3.timesheet.report import timeentry_key_mapping
 from django.contrib.auth.models import Permission
 
 

@@ -104,10 +104,3 @@ def timesheet() -> None:  # noqa: PLR0912, C901
                             resource=resources[0], date=day.date, day_shift_hours=0, leave_hours=i % 3 + 0.5
                         )
     click.secho(f'Created {TimeEntry.objects.filter(resource=resources[0]).count()} time entries.', fg='green')
-
-def prepare_resources() -> list[Resource]:
-    resources = list(Resource.objects.all())
-    for _i in range(2 - len(resources)):
-        resources.append(r := ResourceFactory())
-        click.secho(f'Created resource {r}', fg='yellow')
-    return resources
