@@ -108,50 +108,42 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @override
     @extend_schema(
-        summary="Create new Time Entry",
+        summary='Create new Time Entry',
         responses={
-            201: OpenApiResponse(
-                description="Task assignment created successfully"
-            ),
-            400: OpenApiResponse(
-                description="Bad request - Invalid data"
-            ),
-            403: OpenApiResponse(
-                description="Forbidden - Insufficient permissions"
-            ),
-            404: OpenApiResponse(
-                description="Not found - Task or resource not found"
-            ),
+            201: OpenApiResponse(description='Task assignment created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            403: OpenApiResponse(description='Forbidden - Insufficient permissions'),
+            404: OpenApiResponse(description='Not found - Task or resource not found'),
         },
         examples=[
             OpenApiExample(
-                "Create TaskEntry Example",
+                'Create TaskEntry Example',
                 value={
-                    "task_id": 1,
-                    "dates": ["2025-09-01"],
-                    "night_shift_hours": 0,
-                    "day_shift_hours": 4,
-                    "on_call_hours": 0,
-                    "travel_hours": 0,
-                    "comment": "some comment",
-                    "resource_id": 4
+                    'task_id': 1,
+                    'dates': ['2025-09-01'],
+                    'night_shift_hours': 0,
+                    'day_shift_hours': 4,
+                    'on_call_hours': 0,
+                    'travel_hours': 0,
+                    'comment': 'some comment',
+                    'resource_id': 4,
                 },
-                request_only=True
+                request_only=True,
             ),
             OpenApiExample(
-                "Multiple Dates TaskEntry Example",
+                'Multiple Dates TaskEntry Example',
                 value={
-                    "task_id": 2,
-                    "dates": ["2025-09-01", "2025-09-02", "2025-09-03"],
-                    "night_shift_hours": 8,
-                    "day_shift_hours": 0,
-                    "on_call_hours": 2,
-                    "travel_hours": 1,
-                    "comment": "Task Entry for three days",
-                    "resource_id": 5
+                    'task_id': 2,
+                    'dates': ['2025-09-01', '2025-09-02', '2025-09-03'],
+                    'night_shift_hours': 8,
+                    'day_shift_hours': 0,
+                    'on_call_hours': 2,
+                    'travel_hours': 1,
+                    'comment': 'Task Entry for three days',
+                    'resource_id': 5,
                 },
-                request_only=True
-            )
+                request_only=True,
+            ),
         ],
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -263,16 +255,12 @@ class ReportViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'], url_path=r'data/(?P<date>\d{6})')
     def data_report(self, request: Request, date: str) -> Response:
         user = cast('User', request.user)
-        if not user.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        ):
+        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return Response(status=status.HTTP_403_FORBIDDEN)
         try:
             data = timesheet_report_data(date, json_serializable=True)
         except ValueError:
-            return Response(
-                data={'error': 'Invalid date.'}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(data={'error': 'Invalid date.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(data)
 
     @action(detail=False, methods=['get'], url_path=r'export/(?P<date>\d{6})')
@@ -285,14 +273,24 @@ class ReportViewSet(viewsets.ViewSet):
             headers = [
                 name := f'{resource.last_name.upper()} {resource.first_name}',
                 'Tot HH',
-                *['X' if day.is_holiday else '' for day in data['days']],
+                *[
+                    'X' if day.is_holiday(country_holiday=resource.contract.country_calendar) else ''
+                    for day in data['days']
+                ],
             ]
 
             ws = wb.create_sheet(title=name)
             ws.append(headers)
 
-            giorni = ['Giorni', '', *[f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
-                                      f'{"**" if not day.submitted else ""}' for day in data['days']]]
+            giorni = [
+                'Giorni',
+                '',
+                *[
+                    f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
+                    f'{"**" if not day.submitted else ""}'
+                    for day in data['days']
+                ],
+            ]
             ws.append(giorni)
 
             if data:

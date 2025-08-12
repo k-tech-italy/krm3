@@ -3,7 +3,7 @@ import sys
 import typing
 
 
-from krm3.core.models import Resource, TimeEntry
+from krm3.core.models import TimeEntry
 from krm3.utils.dates import KrmDay, KrmCalendar
 
 sys.path.append('tests/_extras')
@@ -62,17 +62,17 @@ def timesheet() -> None:  # noqa: PLR0912, C901
         for day in KrmCalendar().iter_week(today - 7 * i):
             match i:
                 case 0:  # Sick
-                    if not day.is_holiday:
+                    if not day.is_holiday():
                         TimeEntry.objects.create(
                             resource=resources[0], date=day.date, day_shift_hours=0, sick_hours=8, comment='Feel sick'
                         )
                 case 1:
-                    if not day.is_holiday:  # Holiday
+                    if not day.is_holiday():  # Holiday
                         TimeEntry.objects.create(
                             resource=resources[0], date=day.date, day_shift_hours=0, holiday_hours=8
                         )
                 case 2 | 3:
-                    if not day.is_holiday:  # Regular hours
+                    if not day.is_holiday():  # Regular hours
                         TimeEntry.objects.create(
                             resource=resources[0],
                             date=day.date,
@@ -80,7 +80,7 @@ def timesheet() -> None:  # noqa: PLR0912, C901
                             day_shift_hours=8,
                         )
                 case 4:
-                    if not day.is_holiday:  # Split on tasks
+                    if not day.is_holiday():  # Split on tasks
                         task_set = tasks[:3]
                         random.shuffle(task_set)
                         t1, t2 = task_set[:2]
@@ -92,7 +92,7 @@ def timesheet() -> None:  # noqa: PLR0912, C901
                             resource=resources[0], date=day.date, task=tasks[i % 3], day_shift_hours=8
                         )
                 case 8, 9, 10, 11, 12:
-                    if not day.is_holiday:  # full on tasks
+                    if not day.is_holiday():  # full on tasks
                         TimeEntry.objects.create(
                             resource=resources[0],
                             date=day.date,

@@ -26,11 +26,6 @@ class TestKrmDay:
             ('2025-12-28', 'week_of_year', 52),
             # Note how we are in first week of next year
             ('2025-12-29', 'week_of_year', 1),
-            ('2025-06-02', 'is_holiday', True),  # Mon
-            ('2025-06-29', 'is_holiday', True),  # Rome Patron Saints' day
-            ('2025-06-03', 'is_holiday', False),  # Tue
-            ('2025-06-07', 'is_holiday', False),  # Sat
-            ('2025-06-08', 'is_holiday', True),  # Sun
         ],
     )
     def test_properties(self, krm_day, prop, expected):
@@ -104,6 +99,17 @@ class TestKrmDay:
     def test_init(self):
         assert KrmDay('2025-06-02') == KrmDay(dt('2025-06-02'))
         assert KrmDay('2025-06-02') == KrmDay(KrmDay('2025-06-02'))
+
+    def test_is_holiday(self):
+        assert KrmDay('2025-06-02').is_holiday() is True  # Bank Hol in Italy
+        assert KrmDay('2023-06-29').is_holiday() is True  # Bank Hol in Rome
+        assert KrmDay('2025-08-25').is_holiday() is False  # Bank Hol in UK
+        assert KrmDay('2025-06-07').is_holiday() is False  # Sat
+        assert KrmDay('2025-06-08').is_holiday() is True  # Sun
+
+        assert KrmDay('2025-08-25').is_holiday(country_calendar='GB-ENG') is True  # Bank Hol in UK
+        assert KrmDay('2025-03-17').is_holiday(country_calendar='GB-ENG') is False  # St Patrick's day
+        assert KrmDay('2025-03-17').is_holiday(country_calendar='GB-NIR') is True  # St Patrick's day
 
 
 class TestKrmCalendar:

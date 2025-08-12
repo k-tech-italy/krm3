@@ -9,6 +9,13 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
 
+from krm3.utils.dates import KrmCalendar
+from constance import config
+
+
+if typing.TYPE_CHECKING:
+    from datetime import date
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
@@ -107,6 +114,24 @@ class Resource(models.Model):
         :return: the maximum number of hours in a work day.
         """
         return Decimal(8)
+
+    def get_schedule(self, start_day: date, end_day: date) -> list[float]:
+        from krm3.core.models import Contract
+
+        overlapping_contracts: models.QuerySet[Contract] = Contract.objects.filter(
+            period__overlap=(start_day, end_day), resource=self
+        ).order_by('period__start')
+
+        days = list(KrmCalendar.iter_dates(start_day, end_day))
+
+        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE  # {'mon': 8, 'tue': 8, .... 'sat': 0, 'sun': 0}
+
+        for day in days:
+            contract: Contract = ...  # find the contract in overlapping_contracts for the day
+            schedule = contract.schedule or default_resource_schedule
+            day.min_working_hours = 0 if day.is_holiday() else schedule[day.day_of_week_short]
+
+        return days
 
 
 @receiver(post_save, sender=User)

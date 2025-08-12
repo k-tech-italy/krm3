@@ -51,13 +51,11 @@ class KrmDay:
     def week_of_year(self) -> int:
         return self.date.isocalendar()[1]
 
-    @property
-    def is_holiday(self) -> bool:
-        return not get_country_holidays().is_working_day(self.date)
+    def is_holiday(self, country_calendar:str = None) -> bool:
+        return not get_country_holidays(country_calendar=country_calendar).is_working_day(self.date)
 
-    @property
-    def is_non_working_day(self) -> bool:
-        return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday
+    def is_non_working_day(self, country_calendar:str = None) -> bool:
+        return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar=country_calendar)
 
     @property
     def day_of_week(self) -> str:
@@ -191,9 +189,10 @@ class KrmCalendar(Calendar):
         return self.iter_dates(*self.week_for(date))
 
 
-def get_country_holidays() -> holidays.HolidayBase:
+def get_country_holidays(country_calendar:str = None) -> holidays.HolidayBase:
     """Generate the appropriate country holidays."""
-    country, subdiv = str(env('HOLIDAYS_CALENDAR')).split('-')
+    hol_calendar = country_calendar or str(env('HOLIDAYS_CALENDAR'))
+    country, subdiv = hol_calendar.split('-')
     cal = holidays.country_holidays(country, subdiv)
     cal.weekend = {6}  # SUN
     return cal

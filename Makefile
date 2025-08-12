@@ -203,3 +203,7 @@ release:
 	FE_DATE=`git log -1 --pretty=%ad --date=short` && \
 	cd .. && \
 	printf '{\n"be": {"branch": "'$$BE_BRANCH'", "commit": "'$$BE_COMMIT'", "date": "'$$BE_DATE'", "version": "'$$BE_VER'"},\n"fe": {"branch": "'$$FE_BRANCH'", "commit": "'$$FE_COMMIT'", "date": "'$$FE_DATE'", "version": '$$FE_VER'}\n}' > src/krm3/core/static/release.json
+
+refresh:
+	@cd krm3-fe && git pull && yarn install && yarn build
+	@git pull && uv sync && ./manage.py tailwind build

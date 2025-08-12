@@ -171,6 +171,7 @@ class TimesheetTaskSerializer(TaskSerializer):
 
 
 class KrmDayHolidaySerializer(serializers.Serializer):
+    # TODO: check here if it is broken
     hol = serializers.BooleanField(source='is_holiday')
     nwd = serializers.BooleanField(source='is_non_working_day')
 
