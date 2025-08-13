@@ -28,6 +28,11 @@ from debug_toolbar.toolbar import debug_toolbar_urls
 admin.autodiscover()
 actions.add_to_site(site)
 
+
+def trigger_error(*args) -> None:
+    division_by_zero = 1 / 0  # noqa: F841
+
+
 # see https://djoser.readthedocs.io/en/latest/getting_started.html
 urlpatterns = [
     path('admin/doc/', include('django.contrib.admindocs.urls')),
@@ -42,6 +47,7 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('sentry-debug/', trigger_error),
     path('', include('krm3.fe.urls')),
 ]
 
