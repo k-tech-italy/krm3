@@ -8,6 +8,8 @@ from krm3.core.models import TimeEntry, Resource, Task
 
 from krm3.utils.dates import KrmDay, KrmCalendar
 
+from django.db.models import Q
+
 if typing.TYPE_CHECKING:
     from django.db.models import QuerySet
 
@@ -53,7 +55,7 @@ def _calculate_work_days_for_resources(
             work_days_without_task = [
                 day
                 for day in work_days_without_task
-                if not (task.start_date <= day.date <= task.end_date)
+                if not (task.start_date <= day.date and (task.end_date is None or day.date <= task.end_date))
             ]
 
         data['NUM GIORNI'] = len(work_days) - len(work_days_without_task)
@@ -133,7 +135,7 @@ def timesheet_task_report_raw_data(
     entry_qs = TimeEntry.objects.filter(date__gte=from_date, date__lte=to_date, resource__active=True).order_by(
         'resource', 'date'
     )
-    task_qs = Task.objects.filter(start_date__lte=to_date, end_date__gte=from_date)
+    task_qs = Task.objects.filter(start_date__lte=to_date).filter(Q(end_date__gte=from_date) | Q(end_date__isnull=True))
 
     if resource:
         entry_qs = entry_qs.filter(resource=resource)
