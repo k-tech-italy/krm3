@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "1.5.18"
+version = "1.5.19"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
