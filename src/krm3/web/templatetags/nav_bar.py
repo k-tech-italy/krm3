@@ -29,7 +29,7 @@ def nav_bar(elements: dict[str, str]) -> SafeString | str:
 
     result = f"""
         <nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
-                border-gray-200 dark:border-gray-600">
+                border-gray-200 dark:border-gray-600 mb-20">
             <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
                 <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
                     <span class="text-xl font-bold text-gray-900">KRM³</span>

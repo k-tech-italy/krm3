@@ -1,0 +1,69 @@
+{% extends "home.html" %}
+
+{% load report_line %}
+
+
+{% block extrastyle %}
+    <style>
+      html {
+        background-color: white;
+      }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ block.super }}
+    <div class="w-9/10 mx-auto">
+        <div class="flex flex-row justify-between mt-2">
+            <a href="{% querystring month=prev_month %}"
+                class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-bold text-center mb-1">{{ title }}</h1>
+            </div>
+            <a href="{% querystring month=next_month %}"
+                class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
+        </div>
+        <div class="flex justify-center">
+            <a href="#" class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
+                    Download report</a>
+        </div>
+         {% if data %}
+            <div class="overflow-x-auto rounded-md shadow mb-4">
+                <table class="min-w-full leading-normal text-right border-2 font-semibold border-separate">
+                    <thead>
+                    <tr class="bg-gray-400! dark:bg-blue-900! ">
+                        <td class="text-left p-1 border border-1">
+                            <strong>Bank holidays</strong>
+                        </td>
+                        {% for day in days %}
+                        <td class="p-1 text-center border border-1">
+                            {% if day.is_holiday %}X{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    </thead>
+                    <tbody>
+
+                   <tr class="bg-gray-400! dark:bg-blue-900!">
+                       <td class="text-left p-1 border border-1">Days</td>
+                       {% for day in days %}
+                       <td class="p-1 text-center border border-1 bg-yellow-600">
+                           <p>{{ day.date|date:"D" }}</p>
+                           <p>{{ day.date|date:"j" }}</p>
+                       </td>
+                       {% endfor %}
+                   </tr>
+
+                    {% for resource, values in data.items %}
+                        {% report_line 'absences' resource values True %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="flex justify-center">No data found for this month</div>
+            {% endif %}
+
+    </div>
+{% endblock body %}

@@ -8,6 +8,7 @@ from krm3.core.models import TimeEntry, Resource
 
 from krm3.core.models.timesheets import TimesheetSubmission
 from krm3.utils.dates import KrmCalendar, KrmDay
+from krm3.utils.tools import format_data
 
 
 _fields = [
@@ -111,8 +112,6 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['day_shift'][i] = day_shift
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
-def format_data(value: int) -> int | None | D:
-    return value if value is None or value % 1 != 0 else int(value)
 
 def get_submitted_dates(from_date: datetime.date, to_date: datetime.date, resource: 'Resource'):
         calendar = KrmCalendar()
