@@ -51,13 +51,20 @@ class KrmDay:
     def week_of_year(self) -> int:
         return self.date.isocalendar()[1]
 
-    @property
-    def is_holiday(self) -> bool:
-        return not get_country_holidays().is_working_day(self.date)
+    def is_extra_holiday(self, country_calendar_code:str) -> bool:
+        from krm3.core.models import ExtraHoliday
 
-    @property
-    def is_non_working_day(self) -> bool:
-        return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday
+        extra_holidays = ExtraHoliday.objects.filter(period__contains=self.date,
+                                                     country_codes__contains=[country_calendar_code]).first()
+        return bool(extra_holidays)
+
+    def is_holiday(self, country_calendar_code:str = None) -> bool:
+        if country_calendar_code and self.is_extra_holiday(country_calendar_code):
+            return True
+        return not get_country_holidays(country_calendar_code=country_calendar_code).is_working_day(self.date)
+
+    def is_non_working_day(self, country_calendar_code:str = None) -> bool:
+        return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar_code=country_calendar_code)
 
     @property
     def day_of_week(self) -> str:
@@ -173,7 +180,7 @@ class KrmCalendar(Calendar):
 
         days_between = self.iter_dates(from_date, to_date)
 
-        return [day for day in days_between if not day.is_non_working_day]
+        return [day for day in days_between if not day.is_non_working_day()]
 
     def week_for(self, date: _MaybeDate = None) -> tuple[KrmDay, KrmDay]:
         """Return the start and end date of the week for the given date.
@@ -191,9 +198,14 @@ class KrmCalendar(Calendar):
         return self.iter_dates(*self.week_for(date))
 
 
-def get_country_holidays() -> holidays.HolidayBase:
+def get_country_holidays(country_calendar_code:str = None) -> holidays.HolidayBase:
     """Generate the appropriate country holidays."""
-    country, subdiv = str(env('HOLIDAYS_CALENDAR')).split('-')
+    hol_calendar = country_calendar_code or str(env('HOLIDAYS_CALENDAR'))
+    subdiv = None
+    if '-' in hol_calendar:
+        country, subdiv = hol_calendar.split('-')
+    else:
+        country = hol_calendar
     cal = holidays.country_holidays(country, subdiv)
     cal.weekend = {6}  # SUN
     return cal

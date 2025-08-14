@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
 from django.contrib.postgres.constraints import ExclusionConstraint
-from django.contrib.postgres.fields import DateRangeField, RangeOperators
+from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -530,3 +531,19 @@ def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission | li
 def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains = instance.date).first()
     instance.timesheet = timesheet
+
+
+class ExtraHoliday(models.Model):
+    period = DateRangeField(help_text='NB: End date is the day after the actual end date')
+    # see https://holidays.readthedocs.io/en/latest/
+    country_codes = ArrayField(
+        models.CharField(help_text='holidays.code and optionally subdivision from holidays library')
+    )
+    reason = models.CharField()
+
+    def __str__(self) -> str:
+        reason = shorten(self.reason, width=30, placeholder=' ...')
+        end_dt = self.period.upper - datetime.timedelta(days=1)
+        if self.period.lower == end_dt:
+            return  f'{self.period.lower.strftime('%Y-%m-%d')}: {reason}'
+        return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}: {reason}'
