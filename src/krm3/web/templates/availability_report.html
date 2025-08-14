@@ -1,0 +1,93 @@
+{% extends "home.html" %}
+
+{% load report_line %}
+
+
+{% block extrastyle %}
+    <style>
+      html {
+        background-color: white;
+      }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ block.super }}
+    <div class="w-9/10 mx-auto mt-20">
+        <div class="flex flex-row justify-between mt-2">
+            <a href="{% querystring month=prev_month %}"
+                class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-bold text-center mb-1">{{ title }}</h1>
+            </div>
+            <a href="{% querystring month=next_month %}"
+                class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
+        </div>
+        <div class="mb-10">
+            <label for="country" class="block text-sm/6 font-medium text-white">Filter for project</label>
+            <div class="mt-2 grid grid-cols-1">
+                    <select id="project" name="project" autocomplete="project-name" class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white/5 py-1.5 pr-8 pl-3 text-base text-white outline-1 -outline-offset-1 outline-white/10 *:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6">
+                        {% for id, project in projects.items %}
+                            <option value="{{ id }}">{{ project }}</option>
+                        {% endfor %}
+                    </select>
+                    <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4">
+                    <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                    </svg>
+            </div>
+        </div>
+         {% if data %}
+            <div class="overflow-x-auto rounded-md shadow mb-4">
+                <table class="min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse">
+                    <thead>
+                    <tr class="bg-gray-400! dark:bg-blue-900! ">
+                        <td class="text-left p-1 border border-1">
+                            <strong>Bank holidays</strong>
+                        </td>
+                        {% for day in days %}
+                        <td class="p-1 text-center border border-1">
+                            {% if day.is_holiday %}X{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    </thead>
+                    <tbody>
+
+                   <tr class="bg-gray-400! dark:bg-blue-900!">
+                       <td class="text-left p-1 border border-1">Days</td>
+                       {% for day in days %}
+                       <td class="p-1 text-center border border-1 bg-yellow-600">
+                           <p>{{ day.date|date:"D" }}</p>
+                           <p>{{ day.date|date:"j" }}</p>
+                       </td>
+                       {% endfor %}
+                   </tr>
+
+                    {% for resource, values in data.items %}
+                        {% report_line 'absences' resource values True %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="flex justify-center">No data found for this month or this project</div>
+            {% endif %}
+
+    </div>
+{% endblock body %}
+
+    {% block js-frameworks %}
+        {{ block.super }}
+        <script>
+            const selectElement = document.getElementById('project');
+            {% if selected_project %}
+                selectElement.value = {{ selected_project }};
+            {% endif %}
+            selectElement.addEventListener('change', () => {
+                const url = new URL(window.location);
+                url.searchParams.set('project', selectElement.value);
+                window.location.href = url.toString();
+            });
+        </script>
+    {% endblock js-frameworks %}
