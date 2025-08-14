@@ -1,10 +1,15 @@
+
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
+from django.contrib.postgres.fields import DateRangeField
+from django.db.models import JSONField
+from django.contrib.admin.widgets import AdminDateWidget
+from django.contrib.postgres.forms import RangeWidget
 from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
-from krm3.core.models import City, Client, Country, Resource, UserProfile
+from krm3.core.models import City, Client, Country, Resource, UserProfile, Contract
 
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -58,3 +63,16 @@ class ResourceAdmin(ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(ModelAdmin):
     search_fields = ['name']
+
+
+@admin.register(Contract)
+class ContractAdmin(ModelAdmin):
+    search_fields = ['user']
+
+    formfield_overrides = {
+        # Tell Django to use our custom widget for all DateRangeFields in this admin.
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+        JSONField: {
+            'help_text': '{"mon": 8, "tue": 8, "wed": 8, "thu": 8, "fri": 8, "sat": 0, "sun": 0}'
+        }
+    }

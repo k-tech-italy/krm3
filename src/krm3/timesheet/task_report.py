@@ -76,6 +76,7 @@ def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) 
 def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_date: KrmDay) -> None:
     """Process time entries and populates the results dictionary."""
     for entry in entries:
+
         resource_data = results[entry.resource]
         date = KrmDay(entry.date)
         index = date - start_date + 2

@@ -14,7 +14,7 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
-    TimesheetSubmissionFactory,
+    TimesheetSubmissionFactory, ContractFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -125,7 +125,7 @@ class TestTaskAPIListView:
             'thu': 4,
             'fri': 5,
             'sat': 6,
-            'sun': 0
+            'sun': 2
         }))
     @pytest.mark.parametrize(
         'task_end_date',
@@ -237,15 +237,51 @@ class TestTaskAPIListView:
                 '2024-01-07': {'hol': True, 'nwd': True, 'closed': False},
             },
             'schedule': {
-                'mon': 1,
-                'tue': 2,
-                'wed': 3,
-                'thu': 4,
-                'fri': 5,
-                'sat': 6,
-                'sun': 0
+                '2024-01-01': 0,
+                '2024-01-02': 2,
+                '2024-01-03': 3,
+                '2024-01-04': 4,
+                '2024-01-05': 5,
+                '2024-01-06': 0,
+                '2024-01-07': 2
             },
         }
+
+    def test_schedule_with_contract(self, admin_user, api_client):
+        start_date = datetime.date(2020, 5, 1)
+        end_date = datetime.date(2020, 5, 9)
+        contract = ContractFactory(
+            country_calendar_code='PL',
+            period=(start_date,
+                    end_date + datetime.timedelta(days=1)),
+            working_schedule={
+                'mon': 3,
+                'tue': 4,
+                'wed': 5,
+                'thu': 6,
+                'fri': 7,
+                'sat': 8,
+                'sun': 2,
+           })
+        response = api_client(user=admin_user).get(
+            self.url(),
+            data={
+                'resource_id': contract.resource.pk,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+            },
+        )
+        assert (response.json()['schedule'] == {
+            '2020-05-01': 0,
+            '2020-05-02': 8,
+            '2020-05-03': 0,
+            '2020-05-04': 3,
+            '2020-05-05': 4,
+            '2020-05-06': 5,
+            '2020-05-07': 6,
+            '2020-05-08': 7,
+            '2020-05-09': 8 })
+
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
         project = ProjectFactory(start_date=datetime.date(2022, 1, 1))

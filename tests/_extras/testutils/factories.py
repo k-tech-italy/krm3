@@ -1,3 +1,4 @@
+
 from datetime import date, timedelta
 
 import factory
@@ -8,6 +9,7 @@ from factory import PostGenerationMethodCall
 from factory.base import FactoryMetaClass
 from factory.fuzzy import FuzzyDecimal
 
+from krm3.config import settings
 from krm3.core.models import User
 from krm3.currencies.models import Currency
 
@@ -111,6 +113,16 @@ class ResourceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'core.Resource'
         django_get_or_create = ('first_name', 'last_name')
+
+class ContractFactory(factory.django.DjangoModelFactory):
+    resource = factory.SubFactory(ResourceFactory)
+    period = factory.Sequence(
+        lambda n: generate_month_period(date(2020, 1, 1), n)
+    )
+    country_calendar_code = settings.HOLIDAYS_CALENDAR
+
+    class Meta:
+        model = 'core.Contract'
 
 
 class ClientFactory(factory.django.DjangoModelFactory):

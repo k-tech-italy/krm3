@@ -107,9 +107,9 @@ class TestKrmDay:
         assert KrmDay('2025-06-07').is_holiday() is False  # Sat
         assert KrmDay('2025-06-08').is_holiday() is True  # Sun
 
-        assert KrmDay('2025-08-25').is_holiday(country_calendar='GB-ENG') is True  # Bank Hol in UK
-        assert KrmDay('2025-03-17').is_holiday(country_calendar='GB-ENG') is False  # St Patrick's day
-        assert KrmDay('2025-03-17').is_holiday(country_calendar='GB-NIR') is True  # St Patrick's day
+        assert KrmDay('2025-08-25').is_holiday(country_calendar_code='GB-ENG') is True  # Bank Hol in UK
+        assert KrmDay('2025-03-17').is_holiday(country_calendar_code='GB-ENG') is False  # St Patrick's day
+        assert KrmDay('2025-03-17').is_holiday(country_calendar_code='GB-NIR') is True  # St Patrick's day
 
 
 class TestKrmCalendar:

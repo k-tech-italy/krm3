@@ -1,9 +1,7 @@
 """Non-model domain data-transfer-objects for the timesheet."""
 
 import datetime
-import json
 from typing import Self
-from constance import config
 
 from krm3.core.models.auth import Resource, User
 from krm3.core.models.projects import Task, TaskQuerySet
@@ -32,8 +30,7 @@ class TimesheetDTO:
         self.days = calendar.iter_dates(start_date, end_date)
         self.resource = resource
 
-        # TODO: should load the schedule for the resource
-        # TODO: should account for schedule changes between start_date and end_date
-        self.schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
+        self.schedule = resource.get_schedule(start_date, end_date)
+
 
         return self

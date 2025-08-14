@@ -1,4 +1,6 @@
 import datetime
+
+
 import openpyxl
 
 from typing import TYPE_CHECKING, Any, cast, override
@@ -13,7 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 
-from krm3.core.models import Resource
+from krm3.core.models import Resource, Contract
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
 from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
@@ -270,13 +272,16 @@ class ReportViewSet(viewsets.ViewSet):
         wb.remove(wb.active)
 
         for resource, data in report_data['data'].items():
+            holidays = []
+            for day in data['days']:
+                contract = Contract.objects.filter(resource=resource, period__contains=day.date).first()
+                calendar_code = contract.country_calendar_code if contract else None
+                holidays.append('X' if day.is_holiday(calendar_code) else '')
+
             headers = [
                 name := f'{resource.last_name.upper()} {resource.first_name}',
                 'Tot HH',
-                *[
-                    'X' if day.is_holiday(country_holiday=resource.contract.country_calendar) else ''
-                    for day in data['days']
-                ],
+                *holidays,
             ]
 
             ws = wb.create_sheet(title=name)
