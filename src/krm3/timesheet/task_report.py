@@ -8,6 +8,8 @@ from krm3.core.models import TimeEntry, Resource, Task
 
 from krm3.utils.dates import KrmDay, KrmCalendar
 
+from krm3.utils.tools import format_data
+
 from django.db.models import Q
 
 if typing.TYPE_CHECKING:
@@ -19,9 +21,6 @@ timeentry_key_mapping = {
     'travel_hours': 'Ore Trasferta',
 }
 
-
-def _format_data(value: int) -> int | None | D:
-    return value if value is None or value % 1 != 0 else int(value)
 
 def _initialize_report_data(tasks: typing.Iterable[Task], days_interval: int) -> dict:
     """Initialize the results dictionary with tasks and default values."""
@@ -173,7 +172,7 @@ def task_report_data(current_month: str | None) -> dict[str, typing.Any]:
     for shifts in data.values():
         for key, values in shifts.items():
             if (isinstance(values, list)):
-                shifts[key] = [_format_data(v) if isinstance(v, D | int) else v for v in values]
+                shifts[key] = [format_data(v) if isinstance(v, D | int) else v for v in values]
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
 

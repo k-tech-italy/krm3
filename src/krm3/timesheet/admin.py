@@ -9,17 +9,13 @@ from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
 from django.http import HttpRequest, HttpResponseRedirect
-from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from rangefilter.filters import DateRangeFilter
 
 from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission, Resource
 from krm3.styles.buttons import NORMAL
-from krm3.timesheet.report import timesheet_report_data
 from django import forms
-
-from krm3.timesheet.task_report import task_report_data
 
 
 @admin.register(PO)
@@ -122,16 +118,12 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         return form
 
     @button(html_attrs=NORMAL)
-    def report(self, request: HttpRequest) -> TemplateResponse:
-        current_month = request.GET.get('month')
-        ctx = timesheet_report_data(current_month)
-        return TemplateResponse(request, 'timesheet/report.html', context=ctx)
+    def report(self, _request: HttpRequest) -> HttpResponseRedirect:
+        return HttpResponseRedirect(reverse('report'))
 
     @button(html_attrs=NORMAL)
-    def task_report(self, request: HttpRequest) -> TemplateResponse:
-        current_month = request.GET.get('month')
-        ctx = task_report_data(current_month)
-        return TemplateResponse(request, 'timesheet/task_report.html', context=ctx)
+    def task_report(self, _request: HttpRequest) -> HttpResponseRedirect:
+        return HttpResponseRedirect(reverse('task_report'))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def goto_task(self, request: HttpRequest, pk: int) -> HttpResponseRedirect:

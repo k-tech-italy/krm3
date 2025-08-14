@@ -1,0 +1,93 @@
+{% extends "home.html" %}
+
+{% load tailwind_tags static report_line %}
+
+
+{% block extrastyle %}
+    <style>
+      html {
+            background-color: white;
+            color-scheme: dark !important;
+        }
+
+        body {
+            color-scheme: dark !important;
+        }
+
+        * {
+            color-scheme: dark !important;
+        }
+    </style>
+{% endblock %}
+{% block body %}
+    {{ block.super }}
+    <div class="w-9/10 mx-auto pt-20">
+          <div class="flex flex-row justify-between mt-2">
+              <a href="{% querystring month=prev_month %}"
+                 class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
+              <div class="flex flex-col">
+                  <h1 class="text-3xl font-bold text-center mb-1">Report {{ title }}</h1>
+              </div>
+              <a href="{% querystring month=next_month %}"
+                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
+            </div>
+            <div class="flex justify-center">
+                <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
+                          class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
+                      Download report</a>
+            </div>
+    {% for resource, stats in data.items %}
+        {% if stats %}
+
+            <div class="overflow-x-auto rounded-md shadow mb-4">
+                <table class="min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse">
+                    <thead>
+                    <tr class="bg-gray-400! dark:bg-blue-900! ">
+                        <td class="text-left p-1 border border-1" colspan="2">
+                            {{ resource.first_name }} {{ resource.last_name }}
+                        </td>
+                        {% for day in stats.days %}
+                        <td class="p-1 text-center border border-1">
+                            {% if day.is_holiday %}X{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    </thead>
+                    <tbody>
+
+
+                   <tr class="bg-gray-400! dark:bg-blue-900!">
+                       <td class="text-left p-1 border border-1">Giorni</td>
+                       <td>HH</td>
+                       {% for day in stats.days %}
+                       <td class="p-1 text-center border border-1 {% if not day.submitted %}bg-yellow-600{% endif %}">
+                           <p>{{ day.date|date:"D" }}</p>
+                           <p>{{ day.date|date:"j" }}</p>
+                       </td>
+                       {% endfor %}
+                   </tr>
+
+                    {% for key, label in keymap.items %}
+                        {% report_line key label stats forloop.counter0|divisibleby:"2" %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="overflow-x-auto rounded-md text-zinc-900 shadow mb-4">
+                <table class="min-w-full leading-normal text-right border">
+                    <thead class="bg-gray-200">
+                    <tr>
+                        <td class="text-left p-1 w-1/6" colspan="2"><strong>{{ resource.last_name }}</strong> {{ resource.first_name }}</td>
+                        <td class="text-left" colspan="{{ days|length }}">No data available</td>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    </div>
+
+{% endblock body %}

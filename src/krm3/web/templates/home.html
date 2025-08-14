@@ -1,12 +1,9 @@
-{% load tailwind_tags nav_bar %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    {% tailwind_css nav_bar %}
-    <meta charset="UTF-8">
-    <title>Home</title>
-</head>
-<body>
-{% nav_bar nav_bar_items %}
-</body>
-</html>
+{% extends "base2.html" %}
+{% load nav_bar %}
+
+{% block body %}
+    {{ block.super }}
+
+    {% nav_bar nav_bar_items %}
+
+{% endblock body %}

@@ -94,7 +94,5 @@ terminal the watcher process for building the theme ...
   ```
 
 Hint: See
-- src/krm3/web/templates/example.html as an example page with some cotton components
-- src/krm3/templates/cotton/card.html for the cotton card component
 - src/krm3/theme/static_src/src/styles.scss for the master theme styles.css
 (NB: `@source "../../../**/*.{html,js}"` to capture styles from Django apps)
