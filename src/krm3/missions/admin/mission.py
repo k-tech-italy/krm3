@@ -65,7 +65,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'default_currency',
         'city',
         'expense_num',
-        'to_reimburse'
+        'to_reimburse',
     )
     list_filter = [
         'status',
@@ -104,14 +104,19 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             return FileResponse(f)
 
     def get_queryset(self, request: 'HttpRequest') -> 'QuerySet[Mission]':
-        return (super().get_queryset(request).prefetch_related('expenses').annotate(expenses_count=Count('expenses'))
-                .annotate(to_reimburse_count=Count('expenses', filter=Q(expenses__reimbursement_id__isnull=True))))
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related('expenses')
+            .annotate(expenses_count=Count('expenses'))
+            .annotate(to_reimburse_count=Count('expenses', filter=Q(expenses__reimbursement_id__isnull=True)))
+        )
 
-    @admin.display(description="Num expenses", ordering='expenses_count')
+    @admin.display(description='Num expenses', ordering='expenses_count')
     def expense_num(self, obj: Reimbursement) -> int:
         return obj.expense_count
 
-    @admin.display(description="To Reimburse", ordering='to_reimburse_count')
+    @admin.display(description='To Reimburse', ordering='to_reimburse_count')
     def to_reimburse(self, obj: Reimbursement) -> int:
         return obj.expenses.filter(reimbursement_id__isnull=True).count()
 
@@ -171,20 +176,24 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def overview(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
         mission = self.get_object(request, pk)
         sorting = request.GET.get('sort')
-        qs = mission.expenses.all()
+        expenses = list(mission.expenses.select_related('reimbursement', 'payment_type', 'category', 'currency'))
+        reimbursements = list({e.reimbursement for e in expenses})
+        if None in reimbursements:
+            reimbursements.remove(None)
+            reimbursements.append(None)
         export_format = request.GET.get('_export', None)
         result_dict = {}
 
         try:
             if export_format:
-                expenses_table = build_mission_expenses_table(qs, sorting, True)
+                expenses_table = build_mission_expenses_table(expenses, sorting, report=True)
                 return self.export_table(mission, expenses_table, export_format, request)
 
-            reimbursements = qs.values_list('reimbursement', flat=True).order_by('id').distinct()
+            update_rates(expenses)
             for reimbursement in reimbursements:
-                exp_re = qs.filter(reimbursement_id=reimbursement)
+                exp_re = [e for e in expenses if e.reimbursement == reimbursement]
 
-                expenses_table = build_mission_expenses_table(exp_re, sorting)
+                expenses_table = build_mission_expenses_table(exp_re, sorting, refresh=False)
 
                 summary = {
                     ReimbursementSummaryEnum.SPESE_TRASFERTA: decimal.Decimal(0.0),
@@ -233,7 +242,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     f' ({summary.pop(ReimbursementSummaryEnum.GIA_RIMBORSATE)}'
                     f' già Rimborsate, {da_rimborsare} rimanenti)'
                 )
-                result_dict[Reimbursement.objects.get(id=reimbursement) if reimbursement else None] = {
+                result_dict[reimbursement] = {
                     'expenses': expenses_table,
                     'summary': summary,
                 }
@@ -273,7 +282,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return HttpResponseRedirect(url)
 
 
-def build_mission_expenses_table(qs: 'QuerySet', sorting: str, report: bool = False) -> 'MissionExpenseBaseTable':
+def build_mission_expenses_table(
+    qs: 'QuerySet', sorting: str, report: bool = False, refresh: bool = True
+) -> 'MissionExpenseBaseTable':
     klass = MissionExpenseExportTable if report else MissionExpenseTable
-    update_rates(qs)
+    if refresh:
+        update_rates(qs)
     return klass(qs, order_by=[sorting] if sorting else ['day'])
