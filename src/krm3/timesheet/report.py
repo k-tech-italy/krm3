@@ -150,7 +150,7 @@ def get_days_submission(
     }
 
 
-def timesheet_report_data(current_month: str | None, json_serializable: bool = False) -> dict[str, typing.Any]:
+def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
@@ -171,10 +171,6 @@ def timesheet_report_data(current_month: str | None, json_serializable: bool = F
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
     days = list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month))
-
-    if json_serializable:
-        data = {str(k): v for k, v in data.items()}
-        days = [str(d) for d in days]
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
