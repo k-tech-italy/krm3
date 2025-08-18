@@ -14,7 +14,7 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
-    TimesheetSubmissionFactory, ContractFactory,
+    TimesheetSubmissionFactory, ContractFactory, ExtraHolidayFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -281,6 +281,141 @@ class TestTaskAPIListView:
             '2020-05-07': 6,
             '2020-05-08': 7,
             '2020-05-09': 8 })
+
+    def test_schedule_with_multiple_contracts(self, admin_user, api_client):
+        start_date = datetime.date(2020, 5, 1)
+        end_date = datetime.date(2020, 5, 9)
+        contract_1 = ContractFactory(
+            country_calendar_code='PL',
+            period=(datetime.date(2020, 5, 1),
+                    datetime.date(2020, 5, 4)),
+            working_schedule={
+                'mon': 2,
+                'tue': 2,
+                'wed': 2,
+                'thu': 2,
+                'fri': 2,
+                'sat': 2,
+                'sun': 2,
+        })
+        ContractFactory(
+            country_calendar_code='PL',
+            period=(datetime.date(2020, 5, 4),
+                    datetime.date(2020, 5, 10)),
+            resource=contract_1.resource,
+            working_schedule={
+                'mon': 4,
+                'tue': 4,
+                'wed': 4,
+                'thu': 4,
+                'fri': 4,
+                'sat': 4,
+                'sun': 4,
+        })
+        response = api_client(user=admin_user).get(
+            self.url(),
+            data={
+                'resource_id': contract_1.resource.pk,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+            },
+        )
+        assert (response.json()['schedule'] == {
+            '2020-05-01': 0,
+            '2020-05-02': 2,
+            '2020-05-03': 0,
+            '2020-05-04': 4,
+            '2020-05-05': 4,
+            '2020-05-06': 4,
+            '2020-05-07': 4,
+            '2020-05-08': 4,
+            '2020-05-09': 4 })
+
+    @pytest.mark.parametrize('extra_holiday_dates, expected_schedule',
+                             [
+                                 (
+                                     [{'start_date': datetime.date(2020, 5, 2),
+                                       'end_date': datetime.date(2020, 5, 3)}],
+                                    {
+                                        '2020-05-01': 0,
+                                        '2020-05-02': 0,
+                                        '2020-05-03': 0,
+                                        '2020-05-04': 3,
+                                        '2020-05-05': 4,
+                                        '2020-05-06': 5,
+                                        '2020-05-07': 6,
+                                        '2020-05-08': 7,
+                                        '2020-05-09': 8,
+                                        '2020-05-10': 2
+                                    }
+                                 ),
+                                 (
+                                     [{'start_date': datetime.date(2020, 5, 8),
+                                       'end_date': datetime.date(2020, 5, 10)}],
+                                     {
+                                         '2020-05-01': 0,
+                                         '2020-05-02': 8,
+                                         '2020-05-03': 0,
+                                         '2020-05-04': 3,
+                                         '2020-05-05': 4,
+                                         '2020-05-06': 5,
+                                         '2020-05-07': 6,
+                                         '2020-05-08': 0,
+                                         '2020-05-09': 0,
+                                         '2020-05-10': 0
+                                     }
+                                 ),
+                                 (
+                                         [{'start_date': datetime.date(2020, 5, 1),
+                                           'end_date': datetime.date(2020, 5, 1)},
+                                          {'start_date': datetime.date(2020, 5, 5),
+                                           'end_date': datetime.date(2020, 5, 6)}],
+                                         {
+                                             '2020-05-01': 0,
+                                             '2020-05-02': 8,
+                                             '2020-05-03': 0,
+                                             '2020-05-04': 3,
+                                             '2020-05-05': 0,
+                                             '2020-05-06': 0,
+                                             '2020-05-07': 6,
+                                             '2020-05-08': 7,
+                                             '2020-05-09': 8,
+                                             '2020-05-10': 2
+                                         }
+                                 ),
+                             ])
+
+    def test_schedule_with_extra_holidays(self, admin_user, api_client, extra_holiday_dates, expected_schedule):
+
+        for date in extra_holiday_dates:
+            ExtraHolidayFactory(period=(date['start_date'], date['end_date'] + datetime.timedelta(days=1)),
+                            country_codes=['PL'])
+
+        start_date = datetime.date(2020, 5, 1)
+        end_date = datetime.date(2020, 5, 10)
+        contract = ContractFactory(
+            country_calendar_code='PL',
+            period=(start_date,
+                    end_date + datetime.timedelta(days=1)),
+            working_schedule={
+                'mon': 3,
+                'tue': 4,
+                'wed': 5,
+                'thu': 6,
+                'fri': 7,
+                'sat': 8,
+                'sun': 2,
+            })
+
+        response = api_client(user=admin_user).get(
+            self.url(),
+            data={
+                'resource_id': contract.resource.pk,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+            },
+        )
+        assert response.json()['schedule'] == expected_schedule
 
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):

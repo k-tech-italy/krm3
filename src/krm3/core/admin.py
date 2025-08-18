@@ -9,7 +9,7 @@ from django.contrib.postgres.forms import RangeWidget
 from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
-from krm3.core.models import City, Client, Country, Resource, UserProfile, Contract
+from krm3.core.models import City, Client, Country, Resource, UserProfile, Contract, ExtraHoliday
 
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -76,3 +76,15 @@ class ContractAdmin(ModelAdmin):
             'help_text': '{"mon": 8, "tue": 8, "wed": 8, "thu": 8, "fri": 8, "sat": 0, "sun": 0}'
         }
     }
+
+@admin.register(ExtraHoliday)
+class ExtraHolidayAdmin(ModelAdmin):
+    list_display = ('get_period', 'country_codes', 'reason')
+
+    formfield_overrides = {
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+    }
+
+    @admin.display(description='Period', ordering='period')
+    def get_period(self, obj: ExtraHoliday) -> str:
+        return str(obj)

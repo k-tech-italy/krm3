@@ -58,10 +58,12 @@ class KrmDay:
                                                      country_codes__contains=[country_calendar_code]).first()
         return bool(extra_holidays)
 
-    def is_holiday(self, country_calendar_code:str = None) -> bool:
+    def is_holiday(self, country_calendar_code:str = None, include_sundays_as_holiday: bool = True) -> bool:
         if country_calendar_code and self.is_extra_holiday(country_calendar_code):
             return True
-        return not get_country_holidays(country_calendar_code=country_calendar_code).is_working_day(self.date)
+        if include_sundays_as_holiday:
+            return not get_country_holidays(country_calendar_code=country_calendar_code).is_working_day(self.date)
+        return self.date in get_country_holidays(country_calendar_code=country_calendar_code)
 
     def is_non_working_day(self, country_calendar_code:str = None) -> bool:
         return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar_code=country_calendar_code)
