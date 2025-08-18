@@ -11,7 +11,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
 
 from krm3.config import settings
-from krm3.utils.dates import KrmCalendar, KrmDay, get_country_holidays
+from krm3.utils.dates import KrmCalendar, KrmDay
 from constance import config
 
 if typing.TYPE_CHECKING:
@@ -118,7 +118,7 @@ class Resource(models.Model):
 
     def _min_working_hours_for_day(self, day: KrmDay, country_calendar_code: str, schedule: dict[str, float]) -> float:
         min_working_hours = schedule[day.day_of_week_short.lower()]
-        if day.date in get_country_holidays(country_calendar_code):
+        if day.is_holiday(country_calendar_code, False):
             min_working_hours = 0
         return min_working_hours
 

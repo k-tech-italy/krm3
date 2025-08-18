@@ -124,6 +124,16 @@ class ContractFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'core.Contract'
 
+class ExtraHolidayFactory(factory.django.DjangoModelFactory):
+    period = factory.Sequence(
+        lambda n: generate_month_period(date(2020, 1, 1), n)
+    )
+    country_codes = [settings.HOLIDAYS_CALENDAR]
+    reason = "King coronation"
+
+    class Meta:
+        model = 'core.ExtraHoliday'
+
 
 class ClientFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('company')
