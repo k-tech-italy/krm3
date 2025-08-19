@@ -6,6 +6,7 @@ from krm3.core.models import TimeEntry, Resource
 from krm3.utils.dates import KrmDay
 from dateutil.relativedelta import relativedelta
 
+
 def timesheet_report_raw_data(
     from_date: datetime.date, to_date: datetime.date
 ) -> dict['Resource', dict[str, list[D]]]:

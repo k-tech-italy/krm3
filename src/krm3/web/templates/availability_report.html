@@ -13,7 +13,7 @@
 
 {% block body %}
     {{ block.super }}
-    <div class="w-9/10 mx-auto">
+    <div class="w-9/10 mx-auto mt-20">
         <div class="flex flex-row justify-between mt-2">
             <a href="{% querystring month=prev_month %}"
                 class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
@@ -22,10 +22,6 @@
             </div>
             <a href="{% querystring month=next_month %}"
                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
-        </div>
-        <div class="flex justify-center">
-            <a href="#" class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
-                    Download report</a>
         </div>
          {% if data %}
             <div class="overflow-x-auto rounded-md shadow mb-4">
