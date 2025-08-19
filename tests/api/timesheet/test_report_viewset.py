@@ -10,7 +10,6 @@ from testutils.factories import (
 )
 
 from krm3.timesheet.report import timeentry_key_mapping
-from django.contrib.auth.models import Permission
 
 
 @pytest.mark.django_db
@@ -83,46 +82,3 @@ def test_unauthorized_report_creation(api_client):
     client = api_client()
     response = client.get(url)
     assert response.status_code == 401
-
-
-def test_data_report_user_without_permissions(api_client, regular_user):
-    url = reverse('timesheet-api:api-report-data-report', args=['202506'])
-    client = api_client(user=regular_user)
-    response = client.get(url)
-    assert response.status_code == 403
-
-
-def test_data_report_wrong_date(api_client, admin_user):
-    url = reverse('timesheet-api:api-report-data-report', args=['314159'])
-    client = api_client(user=admin_user)
-    response = client.get(url)
-    assert response.status_code == 400
-    assert response.json() == {'error': 'Invalid date.'}
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    'permissions',
-    [
-        pytest.param(['manage_any_timesheet']),
-        pytest.param(['view_any_timesheet']),
-        pytest.param(['view_any_timesheet', 'manage_any_timesheet']),
-    ],
-)
-def test_data_report_success_user_with_permissions(
-    api_client, regular_user, permissions
-):
-    for permission in permissions:
-        regular_user.user_permissions.add(Permission.objects.get(codename=permission))
-    url = reverse('timesheet-api:api-report-data-report', args=['202506'])
-    client = api_client(user=regular_user)
-    response = client.get(url)
-    assert response.status_code == 200
-
-
-@pytest.mark.django_db
-def test_data_report_success_admin(api_client, admin_user):
-    url = reverse('timesheet-api:api-report-data-report', args=['202506'])
-    client = api_client(user=admin_user)
-    response = client.get(url)
-    assert response.status_code == 200

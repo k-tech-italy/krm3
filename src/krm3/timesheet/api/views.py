@@ -254,17 +254,6 @@ class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 class ReportViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    @action(detail=False, methods=['get'], url_path=r'data/(?P<date>\d{6})')
-    def data_report(self, request: Request, date: str) -> Response:
-        user = cast('User', request.user)
-        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        try:
-            data = timesheet_report_data(date, json_serializable=True)
-        except ValueError:
-            return Response(data={'error': 'Invalid date.'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data)
-
     @action(detail=False, methods=['get'], url_path=r'export/(?P<date>\d{6})')
     def export_report(self, request: Request, date: str) -> Response:
         report_data = timesheet_report_data(date)
