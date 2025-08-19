@@ -8,6 +8,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from krm3.timesheet.availability_report import availability_report_data
+from krm3.timesheet.report import timesheet_report_data
+from krm3.timesheet.task_report import task_report_data
 from django.contrib.auth.views import redirect_to_login
 
 logger = logging.getLogger(__name__)
@@ -22,8 +24,8 @@ class HomeView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['nav_bar_items'] = {
-            'Report': reverse('admin:core_timeentry_report'),
-            'Report by task': reverse('admin:core_timeentry_task_report'),
+            'Report': reverse('report'),
+            'Report by task': reverse('task_report'),
             'Availability report': reverse('availability'),
         }
 
@@ -46,3 +48,21 @@ class AvailabilityReportView(HomeView):
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
         return context | availability_report_data(current_month)
+
+class ReportView(HomeView):
+    login_url = '/admin/login/'
+    template_name = 'report.html'
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        current_month = self.request.GET.get('month')
+        return context | timesheet_report_data(current_month)
+
+class TaskReportView(HomeView):
+    login_url = '/admin/login/'
+    template_name = 'task_report.html'
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        current_month = self.request.GET.get('month')
+        return context | task_report_data(current_month)
