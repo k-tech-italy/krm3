@@ -1,21 +1,17 @@
 import datetime
 
-
-import openpyxl
-
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
 from django.db import transaction
 from django.db.models import QuerySet
-from django.http import HttpResponse
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 
-from krm3.core.models import Resource, Contract
+from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
 from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
@@ -26,8 +22,6 @@ from krm3.timesheet.api.serializers import (
     TimesheetSerializer,
 )
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
-
-from krm3.timesheet.report import timesheet_report_data
 
 if TYPE_CHECKING:
     from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
@@ -249,56 +243,3 @@ class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-
-
-class ReportViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
-    @action(detail=False, methods=['get'], url_path=r'export/(?P<date>\d{6})')
-    def export_report(self, request: Request, date: str) -> Response:
-        report_data = timesheet_report_data(date)
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)
-
-        for resource, data in report_data['data'].items():
-            if data is None:
-                continue
-            holidays = []
-            for day in data['days']:
-                contract = Contract.objects.filter(resource=resource, period__contains=day.date).first()
-                calendar_code = contract.country_calendar_code if contract else None
-                holidays.append('X' if day.is_holiday(calendar_code) else '')
-
-            headers = [
-                name := f'{resource.last_name.upper()} {resource.first_name}',
-                'Tot HH',
-                *holidays,
-            ]
-
-            ws = wb.create_sheet(title=name)
-            ws.append(headers)
-
-            giorni = [
-                'Giorni',
-                '',
-                *[
-                    f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
-                    f'{"**" if not day.submitted else ""}'
-                    for day in data['days']
-                ],
-            ]
-            ws.append(giorni)
-
-            if data:
-                for key, value in data.items():
-                    if key in report_data['keymap']:
-                        safe_value = ['' if v is None else v for v in value]
-                        row = [report_data['keymap'][key], *safe_value]
-                        ws.append(row)
-
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        filename = f'report_{date[0:4]}-{date[4:6]}.xlsx'
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-        wb.save(response)
-        return response
