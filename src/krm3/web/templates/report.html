@@ -32,7 +32,7 @@
                  class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
             </div>
             <div class="flex justify-center">
-                <a href="/api/v1/timesheet/report/export/{{ current_month }}/"
+                <a href="{% url 'export_report' current_month %}"
                           class=" p-2 mb-4 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center text-center justify-center">
                       Download report</a>
             </div>

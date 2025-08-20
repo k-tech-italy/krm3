@@ -261,6 +261,8 @@ class ReportViewSet(viewsets.ViewSet):
         wb.remove(wb.active)
 
         for resource, data in report_data['data'].items():
+            if data is None:
+                continue
             holidays = []
             for day in data['days']:
                 contract = Contract.objects.filter(resource=resource, period__contains=day.date).first()
@@ -290,7 +292,8 @@ class ReportViewSet(viewsets.ViewSet):
             if data:
                 for key, value in data.items():
                     if key in report_data['keymap']:
-                        row = [report_data['keymap'][key], *value]
+                        safe_value = ['' if v is None else v for v in value]
+                        row = [report_data['keymap'][key], *safe_value]
                         ws.append(row)
 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
