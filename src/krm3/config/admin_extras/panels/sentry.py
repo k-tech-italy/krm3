@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import render
 from django.utils.html import urlize
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from krm3.config.admin_extras.forms import SentryForm
 from krm3.utils.sentry import get_sentry_dashboard, get_sentry_host
@@ -21,8 +21,8 @@ def sentry(self, request, extra_context=None):  # noqa: D103
     context['title'] = 'Sentry'
     context['info'] = {
         'SENTRY_DSN': settings.SENTRY_DSN,
-        'SENTRY_SERVER_URL': mark_safe(urlize(get_sentry_host())),
-        'SENTRY_DASHBOARD': mark_safe(urlize(get_sentry_dashboard())),
+        'SENTRY_SERVER_URL': format_html(urlize(get_sentry_host())),
+        'SENTRY_DASHBOARD': format_html(urlize(get_sentry_dashboard())),
         'SENTRY_PROJECT': settings.SENTRY_PROJECT,
         'SENTRY_ENVIRONMENT': settings.SENTRY_ENVIRONMENT,
     }

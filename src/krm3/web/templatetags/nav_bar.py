@@ -1,5 +1,6 @@
 from django import template
-from django.utils.safestring import mark_safe, SafeString
+from django.utils.safestring import SafeString
+from django.utils.html import format_html, format_html_join
 
 register = template.Library()
 
@@ -13,21 +14,32 @@ def nav_bar(elements: dict[str, str]) -> SafeString | str:
         - value (str): the URL the link points to.
     """
 
-    def nav_item_html(element: str) -> str:
-        return f"""
+    def nav_item_html(element: str) -> SafeString:
+        return format_html("""
             <li>
-                <a href="{elements[element]}" class="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100
+                <a href="{}" class="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100
                     md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500
                     dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent
                     dark:border-gray-700">
-                    {element}
+                    {}
                 </a>
             </li>
-        """
+        """, elements[element], element)
 
     nav_items = "\n".join(map(nav_item_html, elements.keys()))
 
-    result = f"""
+    nav_items = format_html_join(
+        "\n",
+    """
+        <li><a href="{}" class="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100
+                    md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500
+                    dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent
+                    dark:border-gray-700">{}</a></li>
+        """,
+        ((url, name) for name, url in elements.items())
+    )
+
+    return format_html("""
         <nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
                 border-gray-200 dark:border-gray-600 mb-20">
             <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
@@ -52,10 +64,9 @@ def nav_bar(elements: dict[str, str]) -> SafeString | str:
                     <ul class="flex flex-col p-4 md:p-0 mt-4 font-medium border border-gray-100 rounded-lg bg-gray-50
                         md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white
                         dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-                        {nav_items}
+                        {}
                     </ul>
                 </div>
             </div>
         </nav>
-    """
-    return mark_safe(result)
+    """, nav_items)

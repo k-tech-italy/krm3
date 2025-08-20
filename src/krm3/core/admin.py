@@ -11,8 +11,8 @@ from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.models import City, Client, Country, Resource, UserProfile, Contract, ExtraHoliday
 
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
+
 
 @admin.register(UserProfile)
 class UserProfileAdmin(ModelAdmin):
@@ -20,14 +20,14 @@ class UserProfileAdmin(ModelAdmin):
 
     def avatar(self, obj: UserProfile) -> str:
         if obj.picture:
-            return mark_safe('<img src="%s" />' % escape(obj.picture))  # noqa: S308
+            return format_html('<img src="{}" />', obj.picture)
         return ''
     avatar.short_description = 'Profile pic'
     avatar.allow_tags = True
 
     def profile(self, obj: UserProfile) -> str:
         if obj.social_profile:
-            return mark_safe('<a href="%s">%s</a>' % (escape(obj.social_profile), escape(obj.social_profile)))  # noqa: S308
+            return format_html('<a href="{}">{}</a>', obj.social_profile, obj.social_profile)
         return ''
     avatar.short_description = 'Profile url'
     avatar.allow_tags = True
