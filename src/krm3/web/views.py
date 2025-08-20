@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 from django.http import HttpRequest, HttpResponseBase
 
 from django.urls import reverse
@@ -10,7 +10,6 @@ from django.core.exceptions import PermissionDenied
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
 from krm3.timesheet.task_report import task_report_data
-from django.contrib.auth.views import redirect_to_login
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +30,15 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
         return context
 
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
-        if not request.user.is_authenticated:
-            return redirect_to_login(
-                request.get_full_path(), self.login_url, 'next'
-            )
-        if not request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):  # type: ignore
-            raise PermissionDenied("You don't have permission to view this report.")
+
+class ReportPermissionView(HomeView):
+
+    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponseBase:
+        user = cast('User', request.user)
+        if not user.is_anonymous and not user.has_any_perm(
+            'core.manage_any_timesheet', 'core.view_any_timesheet'
+        ):
+            raise PermissionDenied()
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -49,8 +50,8 @@ class AvailabilityReportView(HomeView):
         current_month = self.request.GET.get('month')
         return context | availability_report_data(current_month)
 
-class ReportView(HomeView):
-    login_url = '/admin/login/'
+
+class ReportView(ReportPermissionView):
     template_name = 'report.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -58,8 +59,8 @@ class ReportView(HomeView):
         current_month = self.request.GET.get('month')
         return context | timesheet_report_data(current_month)
 
-class TaskReportView(HomeView):
-    login_url = '/admin/login/'
+
+class TaskReportView(ReportPermissionView):
     template_name = 'task_report.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:

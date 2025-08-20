@@ -9,12 +9,11 @@ from testutils.factories import (
     ResourceFactory,
     TimeEntryFactory,
     SpecialLeaveReasonFactory,
-    TaskFactory
+    TaskFactory,
 )
 from urllib.parse import urlencode
 
 from freezegun import freeze_time
-
 
 
 def _assert_homepage_content(response):
@@ -33,43 +32,45 @@ def _assert_homepage_content(response):
     assert f'href="{availability_report_expected_url}"' in content
 
 
-@pytest.mark.parametrize(
-    'permissions',
-    (
-        ['manage_any_timesheet', 'view_any_timesheet'],
-        ['manage_any_timesheet'],
-        ['view_any_timesheet'],
-    ),
-)
-def test_authenticated_user_with_permissions_should_see_homepage(permissions, client):
-    user = UserFactory(username='user00', password='pass123')
-    for perm in permissions:
-        user.user_permissions.add(Permission.objects.get(codename=perm))
+@pytest.mark.parametrize('url', ('/be/', '/be/home/', '/be/availability/'))
+def test_authenticated_user_should_see_homepage_and_availability_report(client, url):
+    UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-
-    url = reverse("home")
     response = client.get(url)
     _assert_homepage_content(response)
 
 
-def test_superuser_should_see_homepage(client):
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+def test_superuser_should_see_permission_protected_views(client, url):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-
-    url = reverse("home")
     response = client.get(url)
     _assert_homepage_content(response)
 
 
-@pytest.mark.parametrize('url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/'))
-def test_user_without_permissions_should_not_see_web_urls(url, client):
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+def test_user_without_permissions_should_not_see_permission_protected_views(
+    url, client
+):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
     response = client.get(url)
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize('url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/'))
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+def test_user_with_permissions_should_see_permission_protected_views(url, client):
+    for perm in ['manage_any_timesheet', 'view_any_timesheet']:
+        user = UserFactory(username='user00', password='pass123')
+        user.user_permissions.add(Permission.objects.get(codename=perm))
+        client.login(username='user00', password='pass123')
+        response = client.get(url)
+        _assert_homepage_content(response)
+
+
+@pytest.mark.parametrize(
+    'url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/')
+)
 def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
     response = client.get(url)
     assert response.status_code == 302
@@ -131,6 +132,7 @@ def test_availability_view_next_previous_month(client, month, expected_result):
         in response.content.decode()
     )
 
+
 @freeze_time('2025-08-22')
 def test_report_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
@@ -147,15 +149,13 @@ def test_report_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert (
-        f'{resource.first_name} {resource.last_name}'
-        in content
-    )
+    assert f'{resource.first_name} {resource.last_name}' in content
     assert '<td class="p-1 border border-1 text-center">8</td>' in content
     assert (
         '<h1 class="text-3xl font-bold text-center mb-1">Report August 2025</h1>'
         in content
     )
+
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
@@ -176,15 +176,13 @@ def test_report_view_next_previous_month(client, month, expected_result):
         in response.content.decode()
     )
 
+
 @freeze_time('2025-08-22')
 def test_task_report_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     task = TaskFactory()
     TimeEntryFactory(
-        resource=task.resource,
-        day_shift_hours=8,
-        date=datetime.date.today(),
-        task=task
+        resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task
     )
     client.login(username='user00', password='pass123')
     url = reverse('task_report')
@@ -200,6 +198,7 @@ def test_task_report_view_current_month(client):
         '<h1 class="text-3xl font-bold text-center mb-1">Task Report August 2025</h1>'
         in content
     )
+
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
