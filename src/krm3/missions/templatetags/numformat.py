@@ -1,6 +1,6 @@
 from django.template.defaultfilters import floatformat
 from django.template.library import Library
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 register = Library()
 
@@ -9,5 +9,5 @@ register = Library()
 def numformat(text, arg=-1):
     txt = floatformat(text, arg=arg)
     if '-' in txt:
-        txt = mark_safe(f'<span style="color: red;">{txt}<span>')
+        txt = format_html('<span style="color: red;">{}<span>', txt)
     return txt
