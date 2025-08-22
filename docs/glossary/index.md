@@ -1,9 +1,11 @@
 # Glossary
 
 ## B
+- [BankOfHours](terms/BankOfHours.md)
 - [BaseCurrency](terms/BaseCurrency.md)
 ## C
 - [ClosedEntry](terms/ClosedEntry.md)
+- [Contract](terms/Contract.md)
 ## D
 - [DayEntry](terms/DayEntry.md)
 ## E

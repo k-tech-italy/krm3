@@ -17,6 +17,8 @@ DayEntry is <glossary:TimeEntry> without specified Task and it's affecting all d
 - leave hours (general time off)
 - special leave hours (time off with a specified reason)
 - rest hours
+- bank to hours
+- bank from hours
 ### DayEntry **cannot** include:
 - day shift hours
 - night shift hours

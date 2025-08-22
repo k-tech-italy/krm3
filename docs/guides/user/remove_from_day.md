@@ -2,7 +2,7 @@
 
 Select days from which you want to delete hours
 
-![Remove hours](./assets/day-selection.png){ style="width:40%; display:block; margin:auto;" }
+![Day selection](./assets/day-selection.png){ style="width:40%; display:block; margin:auto;" }
 
 ## # How to delete every logged hours from selected days
 

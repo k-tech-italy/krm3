@@ -24,4 +24,6 @@ TaskEntry is a <glossary:TimeEntry> with a specified Task and it represents work
 - leave hours (general time off)
 - special leave hours (time off with a specified reason)
 - rest hours
+- bank to hours
+- bank from hours
 (These hours belong to a <glossary:DayEntry>.)
