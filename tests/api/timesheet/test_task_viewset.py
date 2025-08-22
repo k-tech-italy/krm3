@@ -204,6 +204,8 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(task_entry_within_range.rest_hours),
+                    'bankFrom': _as_quantized_decimal(task_entry_within_range.bank_from),
+                    'bankTo': _as_quantized_decimal(day_entry_within_range.bank_to),
                     'comment': 'Within range',
                     'task': task.pk,
                     'taskTitle': task.title,
@@ -222,6 +224,8 @@ class TestTaskAPIListView:
                     'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
                     'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
                     'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
+                    'bankFrom': _as_quantized_decimal(day_entry_within_range.bank_from),
+                    'bankTo': _as_quantized_decimal(day_entry_within_range.bank_to),
                     'comment': 'Within range (day)',
                     'task': None,
                     'taskTitle': None,
@@ -245,6 +249,7 @@ class TestTaskAPIListView:
                 '2024-01-06': 0,
                 '2024-01-07': 2
             },
+            'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance()),
         }
 
     def test_schedule_with_contract(self, admin_user, api_client):

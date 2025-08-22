@@ -39,6 +39,8 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'on_call_hours',
             'travel_hours',
             'rest_hours',
+            'bank_from',
+            'bank_to',
             'comment',
             'task',
             'task_title',
@@ -68,6 +70,8 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'on_call_hours',
             'travel_hours',
             'rest_hours',
+            'bank_from',
+            'bank_to',
             'comment',
             'task',
             'resource',
@@ -99,6 +103,12 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
 
     def validate_rest_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value, field='rest_hours')
+
+    def validate_bank_from_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='bank_from')
+
+    def validate_bank_to_hours(self, value: Hours) -> Hours:
+        return self._validate_hours(value, field='bank_to')
 
     def _validate_hours(self, value: Hours, field: str) -> Hours:
         if Decimal(value) < 0:
@@ -175,6 +185,7 @@ class TimesheetSerializer(serializers.Serializer):
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
     schedule = serializers.DictField(child=serializers.IntegerField())
+    bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_result = {}

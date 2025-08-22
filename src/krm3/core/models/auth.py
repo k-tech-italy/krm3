@@ -4,6 +4,7 @@ import json
 from decimal import Decimal
 import typing
 from django.contrib.auth.base_user import BaseUserManager
+from django.db.models import Sum
 from natural_keys import NaturalKeyModel
 from django.db import models
 from django.db.models.signals import post_save
@@ -145,6 +146,20 @@ class Resource(models.Model):
 
         return {day.date: day.min_working_hours for day in days}
 
+    def get_bank_hours_balance(self) -> Decimal:
+        """Calculate bank hours balance from all time entries."""
+        from krm3.core.models import TimeEntry
+
+        queryset = TimeEntry.objects.filter(resource=self)
+        result = queryset.aggregate(
+            total_deposits=Sum('bank_to'),
+            total_withdrawals=Sum('bank_from')
+        )
+
+        deposits = result['total_deposits'] or Decimal('0')
+        withdrawals = result['total_withdrawals'] or Decimal('0')
+
+        return deposits - withdrawals
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender: User, instance: User, created: bool, **kwargs: dict) -> None:

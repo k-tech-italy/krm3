@@ -113,6 +113,8 @@ class TestTimeEntry:
             pytest.param('night_shift_hours', id='night_shift'),
             pytest.param('travel_hours', id='travel'),
             pytest.param('rest_hours', id='rest'),
+            pytest.param('bank_from', id='bank_from'),
+            pytest.param('bank_to', id='bank_to'),
         ),
     )
     def test_rejects_negative_hours(self, hour_field):
@@ -145,6 +147,8 @@ class TestTimeEntry:
             pytest.param('night_shift_hours', id='night_shift'),
             pytest.param('travel_hours', id='travel'),
             pytest.param('rest_hours', id='rest'),
+            pytest.param('bank_from', id='bank_from'),
+            pytest.param('bank_to', id='bank_to'),
         ),
     )
     def test_rejects_too_many_hours(self, hour_field):
@@ -188,6 +192,238 @@ class TestTimeEntry:
                 day_shift_hours=0,
                 night_shift_hours=Decimal(8.25),
             )
+
+    def test_rejects_both_bank_deposit_and_withdrawal_same_day(self):
+        """Test that you cannot both deposit to and withdraw from bank on same day."""
+        resource = ResourceFactory()
+        with pytest.raises(exceptions.ValidationError,
+                           match='Cannot both withdraw from and deposit to bank hours on the same day'):
+            TimeEntryFactory(
+                day_shift_hours=0,
+                bank_from=2,
+                bank_to=3,
+                resource=resource,
+            )
+
+    def test_bank_hours_included_in_total_hours_calculation(self):
+        """Test that bank hours are properly included in total_hours calculation."""
+        project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
+        resource = ResourceFactory()
+        entry1 = TimeEntryFactory(
+            day_shift_hours=10,
+            task=TaskFactory(project=project, resource=resource, start_date=datetime.date(2020, 1, 1)),
+            resource=resource,
+        )
+        TimeEntryFactory(
+            day_shift_hours=0,
+            bank_to=2,
+            date=entry1.date,
+            resource=resource,
+        )
+
+        daily_entries = TimeEntry.objects.filter(
+            resource=resource,
+            date=entry1.date
+        )
+        total_day_hours_with_deposit = sum(entry.total_hours for entry in daily_entries)
+        assert total_day_hours_with_deposit == 8
+
+        entry2 = TimeEntryFactory(
+            day_shift_hours=6,
+            task=TaskFactory(project=project, resource=resource),
+            resource=resource,
+            date=datetime.date(2020, 3, 4)
+        )
+        TimeEntryFactory(
+            day_shift_hours=0,
+            bank_from=2,
+            date=entry2.date,
+            resource=resource,
+        )
+        daily_entries = TimeEntry.objects.filter(
+            resource=resource,
+            date=entry2.date
+        )
+        total_day_hours_with_withdrawal = sum(entry.total_hours for entry in daily_entries)
+        assert total_day_hours_with_withdrawal == 8
+
+    def test_bank_hours_with_day_entry(self):
+        """Test that bank hours can be used with day entries (non-task)."""
+        resource = ResourceFactory()
+
+        entry = TimeEntryFactory(
+            task=None,
+            resource=resource,
+            date = datetime.date(2025,8,20),
+            day_shift_hours=0,
+            leave_hours=3,
+            bank_from=2,
+            bank_to=0,
+        )
+        assert entry.total_hours == 5
+
+    def test_rejects_bank_deposit_exceeding_upper_limit(self):
+        """Test that bank deposit is rejected if it would exceed upper balance limit."""
+        project = ProjectFactory()
+        resource = ResourceFactory()
+        task = TaskFactory(project=project, resource=resource)
+        TimeEntryFactory(
+            date=datetime.date(2025, 1, 2),
+            resource=resource,
+            task=task,
+            day_shift_hours=16,
+        )
+        TimeEntryFactory(
+            date = datetime.date(2025, 1, 3),
+            resource=resource,
+            task=task,
+            day_shift_hours=16,
+        )
+        TimeEntryFactory(
+            date=datetime.date(2025, 1, 10),
+            resource=resource,
+            task=task,
+            day_shift_hours=10,
+        )
+        TimeEntryFactory(
+            date = datetime.date(2025, 1, 2),
+            resource=resource,
+            day_shift_hours=0,
+            bank_to=8,
+        )
+        TimeEntryFactory(
+            date = datetime.date(2025, 1, 3),
+            resource=resource,
+            day_shift_hours=0,
+            bank_to=8,
+        )
+
+        with pytest.raises(exceptions.ValidationError, match='This transaction would exceed the maximum bank balance'):
+            TimeEntryFactory(
+                date=datetime.date(2025, 1, 10),
+                resource=resource,
+                day_shift_hours=0,
+                bank_to=2,
+            )
+
+    def test_rejects_bank_deposit_exceeding_lower_limit(self):
+        """Test that bank deposit is rejected if it would exceed upper balance limit."""
+        project = ProjectFactory()
+        resource = ResourceFactory()
+        task = TaskFactory(project=project, resource=resource)
+        TimeEntryFactory(
+            date=datetime.date(2024, 1, 2),
+            resource=resource,
+            task=task,
+            day_shift_hours=2,
+            bank_from=8,
+        )
+        TimeEntryFactory(
+            date=datetime.date(2024, 1, 3),
+            resource=resource,
+            task=task,
+            day_shift_hours=4,
+            bank_from=4,
+        )
+
+        with pytest.raises(exceptions.ValidationError, match='This transaction would exceed the minimum bank balance'):
+            TimeEntryFactory(
+                resource=resource,
+                task=task,
+                day_shift_hours=2,
+                bank_from=6,
+            )
+
+    def test_reject_task_entry_deletion_when_deposited_hours(self):
+        project = ProjectFactory()
+        resource = ResourceFactory()
+        task = TaskFactory(project=project, resource=resource)
+        time_entry = TimeEntryFactory(
+            date=datetime.date(2024, 1, 2),
+            resource=resource,
+            task=task,
+            day_shift_hours=10,
+        )
+        TimeEntryFactory(
+            date=datetime.date(2024, 1, 2),
+            resource=resource,
+            day_shift_hours=0,
+            bank_to=2,
+        )
+        with pytest.raises(exceptions.ValidationError, match='Cannot delete this time entry. Removing it would cause '
+                                                             'negative work hours'):
+            time_entry.delete()
+
+    def test_holiday_rejects_any_bank_transactions(self):
+        """Test that holiday entries cannot have any bank transactions."""
+        resource = ResourceFactory()
+
+        with pytest.raises(exceptions.ValidationError, match='Cannot use bank hours during holidays'):
+            TimeEntryFactory(
+                task=None,
+                resource=resource,
+                day_shift_hours=0,
+                holiday_hours=8,
+                bank_to=2,
+                bank_from=0,
+            )
+
+        with pytest.raises(exceptions.ValidationError, match='Cannot use bank hours during holidays'):
+            TimeEntryFactory(
+                task=None,
+                resource=resource,
+                day_shift_hours=0,
+                holiday_hours=8,
+                bank_to=0,
+                bank_from=2,
+            )
+
+    @pytest.mark.parametrize(
+        'day_entry_field',
+        (
+                pytest.param('leave_hours', id='leave'),
+                pytest.param('rest_hours', id='rest'),
+                pytest.param('special_leave_hours', id='special_leave'),
+        ),
+    )
+    def test_day_entries_reject_bank_deposits(self, day_entry_field):
+        """Test that all day entries reject bank deposits."""
+        resource = ResourceFactory()
+        kwargs = {
+            'task': None,
+            'resource': resource,
+            'day_shift_hours': 0,
+            'bank_to': 2,
+            'bank_from': 0,
+            day_entry_field: 10,
+        }
+
+        if day_entry_field == 'special_leave_hours':
+            kwargs['special_leave_reason'] = SpecialLeaveReasonFactory()
+
+        with pytest.raises(exceptions.ValidationError, match='Cannot deposit bank hours during'):
+            TimeEntryFactory(**kwargs)
+
+    def test_bank_hours_with_scheduled_hours(self):
+        resource = ResourceFactory()
+        project = ProjectFactory()
+        task = TaskFactory(project=project, resource=resource)
+        date = datetime.date(2025, 1, 14)
+        TimeEntryFactory(
+            date=date,
+            resource=resource,
+            task=task,
+            day_shift_hours=6,
+        )
+        time_deposit = TimeEntryFactory.build(task=None,resource=resource,date=date,day_shift_hours=0,bank_to=2)
+
+        with pytest.raises(exceptions.ValidationError, match='Cannot deposit 2 bank hours'):
+            time_deposit.save()
+
+        time_withdraw = TimeEntryFactory.build(task=None, resource=resource, date=date, day_shift_hours=0, bank_from=5)
+        with pytest.raises(exceptions.ValidationError, match='Cannot withdraw bank hours when task hours'):
+            time_withdraw.save()
+
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
