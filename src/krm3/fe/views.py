@@ -45,9 +45,3 @@ def serve(request, document_root=None, show_indexes: bool = False):
     if encoding:
         response.headers["Content-Encoding"] = encoding
     return response
-    content_type = content_type or "application/octet-stream"
-    response = FileResponse(fullpath.open("rb"), content_type=content_type)
-    response.headers["Last-Modified"] = http_date(statobj.st_mtime)
-    if encoding:
-        response.headers["Content-Encoding"] = encoding
-    return response

@@ -3,18 +3,11 @@ description:  ""
 template: term.html
 terms:
   - glossary:
-    - Resource
+    - ClosedEntry
 ---
 
-# Resource
+# ClosedEntry
 
-_Django Model: core.Resource_
+_Django Model: core.TimeEntry_
 
-A time entry whose hours have been invoiced to the client. Frozen, can be edited and/or deleted only by privileged users. Implemented as TimeEntrys with their status set to CLOSED.
-
-
-## Fields
-
-- First Name
-- Last Name
-- ...
+A <glossary:TimeEntry> whose hours have been invoiced to the client. Frozen, can be edited and/or deleted only by privileged users. Implemented as a <glossary:TimeEntry> linked to a closed <glossary:TimesheetSubmission>.

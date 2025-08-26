@@ -170,29 +170,40 @@ class TimesheetTaskSerializer(TaskSerializer):
         return obj.project.name
 
 
-class KrmDayHolidaySerializer(serializers.Serializer):
-    hol = serializers.BooleanField(source='is_holiday')
-    nwd = serializers.BooleanField(source='is_non_working_day')
-
-
 class TimesheetSerializer(serializers.Serializer):
     tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
+    schedule = serializers.DictField(child=serializers.IntegerField())
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
-        days_with_closed_attr = {}
+        days_result = {}
 
-        timesheets = TimesheetSubmission.objects.filter(resource=timesheet.resource)
+        timesheet_submissions = TimesheetSubmission.objects.filter(resource=timesheet.resource)
+
+        from krm3.core.models import Contract
+
         for day in timesheet.days:
-            timesheet = timesheets.filter(period__contains=day.date).first()
 
-            if timesheet and timesheet.closed:
-                days_with_closed_attr[day] = {'closed': True}
+            timesheet_submission = timesheet_submissions.filter(period__contains=day.date).first()
+
+            contract = Contract.objects.filter(
+                period__contains=day.date, resource=timesheet.resource
+            ).first()
+
+            if timesheet_submission and timesheet_submission.closed:
+                days_result[str(day.date)] = {'closed': True}
             else:
-                days_with_closed_attr[day] = {'closed': False}
+                days_result[str(day.date)] = {'closed': False}
 
-        return {str(day): KrmDayHolidaySerializer(day).data | value for day, value in days_with_closed_attr.items()}
+            if contract:
+                days_result[str(day.date)]['hol'] = day.is_holiday(contract.country_calendar_code)
+                days_result[str(day.date)]['nwd'] = day.is_non_working_day(contract.country_calendar_code)
+            else:
+                days_result[str(day.date)]['hol'] = day.is_holiday()
+                days_result[str(day.date)]['nwd'] = day.is_non_working_day()
+
+        return days_result
 
 
 class StartEndDateRangeField(serializers.Field):

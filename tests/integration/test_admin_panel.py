@@ -1,11 +1,22 @@
 import time
+import datetime
 
+from freezegun import freeze_time
+from krm3.core.models.missions import Mission
 import pytest
 
 import typing
 
 from selenium.webdriver.common.by import By
-from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
+from testutils.factories import (
+    TaskFactory,
+    TimeEntryFactory,
+    ResourceFactory,
+    SpecialLeaveReasonFactory,
+    MissionFactory,
+    ExpenseFactory,
+    ReimbursementFactory
+)
 from django.contrib.auth.models import Permission
 
 if typing.TYPE_CHECKING:
@@ -242,6 +253,7 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
+@freeze_time("2025-07-14")
 def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
 
     resource = ResourceFactory(user=admin_user_with_plain_password)
@@ -275,3 +287,114 @@ def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser'
     )
     assert reason_2_row[1].text == '3'
     assert reason_2_row[6].text == '3'
+
+
+def test_admin_submit_mission(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
+    mission = MissionFactory(
+        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
+    )
+    admin_user_with_plain_password.user_permissions.add(
+        Permission.objects.get(codename='manage_any_mission')
+    )
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+
+    browser.click('//a[@href="/admin/core/mission/"]')
+    browser.click('//a[@href="/admin/core/mission/{}/change/"]'.format(mission.pk))
+    browser.click('//a[@href="/admin/core/mission/{}/submit/?"]'.format(mission.pk))
+
+    mission.refresh_from_db()
+    assert mission.status == Mission.MissionStatus.SUBMITTED
+    assert mission.number is not None
+
+
+def test_admin_missions_reset_reibursments(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
+    mission = MissionFactory(
+        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
+    )
+    expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Reset reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//td[@class="field-colored_amount_reimbursement" and contains(text(), "None")]',
+    )
+    expense.refresh_from_db()
+    assert expense.amount_reimbursement is None
+
+
+def test_admin_missions_create_reibursments_mission_in_draft(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
+    mission = MissionFactory(
+        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
+    )
+    expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//li[contains(text(), "Please select only expenses of SUBMITTED missions.")]',
+    )
+    expense.refresh_from_db()
+    assert expense.reimbursement is None
+
+
+def test_admin_missions_create_reibursments_already_exists(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
+    mission = MissionFactory(
+        number=314,
+        status=Mission.MissionStatus.SUBMITTED,
+        to_date=datetime.date.today(),
+    )
+    ExpenseFactory(
+        mission=mission,
+        amount_reimbursement=100,
+        reimbursement=ReimbursementFactory(),
+    )
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//li[contains(text(), "Please select only expenses not already reimbursed.")]',
+    )
+
+def test_admin_missions_create_reibursments_get_preview(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
+    mission = MissionFactory(
+        number=314,
+        status=Mission.MissionStatus.SUBMITTED,
+        to_date=datetime.date.today(),
+    )
+    ExpenseFactory(
+        mission=mission,
+        amount_reimbursement=100,
+    )
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//p[contains(text(), "Are you sure you want to create a reimbursement for the following expenses?")]',
+    )

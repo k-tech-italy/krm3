@@ -8,6 +8,10 @@ from krm3.core.models import TimeEntry, Resource, Task
 
 from krm3.utils.dates import KrmDay, KrmCalendar
 
+from krm3.utils.tools import format_data
+
+from django.db.models import Q
+
 if typing.TYPE_CHECKING:
     from django.db.models import QuerySet
 
@@ -17,9 +21,6 @@ timeentry_key_mapping = {
     'travel_hours': 'Ore Trasferta',
 }
 
-
-def _format_data(value: int) -> int | None | D:
-    return value if value is None or value % 1 != 0 else int(value)
 
 def _initialize_report_data(tasks: typing.Iterable[Task], days_interval: int) -> dict:
     """Initialize the results dictionary with tasks and default values."""
@@ -53,7 +54,7 @@ def _calculate_work_days_for_resources(
             work_days_without_task = [
                 day
                 for day in work_days_without_task
-                if not (task.start_date <= day.date <= task.end_date)
+                if not (task.start_date <= day.date and (task.end_date is None or day.date <= task.end_date))
             ]
 
         data['NUM GIORNI'] = len(work_days) - len(work_days_without_task)
@@ -74,6 +75,7 @@ def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) 
 def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_date: KrmDay) -> None:
     """Process time entries and populates the results dictionary."""
     for entry in entries:
+
         resource_data = results[entry.resource]
         date = KrmDay(entry.date)
         index = date - start_date + 2
@@ -133,7 +135,7 @@ def timesheet_task_report_raw_data(
     entry_qs = TimeEntry.objects.filter(date__gte=from_date, date__lte=to_date, resource__active=True).order_by(
         'resource', 'date'
     )
-    task_qs = Task.objects.filter(start_date__lte=to_date, end_date__gte=from_date)
+    task_qs = Task.objects.filter(start_date__lte=to_date).filter(Q(end_date__gte=from_date) | Q(end_date__isnull=True))
 
     if resource:
         entry_qs = entry_qs.filter(resource=resource)
@@ -170,7 +172,7 @@ def task_report_data(current_month: str | None) -> dict[str, typing.Any]:
     for shifts in data.values():
         for key, values in shifts.items():
             if (isinstance(values, list)):
-                shifts[key] = [_format_data(v) if isinstance(v, D | int) else v for v in values]
+                shifts[key] = [format_data(v) if isinstance(v, D | int) else v for v in values]
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
 

@@ -6,7 +6,7 @@ import django_tables2 as tables
 from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from krm3.core.models import Expense
 
@@ -17,7 +17,7 @@ class ExpenseTableMixin:
     def render_amount_currency(self, record: Expense) -> str:
 
         value = f'{record.amount_currency} {record.currency.iso3}'
-        return mark_safe(value)  # noqa: S308
+        return format_html(value)
 
     @classmethod
     def render_amount_base(cls, value: Decimal) -> Decimal | str:
@@ -25,7 +25,7 @@ class ExpenseTableMixin:
             return value
         if value and value < decimal.Decimal(0):
             value = f'{value} {settings.BASE_CURRENCY}'
-            return mark_safe('<span style="color: red;">%s</span>' % value)  # noqa: S308
+            return format_html('<span style="color: red;">{}</span>', value)
         return f'{value} {settings.BASE_CURRENCY}'
 
     @classmethod
@@ -33,7 +33,7 @@ class ExpenseTableMixin:
         if getattr(cls, 'export', False) is True:
             return value
         if value and value < decimal.Decimal(0):
-            return mark_safe('<span style="color: red;">%s</span>' % value)  # noqa: S308
+            return format_html('<span style="color: red;">{}</span>', value)
         return value
 
     def render_day(self, value: datetime.date) -> str:
@@ -43,7 +43,7 @@ class ExpenseTableMixin:
         if record.image:
             return self.render_image(record.image)
         url = reverse('admin:core_expense_changelist')
-        return mark_safe(f'<a href="{url}{record.id}/view_qr/">--</a>')  # noqa: S308
+        return format_html('<a href="{}{}/view_qr/">--</a>', url, record.id)
 
 
 class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
@@ -60,18 +60,18 @@ class MissionExpenseTable(MissionExpenseBaseTable):
 
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')  # noqa: S308
-        return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')  # noqa: S308
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static("admin/img/icon-yes.svg"))
+        return format_html('<img src="{}">', static("admin/img/icon-no.svg"))
 
     def render_reimbursement(self, record: Expense) -> str:
         if record.reimbursement:
             url = reverse('admin:core_reimbursement_change', args=[record.reimbursement.id])
-            return mark_safe(f'<a href="{url}">{record.reimbursement}</a>')  # noqa: S308
+            return format_html('<a href="{}">{}</a>', url, record.reimbursement)
         return '--'
 
     def render_id(self, value: int) -> str:
         url = reverse('admin:core_expense_change', args=[value])
-        return mark_safe(f'<a href="{url}">{value}</a>')  # noqa: S308
+        return format_html('<a href="{}">{}</a>', url, value)
 
     class Meta:
         model = Expense
@@ -108,17 +108,17 @@ class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
 
     def render_id(self, record: Expense) -> str:
         url = reverse('admin:core_expense_change', args=[record.id])
-        return mark_safe(f'<a href="{url}">{record.id}</a>')  # noqa: S308
+        return format_html('<a href="{}">{}</a>', url, record.id)
 
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return mark_safe(f'<a href="{record.image.url}"><img src="{static("admin/img/icon-yes.svg")}"></a>')  # noqa: S308
-        return mark_safe(f'<img src="{static("admin/img/icon-no.svg")}">')  # noqa: S308
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static("admin/img/icon-yes.svg"))
+        return format_html('<img src="{}">', static("admin/img/icon-no.svg"))
 
     def render_mission(self, record: Expense) -> str:
         if record.mission:
             url = reverse('admin:core_mission_change', args=[record.mission.id])
-            return mark_safe(f'<a href="{url}">{record.mission}</a>')  # noqa: S308
+            return format_html('<a href="{}">{}</a>', url, record.mission)
         return '--'
 
 

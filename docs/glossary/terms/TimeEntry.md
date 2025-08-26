@@ -3,18 +3,31 @@ description:  ""
 template: term.html
 terms:
   - glossary:
-    - Resource
+    - TimeEntry
 ---
 
-# Resource
+# TimeEntry
 
-_Django Model: core.Resource_
+_Django Model: core.TimeEntry_
 
-The model recording hours for a given Resource/Task/Day. It is the persistent storage for Day entries and Task entries
+The model recording hours for a given <glossary:Resource>, Day and (optional) Task. It is the persistent storage for <glossary:DayEntry> and Task entries
 
 
 ## Fields
 
-- First Name
-- Last Name
-- ...
+- `date`: The date of the entry.
+- `last_modified`: When the entry was last modified.
+- `day_shift_hours`: Hours worked during the day.
+- `sick_hours`: Hours of sick leave.
+- `holiday_hours`: Hours of holiday leave.
+- `leave_hours`: Hours of general leave.
+- `special_leave_hours`: Hours of special leave.
+- `special_leave_reason`: The reason for special leave.
+- `night_shift_hours`: Hours worked during the night.
+- `on_call_hours`: Hours on call.
+- `travel_hours`: Hours spent traveling.
+- `rest_hours`: Hours of rest.
+- `comment`: A comment on the entry.
+- `timesheet`: The timesheet this entry belongs to.
+- `resource`: The <glossary:Resource> this entry belongs to
+- `task`: The <glossary:Task> this entry is for (if any).

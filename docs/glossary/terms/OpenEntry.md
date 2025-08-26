@@ -3,17 +3,11 @@ description:  ""
 template: term.html
 terms:
   - glossary:
-    - Resource
+    - OpenEntry
 ---
 
-# Resource
+# OpenEntry
 
-_Django Model: core.Resource_
+_Django Model: core.TimeEntry_
 
-A time entry whose hours have not been invoiced yet. Can be edited and/or deleted. Implemented as `TimeEntry`s with their `status` field set to `OPEN`.
-
-## Fields
-
-- First Name
-- Last Name
-- ...
+A <glossary:TimeEntry> whose hours have not been invoiced yet. Can be edited and/or deleted. Implemented as a <glossary:TimeEntry> not yet linked to a closed <glossary:TimesheetSubmission>.

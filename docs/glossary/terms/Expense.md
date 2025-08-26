@@ -15,9 +15,15 @@ An **Expense** is the record about a single monetary transaction executed in the
 
 ## Fields
 
-- <glossary:ExpenseCategory>
-- <glossary:PaymentType>
-- Day: the transaction date
-- Amount currency: the amount in the local currency
-- Currency: the transaction currency (defaults to the default <glossary:Mission> currency)
-- Amount base (calculated): the amount in the company <glossary:BaseCurrency>
+- `mission`: The <glossary:Mission> this expense belongs to.
+- `day`: The date of the expense.
+- `amount_currency`: The amount in the original currency.
+- `currency`: The currency of the expense.
+- `amount_base`: The amount converted to the base currency.
+- `amount_reimbursement`: The amount to be reimbursed.
+- `detail`: A short description of the expense.
+- `category`: The <glossary:ExpenseCategory>.
+- `document_type`: The type of document associated with the expense.
+- `payment_type`: The <glossary:PaymentType>.
+- `reimbursement`: The <glossary:Reimbursement> this expense is part of.
+- `image`: An uploaded image of the receipt.

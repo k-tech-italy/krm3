@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
-from django.utils.safestring import mark_safe
+
 from rangefilter.filters import NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
@@ -260,7 +260,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
                 url = reverse('admin:core_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
                 messages.success(
                     request,
-                    mark_safe(f'New image saved. <a href="{url}">click here to revert to previous image</a>'),  # noqa: S308
+                    format_html('New image saved. <a href="{}">click here to revert to previous image</a>', url),
                 )
             else:
                 messages.warning(request, 'Could not save image')
@@ -317,7 +317,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
                 url = reverse('admin:core_expense_change', args=[pk]) + '?' + urlencode({'revert': f'{backup_path}'})
                 messages.success(
                     request,
-                    mark_safe(f'Image was turned. <a href="{url}">click here to revert to previous image</a>'),  # noqa: S308
+                    format_html('Image was turned. <a href="{}">click here to revert to previous image</a>', url),
                 )
             else:
                 messages.warning(request, 'Could not be turned')

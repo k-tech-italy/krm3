@@ -21,3 +21,4 @@
 ## T
 - [TaskEntry](terms/TaskEntry.md)
 - [TimeEntry](terms/TimeEntry.md)
+- [TimesheetSubmission](terms/TimesheetSubmission.md)

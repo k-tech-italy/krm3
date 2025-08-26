@@ -1,5 +1,6 @@
 from django import template
-from django.utils.safestring import mark_safe, SafeString
+from django.utils.safestring import SafeString
+from django.utils.html import format_html, format_html_join
 
 register = template.Library()
 
@@ -8,12 +9,16 @@ register = template.Library()
 def report_line(key: str, label:str, data: dict, is_alt:bool = False) -> SafeString | str:
     if key not in data:
         return ""
-    cells = '\n'.join([f'<td class="p-1 border border-1 text-center">{c if c else ""}</td>' for c in data[key]])
+    cells = format_html_join(
+        '\n',
+        '<td class="p-1 border border-1 text-center">{}</td>',
+        ((c if c else "",) for c in data[key])
+    )
     row_color = "bg-neutral-300" if is_alt else "bg-neutral-200"
-    result = f"""
-        <tr class="{row_color} dark:bg-neutral-600!">
-            <td class="border border-1 text-left p-1 ">{label}</td>
-            {cells}
+
+    return format_html("""
+        <tr class="{} dark:bg-neutral-600!">
+            <td class="border border-1 text-left p-1 ">{}</td>
+            {}
         </tr>
-    """
-    return mark_safe(result)  # noqa: S308
+    """, row_color, label, cells)

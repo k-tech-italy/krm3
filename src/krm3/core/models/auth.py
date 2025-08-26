@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 import typing
 from django.contrib.auth.base_user import BaseUserManager
@@ -8,6 +9,13 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
+
+from krm3.config import settings
+from krm3.utils.dates import KrmCalendar, KrmDay
+from constance import config
+
+if typing.TYPE_CHECKING:
+    from datetime import date
 
 
 class UserManager(BaseUserManager):
@@ -107,6 +115,35 @@ class Resource(models.Model):
         :return: the maximum number of hours in a work day.
         """
         return Decimal(8)
+
+    def _min_working_hours_for_day(self, day: KrmDay, country_calendar_code: str, schedule: dict[str, float]) -> float:
+        min_working_hours = schedule[day.day_of_week_short.lower()]
+        if day.is_holiday(country_calendar_code, False):
+            min_working_hours = 0
+        return min_working_hours
+
+
+    def get_schedule(self, start_day: date, end_day: date) -> dict[date, float]:
+        from krm3.core.models import Contract
+
+        overlapping_contracts: models.QuerySet[Contract] = Contract.objects.filter(
+            period__overlap=(start_day, end_day), resource=self
+        )
+        calendar = KrmCalendar()
+        days = list(calendar.iter_dates(start_day, end_day))
+
+        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE  # {'mon': 8, 'tue': 8, .... 'sat': 0, 'sun': 0}
+
+        for day in days:
+            contract: Contract = overlapping_contracts.filter(period__contains=day.date).first()
+            if contract and contract.working_schedule:
+                schedule = contract.working_schedule
+            else:
+                schedule = json.loads(default_resource_schedule)
+            country_calendar_code = contract.country_calendar_code if contract else settings.HOLIDAYS_CALENDAR
+            day.min_working_hours = self._min_working_hours_for_day(day, country_calendar_code, schedule)
+
+        return {day.date: day.min_working_hours for day in days}
 
 
 @receiver(post_save, sender=User)

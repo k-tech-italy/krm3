@@ -8,6 +8,7 @@ from krm3.core.models import TimeEntry, Resource
 
 from krm3.core.models.timesheets import TimesheetSubmission
 from krm3.utils.dates import KrmCalendar, KrmDay
+from krm3.utils.tools import format_data
 
 
 _fields = [
@@ -111,8 +112,6 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['day_shift'][i] = day_shift
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
-def format_data(value: int) -> int | None | D:
-    return value if value is None or value % 1 != 0 else int(value)
 
 def get_submitted_dates(from_date: datetime.date, to_date: datetime.date, resource: 'Resource'):
         calendar = KrmCalendar()
@@ -150,7 +149,7 @@ def get_days_submission(
     }
 
 
-def timesheet_report_data(current_month: str | None, json_serializable: bool = False) -> dict[str, typing.Any]:
+def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
@@ -171,10 +170,6 @@ def timesheet_report_data(current_month: str | None, json_serializable: bool = F
 
     data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
     days = list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month))
-
-    if json_serializable:
-        data = {str(k): v for k, v in data.items()}
-        days = [str(d) for d in days]
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),
