@@ -118,7 +118,7 @@ jobs:
         key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
 
     - name: Build static folder
-      run: uv venv && uv run manage.py collectstatic
+      run: uv venv && uv run make release && uv run manage.py collectstatic
 
     - name: Init Frontend Submodule
       run: cd krm3-fe && git submodule update --init
