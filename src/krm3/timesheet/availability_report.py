@@ -25,16 +25,23 @@ def timesheet_report_raw_data(
 
     start_date = KrmDay(from_date)
     days_interval = (to_date - from_date).days + 1
-    results = {}
+    if project is not None:
+        resources = Resource.objects.filter(task__project=project)
+    else:
+        resources = Resource.objects.all()
+    results = {resource: {} for resource in resources}
+
+    for value in results.values():
+        value['absences'] = [*[None] * days_interval]
+
     for entry in qs:
         date = KrmDay(entry.date)
-        resource_stats = results.setdefault(entry.resource, {})
-        absences_list = resource_stats.setdefault('absences', [None] * days_interval)
         index = date - start_date
         if entry.holiday_hours > 0:
-            absences_list[index] = 'H'
+            results[entry.resource]['absences'][index] = 'H'
         elif entry.leave_hours > 0 or entry.special_leave_hours > 0:
-            absences_list[index] = f'L {entry.leave_hours + entry.special_leave_hours}'
+            results[entry.resource]['absences'][index] = f'L {entry.leave_hours + entry.special_leave_hours}'
+
     return results
 
 
