@@ -1,2 +1,17 @@
 nav:
-    - ...
+    - BankOfHours.md
+    - BaseCurrency.md
+    - ClosedEntry.md
+    - Contract.md
+    - DayEntry.md
+    - Expense.md
+    - ExpenseCategory.md
+    - ExtraHoliday.md
+    - Mission.md
+    - OpenEntry.md
+    - PaymentType.md
+    - Reimbursement.md
+    - Resource.md
+    - TaskEntry.md
+    - TimeEntry.md
+    - TimesheetSubmission.md

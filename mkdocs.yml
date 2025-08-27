@@ -142,8 +142,10 @@ nav:
   - Glossary:
       - glossary/index.md
       - Terms:
+          - BankOfHours: glossary/terms/BankOfHours.md
           - BaseCurrency: glossary/terms/BaseCurrency.md
           - ClosedEntry: glossary/terms/ClosedEntry.md
+          - Contract: glossary/terms/Contract.md
           - DayEntry: glossary/terms/DayEntry.md
           - Expense: glossary/terms/Expense.md
           - ExpenseCategory: glossary/terms/ExpenseCategory.md
@@ -163,6 +165,7 @@ nav:
           - How to remove hours from the day: guides/user/remove_from_day.md
           - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
           - How to submit Timesheet : guides/user/submit.md
+          - How to add Bank Hours : guides/user/bank_hours.md
       #- For Developer: guides/developer/index.md
   - Wiki:
       - Overview: wiki/Overview.md
