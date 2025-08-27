@@ -16,10 +16,9 @@ class MissionImporter:
 
     def store(self):
         """Stores the InMemoryUploadedFile to a tempfile for later processing."""
-        pathname = tempfile.mktemp(suffix='.zip')
-        with open(pathname, 'wb') as fo:
-            fo.write(self.in_memory_file.read())
-        # default_storage.save(pathname, ContentFile(self.in_memory_file.read()))
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as temp_file:
+            temp_file.write(self.in_memory_file.read())
+            pathname = temp_file.name
         return pathname
 
     def validate(self):
