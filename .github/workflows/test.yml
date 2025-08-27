@@ -117,14 +117,14 @@ jobs:
           ./tox
         key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
 
-    - name: Build static folder
-      run: uv venv && uv run make release && uv run manage.py collectstatic
-
     - name: Init Frontend Submodule
       run: cd krm3-fe && git submodule update --init
 
     - name: Install yarn and build frontend
       run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
+
+    - name: Build static folder
+      run: uv venv && uv run make release && uv run manage.py collectstatic
 
     - name: Upload built frontend
       uses: actions/upload-artifact@v4
