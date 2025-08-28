@@ -127,7 +127,7 @@ jobs:
       run: uv venv && uv run make release && uv run manage.py collectstatic
 
     - name: Move the release.json file into the FE folder
-      run: cp src/krm3/core/static/release.json krm3-fe
+      run: cp src/krm3/core/static/release.json krm3-fe/dist
 
     - name: Upload built frontend
       uses: actions/upload-artifact@v4
