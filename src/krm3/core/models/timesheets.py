@@ -543,17 +543,17 @@ class TimeEntry(models.Model):
         """Verify bank hours restrictions with different types of day entries."""
         if (self.is_holiday or self.is_sick_day) and (self.bank_to > 0.0 or self.bank_from > 0.0):
             raise ValidationError(
-                _('Cannot use bank hours during holidays'),
+                _('Cannot use bank hours during holidays or sick days'),
                 code='bank_hours_not_allowed_on_holidays'
             )
 
-        day_entry_types_no_deposits = (self.is_sick_day or self.is_holiday or self.is_leave or self.is_rest or
+        day_entry_types_no_deposits = (self.is_leave or self.is_rest or
                                        self.is_special_leave)
         if day_entry_types_no_deposits and self.bank_to > 0.0:
             day_type = (
                 'leave' if self.is_leave else
                 'rest' if self.is_rest else
-                'special_leave'
+                'special leave'
             )
             raise ValidationError(
                 _('Cannot deposit bank hours during a {day_type}').format(day_type=day_type),
