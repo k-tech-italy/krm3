@@ -16,6 +16,8 @@ class TimesheetDTO:
         self._requested_by = requested_by
         self.resource = None
         self.schedule = {}
+        self.bank_hours = 0.0
+
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         self.tasks = (
             Task.objects.filter_acl(self._requested_by)  # pyright: ignore[reportAttributeAccessIssue]
@@ -32,5 +34,6 @@ class TimesheetDTO:
 
         self.schedule = resource.get_schedule(start_date, end_date)
 
+        self.bank_hours = resource.get_bank_hours_balance()
 
         return self

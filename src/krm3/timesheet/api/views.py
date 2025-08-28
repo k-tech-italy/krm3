@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, ExpressionWrapper, Q, BooleanField
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -196,7 +196,10 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         if not isinstance(requested_entry_ids, list):
             return Response(data={'error': 'Time entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        entries: TimeEntryQuerySet = self.get_queryset().filter(pk__in=requested_entry_ids)  # pyright: ignore[reportAssignmentType]
+        entries: TimeEntryQuerySet = (self.get_queryset().filter(pk__in=requested_entry_ids)
+        .annotate(
+            task_is_not_null=ExpressionWrapper(Q(task__isnull=False), output_field=BooleanField())
+        ).order_by('task_is_not_null'))  # pyright: ignore[reportAssignmentType]
 
         if not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             # since we already ACL-filtered the queryset, we need to
@@ -221,7 +224,8 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             )
 
         with transaction.atomic():
-            entries.delete()
+            for entry in entries:
+                entry.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
