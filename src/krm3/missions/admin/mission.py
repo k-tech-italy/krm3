@@ -27,6 +27,7 @@ from django_tables2.export import TableExport
 
 from krm3.currencies.models import Currency
 from krm3.missions.admin.expenses import ExpenseInline
+from krm3.missions.exceptions import RateConversionError
 from krm3.missions.forms import MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -259,6 +260,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 context=ctx,
                 template='admin/missions/mission/summary.html',
             )
+        except RateConversionError as e:
+            messages.error(request, str(e))
         except RuntimeError as e:
             sentry_sdk.capture_exception(e)
             messages.error(request, str(e))
