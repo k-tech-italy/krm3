@@ -25,7 +25,6 @@ CONSTANCE_CONFIG = {
         }),
         'Minimum hours per day'
     ),
-    'BANK_HOURS_DAILY_LIMIT': (8, 'Maximum hours that can be deposited/withdrawn per day', float),
     'BANK_HOURS_UPPER_BOUND': (16, 'Maximum bank hours that can be deposited/withdrawn', float),
     'BANK_HOURS_LOWER_BOUND': (-16, 'Minimum bank hours that can be deposited/withdrawn', float),
 }
