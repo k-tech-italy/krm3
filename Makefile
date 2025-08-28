@@ -195,7 +195,7 @@ release:
 	@BE_BRANCH=`git branch --show-current` \
 	BE_COMMIT=`git rev-parse --short HEAD` \
 	BE_DATE=`git log -1 --pretty=%ad --date=short` && \
-	BE_VER=`python -c "import tomllib; f=open('pyproject.toml', 'rb'); print(tomllib.load(f)['project']['version'])"` \
+	BE_VER=`python -c "import tomllib; f=open('pyproject.toml', 'rb'); data = tomllib.load(f); print(data['project']['version'])"` && \
 	cd ./krm3-fe && \
 	FE_VER=`npm pkg get version` \
 	FE_BRANCH=`git branch --show-current` \
