@@ -1,4 +1,5 @@
 import logging
+import typing
 from typing import Any, cast
 import openpyxl
 from django.http import HttpRequest, HttpResponseBase, HttpResponse
@@ -10,11 +11,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 
-from krm3.core.models import Contract
+
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
 from krm3.timesheet.task_report import task_report_data
+
+if typing.TYPE_CHECKING:
+    from krm3.core.models import Contract
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +76,9 @@ def export_report(date: str) -> Response:
         if data is None:
             continue
         holidays = []
+        overlapping_contracts: 'list[Contract]' = resource.get_contracts(min(data['days']).date, max(data['days']).date)
         for day in data['days']:
-            contract = Contract.objects.filter(resource=resource, period__contains=day.date).first()
+            contract = resource.contract_for_date(overlapping_contracts, day)
             calendar_code = contract.country_calendar_code if contract else None
             holidays.append('X' if day.is_holiday(calendar_code) else '')
 

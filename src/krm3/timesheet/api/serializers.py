@@ -207,7 +207,7 @@ class TimesheetSerializer(serializers.Serializer):
             else:
                 days_result[str(day.date)] = {'closed': False}
 
-            if contract:
+            if contract and contract.country_calendar_code:
                 days_result[str(day.date)]['hol'] = day.is_holiday(contract.country_calendar_code)
                 days_result[str(day.date)]['nwd'] = day.is_non_working_day(contract.country_calendar_code)
             else:
