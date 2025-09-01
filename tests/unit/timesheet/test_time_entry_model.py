@@ -424,6 +424,16 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='Cannot withdraw bank hours when task hours'):
             time_withdraw.save()
 
+    def test_bank_deposit_with_0_scheduled_hours(self):
+        resource = ResourceFactory()
+        date = datetime.date(2025, 8, 2)
+        with does_not_raise():
+            TimeEntryFactory(
+                resource=resource,
+                date=date,
+                bank_to=3,
+                day_shift_hours=0,
+            )
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
