@@ -260,8 +260,7 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
     browser.click('//select[@name="specialReason"]')
     browser.click(f'//select[@name="specialReason"]/option[text()="{special_leave_reason.title}"]')
 
-    browser.click('//*[contains(text(), "Save")]')
-
+    browser.click('//button[contains(text(), "Save")]')
     browser.assert_element('//*[@data-testid = "leave-icon-2025-07-04"]')
     browser.assert_element('//div[@data-tooltip-id="tooltip-hours-2025-07-04" and contains(text(), "7")]')
 
@@ -288,7 +287,7 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     browser.click('//select[@name="specialReason"]')
     browser.click(f'//select[@name="specialReason"]/option[text()="{special_leave_reason.title}"]')
 
-    browser.click('//*[contains(text(), "Save")]')
+    browser.click('//button[contains(text(), "Save")]')
 
     browser.assert_element(
         '//*[contains(text(), "Invalid time entry for 2025-07-04: '
