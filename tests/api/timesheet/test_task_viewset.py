@@ -118,6 +118,12 @@ class TestTaskAPIListView:
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
+    @override_config(LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME="111111")
+    @override_config(EXACT_SCHEDULE_COLOR_BRIGHT_THEME="222222")
+    @override_config(MORE_THAN_SCHEDULE_COLOR_BRIGHT_THEME="333333")
+    @override_config(LESS_THAN_SCHEDULE_COLOR_DARK_THEME="444444")
+    @override_config(EXACT_SCHEDULE_COLOR_DARK_THEME="555555")
+    @override_config(MORE_THAN_SCHEDULE_COLOR_DARK_THEME="666666")
     @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
             'mon': 1,
             'tue': 2,
@@ -250,6 +256,15 @@ class TestTaskAPIListView:
                 '2024-01-07': 2
             },
             'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance()),
+            'timesheetColors': {
+                                'lessThanScheduleColorBrightTheme': '111111',
+                                'exactScheduleColorBrightTheme': '222222',
+                                'moreThanScheduleColorBrightTheme': '333333',
+                                'lessThanScheduleColorDarkTheme': '444444',
+                                'exactScheduleColorDarkTheme': '555555',
+                                'moreThanScheduleColorDarkTheme': '666666'
+            }
+
         }
 
     def test_schedule_with_contract(self, admin_user, api_client):

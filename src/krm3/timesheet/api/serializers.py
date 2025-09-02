@@ -186,6 +186,7 @@ class TimesheetSerializer(serializers.Serializer):
     days = serializers.SerializerMethodField()
     schedule = serializers.DictField(child=serializers.IntegerField())
     bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
+    timesheet_colors = serializers.DictField(child=serializers.CharField())
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_result = {}
