@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 import typing
 from typing import Any, cast
 import openpyxl
@@ -11,7 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 
-
+from krm3.config import settings
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
@@ -35,6 +37,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
             'Report': reverse('report'),
             'Report by task': reverse('task_report'),
             'Availability report': reverse('availability'),
+            'Releases': reverse('releases')
         }
 
         return context
@@ -139,3 +142,24 @@ class TaskReportView(ReportPermissionView):
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
         return context | task_report_data(current_month)
+
+
+class ReleasesView(ReportPermissionView):
+    template_name = 'releases.html'
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+
+        releases_file_path = os.path.join(settings.BASE_DIR, 'releases.json')
+        releases_data = {}
+
+        try:
+            with open(releases_file_path, encoding='utf-8') as file:
+                releases_data = json.load(file)
+        except FileNotFoundError:
+            logger.warning(f"Releases file not found at {releases_file_path}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing releases.json: {e}")
+
+        context['releases'] = releases_data
+        return context

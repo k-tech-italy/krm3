@@ -1,0 +1,11 @@
+{
+  "v1.5.28 - 2025-09-02": {
+    "features": [
+      "#263 Add releases.json file with the page in /be/releases/"
+    ],
+    "fixes": [
+    ],
+    "release_notes": [
+    ]
+  }
+}

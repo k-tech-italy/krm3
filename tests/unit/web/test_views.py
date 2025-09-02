@@ -1,5 +1,7 @@
 import datetime
 import io
+import json
+from unittest.mock import patch, mock_open
 
 import openpyxl
 import pytest
@@ -29,6 +31,7 @@ def _assert_homepage_content(response):
     report_expected_url = reverse('report')
     task_report_expected_url = reverse('task_report')
     availability_report_expected_url = reverse('availability')
+    releases_expected_url = reverse('releases')
 
     assert 'Report' in content
     assert 'Report by task' in content
@@ -36,6 +39,7 @@ def _assert_homepage_content(response):
     assert f'href="{report_expected_url}"' in content
     assert f'href="{task_report_expected_url}"' in content
     assert f'href="{availability_report_expected_url}"' in content
+    assert f'href="{releases_expected_url}"' in content
 
 
 @pytest.mark.parametrize('url', ('/be/', '/be/home/', '/be/availability/'))
@@ -46,7 +50,7 @@ def test_authenticated_user_should_see_homepage_and_availability_report(client, 
     _assert_homepage_content(response)
 
 
-@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/', '/be/releases/'))
 def test_superuser_should_see_permission_protected_views(client, url):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
@@ -54,7 +58,7 @@ def test_superuser_should_see_permission_protected_views(client, url):
     _assert_homepage_content(response)
 
 
-@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/', '/be/releases/'))
 def test_user_without_permissions_should_not_see_permission_protected_views(
     url, client
 ):
@@ -64,7 +68,7 @@ def test_user_without_permissions_should_not_see_permission_protected_views(
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
+@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/', '/be/releases/'))
 def test_user_with_permissions_should_see_permission_protected_views(url, client):
     for perm in ['manage_any_timesheet', 'view_any_timesheet']:
         user = UserFactory(username='user00', password='pass123')
@@ -75,7 +79,7 @@ def test_user_with_permissions_should_see_permission_protected_views(url, client
 
 
 @pytest.mark.parametrize(
-    'url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/')
+    'url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/', '/be/releases/')
 )
 def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
     response = client.get(url)
@@ -327,7 +331,6 @@ def test_report_creation(client):
     assert sheet_1['B3'].value == 14
     assert sheet_2['B4'].value == 7
 
-
 @pytest.mark.django_db
 def test_unauthorized_report_creation(client):
     UserFactory(username='user00', password='pass123')
@@ -335,3 +338,49 @@ def test_unauthorized_report_creation(client):
     url = reverse('export_report', args=['202506'])
     response = client.get(url)
     assert response.status_code == 403
+
+@patch('builtins.open', new_callable=mock_open, read_data=json.dumps({
+    "v1.0.0": {
+        "features": ["Login support", "Dashboard refresh"],
+        "fixes": ["Memory leak", "404 on tasks"],
+        "release_notes": ["Initial production deployment"]
+    }
+}))
+@patch('os.path.join', return_value='/fake/path/releases.json')
+def test_releases_view_with_valid_json(mock_join, mock_file, client):
+    SuperUserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+
+    response = client.get(reverse('releases'))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "v1.0.0" in content
+    assert "Login support" in content
+    assert "Memory leak" in content
+    assert "Initial production deployment" in content
+
+def test_releases_view_with_missing_file_should_show_no_releases(client):
+    SuperUserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+
+    with patch('os.path.join', return_value='/nonexistent/path/releases.json'):
+        response = client.get(reverse('releases'))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert "No releases found" in content
+
+@patch('builtins.open', new_callable=mock_open, read_data='{invalid json}')
+@patch('os.path.join', return_value='/fake/path/releases.json')
+def test_releases_view_with_invalid_json_should_show_no_releases(mock_join, mock_file, client):
+    SuperUserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+
+    with patch('builtins.open', mock_open(read_data="{ invalid json }")):
+        with patch('os.path.join', return_value='/fake/path/releases.json'):
+            response = client.get(reverse('releases'))
+            content = response.content.decode()
+
+            assert response.status_code == 200
+            assert "No releases found" in content
