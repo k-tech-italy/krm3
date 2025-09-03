@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from .views import HomeView, AvailabilityReportView, ReportView, TaskReportView
+from .views import HomeView, AvailabilityReportView, ReportView, TaskReportView, ReleasesView
 
 urlpatterns = [
     path('', HomeView.as_view()),
@@ -9,5 +9,6 @@ urlpatterns = [
     path('report/', ReportView.as_view(), name='report'),
     path('report/export/<str:date>/', ReportView.as_view(), {'export': True}, name='export_report'),
     path('task_report/', TaskReportView.as_view(), name='task_report'),
+    path('releases/', ReleasesView.as_view(), name='releases'),
     path('missions/', include('krm3.missions.urls'))
 ]

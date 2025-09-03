@@ -1,0 +1,106 @@
+{% extends "home.html" %}
+
+{% block extrastyle %}
+    <style>
+      html {
+        background-color: white;
+      }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ block.super }}
+    <div class="w-9/10 mx-auto mt-20">
+        <div class="flex flex-col">
+            <h1 class="text-3xl font-bold text-center mb-8 text-white">Release Notes</h1>
+        </div>
+
+        {% if releases %}
+            {% for version, release_data in releases.items %}
+                <div class="mb-8 overflow-hidden rounded-md shadow bg-white/5 border border-white/10">
+                    <div class="bg-blue-500 dark:bg-blue-700 p-4">
+                        <h2 class="text-xl font-bold text-white">{{ version }}</h2>
+                    </div>
+
+                    <div class="p-4 text-white">
+                        <!-- Features Section -->
+                        <div class="mb-6">
+                            <div class="flex items-center mb-3">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <h3 class="text-lg font-semibold text-green-400">Features</h3>
+                            </div>
+                            {% if release_data.features %}
+                                <div class="bg-white/5 p-4 border border-white/10">
+                                    <ul class="space-y-2">
+                                        {% for feature in release_data.features %}
+                                            <li class="flex items-start">
+                                                <span class="text-sm">{{ feature }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <div class="bg-white/5 p-4 border border-white/10 text-center text-gray-400 italic">
+                                    No new features in this release
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Bug Fixes Section -->
+                        <div class="mb-6">
+                            <div class="flex items-center mb-3">
+                                <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                <h3 class="text-lg font-semibold text-red-400">Bug Fixes</h3>
+                            </div>
+                            {% if release_data.fixes %}
+                                <div class="bg-white/5 p-4 border border-white/10">
+                                    <ul class="space-y-2">
+                                        {% for fix in release_data.fixes %}
+                                            <li class="flex items-start">
+                                                <span class="text-sm">{{ fix }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <div class="bg-white/5 p-4 border border-white/10 text-center text-gray-400 italic">
+                                    No bug fixes in this release
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Release Notes Section -->
+                        <div>
+                            <div class="flex items-center mb-3">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <h3 class="text-lg font-semibold text-blue-400">Release Notes</h3>
+                            </div>
+                            {% if release_data.release_notes %}
+                                <div class="bg-white/5 p-4 border border-white/10">
+                                    <ul class="space-y-2">
+                                        {% for note in release_data.release_notes %}
+                                            <li class="flex items-start">
+                                                <span class="text-sm">{{ note }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <div class="bg-white/5 p-4 border border-white/10 text-center text-gray-400 italic">
+                                    No additional release notes
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="flex justify-center">
+                <div class="bg-white/5 p-8 border border-white/10 text-center">
+                    <h3 class="text-xl font-semibold text-white mb-2">No releases found</h3>
+                    <p class="text-gray-400">The releases.json file could not be found or parsed.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock body %}
