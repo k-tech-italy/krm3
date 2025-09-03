@@ -31,7 +31,7 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
     nav_items = format_html_join(
         "\n",
     """
-        <li><a href="{}" class="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100
+        <li><a href="{}" class="block p-2 text-gray-900 rounded-sm hover:bg-gray-100
                     md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500
                     dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent
                     dark:border-gray-700">{}</a></li>
@@ -43,9 +43,9 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
     if logout_url:
         csrf_token = context.get('csrf_token', '')
         logout_button = format_html("""
-            <form method="post" action="{}" class="inline">
+            <form method="post" action="{}" class="hidden md:inline" id="logout-button">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{}">
-                <button type="submit" class="block py-2 px-3 text-red-600 rounded-sm hover:bg-red-50
+                <button type="submit" class="block py-2 px-6 text-red-600 rounded-sm hover:bg-red-50
                     md:hover:bg-transparent md:hover:text-red-700 md:p-0 md:dark:hover:text-red-400
                     dark:text-red-400 dark:hover:bg-red-900 dark:hover:text-red-300 md:dark:hover:bg-transparent
                     dark:border-gray-700 border-0 bg-transparent cursor-pointer font-medium">
@@ -57,14 +57,20 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
     return format_html("""
             <nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
                     border-gray-200 dark:border-gray-600 mb-20">
-                <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+                <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4 md:py-0 md:px-4">
                     <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
                         <span class="text-xl font-bold text-gray-900 dark:text-white">KRM³</span>
                     </a>
-                    <div class="items-center justify-between w-full md:flex md:w-auto" id="navbar-sticky">
-                        <ul class="flex flex-col p-4 mt-4 font-medium border border-gray-100 rounded-lg bg-gray-50
-                            md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white
-                            dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+                    <button id="hamburger-icon" class="md:hidden p-2 text-gray-900 dark:text-white focus:outline-none">
+                        <span class="block w-6 h-0.5 bg-gray-900 dark:bg-white mb-1"></span>
+                        <span class="block w-6 h-0.5 bg-gray-900 dark:bg-white mb-1"></span>
+                        <span class="block w-6 h-0.5 bg-gray-900 dark:bg-white"></span>
+                    </button>
+                    <div class="items-center justify-between w-full md:flex md:w-auto">
+                        <ul class="flex flex-col p-4 mt-4 font-medium
+                            md:space-x-8 rtl:space-x-reverse hidden md:flex md:flex-row md:mt-0 md:border-0 md:bg-white
+                            dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700 nav-links"
+                            id="nav-links">
                             {}
                         </ul>
                     </div>
