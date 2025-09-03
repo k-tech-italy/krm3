@@ -144,7 +144,7 @@ class TaskReportView(ReportPermissionView):
         return context | task_report_data(current_month)
 
 
-class ReleasesView(ReportPermissionView):
+class ReleasesView(HomeView):
     template_name = 'releases.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
