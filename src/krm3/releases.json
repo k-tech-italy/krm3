@@ -1,4 +1,15 @@
 {
+    "v1.5.30 - 2025-09-03": {
+    "features": [
+      "issue #280 Add logout button in the /be/ section",
+      "US #247 Add color support FE side"
+    ],
+    "fixes": [
+    ],
+    "release_notes": [
+      "aligned FE submodule to v1.0.25"
+    ]
+  },
   "v1.5.29 - 2025-09-03": {
     "features": [
       "#263 Add releases.json file with the page in /be/releases/"
