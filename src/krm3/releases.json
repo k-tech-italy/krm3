@@ -1,10 +1,11 @@
 {
-  "v1.5.?? - 2025-09-04": {
+  "v1.5.31 - 2025-09-04": {
     "features": [
-      "task #293 Fix next param with google authentication",
-      "user story #285 - Fix the hamburger menu in the /be/ section with mobile devices"
+      "task #292 - Added documentation for bump a new version of BE"
     ],
     "fixes": [
+      "user story #285 - Fix the hamburger menu in the /be/ section with mobile devices",
+      "task #293 Fix next param with google authentication",
       "issue #231 add missing check for DateRangeField"
     ],
     "release_notes": [
