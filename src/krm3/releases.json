@@ -1,4 +1,13 @@
 {
+  "v1.5.?? - 2025-09-04": {
+    "features": [
+      "task #293 Fix next param with google authentication"
+    ],
+    "fixes": [
+    ],
+    "release_notes": [
+    ]
+  },
     "v1.5.30 - 2025-09-03": {
     "features": [
       "issue #280 Add logout button in the /be/ section",

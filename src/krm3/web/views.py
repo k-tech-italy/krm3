@@ -39,7 +39,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
             'Availability report': reverse('availability'),
             'Releases': reverse('releases')
         }
-        context['logout_url'] = reverse('admin:logout')
+        context['logout_url'] = reverse('logout')
 
         return context
 
