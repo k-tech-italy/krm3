@@ -149,6 +149,7 @@ nav:
           - DayEntry: glossary/terms/DayEntry.md
           - Expense: glossary/terms/Expense.md
           - ExpenseCategory: glossary/terms/ExpenseCategory.md
+          - ExtraHoliday: glossary/terms/ExtraHoliday.md
           - Mission: glossary/terms/Mission.md
           - OpenEntry: glossary/terms/OpenEntry.md
           - PaymentType: glossary/terms/PaymentType.md
@@ -156,6 +157,7 @@ nav:
           - Resource: glossary/terms/Resource.md
           - TaskEntry: glossary/terms/TaskEntry.md
           - TimeEntry: glossary/terms/TimeEntry.md
+          - TimesheetSubmission: glossary/terms/TimesheetSubmission.md
   - Guide:
       - For User:
           - Introduzione: guides/user/index.md
@@ -167,7 +169,9 @@ nav:
           - How to submit Timesheet : guides/user/submit.md
           - How to add Bank Hours : guides/user/bank_hours.md
           - Availability : guides/user/availability.md
-      #- For Developer: guides/developer/index.md
+      - For Developer:
+          - Introduzione: guides/developer/index.md
+          - How to bump a new BE version: guides/developer/bump.md
   - Wiki:
       - Overview: wiki/Overview.md
       - OS4D: wiki/domains/os4d.org.md
