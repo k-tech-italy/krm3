@@ -4,7 +4,7 @@ Bumping a new version allows you to publish a new Docker image in the Packages s
 
 ```
 $ make bump
-bumpversion [major/minor/patch]: 
+bumpversion [major/minor/patch]:
 ```
 Once the bump type is selected, the new version will be printed on the screen:
 
@@ -12,7 +12,7 @@ Once the bump type is selected, the new version will be printed on the screen:
 version = "1.5.31"
 ```
 The new version must also be inserted into the changelog file located in the `src/krm3/releases.json` file
-along with information about the change you want to publish (whether it's a bug or a feature, and any release notes, as in the following example:
+along with information about the change you want to publish (whether it's a bug or a feature, and any release notes) as in the following example:
 
 ```
 {
@@ -30,6 +30,4 @@ along with information about the change you want to publish (whether it's a bug 
 ```
 Once the changelog file is updated, add all the files modified by the make bump command, create a commit including the new version in the commit message, and push the commit. Once the branch containing the bump is merged into develop with the new version, the build pipeline will publish the Docker image associated with this new version.
 
-The list of published images is available at the following address:
-
-https://github.com/k-tech-italy/krm3/pkgs/container/krm3
+The list of published images is available [here](https://github.com/k-tech-italy/krm3/pkgs/container/krm3) whereas the changelog of the released version can be found [here](https://krm3.k-tech.it/be/releases/)
