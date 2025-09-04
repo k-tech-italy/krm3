@@ -1,7 +1,8 @@
 {
   "v1.5.?? - 2025-09-04": {
     "features": [
-      "task #293 Fix next param with google authentication"
+      "task #293 Fix next param with google authentication",
+      "user story #285 - Fix the hamburger menu in the /be/ section with mobile devices"
     ],
     "fixes": [
     ],
