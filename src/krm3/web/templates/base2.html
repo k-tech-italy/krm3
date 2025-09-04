@@ -31,5 +31,17 @@
     </body>
 
     {% block js-frameworks %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const hamburgerIcon = document.getElementById('hamburger-icon');
+                const navLinks = document.getElementById('nav-links');
+                const logoutButton = document.getElementById('logout-button');
+
+                hamburgerIcon.addEventListener('click', () => {
+                    navLinks.classList.toggle('hidden');
+                    logoutButton.classList.toggle('hidden');
+                });
+            });
+        </script>
     {% endblock js-frameworks %}
 </html>
