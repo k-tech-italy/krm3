@@ -11,6 +11,7 @@
 ## E
 - [Expense](terms/Expense.md)
 - [ExpenseCategory](terms/ExpenseCategory.md)
+- [ExtraHoliday](terms/ExtraHoliday.md)
 ## M
 - [Mission](terms/Mission.md)
 ## O
