@@ -166,6 +166,7 @@ nav:
           - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
           - How to submit Timesheet : guides/user/submit.md
           - How to add Bank Hours : guides/user/bank_hours.md
+          - Availability : guides/user/availability.md
       #- For Developer: guides/developer/index.md
   - Wiki:
       - Overview: wiki/Overview.md
