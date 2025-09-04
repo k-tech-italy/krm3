@@ -5,6 +5,7 @@
       "user story #285 - Fix the hamburger menu in the /be/ section with mobile devices"
     ],
     "fixes": [
+      "issue #231 add missing check for DateRangeField"
     ],
     "release_notes": [
     ]

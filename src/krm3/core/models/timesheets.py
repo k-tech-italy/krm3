@@ -678,3 +678,14 @@ class ExtraHoliday(models.Model):
         if self.period.lower == end_dt:
             return  f'{self.period.lower.strftime('%Y-%m-%d')}: {reason}'
         return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}: {reason}'
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        if self.period.upper < self.period.lower + datetime.timedelta(days=1):
+            raise ValidationError(
+                {"period": "End date must be at least one day after start date."}
+            )
