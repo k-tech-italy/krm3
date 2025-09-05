@@ -172,8 +172,8 @@ nav:
       - For Developer:
           - Introduzione: guides/developer/index.md
           - How to bump a new BE version: guides/developer/bump.md
-  - Wiki:
-      - Overview: wiki/Overview.md
-      - OS4D: wiki/domains/os4d.org.md
+  #- Wiki:
+      #- Overview: wiki/Overview.md
+      #- OS4D: wiki/domains/os4d.org.md
   - License: license.md
   - Tags: tags.md
