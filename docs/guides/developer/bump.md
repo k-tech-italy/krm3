@@ -18,7 +18,8 @@ tag to create: 1.5.33
 increment detected: PATCH
 
 ```
-When bumping, `CHANGELOG.md` is generated automatically. It includes all commits that have correct format which is `type(optional:scope): description`
+When bumping, `CHANGELOG.md` is generated automatically. It includes all commits that have correct format which is `type(optional:scope): description`.
+If you want to know more about how to correctly create commits click [here](commit.md)
 ```
 ## 1.5.32 (2025-09-09)
 
