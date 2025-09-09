@@ -319,3 +319,33 @@ def test_add_bank_hours_success(
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
+
+@freeze_time('2025-07-13')
+def test_use_bank_hours_success(
+        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+
+    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=10, date='2025-07-03')
+    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), bank_to=2, date='2025-07-03')
+    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=6, date='2025-07-04')
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+    
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
+    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
+    assert bank_delta.text.strip() == '(𝚫 = +2h)'
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    browser.click_and_release(day_tile)
+
+    browser.fill('//input[contains(@id,"from-bank-hour-input")]', '2')
+    
+    browser.click('//button[contains(text(), "Save")]')
+    
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
+    assert bank_delta.text.strip() == '(𝚫 = +0h)'
+    
