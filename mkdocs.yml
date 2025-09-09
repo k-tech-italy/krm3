@@ -172,6 +172,7 @@ nav:
       - For Developer:
           - Introduzione: guides/developer/index.md
           - How to bump a new BE version: guides/developer/bump.md
+          - How to create a commit: guides/developer/commit.md
   #- Wiki:
       #- Overview: wiki/Overview.md
       #- OS4D: wiki/domains/os4d.org.md
