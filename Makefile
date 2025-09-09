@@ -94,15 +94,21 @@ fullclean:
 test:
 	pytest tests/
 
-bump:   ## Bumps version
-	@while :; do \
-		read -r -p "bumpversion [major/minor/patch]: " PART; \
-		case "$$PART" in \
-			major|minor|patch) break ;; \
-  		esac \
-	done ; \
-	bumpversion --no-commit --allow-dirty $$PART
-	@grep "^version = " pyproject.toml
+bump:  ## Bumps version
+	@echo "Select version increment:"
+	@echo "1) MAJOR"
+	@echo "2) MINOR"
+	@echo "3) PATCH"
+	@echo -n "Enter choice (1-3): "
+	@read -r choice; \
+	case "$$choice" in \
+		1) increment="MAJOR";; \
+		2) increment="MINOR";; \
+		3) increment="PATCH";; \
+		*) echo "Error: Invalid choice '$$choice'. Please enter 1, 2, or 3."; exit 1;; \
+	esac; \
+	echo "Bumping $$increment version..."; \
+	cz bump --increment "$$increment"
 
 .init-db:
 	sh tools/dev/initdb.sh
