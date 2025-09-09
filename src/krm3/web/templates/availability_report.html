@@ -24,9 +24,9 @@
                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
         </div>
         <div class="mb-10">
-            <label for="country" class="block text-sm/6 font-medium text-white">Filter for project</label>
+            <label for="country" class="block text-sm/6 font-medium">Filter for project</label>
             <div class="mt-2 grid grid-cols-1">
-                    <select id="project" name="project" autocomplete="project-name" class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white/5 py-1.5 pr-8 pl-3 text-base text-white outline-1 -outline-offset-1 outline-white/10 *:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6">
+                    <select id="project" name="project" autocomplete="project-name" class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white/5 py-1.5 pr-8 pl-3 text-base outline-1 -outline-offset-1 *:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6">
                         {% for id, project in projects.items %}
                             <option value="{{ id }}">{{ project }}</option>
                         {% endfor %}
