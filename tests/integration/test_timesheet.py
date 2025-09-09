@@ -292,3 +292,30 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     browser.assert_element(
         '//*[contains(text(), "Invalid time entry for 2025-07-04: '
         'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]')
+        
+@freeze_time('2025-07-13')
+def test_add_bank_hours_success(
+        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+
+    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=10, date='2025-07-04')
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+    
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
+    assert bank_delta.text.strip() == '(𝚫 = +0h)'
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    browser.click_and_release(day_tile)
+
+    browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
+    
+    browser.click('//button[contains(text(), "Save")]')
+    
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
+    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
+    assert bank_delta.text.strip() == '(𝚫 = +2h)'
