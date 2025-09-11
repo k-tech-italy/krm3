@@ -1,18 +1,12 @@
 # # How to bump a new BE version
 
-Bumping a new version allows you to publish a new Docker image in the Packages section of GitHub. To publish a new version, you must run the make bump command in the branch you intend to publish and then merge the branch into the develop branch. Running the make bump command prompts you for the release type (major/minor/patch). The choice depends on the type of change you intend to publish, as shown in the following image:
+Bumping a new version allows you to publish a new Docker image in the Packages section of GitHub. To publish a new
+version, you must run the make bump command in the branch you intend to publish and then merge the branch into the develop branch.
+Running the make bump command automatically bumps and create changelog without a need to specify type of change because
+it is based on commit names that we created (For example feature tag will result in minor change and fix will result in patch)
 
 ```
-$ make bump
-Select version increment:
-1) MAJOR
-2) MINOR
-3) PATCH
-Enter choice (1-3):
-```
-Once the bump type is selected, the commit and tag with new version will be created:
-
-```
+cz bump
 bump: version 1.5.32 → 1.5.33
 tag to create: 1.5.33
 increment detected: PATCH
