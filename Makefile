@@ -94,8 +94,8 @@ fullclean:
 test:
 	pytest tests/
 
-bump:
-    cz bump
+bump: ## Bump version
+	cz bump
 
 .init-db:
 	sh tools/dev/initdb.sh
