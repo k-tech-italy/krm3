@@ -1,6 +1,5 @@
 import datetime
 import io
-import json
 from unittest.mock import patch, mock_open
 
 import openpyxl
@@ -339,15 +338,19 @@ def test_unauthorized_report_creation(client):
     response = client.get(url)
     assert response.status_code == 403
 
-@patch('builtins.open', new_callable=mock_open, read_data=json.dumps({
-    "v1.0.0": {
-        "features": ["Login support", "Dashboard refresh"],
-        "fixes": ["Memory leak", "404 on tasks"],
-        "release_notes": ["Initial production deployment"]
-    }
-}))
-@patch('os.path.join', return_value='/fake/path/releases.json')
-def test_releases_view_with_valid_json(mock_join, mock_file, client):
+@patch('builtins.open', new_callable=mock_open, read_data="""## 1.5.33 (2025-09-10)
+        ### Fix
+        - update template
+
+        ## 1.5.32 (2025-09-09)
+
+        ### Feat
+        - add commitizen setup
+
+        ### Fix
+        - update bump command with interactive mode"""
+)
+def test_releases_view_with_valid_markdown(mock_file, client):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
 
@@ -355,32 +358,34 @@ def test_releases_view_with_valid_json(mock_join, mock_file, client):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "v1.0.0" in content
-    assert "Login support" in content
-    assert "Memory leak" in content
-    assert "Initial production deployment" in content
+    assert "1.5.33" in content
+    assert "1.5.32" in content
+    assert "update template" in content
+    assert "add commitizen setup" in content
+    assert "update bump command" in content
+    assert "Changelog" in content
 
-def test_releases_view_with_missing_file_should_show_no_releases(client):
+@patch('builtins.open', side_effect=FileNotFoundError())
+def test_releases_view_with_missing_file_should_show_error(mock_open_func, client):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
 
-    with patch('os.path.join', return_value='/nonexistent/path/releases.json'):
-        response = client.get(reverse('releases'))
-        content = response.content.decode()
+    response = client.get(reverse('releases'))
+    content = response.content.decode()
 
-        assert response.status_code == 200
-        assert "No releases found" in content
+    assert response.status_code == 200
+    assert "text-gray-400" in content
+    assert "CHANGELOG.md file not found" in content
 
-@patch('builtins.open', new_callable=mock_open, read_data='{invalid json}')
-@patch('os.path.join', return_value='/fake/path/releases.json')
-def test_releases_view_with_invalid_json_should_show_no_releases(mock_join, mock_file, client):
+
+@patch('builtins.open', side_effect=OSError("Permission denied"))
+def test_releases_view_with_file_read_error(mock_open_func, client):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
 
-    with patch('builtins.open', mock_open(read_data="{ invalid json }")):
-        with patch('os.path.join', return_value='/fake/path/releases.json'):
-            response = client.get(reverse('releases'))
-            content = response.content.decode()
+    response = client.get(reverse('releases'))
+    content = response.content.decode()
 
-            assert response.status_code == 200
-            assert "No releases found" in content
+    assert response.status_code == 200
+    assert "Changelog" in content
+    assert "Error parsing CHANGELOG.md" in content

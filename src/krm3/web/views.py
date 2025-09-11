@@ -1,9 +1,11 @@
-import json
 import logging
-import os
 import typing
+from pathlib import Path
 from typing import Any, cast
+
+import markdown
 import openpyxl
+from bs4 import BeautifulSoup
 from django.http import HttpRequest, HttpResponseBase, HttpResponse
 
 from django.urls import reverse
@@ -150,17 +152,42 @@ class ReleasesView(HomeView):
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-
-        releases_file_path = os.path.join(settings.BASE_DIR, 'releases.json')
-        releases_data = {}
+        project_root = Path(settings.BASE_DIR).parent.parent
+        changelog_file_path = project_root / 'CHANGELOG.md'
+        changelog_html = ""
 
         try:
-            with open(releases_file_path, encoding='utf-8') as file:
-                releases_data = json.load(file)
-        except FileNotFoundError:
-            logger.warning(f"Releases file not found at {releases_file_path}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing releases.json: {e}")
+            with open(changelog_file_path, encoding='utf-8') as file:
+                changelog_content = file.read()
+            changelog_html = markdown.markdown(changelog_content)
 
-        context['releases'] = releases_data
+            soup = BeautifulSoup(changelog_html, 'html.parser')
+            for h2 in soup.find_all('h2'):
+                h2['class'] = h2.get('class', []) + ['text-2xl', 'text-blue-300', 'border-b',
+                                                     'border-white/20', 'pb-2', 'mb-4', 'mt-6', 'font-semibold']
+
+            for h3 in soup.find_all('h3'):
+                h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-300', 'mb-3', 'font-medium']
+
+            for ul in soup.find_all('ul'):
+                ul['class'] = ul.get('class', []) + ['space-y-2', 'my-4']
+
+            for li in soup.find_all('li'):
+                li['class'] = li.get('class', []) + ['marker:text-blue-400', 'marker:font-bold', 'ml-4']
+
+            for p in soup.find_all('p'):
+                p['class'] = p.get('class', []) + ['text-gray-200', 'leading-relaxed']
+
+            for strong in soup.find_all('strong'):
+                strong['class'] = strong.get('class', []) + ['text-white', 'font-semibold']
+
+            changelog_html = str(soup)
+        except FileNotFoundError:
+            logger.warning(f"CHANGELOG.md file not found at {changelog_file_path}")
+            changelog_html = "<p class='text-gray-400'>CHANGELOG.md file not found.</p>"
+        except (OSError, UnicodeDecodeError) as e:
+            logger.error(f"Error parsing CHANGELOG.md: {e}")
+            changelog_html = f"<p class='text-red-400'>Error parsing CHANGELOG.md: {e}</p>"
+
+        context['changelog_html'] = changelog_html
         return context
