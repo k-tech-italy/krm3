@@ -428,7 +428,7 @@ def test_add_bank_hours_below_scheduled_hours(
 
 
 @freeze_time('2025-07-13')
-def test_save_bank_hours_after_use_hours(
+def test_save_and_use_bank_hours_in_the_same_day(
     browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
 
