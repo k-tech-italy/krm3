@@ -292,151 +292,187 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     browser.assert_element(
         '//*[contains(text(), "Invalid time entry for 2025-07-04: '
         'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]')
-        
+
+
 @freeze_time('2025-07-13')
 def test_add_bank_hours_success(
-        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
 
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=10, date='2025-07-04')
+    TimeEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource),
+        day_shift_hours=10,
+        date='2025-07-04',
+    )
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
-    
+
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    day_tile = browser.wait_for_element_visible(
+        '//div[contains(@data-testid, "header-2025-07-04")]'
+    )
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
-    
+
     browser.click('//button[contains(text(), "Save")]')
-    
+
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
+
 
 @freeze_time('2025-07-13')
 def test_use_bank_hours_success(
-        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
 
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=10, date='2025-07-03')
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), bank_to=2, date='2025-07-03')
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=6, date='2025-07-04')
+    TimeEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource),
+        day_shift_hours=10,
+        date='2025-07-03',
+    )
+    TimeEntryFactory(
+        resource=resource,
+        task=None,
+        bank_to=2,
+        date='2025-07-03',
+        day_shift_hours=0
+    )
+    TimeEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource),
+        day_shift_hours=6,
+        date='2025-07-04',
+    )
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
-    
+
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    day_tile = browser.wait_for_element_visible(
+        '//div[contains(@data-testid, "header-2025-07-04")]'
+    )
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"from-bank-hour-input")]', '2')
-    
+
     browser.click('//button[contains(text(), "Save")]')
-    
+
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
-    
+
+
 @freeze_time('2025-07-13')
 def test_add_bank_hours_below_scheduled_hours(
-        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
 
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=6, date='2025-07-04')
+
+    TimeEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource),
+        day_shift_hours=6,
+        date='2025-07-04',
+    )
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
-    
+
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    day_tile = browser.wait_for_element_visible(
+        '//div[contains(@data-testid, "header-2025-07-04")]'
+    )
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
-    
+
     browser.click('//button[contains(text(), "Save")]')
 
     browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
+    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
-    driver = browser.driver
-    wait = WebDriverWait(driver, 10)
-
-    error_element = wait.until(
-        EC.visibility_of_element_located((By.ID, "creation-error-message"))
+    expected_error = (
+        "Invalid time entry for 2025-07-04: Cannot deposit 2.00 bank hours. "
+        "Total hours would become 4.00 which is below scheduled hours (8)."
     )
-
-    expected_error = "Invalid time entry for 2025-07-04: Cannot deposit 2.00 bank hours. Total hours would become 4.00 which is below scheduled hours (8)."
     actual_error = error_element.text.strip()
-    
-    assert actual_error == expected_error, f"❌ Messaggio d'errore inatteso: {actual_error}"
-    
+
+    assert (
+        actual_error == expected_error
+    ), f"❌ Unexpected error message: {actual_error}"
+
+
 @freeze_time('2025-07-13')
 def test_save_bank_hours_after_use_hours(
-        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
 
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=6, date='2025-07-04')
+
+    TimeEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource),
+        day_shift_hours=6,
+        date='2025-07-04',
+    )
+
+    TimeEntryFactory(
+        resource=resource,
+        day_shift_hours=0,
+        task=None,
+        bank_from=2,
+        date='2025-07-04',
+    )
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
-    
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
-    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
-    assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
-    browser.click_and_release(day_tile)
-
-    browser.fill('//input[contains(@id,"from-bank-hour-input")]', '2')   
-    browser.click('//button[contains(text(), "Save")]')
-    
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = -2h)'
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
+    day_tile = browser.wait_for_element_visible(
+        '//div[contains(@data-testid, "header-2025-07-04")]'
+    )
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
     browser.click('//button[contains(text(), "Save")]')
 
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
+    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
-    driver = browser.driver
-    wait = WebDriverWait(driver, 10)
-
-    error_element = wait.until(
-        EC.visibility_of_element_located((By.ID, "creation-error-message"))
+    expected_error = (
+        "Invalid time entry for 2025-07-04: Cannot both "
+        "withdraw from and deposit to bank hours on the same day."
     )
-
-    expected_error = "Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit to bank hours on the same day."
     actual_error = error_element.text.strip()
-    
-    assert actual_error == expected_error, f"❌ Messaggio d'errore inatteso: {actual_error}"
-    
+
+    assert (
+        actual_error == expected_error
+    ), f"❌ Unexpected error message: {actual_error}"
