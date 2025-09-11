@@ -1,0 +1,230 @@
+---
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  id-token: write
+  attestations: write
+  actions: write
+  packages: write
+
+jobs:
+#  bump-version:
+#    runs-on: ubuntu-latest
+#    name: "Bump version and create changelog with commitizen"
+#    permissions:
+#      contents: write
+#    outputs:
+#      version: ${{ steps.cz.outputs.version }}
+#    steps:
+#      - name: Check out
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - id: cz
+#        name: Create bump and changelog
+#        uses: commitizen-tools/commitizen-action@master
+#        with:
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      run_build: ${{ steps.changes.outputs.run_build }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+      with:
+        fetch-depth: 0
+
+    - id: changes
+      name: Check for file changes
+      uses: dorny/paths-filter@0bc4621a3135347011ad047f9ecf449bf72ce2bd   # v3.0.0
+      with:
+        base: HEAD~1
+        token: ${{ github.token }}
+        filters: .github/file-filters.yml
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: latest
+        enable-cache: true
+        prune-cache: false
+        cache-local-path: ./uv-cache
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/uv.lock
+        python-version: 3.12.1
+
+    - name: Restore cached vEnv
+      id: cache-venv-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ runner.os }}-venv-3.12
+
+    - name: Install dependencies
+      run: uv sync --cache-dir ./uv-cache --frozen
+
+    - name: Save vEnv
+      id: cache-venv-save
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ./uv-cache
+          ./tox
+        key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
+
+    - name: Init Frontend Submodule
+      run: cd krm3-fe && git submodule update --init
+
+    - name: Install yarn and build frontend
+      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
+
+    - name: Build static folder
+      run: uv venv && uv run make release && uv run manage.py collectstatic
+
+    - name: Move the release.json file into the FE folder
+      run: cp src/krm3/core/static/release.json krm3-fe/dist
+
+    - name: Upload built frontend
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-frontend
+        path: |
+          krm3-fe/dist/
+        retention-days: 1
+        if-no-files-found: warn
+
+  build-and-push:
+    needs: [changes, build-frontend]
+    if: always() && needs.changes.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ needs.bump-version.outputs.version }}
+      image_name: ${{ steps.build.outputs.image_name }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+      with:
+        fetch-depth: 0
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: latest
+        enable-cache: true
+        prune-cache: false
+        cache-local-path: ./uv-cache
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/uv.lock
+        python-version: 3.12.1
+
+    - name: Download built frontend
+      if: needs.build-frontend.result == 'success'
+      uses: actions/download-artifact@v4
+      with:
+        name: built-frontend
+        path: krm3-fe/dist/
+
+    - name: build
+      id: build
+      run: |
+        VERSION=$( uvx --with hatch-vcs hatchling metadata version )
+        COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
+        echo "image_name=ghcr.io/${{ github.repository }}:$VERSION" >> $GITHUB_OUTPUT
+        echo "::notice title=VERSION:: Build local package $VERSION"
+        echo "::notice title=COMMIT:: Build local package $COMMIT_SHA"
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: docker/Dockerfile
+        push: true
+        target: final
+        build-args: |
+          BASE_IMAGE=${{ steps.build.outputs.version }}
+          DOCKER_REGISTRY=local
+        tags: |
+          ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
+          ghcr.io/${{ github.repository }}:latest
+        labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: [ build-and-push ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: production
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Call Rancher API redeploy
+      env:
+        RANCHER_URL: ${{ secrets.RANCHER_URL }}
+        RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
+      run: |
+        response=$(curl -s -w "%{http_code}" -X POST \
+          -H "Authorization: Bearer $RANCHER_TOKEN" \
+          "$RANCHER_URL")
+
+        http_code="${response: -3}"
+        if [ "$http_code" -ne 200 ]; then
+          echo "Deployment failed with HTTP $http_code"
+          exit 1
+        fi
+        echo "Deployment successful"
