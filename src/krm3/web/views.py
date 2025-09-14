@@ -6,6 +6,7 @@ from typing import Any, cast
 import markdown
 import openpyxl
 from bs4 import BeautifulSoup
+from django.conf import settings
 from django.http import HttpRequest, HttpResponseBase, HttpResponse
 
 from django.urls import reverse
@@ -15,7 +16,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 
-from krm3.config import settings
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
@@ -157,8 +157,7 @@ class ReleasesView(HomeView):
         changelog_html = ""
 
         try:
-            with open(changelog_file_path, encoding='utf-8') as file:
-                changelog_content = file.read()
+            changelog_content = Path(changelog_file_path).read_text(encoding='utf-8')
             changelog_html = markdown.markdown(changelog_content)
 
             soup = BeautifulSoup(changelog_html, 'html.parser')

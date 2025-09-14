@@ -1,6 +1,6 @@
 import datetime
 import io
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 import openpyxl
 import pytest
@@ -338,7 +338,7 @@ def test_unauthorized_report_creation(client):
     response = client.get(url)
     assert response.status_code == 403
 
-@patch('builtins.open', new_callable=mock_open, read_data="""## 1.5.33 (2025-09-10)
+@patch('pathlib.Path.read_text', return_value="""## 1.5.33 (2025-09-10)
         ### Fix
         - update template
 
@@ -365,7 +365,7 @@ def test_releases_view_with_valid_markdown(mock_file, client):
     assert "update bump command" in content
     assert "Changelog" in content
 
-@patch('builtins.open', side_effect=FileNotFoundError())
+@patch('pathlib.Path.read_text', side_effect=FileNotFoundError())
 def test_releases_view_with_missing_file_should_show_error(mock_open_func, client):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
@@ -378,7 +378,7 @@ def test_releases_view_with_missing_file_should_show_error(mock_open_func, clien
     assert "CHANGELOG.md file not found" in content
 
 
-@patch('builtins.open', side_effect=OSError("Permission denied"))
+@patch('pathlib.Path.read_text', side_effect=PermissionError())
 def test_releases_view_with_file_read_error(mock_open_func, client):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
