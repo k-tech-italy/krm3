@@ -21,6 +21,6 @@ A **Mission** is a container for all the activities and expenses related to a sp
 - `to_date`: The end date of the mission.
 - `year`: The year of the mission.
 - `default_currency`: The default currency for the mission.
-- `project`: The <glossary:Project> this mission is associated with.
+- `project`: The Project this mission is associated with.
 - `city`: The city where the mission takes place.
-- `resource`: The <glossary:Resource> assigned to the mission.
+- `resource`: The Resource assigned to the mission.

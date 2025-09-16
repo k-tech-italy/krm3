@@ -32,4 +32,4 @@ The model recording hours for a given <glossary:Resource>, Day and (optional) Ta
 - `bank_to`: Hours deposited into <glossary:BankOfHours>
 - `bank_from`: Hours withdrawn from <glossary:BankOfHours>
 - `resource`: The <glossary:Resource> this entry belongs to
-- `task`: The <glossary:Task> this entry is for (if any).
+- `task`: The Task this entry is for (if any).
