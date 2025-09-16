@@ -26,6 +26,8 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from debug_toolbar.toolbar import debug_toolbar_urls
 
+from krm3.config.environ import env
+
 admin.autodiscover()
 actions.add_to_site(site)
 
@@ -50,8 +52,11 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('sentry-debug/', trigger_error),
     path('', include('krm3.fe.urls')),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout')
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]
+
+if token := env('TICKETING_TOKEN'):
+    urlpatterns.insert(0, path('be/ticketing/', include('issues.urls', namespace='issues')))
 
 if settings.DEBUG:
     urlpatterns = (

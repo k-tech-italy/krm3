@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+
+{% load i18n static issues %}
+
+{% block extrastyle %}
+    <link rel="stylesheet" href="{% static "issues/issues.css" %}">
+{% endblock extrastyle %}
+
+{% block extrahead %}
+    {% issues_tags %}
+{% endblock extrahead %}
+
+{% block footer %}
+    <a style="margin:10px" href="#" id="issue-opener">open issue</a>
+{% endblock footer %}

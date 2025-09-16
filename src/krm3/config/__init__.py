@@ -101,5 +101,11 @@ DEFAULTS = dict(  # noqa: C408
     SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS=(list, ['k-tech.it']),
 
     HOLIDAYS_CALENDAR=(str, 'IT-RM'),
-    DEFAULT_MODULE=(str, None)
+    DEFAULT_MODULE=(str, None),
+
+    # Ticketing
+    TICKETING_TOKEN=(str, None),
+    TICKETING_PROJECT_ID=(int, None),
+    TICKETING_ISSUES=(str, None),
+    TICKETING_URL=(str, None)
 )
