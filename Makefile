@@ -83,8 +83,18 @@ fullclean:
 test:
 	pytest tests/
 
-bump: ## Bump version
-	cz bump
+
+bump:   ## Bumps version
+	@while :; do \
+		read -r -p "bumpversion [major/minor/patch]: " PART; \
+		case "$$PART" in \
+			major|minor|patch) break ;; \
+  		esac \
+	done ; \
+	bumpversion --no-commit --allow-dirty $$PART
+	@sed -i 's/serialize = /serialize =/' .bumpversion.cfg
+	@grep "^version = " pyproject.toml
+
 
 .init-db:
 	sh tools/dev/initdb.sh
