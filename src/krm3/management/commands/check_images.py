@@ -90,5 +90,3 @@ def command():
             click.echo(f"  - {ref} (in {md_file.relative_to(DOCS_ROOT)}) → NON TROVATO")
     else:
         click.echo("  ✅ Nessun riferimento rotto")
-
-
