@@ -6,27 +6,26 @@ import re
 from pathlib import Path
 from collections import defaultdict
 
+import djclick as click
+
 # === CONFIG ===
-PROJECT_ROOT = Path(__file__).parent.resolve()
-IGNORE_DIRS = {"node_modules", ".venv", "dist", "build", "__pycache__", ".cache", "~build"}
+DOCS_ROOT = (Path(__file__).parents[4] / 'docs').resolve()
 IMAGE_EXTENSIONS = {".png", ".svg", ".gif"}
 MARKUP_EXTENSIONS = {".md", ".html"}
 
-def is_ignored(path: Path):
-    return any(part in IGNORE_DIRS for part in path.parts)
 
 def find_all_local_images():
     return [
-        p for p in PROJECT_ROOT.rglob("*")
-        if not is_ignored(p) and p.suffix.lower() in IMAGE_EXTENSIONS
+        p for p in DOCS_ROOT.rglob("*")
+        if p.suffix.lower() in IMAGE_EXTENSIONS
     ]
 
 def find_all_image_references():
     pattern = re.compile(r"""(?:!\[.*?\]\(|<img\s+[^>]*src=['"])([^'")]+)(?:['"])""", re.IGNORECASE)
     refs = []
 
-    for file in PROJECT_ROOT.rglob("*"):
-        if is_ignored(file) or file.suffix.lower() not in MARKUP_EXTENSIONS:
+    for file in DOCS_ROOT.rglob("*"):
+        if file.suffix.lower() not in MARKUP_EXTENSIONS:
             continue
         try:
             content = file.read_text(encoding="utf-8")
@@ -44,11 +43,12 @@ def find_all_image_references():
 
 def normalize_path(ref, base_file):
     if ref.startswith("/"):
-        return (PROJECT_ROOT / "docs" / ref.lstrip("/")).resolve()
+        return (DOCS_ROOT / "docs" / ref.lstrip("/")).resolve()
     return (base_file.parent / ref).resolve()
 
-def img_check():
-    print("🔍 Verifica immagini locali nel progetto...\n")
+@click.command()
+def command():
+    click.echo("🔍 Verifica immagini locali nel progetto...\n")
 
     all_images = find_all_local_images()
     all_image_paths = set(p.resolve() for p in all_images)
@@ -68,31 +68,27 @@ def img_check():
 
     unused_images = all_image_paths - referenced_paths
 
-    print(f"📂 Immagini trovate: {len(all_images)}")
+    click.echo(f"📂 Immagini trovate: {len(all_images)}")
 
-    print(f"\n🔗 Immagini referenziate: {len(referenced_paths)}")
+    click.echo(f"\n🔗 Immagini referenziate: {len(referenced_paths)}")
     for img in sorted(referenced_paths):
-        rel_img = img.relative_to(PROJECT_ROOT)
-        sources = [p.relative_to(PROJECT_ROOT) for p in sorted(image_to_sources[img])]
+        rel_img = img.relative_to(DOCS_ROOT)
+        sources = [p.relative_to(DOCS_ROOT) for p in sorted(image_to_sources[img])]
         for src in sources:
-            print(f"  - {rel_img} ← {src}")
+            click.echo(f"  - {rel_img} ← {src}")
 
-    print(f"\n🖼️ Immagini locali non usate: {len(unused_images)}")
+    click.echo(f"\n🖼️ Immagini locali non usate: {len(unused_images)}")
     if unused_images:
         for img in sorted(unused_images):
-            print(f"  - {img.relative_to(PROJECT_ROOT)}")
+            click.echo(f"  - {img.relative_to(DOCS_ROOT)}")
     else:
-        print("  ✅ Nessuna immagine inutilizzata")
+        click.echo("  ✅ Nessuna immagine inutilizzata")
 
-    print("\n❌ Riferimenti a immagini locali mancanti:")
+    click.echo("\n❌ Riferimenti a immagini locali mancanti:")
     if missing_refs:
         for md_file, ref, resolved in missing_refs:
-            print(f"  - {ref} (in {md_file.relative_to(PROJECT_ROOT)}) → NON TROVATO")
+            click.echo(f"  - {ref} (in {md_file.relative_to(DOCS_ROOT)}) → NON TROVATO")
     else:
-        print("  ✅ Nessun riferimento rotto")
+        click.echo("  ✅ Nessun riferimento rotto")
 
-def main():
-    img_check()
 
-if __name__ == "__main__":
-    main()
