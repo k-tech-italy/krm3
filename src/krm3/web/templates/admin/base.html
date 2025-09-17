@@ -2,14 +2,21 @@
 
 {% load i18n static issues %}
 
+
 {% block extrastyle %}
-    <link rel="stylesheet" href="{% static "issues/issues.css" %}">
+    {% if TICKETING_ENABLED %}
+        <link rel="stylesheet" href="{% static "issues/issues.css" %}">
+    {% endif %}
 {% endblock extrastyle %}
 
 {% block extrahead %}
-    {% issues_tags %}
+    {% if TICKETING_ENABLED %}
+        {% issues_tags %}
+    {% endif %}
 {% endblock extrahead %}
 
 {% block footer %}
-    <a style="margin:10px" href="#" id="issue-opener">open issue</a>
+    {% if TICKETING_ENABLED %}
+        <a style="margin:10px" href="#" id="issue-opener">open issue</a>
+    {% endif %}
 {% endblock footer %}

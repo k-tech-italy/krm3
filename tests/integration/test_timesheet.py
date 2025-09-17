@@ -18,15 +18,16 @@ pytestmark = pytest.mark.selenium
 
 @pytest.fixture(autouse=True)
 def flag_timesheet():
-    with override_settings(FLAGS={"TIMESHEET_ENABLED": [("boolean", True)]}):
+    with override_settings(FLAGS={'TIMESHEET_ENABLED': [('boolean', True)]}):
         yield
 
 
 @freeze_time('2025-06-19')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_data_for_current_week(browser: 'AppTestBrowser', regular_user, resource_factory,
-                                         freeze_frontend_time):
+def test_timesheet_data_for_current_week(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
     freeze_frontend_time('2025-06-19T00:00:00Z')
     resource = resource_factory(user=regular_user)
 
@@ -42,11 +43,13 @@ def test_timesheet_data_for_current_week(browser: 'AppTestBrowser', regular_user
 
     browser.assert_element('//div[contains(., "Jun 2") and contains(., "Jun 8") and text()="-"]')
 
+
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_no_data_only_next_month(browser: 'AppTestBrowser', regular_user, resource_factory,
-                                           freeze_frontend_time):
+def test_timesheet_no_data_only_next_month(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
     freeze_frontend_time('2025-06-06T00:00:00Z')
     resource = resource_factory(user=regular_user)
 
@@ -61,11 +64,13 @@ def test_timesheet_no_data_only_next_month(browser: 'AppTestBrowser', regular_us
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
+
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', regular_user, resource_factory,
-                                           freeze_frontend_time):
+def test_timesheet_no_data_only_prev_month(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
     freeze_frontend_time('2025-06-06T00:00:00Z')
     resource = resource_factory(user=regular_user)
 
@@ -84,8 +89,9 @@ def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', regular_us
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_no_data_for_current_period(browser: 'AppTestBrowser', regular_user, resource_factory,
-                                              freeze_frontend_time):
+def test_timesheet_no_data_for_current_period(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
     resource = resource_factory(user=regular_user)
     freeze_frontend_time('2025-06-06T00:00:00Z')
     # Task che inizierà nel mese successivo
@@ -138,6 +144,7 @@ def test_timesheet_no_tasks_defined(browser: 'AppTestBrowser', regular_user, res
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
+
 @freeze_time('2025-06-13')
 @pytest.mark.selenium
 @pytest.mark.django_db
@@ -168,8 +175,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     browser.fill('//input[@id="daytime-input"]', '14')
     browser.click('//*[contains(text(), "Save")]')
 
-
-    entry_tile_2 = browser.find_elements('xpath','//div[starts-with(@id, "Mon Jun 02")]')[1]
+    entry_tile_2 = browser.find_elements('xpath', '//div[starts-with(@id, "Mon Jun 02")]')[1]
     browser.click_and_release(entry_tile_2)
 
     browser.click('//*[contains(text(), "More")]')
@@ -177,8 +183,10 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
 
     browser.click('//*[contains(text(), "Save")]')
 
-    browser.assert_element('//p[@id="creation-error-message" and text()="Invalid time entry for 2025-06-02: '
-                           'Total hours on all time entries on 2025-06-02 (27.00) is over 24 hours."]')
+    browser.assert_element(
+        '//p[@id="creation-error-message" and text()="Invalid time entry for 2025-06-02: '
+        'Total hours on all time entries on 2025-06-02 (27.00) is over 24 hours."]'
+    )
 
     browser.click('//button[@aria-label="Close modal"]')
 
@@ -190,7 +198,6 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-
     freeze_frontend_time('2025-05-13T00:00:00Z')
 
     resource = ResourceFactory(user=regular_user)
@@ -210,7 +217,7 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
         start_date=datetime.date(2025, 5, 1),
         end_date=datetime.date(2025, 5, 30),
     )
-    TimeEntryFactory(task=task_1,date=datetime.date(2025, 5, 21), day_shift_hours=1, resource=resource)
+    TimeEntryFactory(task=task_1, date=datetime.date(2025, 5, 21), day_shift_hours=1, resource=resource)
     TimeEntryFactory(task=task_1, date=datetime.date(2025, 5, 22), day_shift_hours=1, resource=resource)
 
     TimeEntryFactory(task=task_2, date=datetime.date(2025, 5, 21), day_shift_hours=5, resource=resource)
@@ -239,12 +246,13 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     browser.click('//*[contains(text(), "More")]')
     browser.assert_element('//*[contains(text(), "Save")]')
 
+
 @freeze_time('2025-07-13')
 def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    TimeEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
     special_leave_reason = SpecialLeaveReasonFactory()
 
     browser.login_as_user(regular_user)
@@ -264,14 +272,15 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
     browser.assert_element('//*[@data-testid = "leave-icon-2025-07-04"]')
     browser.assert_element('//div[@data-tooltip-id="tooltip-hours-2025-07-04" and contains(text(), "7")]')
 
+
 @freeze_time('2025-07-13')
 def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
-        browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    TimeEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
     special_leave_reason = SpecialLeaveReasonFactory()
 
     browser.login_as_user(regular_user)
@@ -291,14 +300,12 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     browser.assert_element(
         '//*[contains(text(), "Invalid time entry for 2025-07-04: '
-        'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]')
+        'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]'
+    )
 
 
 @freeze_time('2025-07-13')
-def test_add_bank_hours_success(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
-
+def test_add_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -316,9 +323,7 @@ def test_add_bank_hours_success(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-04")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
@@ -331,10 +336,7 @@ def test_add_bank_hours_success(
 
 
 @freeze_time('2025-07-13')
-def test_use_bank_hours_success(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
-
+def test_use_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -344,13 +346,7 @@ def test_use_bank_hours_success(
         day_shift_hours=10,
         date='2025-07-03',
     )
-    TimeEntryFactory(
-        resource=resource,
-        task=None,
-        bank_to=2,
-        date='2025-07-03',
-        day_shift_hours=0
-    )
+    TimeEntryFactory(resource=resource, task=None, bank_to=2, date='2025-07-03', day_shift_hours=0)
     TimeEntryFactory(
         resource=resource,
         task=TaskFactory(resource=resource),
@@ -365,9 +361,7 @@ def test_use_bank_hours_success(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-04")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"from-bank-hour-input")]', '2')
@@ -380,10 +374,7 @@ def test_use_bank_hours_success(
 
 
 @freeze_time('2025-07-13')
-def test_add_bank_hours_below_scheduled_hours(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
-
+def test_add_bank_hours_below_scheduled_hours(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -401,9 +392,7 @@ def test_add_bank_hours_below_scheduled_hours(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-04")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
@@ -417,21 +406,16 @@ def test_add_bank_hours_below_scheduled_hours(
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        "Invalid time entry for 2025-07-04: Cannot deposit 2.00 bank hours. "
-        "Total hours would become 4.00 which is below scheduled hours (8)."
+        'Invalid time entry for 2025-07-04: Cannot deposit 2.00 bank hours. '
+        'Total hours would become 4.00 which is below scheduled hours (8).'
     )
     actual_error = error_element.text.strip()
 
-    assert (
-        actual_error == expected_error
-    ), f"❌ Unexpected error message: {actual_error}"
+    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
 
 
 @freeze_time('2025-07-13')
-def test_save_and_use_bank_hours_in_the_same_day(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
-
+def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -457,9 +441,7 @@ def test_save_and_use_bank_hours_in_the_same_day(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = -2h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-04")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-04")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
@@ -468,21 +450,15 @@ def test_save_and_use_bank_hours_in_the_same_day(
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        "Invalid time entry for 2025-07-04: Cannot both "
-        "withdraw from and deposit to bank hours on the same day."
+        'Invalid time entry for 2025-07-04: Cannot both ' 'withdraw from and deposit to bank hours on the same day.'
     )
     actual_error = error_element.text.strip()
 
-    assert (
-        actual_error == expected_error
-    ), f"❌ Unexpected error message: {actual_error}"
+    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
 
 
 @freeze_time('2025-07-13')
-def test_use_more_bank_hours_than_16(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
-
+def test_use_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -516,9 +492,7 @@ def test_use_more_bank_hours_than_16(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = -16h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-09")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-09")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"from-bank-hour-input")]', '8')
@@ -527,23 +501,19 @@ def test_use_more_bank_hours_than_16(
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        "Invalid time entry for 2025-07-09: This transaction would exceed the minimum bank"
-        " balance of -16.0 hours. Current balance: -16.00, attempting to change by: 8.00."        
+        'Invalid time entry for 2025-07-09: This transaction would exceed the minimum bank'
+        ' balance of -16.0 hours. Current balance: -16.00, attempting to change by: 8.00.'
     )
     actual_error = error_element.text.strip()
 
-    assert (
-        actual_error == expected_error
-    ), f"❌ Unexpected error message: {actual_error}"
-    
-@freeze_time('2025-07-13')
-def test_store_more_bank_hours_than_16(
-    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
-):
+    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
 
+
+@freeze_time('2025-07-13')
+def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    
+
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=16,
@@ -588,9 +558,7 @@ def test_store_more_bank_hours_than_16(
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +16h)'
 
-    day_tile = browser.wait_for_element_visible(
-        '//div[contains(@data-testid, "header-2025-07-09")]'
-    )
+    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-09")]')
     browser.click_and_release(day_tile)
 
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '8')
@@ -599,12 +567,10 @@ def test_store_more_bank_hours_than_16(
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        "Invalid time entry for 2025-07-09: This transaction would exceed the maximum bank balance of 16.0 hours. "
-        "Current balance: 16.00, attempting to add: -8.00; Cannot deposit 8.00 bank hours. Total hours would become -8.00 which is below scheduled hours (8)."        
+        'Invalid time entry for 2025-07-09: This transaction would exceed the maximum bank balance of 16.0 hours. '
+        'Current balance: 16.00, attempting to add: -8.00; Cannot deposit 8.00 bank hours.'
+        ' Total hours would become -8.00 which is below scheduled hours (8).'
     )
     actual_error = error_element.text.strip()
 
-    assert (
-        actual_error == expected_error
-    ), f"❌ Unexpected error message: {actual_error}"
-    
+    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
