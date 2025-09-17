@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=1.5.25
+VERSION=1.5.32
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -49,7 +49,7 @@ compile:
 	@cd ../krm3-fe && yarn install && yarn build
 	@cd .. && ./manage.py tailwind build
 
-build: compile requirements
+build: compile requirements ## Builds the image
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
 		--platform linux/amd64 \
@@ -61,7 +61,7 @@ build: compile requirements
 		-f docker/Dockerfile .
 	@docker images | grep ${DOCKER_IMAGE} | grep ${VERSION}
 
-build-test: compile  requirements## Builds the test image with dev dependencies
+build-test: compile  requirements ## Builds the test image with dev dependencies
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
 		--platform linux/amd64 \

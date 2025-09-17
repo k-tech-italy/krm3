@@ -23,6 +23,7 @@ from .fragments.security import *  # noqa: F401,F403
 from .fragments.sentry import *  # noqa: F401,F403
 from .fragments.smartadmin import *  # noqa: F401,F403
 from .fragments.social import *  # noqa: F401,F403
+from .fragments.ticketing import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ INSTALLED_APPS = (
         'adminfilters',
         'rangefilter',
         'admin_extra_buttons',
+        'issues'
     ]
     + SMART_ADMIN_APPS  # noqa: F405
     + DDT_APPS  # noqa: F405 we import it from smartadmin fragment

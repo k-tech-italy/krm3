@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "1.5.25"
+version = "1.5.32"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -78,6 +78,7 @@ dependencies = [
     "holidays>=0.73",
     "seleniumbase>=4.39.2",
     "django-flags>=5.0.14",
+    "django-online-issues>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -147,3 +148,18 @@ build-backend = "hatchling.build"
 [tool.pyright]
 extraPaths = ["tests/_extras"]
 typeCheckingMode="basic"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "uv"
+update_changelog_on_bump = true
+changelog_incremental = true
+changelog_start_rev = "1.5.31"
+version_files = [
+    "pyproject.toml:version",
+    "src/krm3/__init__.py:__version__",
+    "docker/Makefile:VERSION",
+    "uv.lock:version"
+]

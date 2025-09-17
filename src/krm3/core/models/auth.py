@@ -4,6 +4,7 @@ import json
 from decimal import Decimal
 import typing
 from django.contrib.auth.base_user import BaseUserManager
+from django.db.models import Sum
 from natural_keys import NaturalKeyModel
 from django.db import models
 from django.db.models.signals import post_save
@@ -16,6 +17,7 @@ from constance import config
 
 if typing.TYPE_CHECKING:
     from datetime import date
+    from krm3.core.models import Contract
 
 
 class UserManager(BaseUserManager):
@@ -122,29 +124,56 @@ class Resource(models.Model):
             min_working_hours = 0
         return min_working_hours
 
+    def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
+        """Return a list of contracts applicable to the time interval between start_day and end_day."""
+        from krm3.core.models import Contract
+        return list(
+            Contract.objects.filter(
+                period__overlap=(start_day, end_day), resource=self
+            )
+        )
+
+    def contract_for_date(self, contract_list: 'list[Contract]', day: date) -> 'Contract | None':
+        """Select the contract applicable for the given day."""
+        for contract in contract_list:
+            if contract.period.lower <= day < contract.period.upper:
+                return contract
+        return None
 
     def get_schedule(self, start_day: date, end_day: date) -> dict[date, float]:
-        from krm3.core.models import Contract
-
-        overlapping_contracts: models.QuerySet[Contract] = Contract.objects.filter(
-            period__overlap=(start_day, end_day), resource=self
-        )
+        overlapping_contracts: 'list[Contract]' = self.get_contracts(start_day, end_day)
         calendar = KrmCalendar()
         days = list(calendar.iter_dates(start_day, end_day))
-
         default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE  # {'mon': 8, 'tue': 8, .... 'sat': 0, 'sun': 0}
 
         for day in days:
-            contract: Contract = overlapping_contracts.filter(period__contains=day.date).first()
+            contract: Contract = self.contract_for_date(overlapping_contracts, day.date)
             if contract and contract.working_schedule:
                 schedule = contract.working_schedule
             else:
                 schedule = json.loads(default_resource_schedule)
-            country_calendar_code = contract.country_calendar_code if contract else settings.HOLIDAYS_CALENDAR
+            if contract and contract.country_calendar_code:
+                country_calendar_code = contract.country_calendar_code
+            else:
+                country_calendar_code = settings.HOLIDAYS_CALENDAR
             day.min_working_hours = self._min_working_hours_for_day(day, country_calendar_code, schedule)
 
         return {day.date: day.min_working_hours for day in days}
 
+    def get_bank_hours_balance(self) -> Decimal:
+        """Calculate bank hours balance from all time entries."""
+        from krm3.core.models import TimeEntry
+
+        queryset = TimeEntry.objects.filter(resource=self)
+        result = queryset.aggregate(
+            total_deposits=Sum('bank_to'),
+            total_withdrawals=Sum('bank_from')
+        )
+
+        deposits = result['total_deposits'] or Decimal('0')
+        withdrawals = result['total_withdrawals'] or Decimal('0')
+
+        return deposits - withdrawals
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender: User, instance: User, created: bool, **kwargs: dict) -> None:

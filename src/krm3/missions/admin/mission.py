@@ -27,6 +27,7 @@ from django_tables2.export import TableExport
 
 from krm3.currencies.models import Currency
 from krm3.missions.admin.expenses import ExpenseInline
+from krm3.missions.exceptions import RateConversionError
 from krm3.missions.forms import MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
@@ -186,14 +187,14 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
         try:
             if export_format:
-                expenses_table = build_mission_expenses_table(expenses, sorting, report=True)
+                expenses_table = build_mission_expenses_table(request, expenses, sorting, report=True)
                 return self.export_table(mission, expenses_table, export_format, request)
 
-            update_rates(expenses)
+            update_rates(request, expenses)
             for reimbursement in reimbursements:
                 exp_re = [e for e in expenses if e.reimbursement == reimbursement]
 
-                expenses_table = build_mission_expenses_table(exp_re, sorting, refresh=False)
+                expenses_table = build_mission_expenses_table(request, exp_re, sorting, refresh=False)
 
                 summary = {
                     ReimbursementSummaryEnum.SPESE_TRASFERTA: decimal.Decimal(0.0),
@@ -259,6 +260,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 context=ctx,
                 template='admin/missions/mission/summary.html',
             )
+        except RateConversionError as e:
+            messages.error(request, str(e))
         except RuntimeError as e:
             sentry_sdk.capture_exception(e)
             messages.error(request, str(e))
@@ -282,10 +285,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return HttpResponseRedirect(url)
 
 
-def build_mission_expenses_table(
+def build_mission_expenses_table(request: 'HttpRequest',
     qs: 'QuerySet', sorting: str, report: bool = False, refresh: bool = True
 ) -> 'MissionExpenseBaseTable':
     klass = MissionExpenseExportTable if report else MissionExpenseTable
     if refresh:
-        update_rates(qs)
+        update_rates(request, qs)
     return klass(qs, order_by=[sorting] if sorting else ['day'])

@@ -146,7 +146,7 @@ class ClientFactory(factory.django.DjangoModelFactory):
 class ProjectFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('job')
     client = factory.SubFactory(ClientFactory)
-    start_date = factory.fuzzy.FuzzyDate(date(2020, 1, 1), date(2025,1,1))
+    start_date = date(2020, 1, 1)
 
     class Meta:
         model = 'core.Project'

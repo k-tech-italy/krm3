@@ -55,6 +55,7 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         ('resource', AutoCompleteFilter),
         ('basket_title', AutoCompleteFilter),
     ]
+    autocomplete_fields = ['project', 'resource']
 
     def get_fieldsets(self, request: 'HttpRequest', obj: Task = ...) -> typing.Iterable:
         fieldsets = [

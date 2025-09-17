@@ -54,17 +54,6 @@ help:
 	@mkdir -p ${BUILDDIR}
 
 
-static:  ## build static assets
-	@rm -fr src/krm3/web/static/*
-	@sass src/krm3/web/assets/tw.in.scss | postcss  --config   -o src/krm3/web/assets/tw.css
-	@node_modules/.bin/webpack --mode ${NODE_ENV} --progress  --bail
-	@STATIC_ROOT=src/krm3/web/static ./manage.py collectstatic_js_reverse -v 0
-	@STATIC_ROOT=src/krm3/web/static ./manage.py collectstatic --no-input -v 0
-	@git add src/krm3/web/static
-	@echo $(shell /bin/ls -alu src/krm3/web/static/krm3/app.js)
-	@echo $(shell /bin/ls -alu src/krm3/web/static/krm3/app.css)
-
-
 backup_file := ~$(shell date +%Y-%m-%d).json
 reset-migrations: ## reset django migrations
 	./manage.py check
@@ -94,15 +83,8 @@ fullclean:
 test:
 	pytest tests/
 
-bump:   ## Bumps version
-	@while :; do \
-		read -r -p "bumpversion [major/minor/patch]: " PART; \
-		case "$$PART" in \
-			major|minor|patch) break ;; \
-  		esac \
-	done ; \
-	bumpversion --no-commit --allow-dirty $$PART
-	@grep "^version = " pyproject.toml
+bump: ## Bump version
+	cz bump
 
 .init-db:
 	sh tools/dev/initdb.sh
@@ -195,7 +177,7 @@ release:
 	@BE_BRANCH=`git branch --show-current` \
 	BE_COMMIT=`git rev-parse --short HEAD` \
 	BE_DATE=`git log -1 --pretty=%ad --date=short` && \
-	BE_VER=`python -c "import tomllib; f=open('pyproject.toml', 'rb'); print(tomllib.load(f)['project']['version'])"` \
+	BE_VER=`python -c "import tomllib; f=open('pyproject.toml', 'rb'); data = tomllib.load(f); print(data['project']['version'])"` && \
 	cd ./krm3-fe && \
 	FE_VER=`npm pkg get version` \
 	FE_BRANCH=`git branch --show-current` \
@@ -204,6 +186,6 @@ release:
 	cd .. && \
 	printf '{\n"be": {"branch": "'$$BE_BRANCH'", "commit": "'$$BE_COMMIT'", "date": "'$$BE_DATE'", "version": "'$$BE_VER'"},\n"fe": {"branch": "'$$FE_BRANCH'", "commit": "'$$FE_COMMIT'", "date": "'$$FE_DATE'", "version": '$$FE_VER'}\n}' > src/krm3/core/static/release.json
 
-refresh:
+refresh:  # rebuilds FE and tailwind
 	@cd krm3-fe && git pull && yarn install && yarn build
 	@git pull && uv sync && ./manage.py tailwind build

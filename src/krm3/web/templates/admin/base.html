@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+
+{% load i18n static issues %}
+
+
+{% block extrastyle %}
+    {% if TICKETING_ENABLED %}
+        <link rel="stylesheet" href="{% static "issues/issues.css" %}">
+    {% endif %}
+{% endblock extrastyle %}
+
+{% block extrahead %}
+    {% if TICKETING_ENABLED %}
+        {% issues_tags %}
+    {% endif %}
+{% endblock extrahead %}
+
+{% block footer %}
+    {% if TICKETING_ENABLED %}
+        <a style="margin:10px" href="#" id="issue-opener">open issue</a>
+    {% endif %}
+{% endblock footer %}

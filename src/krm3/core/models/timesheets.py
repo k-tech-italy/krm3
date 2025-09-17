@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
+from constance import config
 
 from .auth import Resource
 
@@ -106,6 +107,8 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         | models.Q(rest_hours__gt=0)
         | models.Q(leave_hours__gt=0)
         | models.Q(special_leave_hours__gt=0)
+        | models.Q(bank_to__gt=0)
+        | models.Q(bank_from__gt=0)
     )
 
     _REGULAR_LEAVE_ENTRY_FILTER = models.Q(leave_hours__gt=0)
@@ -229,6 +232,8 @@ class TimeEntry(models.Model):
     on_call_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    bank_from = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    bank_to =  models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     comment = models.TextField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
     timesheet = models.ForeignKey(TimesheetSubmission, on_delete=models.SET_NULL, null=True, blank=True)
@@ -261,6 +266,8 @@ class TimeEntry(models.Model):
             models.CheckConstraint(condition=models.Q(on_call_hours__range=(0, 24)), name='on_call_hours_range'),
             models.CheckConstraint(condition=models.Q(travel_hours__range=(0, 24)), name='travel_hours_range'),
             models.CheckConstraint(condition=models.Q(rest_hours__range=(0, 24)), name='rest_hours_range'),
+            models.CheckConstraint(condition=models.Q(bank_to__range=(0, 24)), name='bank_to_range'),
+            models.CheckConstraint(condition=models.Q(bank_from__range=(0, 24)), name='bank_from_range'),
         ]
 
     @override
@@ -295,7 +302,7 @@ class TimeEntry(models.Model):
     def total_hours(self) -> Decimal:
         """Compute the grand total of all hours logged on this entry.
 
-        This includes hours logged as absence.
+        This includes hours logged as absence and hours deposited/withdrawn from bank.
 
         :return: the computed total.
         """
@@ -307,6 +314,8 @@ class TimeEntry(models.Model):
             + Decimal(self.sick_hours)
             + Decimal(self.holiday_hours)
             + Decimal(self.rest_hours)
+            + Decimal(self.bank_from)
+            - Decimal(self.bank_to)
         )
 
     @property
@@ -349,6 +358,11 @@ class TimeEntry(models.Model):
     def prevents_overtime_on_same_day(self) -> bool:
         return self.is_leave or self.is_special_leave or self.is_rest
 
+    @property
+    def net_bank_hours(self) -> Decimal:
+        """Calculate net bank hour change for this entry."""
+        return Decimal(self.bank_from) - Decimal(self.bank_to)
+
     @override
     def clean(self) -> None:
         """Validate logged hours.
@@ -376,6 +390,10 @@ class TimeEntry(models.Model):
             self._verify_reason_only_on_special_leave,
             self._verify_special_leave_reason_is_valid,
             self._verify_no_overtime_with_leave_or_rest_entry,
+            self._verify_bank_hours_not_both_directions,
+            self._verify_bank_hours_balance_limits,
+            self._verify_bank_hours_restrictions_with_day_entries,
+            self._verify_bank_hours_against_scheduled_hours,
         )
 
         for validator in validators:
@@ -486,6 +504,119 @@ class TimeEntry(models.Model):
                 code='overtime_while_resting_or_on_leave',
             )
 
+    def _verify_bank_hours_not_both_directions(self) -> None:
+        """Verify that we don't have both withdrawal and deposit on the same day."""
+        if self.bank_from > 0.0 and self.bank_to > 0.0:
+            raise ValidationError(
+                _('Cannot both withdraw from and deposit to bank hours on the same day'),
+                code='bank_both_directions'
+            )
+
+    def _verify_bank_hours_balance_limits(self) -> None:
+        """Verify that the transaction won't exceed total balance limits (-16 to +16)."""
+        balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
+        balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
+        current_balance = self.resource.get_bank_hours_balance()
+        new_balance = current_balance + self.bank_to - self.bank_from
+
+        if new_balance > balance_upper:
+            raise ValidationError(
+                _('This transaction would exceed the maximum bank balance of {limit} hours. '
+                  'Current balance: {current}, attempting to add: {change}').format(
+                    limit=balance_upper,
+                    current=current_balance,
+                    change=self.net_bank_hours
+                ),
+                code='bank_balance_exceeds_upper_limit'
+            )
+        if new_balance < balance_lower:
+            raise ValidationError(
+                _('This transaction would exceed the minimum bank balance of {limit} hours. '
+                  'Current balance: {current}, attempting to change by: {change}').format(
+                    limit=balance_lower,
+                    current=current_balance,
+                    change=self.net_bank_hours
+                ),
+                code='bank_balance_exceeds_lower_limit'
+            )
+    def _verify_bank_hours_restrictions_with_day_entries(self) -> None:
+        """Verify bank hours restrictions with different types of day entries."""
+        if (self.is_holiday or self.is_sick_day) and (self.bank_to > 0.0 or self.bank_from > 0.0):
+            raise ValidationError(
+                _('Cannot use bank hours during holidays or sick days'),
+                code='bank_hours_not_allowed_on_holidays'
+            )
+
+        day_entry_types_no_deposits = (self.is_leave or self.is_rest or
+                                       self.is_special_leave)
+        if day_entry_types_no_deposits and self.bank_to > 0.0:
+            day_type = (
+                'leave' if self.is_leave else
+                'rest' if self.is_rest else
+                'special leave'
+            )
+            raise ValidationError(
+                _('Cannot deposit bank hours during a {day_type}').format(day_type=day_type),
+                code='bank_deposits_not_allowed_on_day_entries'
+            )
+
+    def _verify_bank_hours_against_scheduled_hours(self) -> None:
+        """Verify bank hours usage against scheduled hours for task entries."""
+        if not self.is_day_entry:
+            return
+
+        all_entries = TimeEntry.objects.filter(date=self.date, resource=self.resource)
+        total_hours_on_same_day = sum(entry.total_hours for entry in all_entries)
+        total_hours_with_bank_hours = total_hours_on_same_day + self.net_bank_hours
+        schedule = self.resource.get_schedule(self.date, self.date)
+        scheduled_hours = schedule[self.date]
+        if scheduled_hours is None:
+            return
+
+        if scheduled_hours > 0 and total_hours_with_bank_hours < scheduled_hours and self.bank_to > 0.0:
+            raise ValidationError(
+                _('Cannot deposit {bank_hours} bank hours. Total hours would become {task_hours} '
+                  'which is below scheduled hours ({scheduled_hours})').format(
+                    bank_hours=self.bank_to,
+                    task_hours=total_hours_with_bank_hours,
+                    scheduled_hours=scheduled_hours
+                    ),
+                    code='bank_deposit_below_scheduled_hours'
+            )
+
+        if total_hours_with_bank_hours > scheduled_hours and self.bank_from > 0.0:
+            raise ValidationError(
+                _('Cannot withdraw bank hours when task hours ({task_hours}) are higher or equal scheduled hours'
+                  ' ({scheduled_hours})').format(
+                    task_hours=total_hours_with_bank_hours,
+                    scheduled_hours=scheduled_hours
+                    ),
+                    code='bank_withdraw_above_scheduled_hours'
+            )
+
+    def verify_task_hours_deletion_wont_cause_negative_hours(self) -> None:
+        if not self.is_task_entry:
+            return
+
+        all_entries = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(pk=self.pk)
+        remaining_total_hours = sum(entry.total_hours for entry in all_entries)
+        total_bank_deposits = sum(entry.bank_to for entry in all_entries if entry.bank_to > 0)
+
+        if remaining_total_hours < 0:
+            raise ValidationError(
+                _('Cannot delete this time entry. Removing it would cause negative work hours '
+                  '({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on {date}').format(
+                    remaining_total_hours=remaining_total_hours,
+                    total_bank_deposits=total_bank_deposits,
+                    date=self.date
+                ),
+                code='deletion_would_cause_negative_hours'
+            )
+
+@receiver(models.signals.pre_delete, sender=TimeEntry)
+def validate_timeentry_deletion(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    """Signal handler to validate TimeEntry deletion."""
+    instance.verify_task_hours_deletion_wont_cause_negative_hours()
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
@@ -547,3 +678,14 @@ class ExtraHoliday(models.Model):
         if self.period.lower == end_dt:
             return  f'{self.period.lower.strftime('%Y-%m-%d')}: {reason}'
         return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}: {reason}'
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        if self.period.upper < self.period.lower + datetime.timedelta(days=1):
+            raise ValidationError(
+                {"period": "End date must be at least one day after start date."}
+            )

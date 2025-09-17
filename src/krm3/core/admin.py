@@ -66,8 +66,11 @@ class ClientAdmin(ModelAdmin):
 
 
 @admin.register(Contract)
-class ContractAdmin(ModelAdmin):
+class ContractAdmin(AdminFiltersMixin, ModelAdmin):
     search_fields = ['user']
+    list_display = ['resource', 'period']
+    list_filter = [('resource', AutoCompleteFilter)]
+    autocomplete_fields = ['resource']
 
     formfield_overrides = {
         # Tell Django to use our custom widget for all DateRangeFields in this admin.

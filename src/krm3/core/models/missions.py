@@ -35,7 +35,7 @@ class MissionManager(ActiveManagerMixin, models.Manager):
 
         Superuser gets them all.
         """
-        if user.has_any_perm('core.manage_any_mission', 'core.view_any_mission'):
+        if user.is_authenticated and user.has_any_perm('core.manage_any_mission', 'core.view_any_mission'):
             return self.all()
         return self.filter(resource__user=user)
 

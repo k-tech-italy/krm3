@@ -4,13 +4,13 @@ import os
 import sys
 
 
-def main():
+def main() -> None:
     """Run administrative tasks."""
     if len(sys.argv) > 1 and sys.argv[1] == "check_images":
         import immagini
         immagini.img_check()
         return
-        
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'krm3.config.settings')
     try:
         from django.core.management import execute_from_command_line

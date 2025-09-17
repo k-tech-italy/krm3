@@ -63,7 +63,7 @@ def get_rates(
     expenses = queryset.filter(amount_base__isnull=True)
     ret = expenses.count()
     qs = expenses.all()
-    update_rates(qs)
+    update_rates(request, qs)
     msg = f'Converted {ret} amounts'
     if silent:
         return msg

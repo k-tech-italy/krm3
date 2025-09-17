@@ -142,11 +142,14 @@ nav:
   - Glossary:
       - glossary/index.md
       - Terms:
+          - BankOfHours: glossary/terms/BankOfHours.md
           - BaseCurrency: glossary/terms/BaseCurrency.md
           - ClosedEntry: glossary/terms/ClosedEntry.md
+          - Contract: glossary/terms/Contract.md
           - DayEntry: glossary/terms/DayEntry.md
           - Expense: glossary/terms/Expense.md
           - ExpenseCategory: glossary/terms/ExpenseCategory.md
+          - ExtraHoliday: glossary/terms/ExtraHoliday.md
           - Mission: glossary/terms/Mission.md
           - OpenEntry: glossary/terms/OpenEntry.md
           - PaymentType: glossary/terms/PaymentType.md
@@ -154,18 +157,24 @@ nav:
           - Resource: glossary/terms/Resource.md
           - TaskEntry: glossary/terms/TaskEntry.md
           - TimeEntry: glossary/terms/TimeEntry.md
+          - TimesheetSubmission: glossary/terms/TimesheetSubmission.md
   - Guide:
-      - For User:
-          - Introduzione: guides/user/index.md
-          - Timesheet overview: guides/user/timesheet_overview.md
-          - How to add hours to the task: guides/user/add.md
-          - How to remove hours from the task: guides/user/remove.md
-          - How to remove hours from the day: guides/user/remove_from_day.md
-          - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/user/entry.md
-          - How to submit Timesheet : guides/user/submit.md
-      #- For Developer: guides/developer/index.md
-  - Wiki:
-      - Overview: wiki/Overview.md
-      - OS4D: wiki/domains/os4d.org.md
+      - For Users:
+          - Introduzione: guides/users/index.md
+          - Timesheet overview: guides/users/timesheet_overview.md
+          - How to add hours to the task: guides/users/add.md
+          - How to remove hours from the task: guides/users/remove.md
+          - How to remove hours from the day: guides/users/remove_from_day.md
+          - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/users/entry.md
+          - How to submit Timesheet : guides/users/submit.md
+          - How to add Bank Hours : guides/users/bank_hours.md
+          - Availability : guides/users/availability.md
+      - For Developers:
+          - Introduzione: guides/developers/index.md
+          - How to bump a new BE version: guides/developers/bump.md
+          - How to create a commit: guides/developers/commit.md
+  #- Wiki:
+      #- Overview: wiki/Overview.md
+      #- OS4D: wiki/domains/os4d.org.md
   - License: license.md
   - Tags: tags.md
