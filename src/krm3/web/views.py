@@ -1,12 +1,8 @@
 import logging
 import typing
-from pathlib import Path
 from typing import Any, cast
 
-import markdown
 import openpyxl
-from bs4 import BeautifulSoup
-from django.conf import settings
 from django.http import HttpRequest, HttpResponseBase, HttpResponse
 
 from django.urls import reverse
@@ -38,8 +34,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
         context['nav_bar_items'] = {
             'Report': reverse('report'),
             'Report by task': reverse('task_report'),
-            'Availability report': reverse('availability'),
-            'Releases': reverse('releases')
+            'Availability report': reverse('availability')
         }
         context['logout_url'] = reverse('logout')
 
@@ -145,48 +140,3 @@ class TaskReportView(ReportPermissionView):
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
         return context | task_report_data(current_month)
-
-
-class ReleasesView(HomeView):
-    template_name = 'releases.html'
-
-    def get_context_data(self, **kwargs) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        project_root = Path(settings.BASE_DIR).parent.parent
-        changelog_file_path = project_root / 'CHANGELOG.md'
-        changelog_html = ""
-
-        try:
-            changelog_content = Path(changelog_file_path).read_text(encoding='utf-8')
-            changelog_html = markdown.markdown(changelog_content)
-
-            soup = BeautifulSoup(changelog_html, 'html.parser')
-            for h2 in soup.find_all('h2'):
-                h2['class'] = h2.get('class', []) + ['text-2xl', 'text-blue-300', 'border-b',
-                                                     'border-white/20', 'pb-2', 'mb-4', 'mt-6', 'font-semibold']
-
-            for h3 in soup.find_all('h3'):
-                h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-300', 'mb-3', 'font-medium']
-
-            for ul in soup.find_all('ul'):
-                ul['class'] = ul.get('class', []) + ['space-y-2', 'my-4']
-
-            for li in soup.find_all('li'):
-                li['class'] = li.get('class', []) + ['marker:text-blue-400', 'marker:font-bold', 'ml-4']
-
-            for p in soup.find_all('p'):
-                p['class'] = p.get('class', []) + ['text-gray-200', 'leading-relaxed']
-
-            for strong in soup.find_all('strong'):
-                strong['class'] = strong.get('class', []) + ['text-white', 'font-semibold']
-
-            changelog_html = str(soup)
-        except FileNotFoundError:
-            logger.warning(f"CHANGELOG.md file not found at {changelog_file_path}")
-            changelog_html = "<p class='text-gray-400'>CHANGELOG.md file not found.</p>"
-        except (OSError, UnicodeDecodeError) as e:
-            logger.error(f"Error parsing CHANGELOG.md: {e}")
-            changelog_html = f"<p class='text-red-400'>Error parsing CHANGELOG.md: {e}</p>"
-
-        context['changelog_html'] = changelog_html
-        return context
