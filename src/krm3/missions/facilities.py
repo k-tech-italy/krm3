@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 class ReimbursementFacility:
     def __init__(self, ids: Union[str, 'QuerySet']):
         if isinstance(ids, str):
-            queryset = Expense.objects.filter(
-                id__in=map(int, ids.split(',')))
+            queryset = Expense.objects.filter(id__in=map(int, ids.split(',')))
         else:
             queryset = ids
         self.resources = {}
@@ -32,8 +31,9 @@ class ReimbursementFacility:
         results = {}
 
         for resource, missions in self.resources.items():
-            results[resource] = {mission: MissionExpenseTable(expenses, order_by=['day']) for mission, expenses in
-                                 missions.items()}
+            results[resource] = {
+                mission: MissionExpenseTable(expenses, order_by=['day']) for mission, expenses in missions.items()
+            }
         return results
 
     def check_year(self, year: int):
@@ -56,7 +56,11 @@ class ReimbursementFacility:
             else:
                 tit = f'R_{year}_{number:03}_{month}_{last_name}'
             reimbursement = Reimbursement.objects.create(
-                title=tit, resource=resource, year=year, month=month, number=number,
+                title=tit,
+                resource=resource,
+                year=year,
+                month=month,
+                number=number,
             )
             for mission, expenses in missions.items():
                 for expense in expenses:

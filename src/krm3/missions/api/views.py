@@ -7,9 +7,14 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
-from .serializers.expense import (DocumentTypeSerializer, ExpenseCategorySerializer, ExpenseCreateSerializer,
-                                  ExpenseRetrieveSerializer, ExpenseSerializer, PaymentCategorySerializer,
-                                  )
+from .serializers.expense import (
+    DocumentTypeSerializer,
+    ExpenseCategorySerializer,
+    ExpenseCreateSerializer,
+    ExpenseRetrieveSerializer,
+    ExpenseSerializer,
+    PaymentCategorySerializer,
+)
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
 
 
@@ -61,25 +66,19 @@ class ExpenseAPIViewSet(ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
 
-class ExpenseCategoryAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ExpenseCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
 
-class PaymentCategoryAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class PaymentCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
-class DocumentTypeAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class DocumentTypeAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)

@@ -15,7 +15,6 @@ class ExpenseTableMixin:
     attachment = tables.Column(empty_values=())
 
     def render_amount_currency(self, record: Expense) -> str:
-
         value = f'{record.amount_currency} {record.currency.iso3}'
         return format_html(value)
 
@@ -48,20 +47,17 @@ class ExpenseTableMixin:
 
 class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
-    amount_base = tables.Column(
-        footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data)
-    )
+    amount_base = tables.Column(footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data))
     amount_reimbursement = tables.Column(
         footer=lambda table: sum(x.amount_reimbursement or Decimal(0.0) for x in table.data)
     )
 
 
 class MissionExpenseTable(MissionExpenseBaseTable):
-
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static("admin/img/icon-yes.svg"))
-        return format_html('<img src="{}">', static("admin/img/icon-no.svg"))
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static('admin/img/icon-yes.svg'))
+        return format_html('<img src="{}">', static('admin/img/icon-no.svg'))
 
     def render_reimbursement(self, record: Expense) -> str:
         if record.reimbursement:
@@ -77,6 +73,7 @@ class MissionExpenseTable(MissionExpenseBaseTable):
         model = Expense
         exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement')
 
+
 class MissionExpenseExportTable(MissionExpenseBaseTable):
     export = True
 
@@ -90,11 +87,10 @@ class MissionExpenseExportTable(MissionExpenseBaseTable):
         model = Expense
         exclude = ('mission', 'created_ts', 'modified_ts', 'currency')
 
+
 class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
     id = tables.Column(footer='Totals')
-    amount_base = tables.Column(
-        footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data)
-    )
+    amount_base = tables.Column(footer=lambda table: sum(x.amount_base or Decimal(0.0) for x in table.data))
     amount_reimbursement = tables.Column(
         footer=lambda table: sum(x.amount_reimbursement or Decimal(0.0) for x in table.data)
     )
@@ -105,15 +101,14 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
 
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
-
     def render_id(self, record: Expense) -> str:
         url = reverse('admin:core_expense_change', args=[record.id])
         return format_html('<a href="{}">{}</a>', url, record.id)
 
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static("admin/img/icon-yes.svg"))
-        return format_html('<img src="{}">', static("admin/img/icon-no.svg"))
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static('admin/img/icon-yes.svg'))
+        return format_html('<img src="{}">', static('admin/img/icon-no.svg'))
 
     def render_mission(self, record: Expense) -> str:
         if record.mission:

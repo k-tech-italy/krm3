@@ -32,8 +32,16 @@ class MissionExporter:
         images_prefix_offset = len(f'{settings.MEDIA_URL}{EXPENSES_IMAGE_PREFIX}/')
 
         data = {
-            'clients': {}, 'countries': {}, 'projects': {}, 'cities': {}, 'resources': {},
-            'currencies': {}, 'categories': {}, 'payment_types': {}, 'missions': {}, 'expenses': {}
+            'clients': {},
+            'countries': {},
+            'projects': {},
+            'cities': {},
+            'resources': {},
+            'currencies': {},
+            'categories': {},
+            'payment_types': {},
+            'missions': {},
+            'expenses': {},
         }
         with TemporaryDirectory() as tempdir:
             os.mkdir(f'{tempdir}/images')
@@ -63,7 +71,7 @@ class MissionExporter:
 
                     # copy image
                     if expense_data['image']:
-                        realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL)-1:]
+                        realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL) - 1 :]
                         shutil.copy(realpath, f'{tempdir}/images')
                         expense_data['image'] = expense_data['image'][images_prefix_offset:]
 

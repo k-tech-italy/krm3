@@ -19,6 +19,7 @@ class ReimbursementSummaryEnum(Enum):
     def __str__(self) -> str:
         return self.value
 
+
 def calculate_reimbursement_summaries(qs: QuerySet[Expense]) -> tuple[dict, dict, dict]:
     bypayment = {'Company': [decimal.Decimal('0.0')] * 3, 'Personal': [decimal.Decimal('0.0')] * 3}
     byexpcategory = {pc: [decimal.Decimal('0.0')] * 4 for pc in ExpenseCategory.objects.root_nodes()}

@@ -1,7 +1,12 @@
 from rest_framework.routers import SimpleRouter
 
-from .views import (DocumentTypeAPIViewSet, ExpenseAPIViewSet, ExpenseCategoryAPIViewSet,
-                    MissionAPIViewSet, PaymentCategoryAPIViewSet,)
+from .views import (
+    DocumentTypeAPIViewSet,
+    ExpenseAPIViewSet,
+    ExpenseCategoryAPIViewSet,
+    MissionAPIViewSet,
+    PaymentCategoryAPIViewSet,
+)
 
 router = SimpleRouter()
 router.register('mission', MissionAPIViewSet)

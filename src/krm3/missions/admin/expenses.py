@@ -42,7 +42,7 @@ if typing.TYPE_CHECKING:
 
 
 class RestrictedReimbursementMixin:
-    def get_readonly_fields(self, request: "HttpRequest", obj: Any=None) -> list[str]:
+    def get_readonly_fields(self, request: 'HttpRequest', obj: Any = None) -> list[str]:
         ret = list(super().get_readonly_fields(request, obj))
         if not request.user.has_perm('missions.view_any_mission') and not request.user.has_perm(
             'missions.manage_any_mission'
@@ -58,10 +58,10 @@ class ExpenseInline(RestrictedReimbursementMixin, admin.TabularInline):  # noqa:
     exclude = ['amount_base', 'amount_reimbursement', 'created_ts', 'modified_ts']
     autocomplete_fields = ['mission', 'category', 'currency', 'payment_type', 'reimbursement']
 
-    def get_queryset(self, request: "HttpRequest") -> "QuerySet[Expense]":
+    def get_queryset(self, request: 'HttpRequest') -> 'QuerySet[Expense]':
         return Expense.objects.prefetch_related('category').all()
 
-    def formfield_for_foreignkey(self, db_field: "ModelField", request: "HttpRequest"=None, **kwargs) -> "Field":
+    def formfield_for_foreignkey(self, db_field: 'ModelField', request: 'HttpRequest' = None, **kwargs) -> 'Field':
         if db_field.name == 'currency':
             kwargs['queryset'] = Currency.objects.actives()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -114,12 +114,12 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
     actions = [reset_reimbursement, get_rates, create_reimbursement]
     _resource_link = 'mission__resource'
 
-    def lookup_allowed(self, lookup: str, value: Any, request: "HttpRequest"=None) -> bool:
+    def lookup_allowed(self, lookup: str, value: Any, request: 'HttpRequest' = None) -> bool:
         if lookup == 'mission_id':
             return True
         return super().lookup_allowed(lookup, value, request)
 
-    def get_queryset(self, request: "HttpRequest") -> "QuerySet":
+    def get_queryset(self, request: 'HttpRequest') -> 'QuerySet':
         return super().get_queryset(request).prefetch_related('mission', 'reimbursement')
 
     @admin.display(description='Mission', ordering='mission')
@@ -170,17 +170,17 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     link_to_reimbursement.short_description = 'Reimbursement'
 
-    def formfield_for_foreignkey(self, db_field: "ModelField", request: "HttpRequest" = None, **kwargs) -> "Field":
+    def formfield_for_foreignkey(self, db_field: 'ModelField', request: 'HttpRequest' = None, **kwargs) -> 'Field':
         if db_field.name == 'currency':
             kwargs['queryset'] = Currency.objects.actives()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    def get_form(self, request: "HttpRequest", obj: Expense = None, change: bool = False, **kwargs) -> "Form":
+    def get_form(self, request: 'HttpRequest', obj: Expense = None, change: bool = False, **kwargs) -> 'Form':
         if obj and (revert := request.GET.get('revert')):
             shutil.copy(revert, obj.image.file.name)
         return super().get_form(request, obj, change, **kwargs)
 
-    def get_changeform_initial_data(self, request: "HttpRequest") -> dict:
+    def get_changeform_initial_data(self, request: 'HttpRequest') -> dict:
         ret = super().get_changeform_initial_data(request)
         like = request.session.get('_like', None)
         if like:
@@ -198,7 +198,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
                 ret['mission'] = Mission.objects.filter_acl(request.user).get(pk=pk)
         return ret
 
-    def response_add(self, request: "HttpRequest", obj: Expense, post_url_continue: str = None) -> HttpResponseRedirect:
+    def response_add(self, request: 'HttpRequest', obj: Expense, post_url_continue: str = None) -> HttpResponseRedirect:
         ret = super().response_add(request, obj, post_url_continue)
         if '_addanother' in request.POST:
             day = request.POST['day']
@@ -207,7 +207,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             ret = HttpResponseRedirect(f'{ret.url}{qs}')
         return ret
 
-    def response_change(self, request: "HttpRequest", obj: Expense) -> HttpResponseRedirect:
+    def response_change(self, request: 'HttpRequest', obj: Expense) -> HttpResponseRedirect:
         ret = super().response_change(request, obj)
         if '_addanother' in request.POST:
             day = request.POST['day']
@@ -217,7 +217,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         return ret
 
     @button(html_attrs=NORMAL, visible=lambda button: button.request.GET.get('mission_id') is not None)
-    def capture(self, request: "HttpRequest") -> HttpResponseRedirect | None:
+    def capture(self, request: 'HttpRequest') -> HttpResponseRedirect | None:
         changelist_fitlers = re.match(r'mission_id=(?P<mission_id>\d+)', request.GET.get('_changelist_filters'))
         mission_id = changelist_fitlers.groupdict().get('mission_id')
 
@@ -233,7 +233,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         return None
 
     @button(html_attrs={'style': 'background-color:#0CDC6C;color:black'})
-    def purge_obsolete_images(self, request: "HttpRequest") -> None:
+    def purge_obsolete_images(self, request: 'HttpRequest') -> None:
         count = 0
         storage = Expense.image.field.storage
         existing = set(Expense.objects.values_list('image', flat=True))
@@ -248,7 +248,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     # FIXME: does not work ?
     @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
-    def clean_image(self, request: "HttpRequest", pk: int) -> None:
+    def clean_image(self, request: 'HttpRequest', pk: int) -> None:
         expense = self.model.objects.get(pk=pk)
         pathname = Path(expense.image.file.name)
         backup_path = pathname.parent.joinpath(pathname.stem + f'_{pk}{pathname.suffix}')
@@ -268,7 +268,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             messages.error(request, str(e))
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id))
-    def view_qr(self, request: "HttpRequest", pk: int) -> TemplateResponse:
+    def view_qr(self, request: 'HttpRequest', pk: int) -> TemplateResponse:
         expense = self.get_object(request, pk)
 
         # FIXME: This cannot work as the mobile uploading the client is not authenticated so no same session!
@@ -284,29 +284,29 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         )
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
-    def clone(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
+    def clone(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
         request.session['_like'] = pk
         return HttpResponseRedirect(reverse('admin:core_expense_add'))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
-    def goto_mission(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
+    def goto_mission(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
         expense = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:core_mission_change', args=[expense.mission_id]))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id) and btn.original.reimbursement_id is not None)
-    def goto_reimbursement(self, request: "HttpRequest", pk: int) -> HttpResponseRedirect:
+    def goto_reimbursement(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
         expense = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:core_reimbursement_change', args=[expense.reimbursement_id]))
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
-    def rotate_left(self, request: "HttpRequest", pk: int) -> None:
+    def rotate_left(self, request: 'HttpRequest', pk: int) -> None:
         self._rotate_by_90(pk, request, 'left')
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: bool(btn.original.id and btn.original.image))
-    def rotate_right(self, request: "HttpRequest", pk: int) -> None:
+    def rotate_right(self, request: 'HttpRequest', pk: int) -> None:
         self._rotate_by_90(pk, request, 'right')
 
-    def _rotate_by_90(self, pk: int, request: "HttpRequest", direction: str) -> None:
+    def _rotate_by_90(self, pk: int, request: 'HttpRequest', direction: str) -> None:
         expense = self.model.objects.get(pk=pk)
         pathname = Path(expense.image.file.name)
         backup_path = pathname.parent.joinpath(pathname.stem + f'_{pk}{pathname.suffix}')

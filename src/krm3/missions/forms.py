@@ -49,8 +49,8 @@ class MissionAdminForm(forms.ModelForm):
 
         if 'status' in self.changed_data and self.instance:
             if (
-                    self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
-                    and self.instance.expenses.filter(reimbursement__isnull=False).exists()
+                self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
+                and self.instance.expenses.filter(reimbursement__isnull=False).exists()
             ):
                 raise ValidationError(
                     f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception'
@@ -93,10 +93,14 @@ class MissionsReimbursementForm(forms.Form):
     """Form for reimbursement of multiple expenses."""
 
     expenses = forms.CharField(widget=forms.HiddenInput())
-    year = forms.IntegerField(help_text='Please select the fiscal year for the reimbursements', required=True,
-                              initial=lambda: datetime.date.today().year)
-    month = forms.CharField(help_text='Month of reimbursement', required=True,
-                            initial=lambda: datetime.date.today().strftime('%b'))
+    year = forms.IntegerField(
+        help_text='Please select the fiscal year for the reimbursements',
+        required=True,
+        initial=lambda: datetime.date.today().year,
+    )
+    month = forms.CharField(
+        help_text='Month of reimbursement', required=True, initial=lambda: datetime.date.today().strftime('%b')
+    )
 
     def clean(self):
         ret = super().clean()
