@@ -17,6 +17,7 @@ from testutils.factories import (
 )
 
 from krm3.core.models.timesheets import TimeEntry
+from tests._extras.testutils.factories import ContractFactory
 
 
 class TestBasket:
@@ -423,6 +424,28 @@ class TestTimeEntry:
         time_withdraw = TimeEntryFactory.build(task=None, resource=resource, date=date, day_shift_hours=0, bank_from=5)
         with pytest.raises(exceptions.ValidationError, match='Cannot withdraw bank hours when task hours'):
             time_withdraw.save()
+
+
+    def test_bank_deposit_success_with_correct_custom_schedule(self):
+        start_dt = datetime.date(2020, 1, 1)
+        end_dt = datetime.date(2026, 1, 1)
+        contract = ContractFactory(
+            period=(start_dt, end_dt),
+            working_schedule={'fri': 3, 'mon': 3, 'sat': 0, 'sun': 0, 'thu': 3, 'tue': 3, 'wed': 3}
+        )
+        project = ProjectFactory()
+        resource = contract.resource
+        task = TaskFactory(project=project, resource=resource)
+        date = datetime.date(2025, 1, 14)
+        TimeEntryFactory(
+            date=date,
+            resource=resource,
+            task=task,
+            day_shift_hours=4,
+        )
+        time_deposit = TimeEntryFactory(task=None, resource=resource, date=date, day_shift_hours=0, bank_to=1)
+
+        assert time_deposit.bank_to == 1
 
     def test_bank_deposit_with_0_scheduled_hours(self):
         resource = ResourceFactory()
