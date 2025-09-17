@@ -568,7 +568,7 @@ class TimeEntry(models.Model):
         all_entries = TimeEntry.objects.filter(date=self.date, resource=self.resource)
         total_hours_on_same_day = sum(entry.total_hours for entry in all_entries)
         total_hours_with_bank_hours = total_hours_on_same_day + self.net_bank_hours
-        schedule = self.resource.get_schedule(self.date, self.date)
+        schedule = self.resource.get_schedule(self.date, self.date + datetime.timedelta(days=1))
         scheduled_hours = schedule[self.date]
         if scheduled_hours is None:
             return
