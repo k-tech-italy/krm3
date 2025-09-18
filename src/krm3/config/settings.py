@@ -24,6 +24,7 @@ from .fragments.sentry import *  # noqa: F401,F403
 from .fragments.smartadmin import *  # noqa: F401,F403
 from .fragments.social import *  # noqa: F401,F403
 from .fragments.ticketing import *  # noqa: F401,F403
+from .fragments.sysinfo import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
 
@@ -192,13 +193,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 ADMINS = env('ADMINS')
 TEST_USERS = env('TEST_USERS')
-
-SYSINFO = {
-    'extra': {
-        'GIT': 'krm3.utils.sysinfo.get_commit_info',
-    },
-    'masker': 'krm3.utils.sysinfo.masker',
-}
 
 # the default currency for the organisation
 BASE_CURRENCY = env('BASE_CURRENCY')
