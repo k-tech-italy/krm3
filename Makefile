@@ -83,9 +83,6 @@ fullclean:
 test:
 	pytest tests/
 
-bump: ## Bump version
-	cz bump --dry-run
-
 .init-db:
 	sh tools/dev/initdb.sh
 
