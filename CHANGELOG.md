@@ -1,3 +1,9 @@
+## 1.5.35 (2025-09-18)
+
+### Fix
+
+- **pyproject.toml**: Ugraded Django to 5.2.6
+
 ## 1.5.34 (2025-09-18)
 
 ### Fix
