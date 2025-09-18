@@ -55,7 +55,7 @@ repos:
       - id: check-version-release-match
         args:
           - --pythonpath=src
-          - --package=datcoco
+          - --package=krm3
         stages: [pre-push]
         additional_dependencies: [ setuptools ]
 
@@ -71,3 +71,11 @@ repos:
           - \.showbrowser\(
         stages: [pre-commit]
         additional_dependencies: [ setuptools ]
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.0.0
+    hooks:
+    - id: commitizen
+    - id: commitizen-branch
+      stages:
+      - pre-push
