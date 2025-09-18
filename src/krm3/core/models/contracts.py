@@ -29,6 +29,8 @@ class Contract(models.Model):
         ]
 
     def __str__(self) -> str:
+        if self.period.lower is None:
+           return "Invalid Contract (No start date)"
         if self.period.upper:
             end_dt = self.period.upper - datetime.timedelta(days=1)
             return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}'
@@ -41,7 +43,7 @@ class Contract(models.Model):
     def clean(self) -> None:
         super().clean()
 
-        if self.period is None:
+        if self.period.lower is None:
             raise ValidationError({"period": "Start date is required."})
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError(
