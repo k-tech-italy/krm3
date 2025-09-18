@@ -40,7 +40,10 @@ class Contract(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        if self.period.upper < self.period.lower + datetime.timedelta(days=1):
+
+        if self.period is None:
+            raise ValidationError({"period": "Start date is required."})
+        if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError(
                 {"period": "End date must be at least one day after start date."}
             )
