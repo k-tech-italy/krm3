@@ -1,9 +1,3 @@
-## 1.5.34 (2025-09-18)
-
-### Fix
-
-- **Makefile**: removed bump from Makefile, adjusted pre-commit yaml for cz
-
 ## 1.5.33 (2025-09-18)
 
 ### Fix

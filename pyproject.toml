@@ -159,4 +159,5 @@ changelog_start_rev = "1.5.32"
 version_files = [
     "src/krm3/__init__.py:__version__",
     "docker/Makefile:VERSION",
+    "uv.lock:version"
 ]
