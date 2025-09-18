@@ -148,3 +148,18 @@ build-backend = "hatchling.build"
 [tool.pyright]
 extraPaths = ["tests/_extras"]
 typeCheckingMode="basic"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "uv"
+update_changelog_on_bump = true
+changelog_incremental = true
+changelog_start_rev = "1.5.31"
+version_files = [
+    "pyproject.toml:version",
+    "src/krm3/__init__.py:__version__",
+    "docker/Makefile:VERSION",
+    "uv.lock:version"
+]
