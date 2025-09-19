@@ -342,7 +342,7 @@ def test_timesheet_scheduled_hours_more_colors(browser: 'AppTestBrowser', regula
 
     browser.click_and_release(element)
 
-    browser.find_element(By.XPATH, '//button[text()="More"]').click()
+    browser.click('//*[contains(text(), "More")]')
     browser.fill('//input[@id="daytime-input"]', '13')
     browser.click('//*[contains(text(), "Save")]')
     browser.wait_for_element_visible(
