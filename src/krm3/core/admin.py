@@ -68,7 +68,7 @@ class ClientAdmin(ModelAdmin):
 @admin.register(Contract)
 class ContractAdmin(AdminFiltersMixin, ModelAdmin):
     search_fields = ['user']
-    list_display = ['resource', 'period']
+    list_display = ['resource', 'get_period']
     list_filter = [('resource', AutoCompleteFilter)]
     autocomplete_fields = ['resource']
 
@@ -79,6 +79,10 @@ class ContractAdmin(AdminFiltersMixin, ModelAdmin):
             'help_text': '{"mon": 8, "tue": 8, "wed": 8, "thu": 8, "fri": 8, "sat": 0, "sun": 0}'
         }
     }
+
+    @admin.display(description='Period', ordering='period')
+    def get_period(self, obj: Contract) -> str:
+        return str(obj)
 
 @admin.register(ExtraHoliday)
 class ExtraHolidayAdmin(ModelAdmin):
