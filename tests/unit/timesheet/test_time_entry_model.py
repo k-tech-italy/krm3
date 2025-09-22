@@ -448,15 +448,31 @@ class TestTimeEntry:
         assert time_deposit.bank_to == 1
 
     def test_bank_deposit_with_0_scheduled_hours(self):
+        date = datetime.date(2025,9,21) # Sunday
         resource = ResourceFactory()
-        date = datetime.date(2025, 8, 2)
-        with does_not_raise():
+        with pytest.raises(exceptions.ValidationError, match='Cannot deposit 1 bank hours.'):
             TimeEntryFactory(
+                task=None,
                 resource=resource,
                 date=date,
-                bank_to=3,
                 day_shift_hours=0,
+                bank_to=1
             )
+
+        TimeEntryFactory(
+            date=date,
+            resource=resource,
+            task = TaskFactory(resource=resource),
+            day_shift_hours=1
+        )
+        time_deposit_at_weekend = TimeEntryFactory(
+            task=None,
+            resource=resource,
+            date=date,
+            day_shift_hours=0,
+            bank_to=1
+        )
+        assert time_deposit_at_weekend.bank_to == 1
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""

@@ -573,7 +573,7 @@ class TimeEntry(models.Model):
         if scheduled_hours is None:
             return
 
-        if scheduled_hours > 0 and total_hours_with_bank_hours < scheduled_hours and self.bank_to > 0.0:
+        if scheduled_hours >= 0 and total_hours_with_bank_hours < scheduled_hours and self.bank_to > 0.0:
             raise ValidationError(
                 _('Cannot deposit {bank_hours} bank hours. Total hours would become {task_hours} '
                   'which is below scheduled hours ({scheduled_hours})').format(
