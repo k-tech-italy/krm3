@@ -1,11 +1,11 @@
 import datetime
 
-from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
-
 from django.db import models
 
+from krm3.utils.dates import KrmDay
 
 class Contract(models.Model):
     resource = models.ForeignKey('core.Resource', on_delete=models.CASCADE)
@@ -30,7 +30,7 @@ class Contract(models.Model):
 
     def __str__(self) -> str:
         if self.period.lower is None:
-           return "Invalid Contract (No start date)"
+            return 'Invalid Contract (No start date)'
         if self.period.upper:
             end_dt = self.period.upper - datetime.timedelta(days=1)
             return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}'
@@ -44,8 +44,14 @@ class Contract(models.Model):
         super().clean()
 
         if self.period.lower is None:
-            raise ValidationError({"period": "Start date is required."})
+            raise ValidationError({'period': 'Start date is required.'})
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
-            raise ValidationError(
-                {"period": "End date must be at least one day after start date."}
-            )
+            raise ValidationError({'period': 'End date must be at least one day after start date.'})
+
+    def falls_in(self, day: datetime.date | KrmDay) -> bool:
+        """Check if the provided day falls into the contract period."""
+        if isinstance(day, KrmDay):
+            day = day.date
+        if self.period.upper is None:
+            return self.period.lower <= day
+        return self.period.lower <= day < self.period.upper

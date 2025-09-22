@@ -133,10 +133,10 @@ class Resource(models.Model):
             )
         )
 
-    def contract_for_date(self, contract_list: 'list[Contract]', day: date) -> 'Contract | None':
+    def contract_for_date(self, contract_list: 'list[Contract]', day: date | KrmDay) -> 'Contract | None':
         """Select the contract applicable for the given day."""
         for contract in contract_list:
-            if contract.period.lower <= day < contract.period.upper:
+            if contract.falls_in(day):
                 return contract
         return None
 

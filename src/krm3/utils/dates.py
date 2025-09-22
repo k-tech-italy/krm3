@@ -95,15 +95,31 @@ class KrmDay:
             yield self + i
 
     def __eq__(self, __value: Self) -> bool:
+        if not isinstance(__value, KrmDay):
+            __value = KrmDay(__value)
         return self.date == __value.date
 
     def __hash__(self) -> int:
         return self.date.year * 10000 + self.date.month * 100 + self.date.day
 
+    def __lt__(self, __value: Self) -> bool:
+        if not isinstance(__value, KrmDay):
+            __value = KrmDay(__value)
+        return hash(self) < hash(__value)
+
     def __gt__(self, __value: Self) -> bool:
+        if not isinstance(__value, KrmDay):
+            __value = KrmDay(__value)
         return hash(self) > hash(__value)
 
+    def __le__(self, __value: Self) -> bool:
+        if not isinstance(__value, KrmDay):
+            __value = KrmDay(__value)
+        return hash(self) <= hash(__value)
+
     def __ge__(self, __value: Self) -> bool:
+        if not isinstance(__value, KrmDay):
+            __value = KrmDay(__value)
         return hash(self) >= hash(__value)
 
     def __sub__(self, other: Self | int | datetime.timedelta | relativedelta) -> int | KrmDay:

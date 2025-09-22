@@ -6,6 +6,7 @@ import freezegun
 import pytest
 
 from krm3.utils.dates import KrmDay, dt, KrmCalendar
+from testutils.date_utils import _dt
 
 
 class TestKrmDay:
@@ -34,6 +35,8 @@ class TestKrmDay:
     def test_equals(self):
         assert KrmDay('2025-06-02') == KrmDay('2025-06-02')
         assert KrmDay('2025-06-02') != KrmDay('2025-06-03')
+        assert KrmDay('2025-06-02') == _dt('2025-06-02')
+        assert KrmDay('2025-06-02') != _dt('2025-06-03')
 
     def test_gt(self):
         assert (KrmDay('2025-06-02') > KrmDay('2025-06-02')) is False
@@ -41,6 +44,11 @@ class TestKrmDay:
         assert (KrmDay('2025-06-01') >= KrmDay('2025-06-02')) is False
         assert (KrmDay('2025-06-02') >= KrmDay('2025-06-02')) is True
         assert (KrmDay('2025-06-03') >= KrmDay('2025-06-02')) is True
+        assert (KrmDay('2025-06-02') > _dt('2025-06-02')) is False
+        assert (KrmDay('2025-06-03') > _dt('2025-06-02')) is True
+        assert (KrmDay('2025-06-01') >= _dt('2025-06-02')) is False
+        assert (KrmDay('2025-06-02') >= _dt('2025-06-02')) is True
+        assert (KrmDay('2025-06-03') >= _dt('2025-06-02')) is True
 
     def test_lt(self):
         assert (KrmDay('2025-06-02') < KrmDay('2025-06-02')) is False
@@ -48,6 +56,11 @@ class TestKrmDay:
         assert (KrmDay('2025-06-02') <= KrmDay('2025-06-01')) is False
         assert (KrmDay('2025-06-02') <= KrmDay('2025-06-02')) is True
         assert (KrmDay('2025-06-02') <= KrmDay('2025-06-03')) is True
+        assert (KrmDay('2025-06-02') < _dt('2025-06-02')) is False
+        assert (KrmDay('2025-06-02') < _dt('2025-06-03')) is True
+        assert (KrmDay('2025-06-02') <= _dt('2025-06-01')) is False
+        assert (KrmDay('2025-06-02') <= _dt('2025-06-02')) is True
+        assert (KrmDay('2025-06-02') <= _dt('2025-06-03')) is True
 
     def test_sub(self):
         assert KrmDay('2025-06-02') - KrmDay('2025-06-02') == 0
