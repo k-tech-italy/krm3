@@ -1,3 +1,9 @@
+## 1.5.36 (2025-09-24)
+
+### Fix
+
+- **timesheets.py**: update validator for deposit when schedule is 0 hours (#119)
+
 ## 1.5.35 (2025-09-18)
 
 ### Fix

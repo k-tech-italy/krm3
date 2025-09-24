@@ -1232,7 +1232,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "1.5.35"
+version = "1.5.36"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
