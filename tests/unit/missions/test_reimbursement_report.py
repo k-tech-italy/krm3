@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from testutils.date_utils import _dt
+from testutils.utils import _dt
 from testutils.factories import ExpenseFactory, ReimbursementFactory, MissionFactory, ResourceFactory
 from krm3.core.models import Reimbursement, Resource, Mission, PaymentCategory, ExpenseCategory
 from krm3.missions.admin.reimbursement import prepare_reimbursement_report_data, prepare_reimbursement_report_context
