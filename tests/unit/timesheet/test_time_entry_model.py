@@ -506,7 +506,7 @@ class TestTimeEntry:
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
     def test_day_entry_overwrites_other_existing_day_entry_on_the_same_day(self, existing_hours_field, new_hours_field):
         resource = ResourceFactory()
-        absence_day = datetime.date(2024, 1, 1)
+        absence_day = datetime.date(2024, 1, 3)
         _absence_entry = TimeEntryFactory(
             date=absence_day,
             day_shift_hours=0,

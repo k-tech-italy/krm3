@@ -1084,7 +1084,7 @@ class TestTimeEntryAPICreateView:
         self, hours_key, existing_hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 1)
+        target_date = datetime.date(2024, 1, 2)
 
         existing_day_entry = TimeEntryFactory(
             resource=resource, date=target_date, day_shift_hours=0, **{existing_hours_field: 4}
