@@ -87,6 +87,16 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
 
+# Mermaid configuration
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+extra_css:
+  - _theme/css/mermaid.css
+
 
 plugins:
   - autorefs
@@ -173,8 +183,7 @@ nav:
           - Introduzione: guides/developers/index.md
           - How to bump a new BE version: guides/developers/bump.md
           - How to create a commit: guides/developers/commit.md
-  #- Wiki:
-      #- Overview: wiki/Overview.md
-      #- OS4D: wiki/domains/os4d.org.md
+  - Wiki:
+      - Release workflow: wiki/ReleaseWorkflow.md
   - License: license.md
   - Tags: tags.md
