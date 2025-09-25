@@ -1,7 +1,7 @@
 import datetime
 import typing
 from decimal import Decimal as D  # noqa: N817
-
+from django.contrib.auth import get_user_model
 from dateutil.relativedelta import relativedelta
 
 from krm3.core.models import TimeEntry, Resource
@@ -10,6 +10,7 @@ from krm3.core.models.timesheets import TimesheetSubmission
 from krm3.utils.dates import KrmCalendar, KrmDay
 from krm3.utils.tools import format_data
 
+User = get_user_model()
 
 _fields = [
     'day_shift',
@@ -36,10 +37,14 @@ timeentry_key_mapping = {
 }
 
 
-def enrich_with_resource_calendar(results, from_date, to_date) -> None:
+def enrich_with_resource_calendar(
+    results: dict[Resource, dict], from_date: datetime.date, to_date: datetime.date
+    ) -> None:
     for resource, stats in results.items():
         submitted_days = get_submitted_dates(from_date, to_date, resource)
-        stats['days'] = [KrmDay(d, submitted=d.date in submitted_days) for d in KrmCalendar().iter_dates(from_date, to_date)]
+        stats['days'] = [
+            KrmDay(d, submitted=d.date in submitted_days) for d in KrmCalendar().iter_dates(from_date, to_date)
+        ]
 
 
 def timesheet_report_raw_data(
@@ -103,7 +108,9 @@ def calculate_overtime(resource_stats: dict) -> None:
     for stats in resource_stats.values():
         num_days = len(stats['day_shift'])
 
-        day_keys = [x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime', 'days']]
+        day_keys = [
+            x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime', 'days']
+        ]
 
         for i in range(num_days):
             if sum([stats[x][i] for x in day_keys]) == D(0.0):
@@ -113,43 +120,34 @@ def calculate_overtime(resource_stats: dict) -> None:
                 stats['overtime'][i] = max(tot_hours - D('8.00'), D('0.00'))
 
 
-def get_submitted_dates(from_date: datetime.date, to_date: datetime.date, resource: 'Resource'):
-        calendar = KrmCalendar()
-        submissions = TimesheetSubmission.objects.get_closed_in_period(from_date, to_date, resource).values('period')
-        submitted_dates = set()
+def get_submitted_dates(from_date: datetime.date, to_date: datetime.date, resource: 'Resource') -> set[datetime.date]:
+    calendar = KrmCalendar()
+    submissions = TimesheetSubmission.objects.get_closed_in_period(from_date, to_date, resource).values('period')
+    submitted_dates = set()
 
-        for submission in submissions:
-            period_start = submission['period'].lower
-            period_end = submission['period'].upper - datetime.timedelta(days=1)
-            actual_start = max(period_start, from_date)
-            actual_end = min(period_end, to_date)
+    for submission in submissions:
+        period_start = submission['period'].lower
+        period_end = submission['period'].upper - datetime.timedelta(days=1)
+        actual_start = max(period_start, from_date)
+        actual_end = min(period_end, to_date)
 
-            submitted_dates.update(
-                krm_day.date
-                for krm_day in calendar.iter_dates(actual_start, actual_end)
-            )
+        submitted_dates.update(krm_day.date for krm_day in calendar.iter_dates(actual_start, actual_end))
 
-        return submitted_dates
+    return submitted_dates
+
 
 def get_days_submission(
-    from_date: datetime.date,
-    to_date: datetime.date,
-    resource: Resource
+    from_date: datetime.date, to_date: datetime.date, resource: Resource
 ) -> dict[datetime.date, bool]:
     """Return dictionary of all days in a period with their submission status for a specific resource."""
     calendar = KrmCalendar()
 
-    submitted_days = get_submitted_dates(
-        from_date, to_date, resource
-    )
+    submitted_days = get_submitted_dates(from_date, to_date, resource)
 
-    return {
-        krm_day.date: krm_day.date in submitted_days
-        for krm_day in calendar.iter_dates(from_date, to_date)
-    }
+    return {krm_day.date: krm_day.date in submitted_days for krm_day in calendar.iter_dates(from_date, to_date)}
 
 
-def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
+def timesheet_report_data(current_month: str | None, user: User) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
@@ -159,7 +157,10 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
     next_month = start_of_month + relativedelta(months=1)
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    data, additional_mapping = timesheet_report_raw_data(start_of_month, end_of_month)
+    resource = None
+    if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+        resource = user.get_resource()
+    data, additional_mapping = timesheet_report_raw_data(start_of_month, end_of_month, resource=resource)
     calculate_overtime(data)
     add_report_summaries(data)
 
@@ -167,8 +168,10 @@ def timesheet_report_data(current_month: str | None) -> dict[str, typing.Any]:
         for key, values in shifts.items():
             if key != 'days':
                 shifts[key] = [format_data(v) for v in values]
-
-    data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
+    resources = Resource.objects.filter(active=True)
+    if resource:
+        resources = resources.filter(pk=resource.pk)
+    data = dict.fromkeys(resources.order_by('last_name', 'first_name'), None) | data
     days = list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month))
 
     return {

@@ -41,8 +41,10 @@ def _assert_homepage_content(response):
     assert f'href="{releases_expected_url}"' in content
 
 
-@pytest.mark.parametrize('url', ('/be/', '/be/home/', '/be/availability/', '/be/releases/'))
-def test_authenticated_user_should_see_homepage_availability_report_and_releases(client, url):
+@pytest.mark.parametrize(
+    'url', ('/be/', '/be/home/', '/be/availability/', '/be/releases/', '/be/report/', '/be/task_report/')
+)
+def test_authenticated_user_should_see_all_be_views(client, url):
     UserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
     response = client.get(url)
@@ -50,31 +52,37 @@ def test_authenticated_user_should_see_homepage_availability_report_and_releases
 
 
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_superuser_should_see_permission_protected_views(client, url):
-    SuperUserFactory(username='user00', password='pass123')
+def test_user_without_permission_should_only_see_its_reports(url, client):
+    user = UserFactory(username='user00', password='pass123')
+    another_user = UserFactory(username='user01', password='pass123')
+    resource = ResourceFactory(user=user, profile=user.profile)
+    another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
     client.login(username='user00', password='pass123')
     response = client.get(url)
-    _assert_homepage_content(response)
+    assert response.status_code == 200
+    content = response.content.decode()
+    resource_name = f'{resource.last_name}</strong> {resource.first_name}'
+    another_user_name = f'{another_resource.last_name}</strong> {another_resource.first_name}'
+    assert resource_name in content
+    assert another_user_name not in content
 
 
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_user_without_permissions_should_not_see_permission_protected_views(
-    url, client
-):
-    UserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
-    response = client.get(url)
-    assert response.status_code == 403
-
-
-@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_user_with_permissions_should_see_permission_protected_views(url, client):
+def test_user_with_permissions_should_see_all_resources_reports(url, client):
+    user = UserFactory(username='user00', password='pass123')
+    another_user = UserFactory(username='user01', password='pass123')
+    resource = ResourceFactory(user=user, profile=user.profile)
+    another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
     for perm in ['manage_any_timesheet', 'view_any_timesheet']:
-        user = UserFactory(username='user00', password='pass123')
         user.user_permissions.add(Permission.objects.get(codename=perm))
         client.login(username='user00', password='pass123')
         response = client.get(url)
-        _assert_homepage_content(response)
+        assert response.status_code == 200
+        content = response.content.decode()
+        resource_name = f'{resource.last_name}</strong> {resource.first_name}'
+        another_user_name = f'{another_resource.last_name}</strong> {another_resource.first_name}'
+        assert resource_name in content
+        assert another_user_name in content
 
 
 @pytest.mark.parametrize(
@@ -110,16 +118,10 @@ def test_availability_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert (
-        f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>'
-        in content
-    )
+    assert f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>' in content
     assert '<td class="p-1 border border-1 text-center">H</td>' in content
     assert '<td class="p-1 border border-1 text-center">L 6.00</td>' in content
-    assert (
-        '<h1 class="text-3xl font-bold text-center mb-1">Availability August 2025</h1>'
-        in content
-    )
+    assert '<h1 class="text-3xl font-bold text-center mb-1">Availability August 2025</h1>' in content
 
 
 def test_availability_view_filtered_by_project(client):
@@ -148,10 +150,7 @@ def test_availability_view_filtered_by_project(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert (
-        f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>'
-        in content
-    )
+    assert f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>' in content
     assert (
         f'<td class="border border-1 text-left p-1 ">{another_resource.first_name} {another_resource.last_name}</td>'
         not in content
@@ -171,13 +170,10 @@ def test_availability_view_filtered_by_project(client):
 def test_availability_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse('availability')}?{urlencode({"month": month})}')
+    response = client.get(f'{reverse("availability")}?{urlencode({"month": month})}')
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert (
-        f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>'
-        in response.content.decode()
-    )
+    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
 
 
 @freeze_time('2025-08-22')
@@ -198,10 +194,7 @@ def test_report_view_current_month(client):
     content = response.content.decode()
     assert f'{resource.first_name} {resource.last_name}' in content
     assert '<td class="p-1 border border-1 text-center">8</td>' in content
-    assert (
-        '<h1 class="text-3xl font-bold text-center mb-1">Report August 2025</h1>'
-        in content
-    )
+    assert '<h1 class="text-3xl font-bold text-center mb-1">Report August 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
@@ -215,36 +208,25 @@ def test_report_view_current_month(client):
 def test_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse('report')}?{urlencode({"month": month})}')
+    response = client.get(f'{reverse("report")}?{urlencode({"month": month})}')
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert (
-        f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>'
-        in response.content.decode()
-    )
+    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
 
 
 @freeze_time('2025-08-22')
 def test_task_report_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     task = TaskFactory()
-    TimeEntryFactory(
-        resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task
-    )
+    TimeEntryFactory(resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task)
     client.login(username='user00', password='pass123')
     url = reverse('task_report')
     response = client.get(url)
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert (
-        f'<td class="border border-1 text-left p-1 ">{task.project}: {task.title}</td>'
-        in content
-    )
-    assert (
-        '<h1 class="text-3xl font-bold text-center mb-1">Task Report August 2025</h1>'
-        in content
-    )
+    assert f'<td class="border border-1 text-left p-1 ">{task.project}: {task.title}</td>' in content
+    assert '<h1 class="text-3xl font-bold text-center mb-1">Task Report August 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
@@ -258,13 +240,11 @@ def test_task_report_view_current_month(client):
 def test_task_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse('task_report')}?{urlencode({"month": month})}')
+    response = client.get(f'{reverse("task_report")}?{urlencode({"month": month})}')
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert (
-        f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>'
-        in response.content.decode()
-    )
+    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
+
 
 @pytest.mark.django_db
 def test_report_creation(client):
@@ -296,10 +276,7 @@ def test_report_creation(client):
     url = reverse('export_report', args=['202506'])
     response = client.get(url)
     assert response.status_code == 200
-    assert (
-        response['Content-Type']
-        == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
 
@@ -330,6 +307,7 @@ def test_report_creation(client):
     assert sheet_1['B3'].value == 14
     assert sheet_2['B4'].value == 7
 
+
 @pytest.mark.django_db
 def test_unauthorized_report_creation(client):
     UserFactory(username='user00', password='pass123')
@@ -338,7 +316,10 @@ def test_unauthorized_report_creation(client):
     response = client.get(url)
     assert response.status_code == 403
 
-@patch('pathlib.Path.read_text', return_value="""## 1.5.33 (2025-09-10)
+
+@patch(
+    'pathlib.Path.read_text',
+    return_value="""## 1.5.33 (2025-09-10)
         ### Fix
         - update template
 
@@ -348,7 +329,7 @@ def test_unauthorized_report_creation(client):
         - add commitizen setup
 
         ### Fix
-        - update bump command with interactive mode"""
+        - update bump command with interactive mode""",
 )
 def test_releases_view_with_valid_markdown(mock_file, client):
     UserFactory(username='user00', password='pass123')
@@ -358,12 +339,13 @@ def test_releases_view_with_valid_markdown(mock_file, client):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "1.5.33" in content
-    assert "1.5.32" in content
-    assert "update template" in content
-    assert "add commitizen setup" in content
-    assert "update bump command" in content
-    assert "Changelog" in content
+    assert '1.5.33' in content
+    assert '1.5.32' in content
+    assert 'update template' in content
+    assert 'add commitizen setup' in content
+    assert 'update bump command' in content
+    assert 'Changelog' in content
+
 
 @patch('pathlib.Path.read_text', side_effect=FileNotFoundError())
 def test_releases_view_with_missing_file_should_show_error(mock_open_func, client):
@@ -374,8 +356,8 @@ def test_releases_view_with_missing_file_should_show_error(mock_open_func, clien
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "text-gray-400" in content
-    assert "CHANGELOG.md file not found" in content
+    assert 'text-gray-400' in content
+    assert 'CHANGELOG.md file not found' in content
 
 
 @patch('pathlib.Path.read_text', side_effect=PermissionError())
@@ -387,5 +369,5 @@ def test_releases_view_with_file_read_error(mock_open_func, client):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "Changelog" in content
-    assert "Error parsing CHANGELOG.md" in content
+    assert 'Changelog' in content
+    assert 'Error parsing CHANGELOG.md' in content
