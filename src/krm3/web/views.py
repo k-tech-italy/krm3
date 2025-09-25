@@ -1,20 +1,18 @@
 import logging
 import typing
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import markdown
 import openpyxl
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.http import HttpRequest, HttpResponseBase, HttpResponse
-
-from django.urls import reverse
-from rest_framework.response import Response
-from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import HttpRequest, HttpResponse
+from django.urls import reverse
+from django.views.generic import TemplateView
 
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
@@ -39,22 +37,11 @@ class HomeView(LoginRequiredMixin, TemplateView):
             'Report': reverse('report'),
             'Report by task': reverse('task_report'),
             'Availability report': reverse('availability'),
-            'Releases': reverse('releases')
+            'Releases': reverse('releases'),
         }
         context['logout_url'] = reverse('logout')
 
         return context
-
-
-class ReportPermissionView(HomeView):
-
-    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponseBase:
-        user = cast('User', request.user)
-        if not user.is_anonymous and not user.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        ):
-            raise PermissionDenied()
-        return super().dispatch(request, *args, **kwargs)
 
 
 class AvailabilityReportView(HomeView):
@@ -64,17 +51,18 @@ class AvailabilityReportView(HomeView):
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
         selected_project = self.request.GET.get('project', '')
-        projects = {
-            '': 'All projects'
-        } | dict(Project.objects.values_list('id', 'name'))
+        projects = {'': 'All projects'} | dict(Project.objects.values_list('id', 'name'))
         data = availability_report_data(current_month, selected_project)
         data['projects'] = projects
         data['selected_project'] = selected_project
         return context | data
 
 
-def export_report(date: str) -> Response:
-    report_data = timesheet_report_data(date)
+def export_report(request: HttpRequest, date: str) -> HttpResponse:
+    if not request.user.has_perm('core.view_any_timesheet'):
+        raise PermissionDenied()
+
+    report_data = timesheet_report_data(date, request.user)
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
@@ -123,28 +111,28 @@ def export_report(date: str) -> Response:
     return response
 
 
-class ReportView(ReportPermissionView):
+class ReportView(HomeView):
     template_name = 'report.html'
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if kwargs.get('export'):
             date = kwargs.get('date')
-            return export_report(date)
+            return export_report(request, date)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
-        return context | timesheet_report_data(current_month)
+        return context | timesheet_report_data(current_month, user=self.request.user)
 
 
-class TaskReportView(ReportPermissionView):
+class TaskReportView(HomeView):
     template_name = 'task_report.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
-        return context | task_report_data(current_month)
+        return context | task_report_data(current_month, user=self.request.user)
 
 
 class ReleasesView(HomeView):
@@ -154,7 +142,7 @@ class ReleasesView(HomeView):
         context = super().get_context_data(**kwargs)
         project_root = Path(settings.BASE_DIR).parent.parent
         changelog_file_path = project_root / 'CHANGELOG.md'
-        changelog_html = ""
+        changelog_html = ''
 
         try:
             changelog_content = Path(changelog_file_path).read_text(encoding='utf-8')
@@ -162,8 +150,16 @@ class ReleasesView(HomeView):
 
             soup = BeautifulSoup(changelog_html, 'html.parser')
             for h2 in soup.find_all('h2'):
-                h2['class'] = h2.get('class', []) + ['text-2xl', 'text-blue-300', 'border-b',
-                                                     'border-white/20', 'pb-2', 'mb-4', 'mt-6', 'font-semibold']
+                h2['class'] = h2.get('class', []) + [
+                    'text-2xl',
+                    'text-blue-300',
+                    'border-b',
+                    'border-white/20',
+                    'pb-2',
+                    'mb-4',
+                    'mt-6',
+                    'font-semibold',
+                ]
 
             for h3 in soup.find_all('h3'):
                 h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-300', 'mb-3', 'font-medium']
@@ -182,10 +178,10 @@ class ReleasesView(HomeView):
 
             changelog_html = str(soup)
         except FileNotFoundError:
-            logger.warning(f"CHANGELOG.md file not found at {changelog_file_path}")
+            logger.warning(f'CHANGELOG.md file not found at {changelog_file_path}')
             changelog_html = "<p class='text-gray-400'>CHANGELOG.md file not found.</p>"
         except (OSError, UnicodeDecodeError) as e:
-            logger.error(f"Error parsing CHANGELOG.md: {e}")
+            logger.error(f'Error parsing CHANGELOG.md: {e}')
             changelog_html = f"<p class='text-red-400'>Error parsing CHANGELOG.md: {e}</p>"
 
         context['changelog_html'] = changelog_html
