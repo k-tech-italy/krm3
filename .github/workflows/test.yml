@@ -1,5 +1,5 @@
 ---
-name: Test and Build
+name: Test and Security Scan
 
 on:
   push:
@@ -21,7 +21,7 @@ permissions:
   attestations: write
   actions: write
   packages: write
-
+  security-events: write
 
 jobs:
   changes:
@@ -300,30 +300,3 @@ jobs:
         name: trivy-scan-results
         path: trivy-results.sarif
         retention-days: 30
-
-  merge:
-    needs: [changes, build, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && needs.changes.outputs.version == 'true' && needs.security-scan.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-    - name: Log in to the Container registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Download Docker image
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp/
-
-    - name: Load and push Docker image
-      run: |
-        docker load --input /tmp/image.tar
-        docker push ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }}
-        docker push ghcr.io/${{ github.repository }}:latest
