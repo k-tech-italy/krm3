@@ -94,8 +94,6 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
-extra_css:
-  - _theme/css/mermaid.css
 
 
 plugins:
