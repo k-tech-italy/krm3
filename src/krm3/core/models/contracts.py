@@ -3,8 +3,10 @@ import datetime
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
+from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import KrmDay
 
 class Contract(models.Model):
@@ -16,6 +18,15 @@ class Contract(models.Model):
         help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
     )
     working_schedule = models.JSONField(blank=True, null=True)
+    meal_vaucher = models.BooleanField(default=True, help_text='Enable meal voucher for this contract')
+    comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
+    document = models.FileField(
+        upload_to=contract_directory_path,
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(['pdf'])],
+        help_text='Optional PDF document (PDF files only)'
+    )
 
     class Meta:
         constraints = [
