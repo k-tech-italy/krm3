@@ -13,12 +13,11 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 from krm3.core.models import Project, Task
-from krm3.projects.forms import TaskForm
+from krm3.projects.forms import TaskForm, ProjectForm
 from krm3.styles.buttons import NORMAL
 
 if typing.TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
-
     from krm3.core.models.auth import User
 
 
@@ -27,9 +26,9 @@ class TaskInline(admin.TabularInline):  # noqa: D101
     exclude = ['color', 'on_call_price', 'overtime_price', 'travel_price']
     autocomplete_fields = ['resource']
 
-
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    form = ProjectForm
     search_fields = ('name',)
     list_display = ('client', 'name', 'start_date', 'end_date')
     list_filter = (

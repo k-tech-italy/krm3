@@ -1,11 +1,12 @@
+import datetime
 import random
 
 from django.forms import ModelForm, TextInput, CharField
 
-from krm3.core.models.projects import Task
+from krm3.core.models.projects import Task, Project
 
 
-def _pick_random_color(*args, **kwargs):
+def _pick_random_color(*args, **kwargs) -> str:
     return random.choice([
         'ED9B9B',
         '9E6B6B',
@@ -19,6 +20,16 @@ def _pick_random_color(*args, **kwargs):
         'D1E2AB'
     ])
 
+class ProjectForm(ModelForm):
+    class Meta:
+        model = Project
+        fields = ['name', 'client', 'start_date', 'end_date', 'metadata', 'notes']
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        if not self.instance.pk:
+            self.fields['start_date'].initial = datetime.date.today()
 
 class TaskForm(ModelForm):
     color = CharField(
@@ -27,7 +38,7 @@ class TaskForm(ModelForm):
         initial=_pick_random_color # Set your default color hex code here
     )
 
-    def clean_color(self):
+    def clean_color(self) -> None:
         if self.cleaned_data['color'] == '#000000':
             self.cleaned_data['color'] = None
 
