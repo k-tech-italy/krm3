@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import datetime
 from typing import TYPE_CHECKING, Self, override, Iterable
 
 from django.core.exceptions import ValidationError
@@ -13,6 +11,7 @@ from .contacts import Client
 from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
+    import datetime
     from django.db.models.base import ModelBase
     from decimal import Decimal
     from krm3.core.models.auth import User
@@ -35,7 +34,7 @@ class ProjectManager(NaturalKeyModelManager):
 class Project(NaturalKeyModel):
     name = models.CharField(max_length=80, unique=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    start_date = models.DateField(null=True, blank=True)
+    start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
@@ -62,13 +61,14 @@ class Project(NaturalKeyModel):
         using: str | None = None,
         update_fields: Iterable[str] | None = None,
     ) -> None:
-        if self.start_date is None:
-            self.start_date = datetime.date.today()
         self.full_clean()
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
     @override
     def clean(self) -> None:
+        if self.start_date is None:
+            raise ValidationError(_('"start_date" is required'), code='required')
+
         if self.end_date and (self.start_date > self.end_date):
             raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
         return super().clean()
