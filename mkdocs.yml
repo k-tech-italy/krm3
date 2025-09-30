@@ -1,3 +1,4 @@
+copyright: Copyright &copy; 2020-2024 K-Tech srl.
 dev_addr: 127.0.0.1:8001
 docs_dir: docs
 edit_uri: 'blob/develop/docs/'
@@ -13,7 +14,7 @@ extra_css:
 extra_javascript:
   - _theme/js/js.cookie.js
   - _theme/js/address.js
-  - krm3/assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js
+  - assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js
 exclude_docs: |
   ~*
   .m_templates
