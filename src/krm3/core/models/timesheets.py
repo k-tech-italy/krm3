@@ -16,6 +16,7 @@ from django.db.models import QuerySet
 from constance import config
 
 from .auth import Resource
+from ...utils.dates import KrmDay
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -355,8 +356,12 @@ class TimeEntry(models.Model):
         return self.total_task_hours > 0.0 or self.on_call_hours > 0.0
 
     @property
-    def prevents_overtime_on_same_day(self) -> bool:
-        return self.is_leave or self.is_special_leave or self.is_rest
+    def does_entry_blocking_overtime_exist_for_same_day(self) -> bool:
+        time_entries_for_same_day = TimeEntry.objects.filter(resource=self.resource, date=self.date).exclude(pk=self.pk)
+        for time_entry in time_entries_for_same_day:
+            if time_entry.is_leave or time_entry.is_special_leave or time_entry.is_rest:
+                return True
+        return False
 
     @property
     def net_bank_hours(self) -> Decimal:
@@ -484,21 +489,22 @@ class TimeEntry(models.Model):
 
         other_entries_on_same_day = all_entries.exclude(task=self.task).exclude(pk=self.pk)
 
-        # this check only involves leave (both kinds) and rest entries
         if (
-            not self.prevents_overtime_on_same_day
-            and not other_entries_on_same_day.entries_preventing_overtime_on_same_day().exists()
+            not (self.does_entry_blocking_overtime_exist_for_same_day
+                 or self.is_special_leave or self.is_rest or self.is_special_leave)
         ):
             return
 
         total_hours_on_same_day = sum(entry.total_hours for entry in other_entries_on_same_day) + self.total_hours
-        if total_hours_on_same_day > self.resource.daily_work_hours_max:
+
+        if total_hours_on_same_day > self.resource.scheduled_working_hours_for_day(KrmDay(self.date)):
+
             raise ValidationError(
                 _(
                     'No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, got {actual_hours}'
                 ).format(
                     kind='rest' if self.is_rest else 'leave',
-                    work_hours=self.resource.daily_work_hours_max,
+                    work_hours= self.resource.scheduled_working_hours_for_day(KrmDay(self.date)),
                     actual_hours=total_hours_on_same_day,
                 ),
                 code='overtime_while_resting_or_on_leave',

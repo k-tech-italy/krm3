@@ -1,6 +1,8 @@
 import datetime
 import io
+import json
 from unittest.mock import patch
+from constance.test import override_config
 
 import openpyxl
 import pytest
@@ -93,7 +95,15 @@ def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
     assert response.status_code == 302
     assert response.url == f'/admin/login/?next={url}'
 
-
+@override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+    'mon': 8,
+    'tue': 8,
+    'wed': 8,
+    'thu': 8,
+    'fri': 8,
+    'sat': 8,
+    'sun': 8
+}))
 @freeze_time('2025-08-22')
 def test_availability_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')

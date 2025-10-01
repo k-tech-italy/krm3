@@ -1,9 +1,11 @@
+import json
 import time
 import datetime
 import os
 import tempfile
 
 from freezegun import freeze_time
+from constance.test import override_config
 from krm3.core.models.missions import Mission
 import pytest
 
@@ -256,6 +258,15 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
+@override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+    'mon': 8,
+    'tue': 8,
+    'wed': 8,
+    'thu': 8,
+    'fri': 8,
+    'sat': 8,
+    'sun': 8
+}))
 @freeze_time("2025-07-14")
 def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
 
