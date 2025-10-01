@@ -1,6 +1,7 @@
 from typing import Any
 
 from flags.state import flag_enabled
+from flags.sources import get_flags
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
@@ -8,6 +9,24 @@ from krm3.config.environ import env
 from krm3.core.models import Resource, UserProfile
 from krm3.core.models.auth import User
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
+
+LABEL_TO_FLAG_URL_MAP = [
+    {
+        'flag': 'TRANSFERT_ENABLED',
+        'url': 'trasferte',
+        'label': 'Trasferte',
+    },
+    {
+        'flag': 'TIMESHEET_ENABLED',
+        'url': 'timesheet',
+        'label': 'Timesheet',
+    },
+    {
+        'flag': 'REPORT_ENABLED',
+        'url': 'be/',
+        'label': 'Report',
+    },
+]
 
 
 # XXX: why is this not a BaseSerializer? The metaclass implicitly
@@ -59,13 +78,11 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
     def get_config(self, *args) -> dict[str, Any]:
         """Return a dictionary of configuration values."""
         config = {
-            'modules': sorted(
-                [
-                    k
-                    for k, flag in {'trasferte': 'TRASFERTE_ENABLED', 'timesheet': 'TIMESHEET_ENABLED'}.items()
-                    if flag_enabled(flag, request=self.context['request'])
+            'modules':
+                [   obj
+                    for obj in LABEL_TO_FLAG_URL_MAP
+                    if flag_enabled(obj['flag'], request=self.context['request']) # type: ignore
                 ]
-            )
         }
 
         default = env('DEFAULT_MODULE')
@@ -81,8 +98,8 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
     def get_flags(self, *args) -> dict[str, bool] | None:
         """Return a dictionary of feature flags and their enabled status."""
         return {
-            key: flag_enabled(key, request=self.context['request'])
-            for key in ['TRASFERTE_ENABLED', 'TIMESHEET_ENABLED']
+            key: flag_enabled(key, request=self.context['request'])  # type: ignore
+            for key in list(get_flags().keys())
         }
 
 
