@@ -105,6 +105,7 @@ class TestTimeEntry:
     def test_day_entry_is_saved_only_with_sick_holiday_rest_or_leave_hours(self, hour_field, expected_behavior):
         with expected_behavior:
             entry = TimeEntryFactory(
+                date=datetime.date(2025, 7, 14),
                 task=None,
                 day_shift_hours=0,
                 special_leave_reason=SpecialLeaveReasonFactory() if hour_field == 'special_leave_hours' else None,
@@ -713,6 +714,7 @@ class TestTimeEntry:
         reason = SpecialLeaveReasonFactory() if hours_key == 'special_leave_hours' else None
         with expected_to_raise:
             TimeEntryFactory(
+                date=datetime.date(2025, 7, 14),
                 task=(
                     None
                     if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'rest', 'leave', 'special_leave')

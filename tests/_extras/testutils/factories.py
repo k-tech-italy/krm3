@@ -305,7 +305,7 @@ class InvoiceEntryFactory(factory.django.DjangoModelFactory):
 
 
 class SpecialLeaveReasonFactory(factory.django.DjangoModelFactory):
-    title = factory.Faker('sentence', nb_words=2)
+    title = factory.Faker('sentence', nb_words=4)
 
     class Meta:
         model = 'core.SpecialLeaveReason'
