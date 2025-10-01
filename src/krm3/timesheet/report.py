@@ -21,6 +21,7 @@ _fields = [
     'on_call',
     'travel',
     'rest',
+    'bank_from'
 ]
 
 
@@ -45,6 +46,50 @@ def enrich_with_resource_calendar(
         stats['days'] = [
             KrmDay(d, submitted=d.date in submitted_days) for d in KrmCalendar().iter_dates(from_date, to_date)
         ]
+
+def enrich_with_meal_vaucher(
+        results: dict[Resource,dict], from_date: datetime.date, to_date: datetime.date
+    ) -> dict[str, str]:
+    """
+    Add meal vaucher calculation to the results.
+
+    Value is 1 if resource worked >=75% of scheduled hours, empty otherwise.
+    Only calculated if contract.meal_vaucher is enabled.
+
+    Returns:
+        Dictionary with meal vaucher mapping for the keymap
+
+    """
+    calendar = KrmCalendar()
+    meal_vaucher_mapping = {}
+
+    for resource, stats in results.items():
+        days_interval = (to_date - from_date).days + 1
+        stats['meal_vaucher'] = [None] * days_interval
+
+        contracts = resource.get_contracts(from_date, to_date)
+        schedule = resource.get_schedule(from_date, to_date)
+
+        for day_index, krm_day in enumerate(calendar.iter_dates(from_date, to_date)):
+            date = krm_day.date
+
+            contract = resource.contract_for_date(contracts, date)
+            if not contract or not contract.meal_vaucher:
+                continue
+
+            scheduled_hours = schedule[date]
+
+            total_worked_hours = (
+                stats['day_shift'][day_index] +
+                stats['night_shift'][day_index] +
+                stats['travel'][day_index] +
+                stats['bank_from'][day_index]
+            )
+            if scheduled_hours > 0 and total_worked_hours >= scheduled_hours * 0.75:
+                stats['meal_vaucher'][day_index] = 1
+
+    meal_vaucher_mapping['meal_vaucher'] = 'Buoni pasto'
+    return meal_vaucher_mapping
 
 
 def timesheet_report_raw_data(
@@ -82,14 +127,18 @@ def timesheet_report_raw_data(
             hours_types[index] += entry.special_leave_hours
         for field in _fields:
             hours_types = resource_stats.setdefault(field, [D('0.00')] * days_interval)
-            hours_types[index] += getattr(entry, f'{field}_hours')
+            if field == 'bank_from':
+                hours_types[index] += getattr(entry, f'{field}')
+            else:
+                hours_types[index] += getattr(entry, f'{field}_hours')
 
     for stats in results.values():
         stats['overtime'] = [D('0.00')] * days_interval
 
     enrich_with_resource_calendar(results, from_date, to_date)
-
-    return results, special_leave_mapping_dict
+    meal_vaucher_mapping = enrich_with_meal_vaucher(results, from_date, to_date)
+    additional_mapping = special_leave_mapping_dict | meal_vaucher_mapping
+    return results, additional_mapping
 
 
 def add_report_summaries(results: dict) -> None:
@@ -97,7 +146,11 @@ def add_report_summaries(results: dict) -> None:
     for stats in results.values():
         for k, result_list in stats.items():
             if k != 'days':
-                result_list.insert(0, sum(result_list))
+                if k =='meal_vaucher':
+                    vaucher_count = sum(1 for val in result_list if val ==1)
+                    result_list.insert(0, vaucher_count)
+                else:
+                    result_list.insert(0, sum(result_list))
                 for i in range(1, len(result_list)):
                     if result_list[i] == D('0.00'):
                         result_list[i] = None
@@ -109,7 +162,8 @@ def calculate_overtime(resource_stats: dict) -> None:
         num_days = len(stats['day_shift'])
 
         day_keys = [
-            x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime', 'days']
+            x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime',
+                                          'days', 'bank_from', 'meal_vaucher']
         ]
 
         for i in range(num_days):
