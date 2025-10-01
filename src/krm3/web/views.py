@@ -21,6 +21,7 @@ from krm3.timesheet.task_report import task_report_data
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
+    from openpyxl.worksheet.worksheet import Worksheet
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,21 @@ class AvailabilityReportView(HomeView):
         data['selected_project'] = selected_project
         return context | data
 
+def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current_row: int) -> int:
+    """Write all data rows for a resource."""
+    if not data:
+        return current_row
+
+    for key, value in data.items():
+        if key in report_data['keymap']:
+            safe_value = ['' if v is None else v for v in value]
+            row_data = [report_data['keymap'][key], *safe_value]
+
+            for col, cell_value in enumerate(row_data, 1):
+                ws.cell(row=current_row, column=col, value=cell_value)
+            current_row += 1
+
+    return current_row
 
 def export_report(request: HttpRequest, date: str) -> HttpResponse:
     if not request.user.has_perm('core.view_any_timesheet'):
@@ -64,11 +80,19 @@ def export_report(request: HttpRequest, date: str) -> HttpResponse:
 
     report_data = timesheet_report_data(date, request.user)
     wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+    ws = wb.active
+    ws.title = f"Report {date[0:4]}-{date[4:6]}"
 
-    for resource, data in report_data['data'].items():
+    current_row = 1
+
+    for resource_idx, (resource, data) in enumerate(report_data['data'].items()):
         if data is None:
             continue
+
+        # spacing between employees
+        if resource_idx > 0:
+            current_row += 2
+
         holidays = []
         overlapping_contracts: 'list[Contract]' = resource.get_contracts(min(data['days']).date, max(data['days']).date)
         for day in data['days']:
@@ -77,13 +101,14 @@ def export_report(request: HttpRequest, date: str) -> HttpResponse:
             holidays.append('X' if day.is_holiday(calendar_code) else '')
 
         headers = [
-            name := f'{resource.last_name.upper()} {resource.first_name}',
+            f'{resource.last_name.upper()} {resource.first_name}',
             'Tot HH',
             *holidays,
         ]
 
-        ws = wb.create_sheet(title=name)
-        ws.append(headers)
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=current_row, column=col, value=header)
+        current_row += 1
 
         giorni = [
             'Giorni',
@@ -94,14 +119,12 @@ def export_report(request: HttpRequest, date: str) -> HttpResponse:
                 for day in data['days']
             ],
         ]
-        ws.append(giorni)
 
-        if data:
-            for key, value in data.items():
-                if key in report_data['keymap']:
-                    safe_value = ['' if v is None else v for v in value]
-                    row = [report_data['keymap'][key], *safe_value]
-                    ws.append(row)
+        for col, giorno in enumerate(giorni, 1):
+            ws.cell(row=current_row, column=col, value=giorno)
+        current_row += 1
+
+        current_row = _write_resource_data(ws, data, report_data, current_row)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     filename = f'report_{date[0:4]}-{date[4:6]}.xlsx'

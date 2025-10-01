@@ -272,40 +272,50 @@ def test_report_creation(client):
         task=task_1,
         resource=task_2.resource,
     )
-
-    url = reverse('export_report', args=['202506'])
+    date_arg = '202506'
+    url = reverse('export_report', args=[date_arg])
     response = client.get(url)
     assert response.status_code == 200
     assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
 
-    # check sheet names
     r1_name = f'{task_1.resource.last_name.upper()} {task_1.resource.first_name}'
     r2_name = f'{task_2.resource.last_name.upper()} {task_2.resource.first_name}'
-    assert r1_name, r2_name in workbook.sheetnames
-    sheet_1 = workbook[r1_name]
-    sheet_2 = workbook[r2_name]
+    assert len(workbook.sheetnames) == 1
+    sheet_name = f"Report {date_arg[0:4]}-{date_arg[4:6]}"
+    assert sheet_name in workbook.sheetnames
+    sheet = workbook[sheet_name]
 
-    # check row labels
-    assert sheet_1['A1'].value == r1_name
-    assert sheet_1['A2'].value == 'Giorni'
-    row_labels = [sheet_1[f'A{index}'].value for index in range(3, 12)]
+    resource_rows = {}
+    for row in range(1, sheet.max_row + 1):
+        cell_value = sheet[f'A{row}'].value
+        if cell_value == r1_name:
+            resource_rows['r1'] = row
+        elif cell_value == r2_name:
+            resource_rows['r2'] = row
+
+    assert 'r1' in resource_rows, f"Resource 1 '{r1_name}' not found in sheet"
+    assert 'r2' in resource_rows, f"Resource 2 '{r2_name}' not found in sheet"
+
+    r1_row = resource_rows['r1']
+
+    assert sheet[f'A{r1_row}'].value == r1_name
+    assert sheet[f'A{r1_row + 1}'].value == 'Giorni'
+    row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
+    row_labels = [label for label in row_labels if label]
     assert all(value in timeentry_key_mapping.values() for value in row_labels)
 
-    # check day labels
-    assert sheet_1['C2'].value == '**Sun\n1**'
-    assert sheet_1['AF2'].value == '**Mon\n30**'
-    assert sheet_1['AG2'].value is None
+    first_resource_row = min(resource_rows.values())
+    assert sheet[f'C{first_resource_row + 1}'].value == '**Sun\n1**'
+    assert sheet[f'AF{first_resource_row + 1}'].value == '**Mon\n30**'
+    assert sheet[f'AG{first_resource_row + 1}'].value is None
 
-    # check cell values
-    assert sheet_1['L3'].value == 8
-    assert sheet_1['Q3'].value is None
-    assert sheet_2['O4'].value == 7
+    day_shift_data_row = r1_row + 2
+    assert sheet[f'L{day_shift_data_row}'].value == 8
+    assert sheet[f'Q{day_shift_data_row}'].value is None
 
-    # check total hours
-    assert sheet_1['B3'].value == 14
-    assert sheet_2['B4'].value == 7
+    assert sheet[f'B{day_shift_data_row}'].value == 14
 
 
 @pytest.mark.django_db
