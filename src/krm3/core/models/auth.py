@@ -19,7 +19,6 @@ if typing.TYPE_CHECKING:
     from datetime import date
     from krm3.core.models import Contract
 
-
 class UserManager(BaseUserManager):
     def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
         if not email:
@@ -108,20 +107,27 @@ class Resource(models.Model):
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
 
-    @property
-    def daily_work_hours_max(self) -> Decimal:
-        """Maximum number of hours a resource should work each day.
+    def scheduled_working_hours_for_day(self, day: KrmDay) -> float:
+        """Scheduled number of hours a resource should work each day.
 
-        It can be exceeded.
-
-        :return: the maximum number of hours in a work day.
+        :return: scheduled number of hours.
         """
-        return Decimal(8)
+        from krm3.core.models import Contract
+        contract = Contract.objects.filter(resource=self, period__contains=day.date).first()
+        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE
+        if contract and contract.working_schedule:
+            schedule = contract.working_schedule
+        else:
+            schedule = json.loads(default_resource_schedule)
+        if contract and contract.country_calendar_code:
+            country_calendar_code = contract.country_calendar_code
+        else:
+            country_calendar_code = settings.HOLIDAYS_CALENDAR
 
-    def _min_working_hours_for_day(self, day: KrmDay, country_calendar_code: str, schedule: dict[str, float]) -> float:
         min_working_hours = schedule[day.day_of_week_short.lower()]
         if day.is_holiday(country_calendar_code, False):
             min_working_hours = 0
+
         return min_working_hours
 
     def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
@@ -141,22 +147,11 @@ class Resource(models.Model):
         return None
 
     def get_schedule(self, start_day: date, end_day: date) -> dict[date, float]:
-        overlapping_contracts: 'list[Contract]' = self.get_contracts(start_day, end_day)
         calendar = KrmCalendar()
         days = list(calendar.iter_dates(start_day, end_day))
-        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE  # {'mon': 8, 'tue': 8, .... 'sat': 0, 'sun': 0}
 
         for day in days:
-            contract: Contract = self.contract_for_date(overlapping_contracts, day.date)
-            if contract and contract.working_schedule:
-                schedule = contract.working_schedule
-            else:
-                schedule = json.loads(default_resource_schedule)
-            if contract and contract.country_calendar_code:
-                country_calendar_code = contract.country_calendar_code
-            else:
-                country_calendar_code = settings.HOLIDAYS_CALENDAR
-            day.min_working_hours = self._min_working_hours_for_day(day, country_calendar_code, schedule)
+            day.min_working_hours = self.scheduled_working_hours_for_day(day)
 
         return {day.date: day.min_working_hours for day in days}
 

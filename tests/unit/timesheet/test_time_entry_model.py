@@ -1,6 +1,8 @@
 import datetime
+import json
 from contextlib import nullcontext as does_not_raise
 from decimal import Decimal
+from constance.test import override_config
 
 import pytest
 from django.core import exceptions
@@ -78,6 +80,15 @@ class TestBasket:
 
 
 class TestTimeEntry:
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('hour_field', 'expected_behavior'),
         (
@@ -506,7 +517,7 @@ class TestTimeEntry:
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
     def test_day_entry_overwrites_other_existing_day_entry_on_the_same_day(self, existing_hours_field, new_hours_field):
         resource = ResourceFactory()
-        absence_day = datetime.date(2024, 1, 1)
+        absence_day = datetime.date(2024, 1, 3)
         _absence_entry = TimeEntryFactory(
             date=absence_day,
             day_shift_hours=0,
@@ -626,6 +637,15 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.leave_hours == 8
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     def test_is_saved_as_special_leave(self):
         """Special leave hours with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
@@ -663,6 +683,15 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('hours_key', 'expected_to_raise'),
         (
@@ -693,7 +722,15 @@ class TestTimeEntry:
                 special_leave_reason=reason,
                 **hours,
             )
-
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('hours_key', 'expected_to_raise'),
         (
@@ -743,18 +780,18 @@ class TestTimeEntry:
 
         with does_not_raise():
             entry = TimeEntryFactory(
-                date=datetime.date(2024, 1, 1),
+                date=datetime.date(2024, 1, 2),
                 day_shift_hours=0,
                 special_leave_hours=2,
                 special_leave_reason=valid_reason,
             )
 
-        expired_reason = SpecialLeaveReasonFactory(title='expired', to_date=datetime.date(2020, 1, 1))
+        expired_reason = SpecialLeaveReasonFactory(title='expired', to_date=datetime.date(2020, 1, 2))
         entry.special_leave_reason = expired_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "expired" is not valid'):
             entry.save()
 
-        upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 1))
+        upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 2))
         entry.special_leave_reason = upcoming_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "upcoming" is not valid'):
             entry.save()
