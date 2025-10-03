@@ -606,6 +606,23 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.sick_hours == 8
 
+    def test_protocol_number_without_sick_hours(self):
+        """Protocol number field cannot be set without sick hours logged."""
+        with pytest.raises(exceptions.ValidationError, match='Protocol number can be used only for sick days'):
+            TimeEntryFactory(task=None, protocol_number='123', sick_hours=0, resource=ResourceFactory())
+
+    def test_protocol_number_with_wrong_format(self):
+        """Protocol number field values must be all digits."""
+        with pytest.raises(exceptions.ValidationError, match='Protocol number digits must be numeric'):
+            TimeEntryFactory(task=None, protocol_number='3.1415', sick_hours=8, resource=ResourceFactory())
+
+    def test_sick_hours_protocol_number_success(self):
+        """Test Protocol number with correct format with sick hours."""
+        with does_not_raise():
+            TimeEntryFactory(
+                task=None, protocol_number='00032100', sick_hours=8, day_shift_hours=0, resource=ResourceFactory()
+            )
+
     def test_is_saved_as_holiday(self):
         """Sick day with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
@@ -684,46 +701,6 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
-    @pytest.mark.parametrize(
-        ('hours_key', 'expected_to_raise'),
-        (
-            pytest.param('day_shift_hours', does_not_raise(), id='day'),
-            pytest.param('night_shift_hours', does_not_raise(), id='night'),
-            pytest.param('rest_hours', does_not_raise(), id='rest'),
-            pytest.param('travel_hours', does_not_raise(), id='travel'),
-            pytest.param('on_call_hours', does_not_raise(), id='on_call'),
-            pytest.param(
-                'sick_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='sick'
-            ),
-            pytest.param('holiday_hours', does_not_raise(), id='holiday'),
-            pytest.param('leave_hours', does_not_raise(), id='leave'),
-            pytest.param('special_leave_hours', does_not_raise(), id='leave'),
-        ),
-    )
-    def test_raises_if_missing_mandatory_comment(self, hours_key, expected_to_raise):
-        hours = {'day_shift_hours': 0} | {hours_key: 8}
-        reason = SpecialLeaveReasonFactory() if hours_key == 'special_leave_hours' else None
-        with expected_to_raise:
-            TimeEntryFactory(
-                date=datetime.date(2025, 7, 14),
-                task=(
-                    None
-                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'rest', 'leave', 'special_leave')
-                    else TaskFactory()
-                ),
-                comment=None,
-                special_leave_reason=reason,
-                **hours,
-            )
     @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
         'mon': 8,
         'tue': 8,
@@ -882,3 +859,11 @@ class TestTimeEntry:
         time_entry.date = datetime.date(2020, 6, 15)
         time_entry.save()
         assert time_entry.timesheet == timesheet_2
+
+    def test_timesheet_submission_str(self):
+        from psycopg.types.range import DateRange
+
+        timesheet = TimesheetSubmissionFactory(
+            period=DateRange(datetime.date(2020, 5, 1), datetime.date(2020, 5, 31), '[]')
+        )
+        assert str(timesheet) == '2020-05-01 - 2020-05-30'

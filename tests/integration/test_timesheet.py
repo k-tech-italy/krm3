@@ -574,3 +574,72 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
     actual_error = error_element.text.strip()
 
     assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_wrong_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-radio")]')
+
+    # Add a wrong protocol number
+    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', 'ABC3982ESA')
+
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element(
+        '//*[contains(text(), "Invalid time entry for 2025-07-04: Protocol number digits must be numeric.")]'
+    )
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_empty_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-radio")]')
+
+    # Leaving an empty protocol number should be possible now
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_correct_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-radio")]')
+
+    # Add a protocol number with correct format (only digits)
+    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', '001234985983400')
+
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+
+    # check the protocol number is saved
+    browser.click_and_release(day_tile)
+    browser.assert_element(
+        '//textarea[contains(@id,"day-entry-protocol-number-input")][contains(text(), "001234985983400")]'
+    )
