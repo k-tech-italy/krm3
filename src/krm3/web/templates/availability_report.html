@@ -26,13 +26,12 @@
         <div class="mb-10">
             <label for="country" class="block text-sm/6 font-medium">Filter for project</label>
             <div class="mt-2 grid grid-cols-1">
-                    <select id="project" name="project" autocomplete="project-name" class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white/5 py-1.5 pr-8 pl-3 text-base outline-1 -outline-offset-1 *:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6">
+                    <select id="project" name="project" autocomplete="project-name">
                         {% for id, project in projects.items %}
                             <option value="{{ id }}">{{ project }}</option>
                         {% endfor %}
                     </select>
                     <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4">
-                    <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                     </svg>
             </div>
         </div>
@@ -79,15 +78,25 @@
 
     {% block js-frameworks %}
         {{ block.super }}
-        <script>
-            const selectElement = document.getElementById('project');
-            {% if selected_project %}
-                selectElement.value = {{ selected_project }};
-            {% endif %}
-            selectElement.addEventListener('change', () => {
-                const url = new URL(window.location);
-                url.searchParams.set('project', selectElement.value);
-                window.location.href = url.toString();
-            });
-        </script>
+<script>
+    $(document).ready(function() {
+        const $select = $('#project');
+
+        {% if selected_project %}
+            $select.val("{{ selected_project }}")
+        {% endif %}
+
+        $select.select2();
+
+        $select.on('change', function () {
+            const url = new URL(window.location);
+            url.searchParams.set('project', this.value);
+            window.location.href = url.toString();
+        });
+
+        $select.on('select2:open', function() {
+            $('#select2-project-results').addClass('text-black');
+        });
+    });
+</script>
     {% endblock js-frameworks %}
