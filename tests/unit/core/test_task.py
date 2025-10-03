@@ -4,6 +4,7 @@ import typing
 import pytest
 
 from krm3.projects.forms import TaskForm
+from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, ProjectFactory, ResourceFactory
 
 if typing.TYPE_CHECKING:
@@ -47,32 +48,53 @@ def test_task_with_contract(end_date, project_2020_open):
 
 
 def test_task_spanning_contracts(project_2020_open):
-    c1: 'Contract' = ContractFactory(period=(datetime.date(2020, 1, 1), datetime.date(2025, 1, 1)))
-    ContractFactory(resource=c1.resource, period=(datetime.date(2025, 1, 1), None))
+    c1: 'Contract' = ContractFactory(period=(_dt('20200101'), _dt('20220101')))
+    ContractFactory(resource=c1.resource, period=(_dt('20220101'), _dt('20250101')))
+    ContractFactory(resource=c1.resource, period=(_dt('20250101'), None))
 
     form = TaskForm(
         data=base
         | {
             'project': project_2020_open,
             'resource': c1.resource,
-            'start_date': datetime.date(2024, 12, 1),
-            'end_date': datetime.date(2025, 2, 1),
+            'start_date': _dt('20211201'),
+            'end_date': _dt('20250301'),
         }
     )
-    assert form.is_valid() is True
+    assert form.is_valid() is True, form.errors
 
 
-def test_non_contiguous_contracts(project_2020_open):
-    c1: 'Contract' = ContractFactory(period=(datetime.date(2020, 1, 1), datetime.date(2025, 1, 1)))
-    ContractFactory(resource=c1.resource, period=(datetime.date(2025, 1, 2), None))
+@pytest.mark.parametrize(
+    'contracts',
+    [
+        pytest.param(
+            [
+                [_dt('2020-01-01'), _dt('2025-01-01')],
+                [_dt('2025-01-02'), None],
+            ], id='gap-end'),
+        pytest.param(
+            [
+                [_dt('2025-01-02'), None],
+            ], id='gap-start'),
+        pytest.param(
+            [
+                [_dt('2020-01-01'), _dt('2024-01-01')],
+                [_dt('2024-04-01'), _dt('2026-01-01')],
+            ], id='gap-middle'),
+    ],
+)
+def test_non_contiguous_contracts(contracts, project_2020_open):
+    c1: 'Contract' = ContractFactory(period=(contracts[0][0], contracts[0][1]))
+    for contract in contracts[1:]:
+        ContractFactory(resource=c1.resource, period=(contract[0], contract[1]))
 
     form = TaskForm(
         data=base
         | {
             'project': project_2020_open,
             'resource': c1.resource,
-            'start_date': datetime.date(2024, 12, 1),
-            'end_date': datetime.date(2025, 1, 1),
+            'start_date': _dt('2022-12-01'),
+            'end_date': _dt('2025-01-01'),
         }
     )
     assert form.is_valid() is False
