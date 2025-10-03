@@ -12,17 +12,7 @@ from krm3.utils.tools import format_data
 
 User = get_user_model()
 
-_fields = [
-    'day_shift',
-    'night_shift',
-    'sick',
-    'holiday',
-    'leave',
-    'on_call',
-    'travel',
-    'rest',
-    'bank_from'
-]
+_fields = ['day_shift', 'night_shift', 'sick', 'holiday', 'leave', 'on_call', 'travel', 'rest', 'bank_from']
 
 
 timeentry_key_mapping = {
@@ -40,16 +30,17 @@ timeentry_key_mapping = {
 
 def enrich_with_resource_calendar(
     results: dict[Resource, dict], from_date: datetime.date, to_date: datetime.date
-    ) -> None:
+) -> None:
     for resource, stats in results.items():
         submitted_days = get_submitted_dates(from_date, to_date, resource)
         stats['days'] = [
             KrmDay(d, submitted=d.date in submitted_days) for d in KrmCalendar().iter_dates(from_date, to_date)
         ]
 
+
 def enrich_with_meal_vaucher(
-        results: dict[Resource,dict], from_date: datetime.date, to_date: datetime.date
-    ) -> dict[str, str]:
+    results: dict[Resource, dict], from_date: datetime.date, to_date: datetime.date
+) -> dict[str, str]:
     """
     Add meal vaucher calculation to the results.
 
@@ -80,10 +71,10 @@ def enrich_with_meal_vaucher(
             scheduled_hours = schedule[date]
 
             total_worked_hours = (
-                stats['day_shift'][day_index] +
-                stats['night_shift'][day_index] +
-                stats['travel'][day_index] +
-                stats['bank_from'][day_index]
+                stats['day_shift'][day_index]
+                + stats['night_shift'][day_index]
+                + stats['travel'][day_index]
+                + stats['bank_from'][day_index]
             )
             if scheduled_hours > 0 and total_worked_hours >= scheduled_hours * 0.75:
                 stats['meal_vaucher'][day_index] = 1
@@ -112,10 +103,16 @@ def timesheet_report_raw_data(
     if resource:
         qs = qs.filter(resource=resource)
 
+    # resource_calendars = {}
+
     start_date = KrmDay(from_date)
     days_interval = (to_date - from_date).days + 1
     results, special_leave_mapping_dict = {}, {}
     for entry in qs:
+        # TODO: WIP
+        # resource_calendar = resource_calendars.setdefault(
+        #    entry.resource, entry.resource.get_krm_days_with_contract(from_date, to_date))
+
         date = KrmDay(entry.date)
         resource_stats = results.setdefault(entry.resource, {})
 
@@ -146,8 +143,8 @@ def add_report_summaries(results: dict) -> None:
     for stats in results.values():
         for k, result_list in stats.items():
             if k != 'days':
-                if k =='meal_vaucher':
-                    vaucher_count = sum(1 for val in result_list if val ==1)
+                if k == 'meal_vaucher':
+                    vaucher_count = sum(1 for val in result_list if val == 1)
                     result_list.insert(0, vaucher_count)
                 else:
                     result_list.insert(0, sum(result_list))
@@ -162,8 +159,20 @@ def calculate_overtime(resource_stats: dict) -> None:
         num_days = len(stats['day_shift'])
 
         day_keys = [
-            x for x in stats if x not in ['day_shift', 'night_shift', 'on_call', 'travel', 'rest', 'overtime',
-                                          'days', 'bank_from', 'meal_vaucher']
+            x
+            for x in stats
+            if x
+            not in [
+                'day_shift',
+                'night_shift',
+                'on_call',
+                'travel',
+                'rest',
+                'overtime',
+                'days',
+                'bank_from',
+                'meal_vaucher',
+            ]
         ]
 
         for i in range(num_days):

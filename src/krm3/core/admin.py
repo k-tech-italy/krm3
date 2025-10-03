@@ -9,6 +9,7 @@ from django.contrib.postgres.forms import RangeWidget
 from django.contrib.admin import ModelAdmin
 from smart_admin.smart_auth.admin import UserAdmin
 
+from krm3.core.forms import ContractForm
 from krm3.core.models import City, Client, Country, Resource, UserProfile, Contract, ExtraHoliday
 
 from django.utils.html import format_html
@@ -56,8 +57,11 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
-    list_display = ('first_name', 'last_name', 'user')
+    list_display = ('first_name', 'last_name', 'user', 'active')
     search_fields = ['first_name', 'last_name']
+    list_filter = (
+        ('active', admin.BooleanFieldListFilter),
+    )
 
 
 @admin.register(Client)
@@ -65,8 +69,10 @@ class ClientAdmin(ModelAdmin):
     search_fields = ['name']
 
 
+
 @admin.register(Contract)
 class ContractAdmin(AdminFiltersMixin, ModelAdmin):
+    form = ContractForm
     search_fields = ['user']
     list_display = ['resource', 'get_period']
     list_filter = [('resource', AutoCompleteFilter)]

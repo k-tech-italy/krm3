@@ -1,0 +1,37 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram name="contracts_and_tasks" id="nMTLhx9FORALqDZhaz_3">
+    <mxGraphModel dx="1496" dy="874" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-1" value="T1&lt;div&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;2020-04-01-&amp;gt;2020-06-15&lt;/font&gt;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="60" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-2" value="T2&lt;div&gt;&lt;span style=&quot;font-size: 9px;&quot;&gt;2020-06-01-&amp;gt;2020-08-31&lt;/span&gt;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="100" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-3" value="T3&lt;div&gt;&lt;span style=&quot;font-size: 9px;&quot;&gt;2020-08-01-&amp;gt; ...&lt;/span&gt;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="292" y="150" width="608" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-4" value="C1&lt;div&gt;2020-01-01-&amp;gt;2020-06-30&amp;nbsp;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="260" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-5" value="C2&lt;div&gt;2020-07-01-&amp;gt;2020-12-31&amp;nbsp;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="10" width="260" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-6" value="C3&lt;div&gt;2021-01-01-&amp;gt; ...&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="10" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-7" value="C4&lt;div&gt;2019-01-01-&amp;gt;2020-04-30&amp;nbsp;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry y="220" width="230" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-9" value="T4&lt;div&gt;&lt;span style=&quot;font-size: 9px;&quot;&gt;2020-01-01-&amp;gt;2020-03-15&lt;/span&gt;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="260" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="nzRKjU25RNvl1pfEaFcP-11" value="C5&lt;div&gt;2020-05-01-&amp;gt;2020-09-30&amp;nbsp;&lt;/div&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="220" width="250" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

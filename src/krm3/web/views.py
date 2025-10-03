@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 from django.views.generic import TemplateView
@@ -18,6 +17,7 @@ from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
 from krm3.timesheet.task_report import task_report_data
+from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, cell_alignment
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
@@ -58,6 +58,7 @@ class AvailabilityReportView(HomeView):
         data['selected_project'] = selected_project
         return context | data
 
+
 def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current_row: int) -> int:
     """Write all data rows for a resource."""
     if not data:
@@ -69,47 +70,55 @@ def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current
             row_data = [report_data['keymap'][key], *safe_value]
 
             for col, cell_value in enumerate(row_data, 1):
-                ws.cell(row=current_row, column=col, value=cell_value)
+                cell = ws.cell(row=current_row, column=col, value=cell_value)
+                if col > 1:
+                    cell.alignment = cell_alignment
             current_row += 1
 
     return current_row
 
-def export_report(request: HttpRequest, date: str) -> HttpResponse:
-    if not request.user.has_perm('core.view_any_timesheet'):
-        raise PermissionDenied()
 
-    report_data = timesheet_report_data(date, request.user)
+def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpResponse:
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = f"Report {date[0:4]}-{date[4:6]}"
+    ws.title = f'Report {date[0:4]}-{date[4:6]}'
+
+    ws.column_dimensions['A'].width = 30
 
     current_row = 1
 
-    for resource_idx, (resource, data) in enumerate(report_data['data'].items()):
+    for resource_idx, (resource, data) in enumerate(report_data['data'].items(), start=1):
         if data is None:
             continue
 
         # spacing between employees
-        if resource_idx > 0:
+        if resource_idx > 1:
             current_row += 2
 
         holidays = []
         overlapping_contracts: 'list[Contract]' = resource.get_contracts(min(data['days']).date, max(data['days']).date)
+
         for day in data['days']:
             contract = resource.contract_for_date(overlapping_contracts, day)
             calendar_code = contract.country_calendar_code if contract else None
             holidays.append('X' if day.is_holiday(calendar_code) else '')
 
+        # Header section
         headers = [
-            f'{resource.last_name.upper()} {resource.first_name}',
+            f'{resource_idx} - {resource.last_name.upper()} {resource.first_name}',
             'Tot HH',
             *holidays,
         ]
-
         for col, header in enumerate(headers, 1):
-            ws.cell(row=current_row, column=col, value=header)
+            cell = ws.cell(row=current_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = header_alignment
+
         current_row += 1
 
+        # Days row
         giorni = [
             'Giorni',
             '',
@@ -119,9 +128,8 @@ def export_report(request: HttpRequest, date: str) -> HttpResponse:
                 for day in data['days']
             ],
         ]
-
         for col, giorno in enumerate(giorni, 1):
-            ws.cell(row=current_row, column=col, value=giorno)
+            ws.cell(row=current_row, column=col, value=giorno).alignment = header_alignment
         current_row += 1
 
         current_row = _write_resource_data(ws, data, report_data, current_row)
@@ -140,7 +148,8 @@ class ReportView(HomeView):
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if kwargs.get('export'):
             date = kwargs.get('date')
-            return export_report(request, date)
+            report_data = timesheet_report_data(date, request.user)
+            return export_report(request, report_data, date)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:

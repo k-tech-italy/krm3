@@ -257,9 +257,7 @@ def test_task_report_view_next_previous_month(client, month, expected_result):
 
 
 @pytest.mark.django_db
-def test_report_creation(client):
-    SuperUserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
+def test_report_creation(admin_client):
     task_1 = TaskFactory()
     task_2 = TaskFactory()
 
@@ -284,7 +282,7 @@ def test_report_creation(client):
     )
     date_arg = '202506'
     url = reverse('export_report', args=[date_arg])
-    response = client.get(url)
+    response = admin_client.get(url)
     assert response.status_code == 200
     assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -299,18 +297,18 @@ def test_report_creation(client):
 
     resource_rows = {}
     for row in range(1, sheet.max_row + 1):
-        cell_value = sheet[f'A{row}'].value
-        if cell_value == r1_name:
-            resource_rows['r1'] = row
-        elif cell_value == r2_name:
-            resource_rows['r2'] = row
+        if cell_value := sheet[f'A{row}'].value:
+            if r1_name in cell_value:
+                resource_rows['r1'] = row
+            elif r2_name in cell_value:
+                resource_rows['r2'] = row
 
     assert 'r1' in resource_rows, f"Resource 1 '{r1_name}' not found in sheet"
     assert 'r2' in resource_rows, f"Resource 2 '{r2_name}' not found in sheet"
 
     r1_row = resource_rows['r1']
 
-    assert sheet[f'A{r1_row}'].value == r1_name
+    assert sheet[f'A{r1_row}'].value.split(' - ')[-1] == r1_name
     assert sheet[f'A{r1_row + 1}'].value == 'Giorni'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
@@ -326,15 +324,6 @@ def test_report_creation(client):
     assert sheet[f'Q{day_shift_data_row}'].value is None
 
     assert sheet[f'B{day_shift_data_row}'].value == 14
-
-
-@pytest.mark.django_db
-def test_unauthorized_report_creation(client):
-    UserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
-    url = reverse('export_report', args=['202506'])
-    response = client.get(url)
-    assert response.status_code == 403
 
 
 @patch(
