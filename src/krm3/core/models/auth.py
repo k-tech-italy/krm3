@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from decimal import Decimal
 import typing
@@ -102,7 +103,7 @@ class Resource(models.Model):
     active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['first_name', 'last_name']
+        ordering = ['last_name', 'first_name']
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
@@ -112,13 +113,16 @@ class Resource(models.Model):
 
         :return: scheduled number of hours.
         """
-        from krm3.core.models import Contract
+        from krm3.core.models import Contract  # noqa: PLC0415
         contract = Contract.objects.filter(resource=self, period__contains=day.date).first()
-        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE
+        return self._get_min_working_hours(contract, day)
+
+    def _get_min_working_hours(self, contract: Contract | None, day: KrmDay) -> float:
+        """Return the minimum working hours for a given day."""
         if contract and contract.working_schedule:
             schedule = contract.working_schedule
         else:
-            schedule = json.loads(default_resource_schedule)
+            schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
         if contract and contract.country_calendar_code:
             country_calendar_code = contract.country_calendar_code
         else:
@@ -127,15 +131,45 @@ class Resource(models.Model):
         min_working_hours = schedule[day.day_of_week_short.lower()]
         if day.is_holiday(country_calendar_code, False):
             min_working_hours = 0
-
         return min_working_hours
+
+    def get_krm_days_with_contract(self, start_day: date, end_day: date) -> list[KrmDay]:
+        """Return a list of Krm days tailored for the resource contract/schedule.
+
+        Attributes added to KRM Day:
+        - contract: The contract for the day if available
+        - min_working_hours: the minimum working hours for the day (Result is based on resource calendar and schedule)
+        - is_holiday (overridden method. Result is contract country calendar aware)
+        """
+        days_list = list(KrmCalendar().iter_dates(start_day, end_day))
+        contracts = self.get_contracts(start_day, end_day)
+
+        for kd in days_list:
+            kd.contract = None
+            kd.min_working_hours = 0
+
+            country_calendar_code = settings.HOLIDAYS_CALENDAR
+            for contract in contracts:
+                if contract.falls_in(kd.date):
+                    kd.contract = contract
+                    kd.min_working_hours = self._get_min_working_hours(contract, kd)
+                    if contract.country_calendar_code:
+                        country_calendar_code = contract.country_calendar_code
+                    break
+
+            if kd.is_holiday(country_calendar_code, True):
+                kd.is_holiday = lambda *args, **kwargs: True
+            else:
+                kd.is_holiday = lambda *args, **kwargs: False
+
+        return days_list
 
     def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
         """Return a list of contracts applicable to the time interval between start_day and end_day."""
-        from krm3.core.models import Contract
+        from krm3.core.models import Contract  # noqa: PLC0415
         return list(
             Contract.objects.filter(
-                period__overlap=(start_day, end_day), resource=self
+                period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
             )
         )
 
@@ -157,7 +191,7 @@ class Resource(models.Model):
 
     def get_bank_hours_balance(self) -> Decimal:
         """Calculate bank hours balance from all time entries."""
-        from krm3.core.models import TimeEntry
+        from krm3.core.models import TimeEntry  # noqa: PLC0415
 
         queryset = TimeEntry.objects.filter(resource=self)
         result = queryset.aggregate(
@@ -165,8 +199,8 @@ class Resource(models.Model):
             total_withdrawals=Sum('bank_from')
         )
 
-        deposits = result['total_deposits'] or Decimal('0')
-        withdrawals = result['total_withdrawals'] or Decimal('0')
+        deposits = result['total_deposits'] or Decimal(0)
+        withdrawals = result['total_withdrawals'] or Decimal(0)
 
         return deposits - withdrawals
 

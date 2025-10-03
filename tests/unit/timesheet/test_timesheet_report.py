@@ -1,20 +1,27 @@
 """
 Hint: keep the file ./test_timesheet_report.xlsx aligned with fixture report_resource
 """
+
 import datetime
 import pathlib
 from decimal import Decimal as D  # noqa: N817
 
 import pytest
-
-from krm3.timesheet.report import timesheet_report_raw_data, calculate_overtime, timeentry_key_mapping, \
-    get_submitted_dates, get_days_submission
-from krm3.utils.dates import dt, KrmDay
+from django.contrib.auth.models import Permission
 from testutils import yaml as test_yaml
-from testutils.factories import TimeEntryFactory, TaskFactory, SpecialLeaveReasonFactory
+from testutils.factories import SpecialLeaveReasonFactory, TaskFactory, TimeEntryFactory, UserFactory
 
-from tests._extras.testutils.factories import TimesheetSubmissionFactory, ContractFactory
-
+from krm3.core.models import TimeEntry
+from krm3.timesheet.report import (
+    calculate_overtime,
+    get_days_submission,
+    get_submitted_dates,
+    timeentry_key_mapping,
+    timesheet_report_data,
+    timesheet_report_raw_data,
+)
+from krm3.utils.dates import KrmDay, dt
+from tests._extras.testutils.factories import ContractFactory, TimesheetSubmissionFactory
 
 @pytest.fixture
 def report_resource():
@@ -25,8 +32,7 @@ def report_resource():
     ContractFactory(
         resource=r1,
         country_calendar_code='PL',
-        period=(datetime.date(2025, 5, 30),
-                datetime.date(2025, 6, 30)),
+        period=(datetime.date(2025, 5, 30), datetime.date(2025, 6, 30)),
         working_schedule={
             'mon': 8,
             'tue': 8,
@@ -35,7 +41,8 @@ def report_resource():
             'fri': 8,
             'sat': 0,
             'sun': 0,
-        })
+        },
+    )
     t2 = TaskFactory(resource=r1)
     r1._time_entries = [
         TimeEntryFactory(resource=r1, date='2025-05-30', day_shift_hours=0, holiday_hours=8),
@@ -52,12 +59,30 @@ def report_resource():
         TimeEntryFactory(resource=r1, date='2025-06-04', day_shift_hours=0, leave_hours=1.5),
         TimeEntryFactory(resource=r1, date='2025-06-04', task=t1, day_shift_hours=6),
         TimeEntryFactory(
-            resource=r1, date='2025-06-05', day_shift_hours=0, bank_from=6, special_leave_hours=0.5,
-            special_leave_reason=sl1
+            resource=r1,
+            date='2025-06-05',
+            day_shift_hours=0,
+            bank_from=6,
+            special_leave_hours=0.5,
+            special_leave_reason=sl1,
         ),
         TimeEntryFactory(
             resource=r1, date='2025-06-06', day_shift_hours=0, special_leave_hours=5, special_leave_reason=sl2
         ),
+    ]
+    return r1
+
+
+@pytest.fixture
+def other_resource():
+    t1 = TaskFactory()
+    r1 = t1.resource
+    r1._time_entries = [
+        TimeEntryFactory(resource=r1, date='2025-05-30', day_shift_hours=0, holiday_hours=8),
+        TimeEntryFactory(
+            resource=r1, date='2025-05-31', task=t1, day_shift_hours=4, night_shift_hours=1, travel_hours=2
+        ),
+        TimeEntryFactory(resource=r1, date='2025-06-05', task=t1, day_shift_hours=6),
     ]
     return r1
 
@@ -77,8 +102,16 @@ def _raw_results():
         'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'overtime': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'meal_vaucher': [None, None, None, 1, 1, 1, 1, None],
-        'days': [KrmDay('2025-05-30'), KrmDay('2025-05-31'), KrmDay('2025-06-01'), KrmDay('2025-06-02'),
-            KrmDay('2025-06-03'), KrmDay('2025-06-04'), KrmDay('2025-06-05'), KrmDay('2025-06-06')],
+        'days': [
+            KrmDay('2025-05-30'),
+            KrmDay('2025-05-31'),
+            KrmDay('2025-06-01'),
+            KrmDay('2025-06-02'),
+            KrmDay('2025-06-03'),
+            KrmDay('2025-06-04'),
+            KrmDay('2025-06-05'),
+            KrmDay('2025-06-06'),
+        ],
     }
 
 
@@ -96,8 +129,16 @@ _overtime_results = {
     'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     'overtime': [D('0.00'), D('3.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     'meal_vaucher': [None, None, None, 1, 1, 1, 1, None],
-    'days': [KrmDay('2025-05-30'), KrmDay('2025-05-31'), KrmDay('2025-06-01'), KrmDay('2025-06-02'),
-            KrmDay('2025-06-03'), KrmDay('2025-06-04'), KrmDay('2025-06-05'), KrmDay('2025-06-06')],
+    'days': [
+        KrmDay('2025-05-30'),
+        KrmDay('2025-05-31'),
+        KrmDay('2025-06-01'),
+        KrmDay('2025-06-02'),
+        KrmDay('2025-06-03'),
+        KrmDay('2025-06-04'),
+        KrmDay('2025-06-05'),
+        KrmDay('2025-06-06'),
+    ],
 }
 
 
@@ -119,22 +160,41 @@ class TestTimesheetReport:
         assert result == expected_dict
 
     def test_report_raw_data(self, report_resource):
-        from krm3.core.models import TimeEntry
-
         assert TimeEntry.objects.count() == report_resource._time_entries.__len__()
         result, additional_key_mapping = timesheet_report_raw_data(dt('2025-05-30'), dt('2025-06-06'))
         dynamic_special_leave_keys = additional_key_mapping.keys()
-        expected_result =_raw_results()
+        expected_result = _raw_results()
         for index, key in enumerate(dynamic_special_leave_keys):
             if key.startswith('special_leave'):
-                expected_result[key] = expected_result[f"special_leave|{index}"]
-                del expected_result[f"special_leave|{index}"]
+                expected_result[key] = expected_result[f'special_leave|{index}']
+                del expected_result[f'special_leave|{index}']
         assert result == {report_resource: expected_result}
 
     def test_calculate_overtime(self):
         results = {'<resource>': _raw_results()}
         calculate_overtime(results)
         assert results['<resource>'] == _overtime_results
+
+    @pytest.mark.parametrize(
+        'user, perm, expected',  # noqa: PT006
+        [
+            pytest.param('admin', None, 'all', id='admin-all'),
+            pytest.param('regular', None, 'own', id='user-own'),
+            pytest.param('regular', 'view_any_timesheet', 'all', id='permitted-viewer'),
+            pytest.param('regular', 'manage_any_timesheet', 'all', id='permitted-manager'),
+        ],
+    )
+    def test_timesheet_report_data_privileged(self, user, perm, expected, admin_user, report_resource, other_resource):
+        report_resource.user = admin_user if user == 'admin' else UserFactory()
+        if perm:
+            report_resource.user.user_permissions.add(Permission.objects.get(codename=perm))
+
+        report_data = timesheet_report_data('202506', report_resource.user)
+        assert (
+            set(report_data['data'].keys()) == {report_resource, other_resource}
+            if expected == 'all'
+            else {report_resource}
+        )
 
 
 class TestTimesheetSubmission:

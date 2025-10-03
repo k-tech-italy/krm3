@@ -227,3 +227,6 @@ def get_country_holidays(country_calendar_code:str = None) -> holidays.HolidayBa
     cal = holidays.country_holidays(country, subdiv)
     cal.weekend = {6}  # SUN
     return cal
+
+
+DATE_INFINITE = datetime.date(9999, 9, 9)
