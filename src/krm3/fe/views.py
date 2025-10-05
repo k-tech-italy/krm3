@@ -1,4 +1,3 @@
-
 import mimetypes
 from pathlib import Path
 
@@ -29,19 +28,17 @@ def serve(request, document_root=None, show_indexes: bool = False):
     if is_html:
         fullpath = Path(safe_join(document_root, 'index.html'))
     else:
-        fullpath = Path(safe_join(document_root, request.path.lstrip("/")))
+        fullpath = Path(safe_join(document_root, request.path.lstrip('/')))
     if not fullpath.exists():
-        raise Http404(_("“%(path)s” does not exist") % {"path": fullpath})
+        raise Http404(_('“%(path)s” does not exist') % {'path': fullpath})
     # Respect the If-Modified-Since header.
     statobj = fullpath.stat()
-    if not was_modified_since(
-        request.META.get("HTTP_IF_MODIFIED_SINCE"), statobj.st_mtime
-    ):
+    if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'), statobj.st_mtime):
         return HttpResponseNotModified()
     content_type, encoding = mimetypes.guess_type('index.html' if is_html else request.path)
-    content_type = content_type or "application/octet-stream"
-    response = FileResponse(fullpath.open("rb"), content_type=content_type)
-    response.headers["Last-Modified"] = http_date(statobj.st_mtime)
+    content_type = content_type or 'application/octet-stream'
+    response = FileResponse(fullpath.open('rb'), content_type=content_type)
+    response.headers['Last-Modified'] = http_date(statobj.st_mtime)
     if encoding:
-        response.headers["Content-Encoding"] = encoding
+        response.headers['Content-Encoding'] = encoding
     return response

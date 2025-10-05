@@ -5,7 +5,6 @@ from rest_framework.serializers import SerializerMetaclass
 
 
 class ModelDefaultSerializerMixin:
-
     def __init__(self, instance=None, *args, **kwargs):
         depth = kwargs.pop('depth', None)
         exclude = kwargs.pop('exclude', None)

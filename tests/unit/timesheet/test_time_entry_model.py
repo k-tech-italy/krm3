@@ -63,8 +63,9 @@ class TestBasket:
 
         # closed time entries should be considered invoiced and
         # as such should be ignored
-        timesheet = TimesheetSubmissionFactory(resource=task.resource,
-                                               period=(task.start_date, task.start_date + datetime.timedelta(days=10)))
+        timesheet = TimesheetSubmissionFactory(
+            resource=task.resource, period=(task.start_date, task.start_date + datetime.timedelta(days=10))
+        )
         other_task = TaskFactory(basket_title=basket.title)
         for days in range(5):
             target_day = task.start_date + datetime.timedelta(days=days)
@@ -80,15 +81,9 @@ class TestBasket:
 
 
 class TestTimeEntry:
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         ('hour_field', 'expected_behavior'),
         (
@@ -209,8 +204,9 @@ class TestTimeEntry:
     def test_rejects_both_bank_deposit_and_withdrawal_same_day(self):
         """Test that you cannot both deposit to and withdraw from bank on same day."""
         resource = ResourceFactory()
-        with pytest.raises(exceptions.ValidationError,
-                           match='Cannot both withdraw from and deposit to bank hours on the same day'):
+        with pytest.raises(
+            exceptions.ValidationError, match='Cannot both withdraw from and deposit to bank hours on the same day'
+        ):
             TimeEntryFactory(
                 day_shift_hours=0,
                 bank_from=2,
@@ -234,10 +230,7 @@ class TestTimeEntry:
             resource=resource,
         )
 
-        daily_entries = TimeEntry.objects.filter(
-            resource=resource,
-            date=entry1.date
-        )
+        daily_entries = TimeEntry.objects.filter(resource=resource, date=entry1.date)
         total_day_hours_with_deposit = sum(entry.total_hours for entry in daily_entries)
         assert total_day_hours_with_deposit == 8
 
@@ -245,7 +238,7 @@ class TestTimeEntry:
             day_shift_hours=6,
             task=TaskFactory(project=project, resource=resource),
             resource=resource,
-            date=datetime.date(2020, 3, 4)
+            date=datetime.date(2020, 3, 4),
         )
         TimeEntryFactory(
             day_shift_hours=0,
@@ -253,10 +246,7 @@ class TestTimeEntry:
             date=entry2.date,
             resource=resource,
         )
-        daily_entries = TimeEntry.objects.filter(
-            resource=resource,
-            date=entry2.date
-        )
+        daily_entries = TimeEntry.objects.filter(resource=resource, date=entry2.date)
         total_day_hours_with_withdrawal = sum(entry.total_hours for entry in daily_entries)
         assert total_day_hours_with_withdrawal == 8
 
@@ -267,7 +257,7 @@ class TestTimeEntry:
         entry = TimeEntryFactory(
             task=None,
             resource=resource,
-            date = datetime.date(2025,8,20),
+            date=datetime.date(2025, 8, 20),
             day_shift_hours=0,
             leave_hours=3,
             bank_from=2,
@@ -287,7 +277,7 @@ class TestTimeEntry:
             day_shift_hours=16,
         )
         TimeEntryFactory(
-            date = datetime.date(2025, 1, 3),
+            date=datetime.date(2025, 1, 3),
             resource=resource,
             task=task,
             day_shift_hours=16,
@@ -299,13 +289,13 @@ class TestTimeEntry:
             day_shift_hours=10,
         )
         TimeEntryFactory(
-            date = datetime.date(2025, 1, 2),
+            date=datetime.date(2025, 1, 2),
             resource=resource,
             day_shift_hours=0,
             bank_to=8,
         )
         TimeEntryFactory(
-            date = datetime.date(2025, 1, 3),
+            date=datetime.date(2025, 1, 3),
             resource=resource,
             day_shift_hours=0,
             bank_to=8,
@@ -363,8 +353,10 @@ class TestTimeEntry:
             day_shift_hours=0,
             bank_to=2,
         )
-        with pytest.raises(exceptions.ValidationError, match='Cannot delete this time entry. Removing it would cause '
-                                                             'negative work hours'):
+        with pytest.raises(
+            exceptions.ValidationError,
+            match='Cannot delete this time entry. Removing it would cause negative work hours',
+        ):
             time_entry.delete()
 
     def test_holiday_rejects_any_bank_transactions(self):
@@ -394,9 +386,9 @@ class TestTimeEntry:
     @pytest.mark.parametrize(
         'day_entry_field',
         (
-                pytest.param('leave_hours', id='leave'),
-                pytest.param('rest_hours', id='rest'),
-                pytest.param('special_leave_hours', id='special_leave'),
+            pytest.param('leave_hours', id='leave'),
+            pytest.param('rest_hours', id='rest'),
+            pytest.param('special_leave_hours', id='special_leave'),
         ),
     )
     def test_day_entries_reject_bank_deposits(self, day_entry_field):
@@ -428,7 +420,7 @@ class TestTimeEntry:
             task=task,
             day_shift_hours=6,
         )
-        time_deposit = TimeEntryFactory.build(task=None,resource=resource,date=date,day_shift_hours=0,bank_to=2)
+        time_deposit = TimeEntryFactory.build(task=None, resource=resource, date=date, day_shift_hours=0, bank_to=2)
 
         with pytest.raises(exceptions.ValidationError, match='Cannot deposit 2 bank hours'):
             time_deposit.save()
@@ -437,13 +429,12 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='Cannot withdraw bank hours when task hours'):
             time_withdraw.save()
 
-
     def test_bank_deposit_success_with_correct_custom_schedule(self):
         start_dt = datetime.date(2020, 1, 1)
         end_dt = datetime.date(2026, 1, 1)
         contract = ContractFactory(
             period=(start_dt, end_dt),
-            working_schedule={'fri': 3, 'mon': 3, 'sat': 0, 'sun': 0, 'thu': 3, 'tue': 3, 'wed': 3}
+            working_schedule={'fri': 3, 'mon': 3, 'sat': 0, 'sun': 0, 'thu': 3, 'tue': 3, 'wed': 3},
         )
         project = ProjectFactory()
         resource = contract.resource
@@ -460,29 +451,14 @@ class TestTimeEntry:
         assert time_deposit.bank_to == 1
 
     def test_bank_deposit_with_0_scheduled_hours(self):
-        date = datetime.date(2025,9,21) # Sunday
+        date = datetime.date(2025, 9, 21)  # Sunday
         resource = ResourceFactory()
         with pytest.raises(exceptions.ValidationError, match='Cannot deposit 1 bank hours.'):
-            TimeEntryFactory(
-                task=None,
-                resource=resource,
-                date=date,
-                day_shift_hours=0,
-                bank_to=1
-            )
+            TimeEntryFactory(task=None, resource=resource, date=date, day_shift_hours=0, bank_to=1)
 
-        TimeEntryFactory(
-            date=date,
-            resource=resource,
-            task = TaskFactory(resource=resource),
-            day_shift_hours=1
-        )
+        TimeEntryFactory(date=date, resource=resource, task=TaskFactory(resource=resource), day_shift_hours=1)
         time_deposit_at_weekend = TimeEntryFactory(
-            task=None,
-            resource=resource,
-            date=date,
-            day_shift_hours=0,
-            bank_to=1
+            task=None, resource=resource, date=date, day_shift_hours=0, bank_to=1
         )
         assert time_deposit_at_weekend.bank_to == 1
 
@@ -655,15 +631,9 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.leave_hours == 8
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     def test_is_saved_as_special_leave(self):
         """Special leave hours with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
@@ -701,15 +671,9 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         ('hours_key', 'expected_to_raise'),
         (
@@ -785,39 +749,42 @@ class TestTimeEntry:
                 from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2020, 1, 1)
             )
 
-    @pytest.mark.parametrize('time_entry_date, expected_assigned_timesheet_index',
-                             [
-                                 (datetime.date(2020, 5, 15), 0),
-                                 (datetime.date(2020, 6, 15), 1),
-                                 (datetime.date(2020, 7, 15), 2),
-                                 (datetime.date(2020, 5, 31), 0),
-                                 (datetime.date(2020, 6, 1), 1),
-                                 (datetime.date(2020, 8, 15), None),
-                                 (datetime.date(2020, 4, 15), None),
-                             ])
+    @pytest.mark.parametrize(
+        'time_entry_date, expected_assigned_timesheet_index',
+        [
+            (datetime.date(2020, 5, 15), 0),
+            (datetime.date(2020, 6, 15), 1),
+            (datetime.date(2020, 7, 15), 2),
+            (datetime.date(2020, 5, 31), 0),
+            (datetime.date(2020, 6, 1), 1),
+            (datetime.date(2020, 8, 15), None),
+            (datetime.date(2020, 4, 15), None),
+        ],
+    )
     def test_time_entry_should_be_assigned_to_appropriate_timesheet(
-            self, time_entry_date, expected_assigned_timesheet_index):
+        self, time_entry_date, expected_assigned_timesheet_index
+    ):
         resource = ResourceFactory()
         task = TaskFactory()
         TimeEntryFactory(date=time_entry_date, resource=resource, task=task)
 
         timesheets = []
 
-        timesheets.append(TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
-        ))
-        timesheets.append(TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 6, 1), datetime.date(2020, 7, 1))
-        ))
-        timesheets.append(TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 7, 1), datetime.date(2020, 8, 1))
-        ))
+        timesheets.append(
+            TimesheetSubmissionFactory(
+                resource=resource, closed=True, period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+            )
+        )
+        timesheets.append(
+            TimesheetSubmissionFactory(
+                resource=resource, closed=True, period=(datetime.date(2020, 6, 1), datetime.date(2020, 7, 1))
+            )
+        )
+        timesheets.append(
+            TimesheetSubmissionFactory(
+                resource=resource, closed=True, period=(datetime.date(2020, 7, 1), datetime.date(2020, 8, 1))
+            )
+        )
 
         for i, timesheet in enumerate(timesheets):
             expected_count = 1 if i == expected_assigned_timesheet_index else 0
@@ -829,9 +796,7 @@ class TestTimeEntry:
         time_entry = TimeEntryFactory(date=datetime.date(2020, 5, 15), resource=resource, task=task)
 
         timesheet = TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+            resource=resource, closed=True, period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
         )
 
         time_entry.refresh_from_db()
@@ -846,14 +811,10 @@ class TestTimeEntry:
         task = TaskFactory()
         time_entry = TimeEntryFactory(date=datetime.date(2020, 5, 15), resource=resource, task=task)
         timesheet_1 = TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+            resource=resource, closed=True, period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
         )
         timesheet_2 = TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 6, 1), datetime.date(2020, 6, 1))
+            resource=resource, closed=True, period=(datetime.date(2020, 6, 1), datetime.date(2020, 6, 1))
         )
         assert time_entry.timesheet == timesheet_1
         time_entry.date = datetime.date(2020, 6, 15)

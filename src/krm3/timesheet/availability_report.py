@@ -10,7 +10,6 @@ from dateutil.relativedelta import relativedelta
 def timesheet_report_raw_data(
     from_date: datetime.date, to_date: datetime.date, project: str | None = None
 ) -> dict['Resource', dict[str, list[D]]]:
-
     qs = TimeEntry.objects.filter(
         Q(date__gte=from_date)
         & Q(date__lte=to_date)
@@ -45,7 +44,7 @@ def timesheet_report_raw_data(
     return results
 
 
-def availability_report_data(current_month: str | None, project: str | None  = '') -> dict[str, typing.Any]:
+def availability_report_data(current_month: str | None, project: str | None = '') -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if project == '':
         project = None
@@ -64,7 +63,7 @@ def availability_report_data(current_month: str | None, project: str | None  = '
         'prev_month': prev_month.strftime('%Y%m'),
         'current_month': start_of_month.strftime('%Y%m'),
         'next_month': next_month.strftime('%Y%m'),
-        'title': f"Availability {start_of_month.strftime('%B %Y')}",
+        'title': f'Availability {start_of_month.strftime("%B %Y")}',
         'days': days,
         'data': data,
     }

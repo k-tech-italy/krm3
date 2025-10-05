@@ -28,37 +28,56 @@ def configure_dirs(prompt, verbosity):
                 target.mkdir(parents=True)
 
 
-
 @click.command()  # noqa: C901
-@click.option('--prompt/--no-input', default=True, is_flag=True,
-              help='Do not prompt for parameters', show_default=True)
-@click.option('--demo/--no-nodemo', default=False, is_flag=True,
-              help='Load demo data', show_default=True)
-@click.option('--migrate/--no-migrate', default=True, is_flag=True,
-              help='Run database migrations', show_default=True)
-@click.option('--static/--no-static', default=False, is_flag=True,
-              help='Collect static assets', show_default=True)
-@click.option('--traceback', '-tb', default=False, is_flag=True,
-              help='Raise on exceptions', show_default=True)
-@click.option('-v', '--verbosity', count=True, default=0, help='Enables verbosity mode. Use -vv -vvv to increase',
-              show_default=True)
-@click.option('--admin-email', '-ae', default=env.str('ADMIN_EMAIL'), help='Do not prompt for parameters',
-              show_default=True)
-@click.option('--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters',
-              show_default=True)
-@click.option('--admin-firstname', '-af', default=env.str('ADMIN_FIRSTNAME'), help='Do not prompt for parameters',
-              show_default=True)
-@click.option('--admin-lastname', '-al', default=env.str('ADMIN_LASTNAME'), help='Do not prompt for parameters',
-              show_default=True)
+@click.option('--prompt/--no-input', default=True, is_flag=True, help='Do not prompt for parameters', show_default=True)
+@click.option('--demo/--no-nodemo', default=False, is_flag=True, help='Load demo data', show_default=True)
+@click.option('--migrate/--no-migrate', default=True, is_flag=True, help='Run database migrations', show_default=True)
+@click.option('--static/--no-static', default=False, is_flag=True, help='Collect static assets', show_default=True)
+@click.option('--traceback', '-tb', default=False, is_flag=True, help='Raise on exceptions', show_default=True)
+@click.option(
+    '-v',
+    '--verbosity',
+    count=True,
+    default=0,
+    help='Enables verbosity mode. Use -vv -vvv to increase',
+    show_default=True,
+)
+@click.option(
+    '--admin-email', '-ae', default=env.str('ADMIN_EMAIL'), help='Do not prompt for parameters', show_default=True
+)
+@click.option(
+    '--admin-username', '-au', default=env.str('ADMIN_USERNAME'), help='Do not prompt for parameters', show_default=True
+)
+@click.option(
+    '--admin-firstname',
+    '-af',
+    default=env.str('ADMIN_FIRSTNAME'),
+    help='Do not prompt for parameters',
+    show_default=True,
+)
+@click.option(
+    '--admin-lastname', '-al', default=env.str('ADMIN_LASTNAME'), help='Do not prompt for parameters', show_default=True
+)
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
-def command(ctx, prompt, demo, migrate, static, verbosity,  # noqa: C901
-            traceback, admin_username, admin_firstname, admin_lastname, admin_email, admin_password, **kwargs):
+def command(
+    ctx,
+    prompt,
+    demo,
+    migrate,
+    static,
+    verbosity,  # noqa: C901
+    traceback,
+    admin_username,
+    admin_firstname,
+    admin_lastname,
+    admin_email,
+    admin_password,
+    **kwargs,
+):
     """Perform any pending database migrations and upgrades."""
     try:
-
-        extra = {'interactive': prompt,
-                 'verbosity': verbosity - 1}
+        extra = {'interactive': prompt, 'verbosity': verbosity - 1}
 
         configure_dirs(prompt, verbosity)
 

@@ -196,10 +196,12 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         if not isinstance(requested_entry_ids, list):
             return Response(data={'error': 'Time entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        entries: TimeEntryQuerySet = (self.get_queryset().filter(pk__in=requested_entry_ids)
-        .annotate(
-            task_is_not_null=ExpressionWrapper(Q(task__isnull=False), output_field=BooleanField())
-        ).order_by('task_is_not_null'))  # pyright: ignore[reportAssignmentType]
+        entries: TimeEntryQuerySet = (
+            self.get_queryset()
+            .filter(pk__in=requested_entry_ids)
+            .annotate(task_is_not_null=ExpressionWrapper(Q(task__isnull=False), output_field=BooleanField()))
+            .order_by('task_is_not_null')
+        )  # pyright: ignore[reportAssignmentType]
 
         if not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             # since we already ACL-filtered the queryset, we need to

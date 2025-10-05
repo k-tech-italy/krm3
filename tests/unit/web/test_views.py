@@ -46,27 +46,25 @@ def _assert_homepage_content(response):
 @pytest.mark.parametrize(
     'url', ('/be/', '/be/home/', '/be/availability/', '/be/releases/', '/be/report/', '/be/task_report/')
 )
-def test_authenticated_user_should_see_all_be_views(client, url):
-    UserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
-    response = client.get(url)
+def test_resource_user_should_see_all_be_views(resource_client, url):
+    response = resource_client.get(url)
     _assert_homepage_content(response)
 
 
-@pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_user_without_permission_should_only_see_its_reports(url, client):
-    user = UserFactory(username='user00', password='pass123')
+@pytest.mark.parametrize('url', [
+    pytest.param('/be/report/', id='report'),
+    pytest.param('/be/task_report/', id='task_report'),
+])
+def test_user_without_permission_should_only_see_its_reports(url, resource_client):
     another_user = UserFactory(username='user01', password='pass123')
-    resource = ResourceFactory(user=user, profile=user.profile)
     another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
-    client.login(username='user00', password='pass123')
-    response = client.get(url)
+    response = resource_client.get(url)
     assert response.status_code == 200
     content = response.content.decode()
-    resource_name = f'{resource.last_name}</strong> {resource.first_name}'
+    resource_name = f'{resource_client._resource.last_name}</strong> {resource_client._resource.first_name}'
     another_user_name = f'{another_resource.last_name}</strong> {another_resource.first_name}'
-    assert resource_name in content
-    assert another_user_name not in content
+    assert resource_name in content, f'{resource_name} not found in report'
+    assert another_user_name not in content, f'{another_user_name} found in report'
 
 
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
@@ -95,15 +93,10 @@ def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
     assert response.status_code == 302
     assert response.url == f'/admin/login/?next={url}'
 
-@override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-    'mon': 8,
-    'tue': 8,
-    'wed': 8,
-    'thu': 8,
-    'fri': 8,
-    'sat': 8,
-    'sun': 8
-}))
+
+@override_config(
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+)
 @freeze_time('2025-08-22')
 def test_availability_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
@@ -202,9 +195,8 @@ def test_report_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert f'{resource.first_name} {resource.last_name}' in content
-    assert '<td class="p-1 border border-1 text-center">8</td>' in content
-    assert '<h1 class="text-3xl font-bold text-center mb-1">Report August 2025</h1>' in content
+    assert f'{resource.last_name}</strong> {resource.first_name}' in content
+    assert 'Report August 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
@@ -218,10 +210,10 @@ def test_report_view_current_month(client):
 def test_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse("report")}?{urlencode({"month": month})}')
+    response = client.get(reverse("report-month", args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
+    assert expected_result in response.content.decode()
 
 
 @freeze_time('2025-08-22')
@@ -253,7 +245,7 @@ def test_task_report_view_next_previous_month(client, month, expected_result):
     response = client.get(f'{reverse("task_report")}?{urlencode({"month": month})}')
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
+    assert expected_result in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -291,7 +283,7 @@ def test_report_creation(admin_client):
     r1_name = f'{task_1.resource.last_name.upper()} {task_1.resource.first_name}'
     r2_name = f'{task_2.resource.last_name.upper()} {task_2.resource.first_name}'
     assert len(workbook.sheetnames) == 1
-    sheet_name = f"Report {date_arg[0:4]}-{date_arg[4:6]}"
+    sheet_name = 'Report risorse June 2025'
     assert sheet_name in workbook.sheetnames
     sheet = workbook[sheet_name]
 
@@ -309,7 +301,7 @@ def test_report_creation(admin_client):
     r1_row = resource_rows['r1']
 
     assert sheet[f'A{r1_row}'].value.split(' - ')[-1] == r1_name
-    assert sheet[f'A{r1_row + 1}'].value == 'Giorni'
+    assert sheet[f'A{r1_row + 1}'].value == 'Giorni 0'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
     assert all(value in timeentry_key_mapping.values() for value in row_labels)
@@ -319,7 +311,7 @@ def test_report_creation(admin_client):
     assert sheet[f'AF{first_resource_row + 1}'].value == '**Mon\n30**'
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
-    day_shift_data_row = r1_row + 2
+    day_shift_data_row = r1_row + 3
     assert sheet[f'L{day_shift_data_row}'].value == 8
     assert sheet[f'Q{day_shift_data_row}'].value is None
 

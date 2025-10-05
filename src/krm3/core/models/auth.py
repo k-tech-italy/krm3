@@ -20,6 +20,7 @@ if typing.TYPE_CHECKING:
     from datetime import date
     from krm3.core.models import Contract
 
+
 class UserManager(BaseUserManager):
     def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
         if not email:
@@ -115,6 +116,7 @@ class Resource(models.Model):
         :return: scheduled number of hours.
         """
         from krm3.core.models import Contract  # noqa: PLC0415
+
         contract = Contract.objects.filter(resource=self, period__contains=day.date).first()
         return self._get_min_working_hours(contract, day)
 
@@ -168,6 +170,7 @@ class Resource(models.Model):
     def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
         """Return a list of contracts applicable to the time interval between start_day and end_day."""
         from krm3.core.models import Contract  # noqa: PLC0415
+
         return list(
             Contract.objects.filter(
                 period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
@@ -195,15 +198,13 @@ class Resource(models.Model):
         from krm3.core.models import TimeEntry  # noqa: PLC0415
 
         queryset = TimeEntry.objects.filter(resource=self)
-        result = queryset.aggregate(
-            total_deposits=Sum('bank_to'),
-            total_withdrawals=Sum('bank_from')
-        )
+        result = queryset.aggregate(total_deposits=Sum('bank_to'), total_withdrawals=Sum('bank_from'))
 
         deposits = result['total_deposits'] or Decimal(0)
         withdrawals = result['total_withdrawals'] or Decimal(0)
 
         return deposits - withdrawals
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender: User, instance: User, created: bool, **kwargs: dict) -> None:

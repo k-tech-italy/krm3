@@ -5,7 +5,8 @@ import pytest
 from testutils.factories import (
     ResourceFactory,
     UserFactory,
-    TimesheetSubmissionFactory, GroupFactory,
+    TimesheetSubmissionFactory,
+    GroupFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -85,13 +86,9 @@ class TestTimesheetSubmissionModelAPIListView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert TimesheetSubmission.objects.count() == 0
 
-
     @pytest.mark.parametrize(
         'who',
-        [
-            pytest.param('regular', id='regular'),
-            pytest.param('viewer', id='viewer')
-        ],
+        [pytest.param('regular', id='regular'), pytest.param('viewer', id='viewer')],
     )
     def test_unauthorised_other(self, who, api_client, regular_user, viewer):
         match who:
@@ -123,7 +120,7 @@ class TestTimesheetSubmissionModelAPIListView:
             pytest.param('manager', 'full', id='manager'),
             pytest.param('group-manager', 'full', id='group-manager'),
             pytest.param('admin', 'full', id='admin'),
-            pytest.param('viewer', 'full', id='viewer')
+            pytest.param('viewer', 'full', id='viewer'),
         ],
     )
     def test_retrieve(self, who, result, api_client, regular_user, manager, admin_user, group_manager, viewer):

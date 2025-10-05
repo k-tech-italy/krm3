@@ -96,11 +96,7 @@ def valid_mission_zip():
         zip_file.writestr('images/', '')
 
         # Add required data.json file
-        data_json = {
-            "missions": [
-                {"id": 1, "name": "Test Mission", "description": "A test mission"}
-            ]
-        }
+        data_json = {'missions': [{'id': 1, 'name': 'Test Mission', 'description': 'A test mission'}]}
         import json
 
         zip_file.writestr('data.json', json.dumps(data_json, indent=2))
@@ -153,9 +149,7 @@ def non_zip_file():
 def create_in_memory_uploaded_file():
     """Factory fixture to create InMemoryUploadedFile instances."""
 
-    def _create_file(
-        content_buffer, filename='test.zip', content_type='application/zip'
-    ):
+    def _create_file(content_buffer, filename='test.zip', content_type='application/zip'):
         return InMemoryUploadedFile(
             file=content_buffer,
             field_name='file',
@@ -171,9 +165,7 @@ def create_in_memory_uploaded_file():
 class TestMissionImporterStore:
     """Test cases for the store method."""
 
-    def test_store_creates_file_with_correct_content(
-        self, valid_mission_zip, create_in_memory_uploaded_file
-    ):
+    def test_store_creates_file_with_correct_content(self, valid_mission_zip, create_in_memory_uploaded_file):
         """Test that store creates a file with the correct content."""
         uploaded_file = create_in_memory_uploaded_file(valid_mission_zip)
         importer = MissionImporter(uploaded_file)
@@ -205,9 +197,7 @@ class TestMissionImporterStore:
             if os.path.exists(pathname):
                 os.unlink(pathname)
 
-    def test_store_returns_valid_pathname(
-        self, valid_mission_zip, create_in_memory_uploaded_file
-    ):
+    def test_store_returns_valid_pathname(self, valid_mission_zip, create_in_memory_uploaded_file):
         """Test that store returns a valid pathname."""
         uploaded_file = create_in_memory_uploaded_file(valid_mission_zip)
         importer = MissionImporter(uploaded_file)
@@ -232,9 +222,7 @@ class TestMissionImporterStore:
             if os.path.exists(pathname):
                 os.unlink(pathname)
 
-    def test_store_file_can_be_read_after_creation(
-        self, valid_mission_zip, create_in_memory_uploaded_file
-    ):
+    def test_store_file_can_be_read_after_creation(self, valid_mission_zip, create_in_memory_uploaded_file):
         """Test that the stored file can be read and processed."""
         uploaded_file = create_in_memory_uploaded_file(valid_mission_zip)
         importer = MissionImporter(uploaded_file)
@@ -259,9 +247,7 @@ class TestMissionImporterStore:
 class TestMissionImporterIntegration:
     """Integration tests for both methods together."""
 
-    def test_validate_then_store(
-        self, valid_mission_zip, create_in_memory_uploaded_file
-    ):
+    def test_validate_then_store(self, valid_mission_zip, create_in_memory_uploaded_file):
         """Test that validate and store can be called sequentially."""
         uploaded_file = create_in_memory_uploaded_file(valid_mission_zip)
         importer = MissionImporter(uploaded_file)
@@ -287,9 +273,7 @@ class TestMissionImporterIntegration:
             if os.path.exists(pathname):
                 os.unlink(pathname)
 
-    def test_store_then_validate_different_instance(
-        self, valid_mission_zip, create_in_memory_uploaded_file
-    ):
+    def test_store_then_validate_different_instance(self, valid_mission_zip, create_in_memory_uploaded_file):
         """Test storing file and then validating with a new instance using the stored file."""
         uploaded_file = create_in_memory_uploaded_file(valid_mission_zip)
         importer = MissionImporter(uploaded_file)

@@ -27,7 +27,7 @@ class Currency(models.Model):
 
     class Meta:
         verbose_name_plural = 'currencies'
-        ordering = ('iso3', )
+        ordering = ('iso3',)
 
 
 class Rate(models.Model):
@@ -48,10 +48,9 @@ class Rate(models.Model):
             missing = set(config.CURRENCIES.split(',')) | set(include) | set(self.rates.keys())
         if missing:
             from krm3.currencies.client import get_client
+
             client = get_client()
-            ret = client.get_historical(
-                self.day.strftime('%Y-%m-%d'),
-                symbols=sorted(list(missing)))
+            ret = client.get_historical(self.day.strftime('%Y-%m-%d'), symbols=sorted(list(missing)))
             self.rates |= {k: v for k, v in ret['rates'].items() if k == 'USD' or k in missing}
             self.save()
 

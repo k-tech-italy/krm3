@@ -1,6 +1,7 @@
 @import "./_footer.scss";
 
 @import "tailwindcss";
+
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @plugin "daisyui";
@@ -15,3 +16,55 @@
   * the scope of this path.
   */
 @source "../../../**/*.{html,js,py}";
+
+.title {
+  @apply text-3xl font-bold mb-1;
+}
+
+.button {
+  @apply flex p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl hover:bg-blue-600 items-center;
+}
+
+.report-container {
+  @apply overflow-x-auto rounded-md shadow mb-4;
+
+  .report-table {
+    @apply min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse;
+
+    .pending {
+      @apply italic;
+    }
+
+    td {
+      @apply border border-1;
+    }
+
+    .table-header-row {
+      @apply bg-gray-400! dark:bg-blue-900! text-center;
+
+      td {
+        @apply p-1;
+      }
+    }
+
+    .row-data {
+      @apply bg-neutral-200 even:bg-neutral-300 dark:bg-neutral-600!;
+    }
+
+    .row-header {
+      @apply text-left p-1;
+    }
+
+    .cell-data {
+      @apply p-1  text-center text-sm;
+    }
+
+    .workday {
+      @apply bg-yellow-600;
+    }
+
+    .non-workday {
+      @apply bg-gray-400!  dark:bg-blue-900!;
+    }
+  }
+}

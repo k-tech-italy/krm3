@@ -14,7 +14,9 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     UserFactory,
-    TimesheetSubmissionFactory, ContractFactory, ExtraHolidayFactory,
+    TimesheetSubmissionFactory,
+    ContractFactory,
+    ExtraHolidayFactory,
 )
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -118,21 +120,15 @@ class TestTaskAPIListView:
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
-    @override_config(LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME="111111")
-    @override_config(EXACT_SCHEDULE_COLOR_BRIGHT_THEME="222222")
-    @override_config(MORE_THAN_SCHEDULE_COLOR_BRIGHT_THEME="333333")
-    @override_config(LESS_THAN_SCHEDULE_COLOR_DARK_THEME="444444")
-    @override_config(EXACT_SCHEDULE_COLOR_DARK_THEME="555555")
-    @override_config(MORE_THAN_SCHEDULE_COLOR_DARK_THEME="666666")
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-            'mon': 1,
-            'tue': 2,
-            'wed': 3,
-            'thu': 4,
-            'fri': 5,
-            'sat': 6,
-            'sun': 2
-        }))
+    @override_config(LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME='111111')
+    @override_config(EXACT_SCHEDULE_COLOR_BRIGHT_THEME='222222')
+    @override_config(MORE_THAN_SCHEDULE_COLOR_BRIGHT_THEME='333333')
+    @override_config(LESS_THAN_SCHEDULE_COLOR_DARK_THEME='444444')
+    @override_config(EXACT_SCHEDULE_COLOR_DARK_THEME='555555')
+    @override_config(MORE_THAN_SCHEDULE_COLOR_DARK_THEME='666666')
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 2})
+    )
     @pytest.mark.parametrize(
         'task_end_date',
         (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
@@ -255,18 +251,17 @@ class TestTaskAPIListView:
                 '2024-01-04': 4,
                 '2024-01-05': 5,
                 '2024-01-06': 0,
-                '2024-01-07': 2
+                '2024-01-07': 2,
             },
             'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance()),
             'timesheetColors': {
-                                'lessThanScheduleColorBrightTheme': '111111',
-                                'exactScheduleColorBrightTheme': '222222',
-                                'moreThanScheduleColorBrightTheme': '333333',
-                                'lessThanScheduleColorDarkTheme': '444444',
-                                'exactScheduleColorDarkTheme': '555555',
-                                'moreThanScheduleColorDarkTheme': '666666'
-            }
-
+                'lessThanScheduleColorBrightTheme': '111111',
+                'exactScheduleColorBrightTheme': '222222',
+                'moreThanScheduleColorBrightTheme': '333333',
+                'lessThanScheduleColorDarkTheme': '444444',
+                'exactScheduleColorDarkTheme': '555555',
+                'moreThanScheduleColorDarkTheme': '666666',
+            },
         }
 
     def test_schedule_with_contract(self, admin_user, api_client):
@@ -274,8 +269,7 @@ class TestTaskAPIListView:
         end_date = datetime.date(2020, 5, 9)
         contract = ContractFactory(
             country_calendar_code='PL',
-            period=(start_date,
-                    end_date + datetime.timedelta(days=1)),
+            period=(start_date, end_date + datetime.timedelta(days=1)),
             working_schedule={
                 'mon': 3,
                 'tue': 4,
@@ -284,7 +278,8 @@ class TestTaskAPIListView:
                 'fri': 7,
                 'sat': 8,
                 'sun': 2,
-           })
+            },
+        )
         response = api_client(user=admin_user).get(
             self.url(),
             data={
@@ -293,7 +288,7 @@ class TestTaskAPIListView:
                 'end_date': end_date.isoformat(),
             },
         )
-        assert (response.json()['schedule'] == {
+        assert response.json()['schedule'] == {
             '2020-05-01': 0,
             '2020-05-02': 8,
             '2020-05-03': 0,
@@ -302,15 +297,15 @@ class TestTaskAPIListView:
             '2020-05-06': 5,
             '2020-05-07': 6,
             '2020-05-08': 7,
-            '2020-05-09': 8 })
+            '2020-05-09': 8,
+        }
 
     def test_schedule_with_multiple_contracts(self, admin_user, api_client):
         start_date = datetime.date(2020, 5, 1)
         end_date = datetime.date(2020, 5, 9)
         contract_1 = ContractFactory(
             country_calendar_code='PL',
-            period=(datetime.date(2020, 5, 1),
-                    datetime.date(2020, 5, 4)),
+            period=(datetime.date(2020, 5, 1), datetime.date(2020, 5, 4)),
             working_schedule={
                 'mon': 2,
                 'tue': 2,
@@ -319,11 +314,11 @@ class TestTaskAPIListView:
                 'fri': 2,
                 'sat': 2,
                 'sun': 2,
-        })
+            },
+        )
         ContractFactory(
             country_calendar_code='PL',
-            period=(datetime.date(2020, 5, 4),
-                    datetime.date(2020, 5, 10)),
+            period=(datetime.date(2020, 5, 4), datetime.date(2020, 5, 10)),
             resource=contract_1.resource,
             working_schedule={
                 'mon': 4,
@@ -333,7 +328,8 @@ class TestTaskAPIListView:
                 'fri': 4,
                 'sat': 4,
                 'sun': 4,
-        })
+            },
+        )
         response = api_client(user=admin_user).get(
             self.url(),
             data={
@@ -342,7 +338,7 @@ class TestTaskAPIListView:
                 'end_date': end_date.isoformat(),
             },
         )
-        assert (response.json()['schedule'] == {
+        assert response.json()['schedule'] == {
             '2020-05-01': 0,
             '2020-05-02': 2,
             '2020-05-03': 0,
@@ -351,74 +347,73 @@ class TestTaskAPIListView:
             '2020-05-06': 4,
             '2020-05-07': 4,
             '2020-05-08': 4,
-            '2020-05-09': 4 })
+            '2020-05-09': 4,
+        }
 
-    @pytest.mark.parametrize('extra_holiday_dates, expected_schedule',
-                             [
-                                 (
-                                     [{'start_date': datetime.date(2020, 5, 2),
-                                       'end_date': datetime.date(2020, 5, 3)}],
-                                    {
-                                        '2020-05-01': 0,
-                                        '2020-05-02': 0,
-                                        '2020-05-03': 0,
-                                        '2020-05-04': 3,
-                                        '2020-05-05': 4,
-                                        '2020-05-06': 5,
-                                        '2020-05-07': 6,
-                                        '2020-05-08': 7,
-                                        '2020-05-09': 8,
-                                        '2020-05-10': 2
-                                    }
-                                 ),
-                                 (
-                                     [{'start_date': datetime.date(2020, 5, 8),
-                                       'end_date': datetime.date(2020, 5, 10)}],
-                                     {
-                                         '2020-05-01': 0,
-                                         '2020-05-02': 8,
-                                         '2020-05-03': 0,
-                                         '2020-05-04': 3,
-                                         '2020-05-05': 4,
-                                         '2020-05-06': 5,
-                                         '2020-05-07': 6,
-                                         '2020-05-08': 0,
-                                         '2020-05-09': 0,
-                                         '2020-05-10': 0
-                                     }
-                                 ),
-                                 (
-                                         [{'start_date': datetime.date(2020, 5, 1),
-                                           'end_date': datetime.date(2020, 5, 1)},
-                                          {'start_date': datetime.date(2020, 5, 5),
-                                           'end_date': datetime.date(2020, 5, 6)}],
-                                         {
-                                             '2020-05-01': 0,
-                                             '2020-05-02': 8,
-                                             '2020-05-03': 0,
-                                             '2020-05-04': 3,
-                                             '2020-05-05': 0,
-                                             '2020-05-06': 0,
-                                             '2020-05-07': 6,
-                                             '2020-05-08': 7,
-                                             '2020-05-09': 8,
-                                             '2020-05-10': 2
-                                         }
-                                 ),
-                             ])
-
+    @pytest.mark.parametrize(
+        'extra_holiday_dates, expected_schedule',
+        [
+            (
+                [{'start_date': datetime.date(2020, 5, 2), 'end_date': datetime.date(2020, 5, 3)}],
+                {
+                    '2020-05-01': 0,
+                    '2020-05-02': 0,
+                    '2020-05-03': 0,
+                    '2020-05-04': 3,
+                    '2020-05-05': 4,
+                    '2020-05-06': 5,
+                    '2020-05-07': 6,
+                    '2020-05-08': 7,
+                    '2020-05-09': 8,
+                    '2020-05-10': 2,
+                },
+            ),
+            (
+                [{'start_date': datetime.date(2020, 5, 8), 'end_date': datetime.date(2020, 5, 10)}],
+                {
+                    '2020-05-01': 0,
+                    '2020-05-02': 8,
+                    '2020-05-03': 0,
+                    '2020-05-04': 3,
+                    '2020-05-05': 4,
+                    '2020-05-06': 5,
+                    '2020-05-07': 6,
+                    '2020-05-08': 0,
+                    '2020-05-09': 0,
+                    '2020-05-10': 0,
+                },
+            ),
+            (
+                [
+                    {'start_date': datetime.date(2020, 5, 1), 'end_date': datetime.date(2020, 5, 1)},
+                    {'start_date': datetime.date(2020, 5, 5), 'end_date': datetime.date(2020, 5, 6)},
+                ],
+                {
+                    '2020-05-01': 0,
+                    '2020-05-02': 8,
+                    '2020-05-03': 0,
+                    '2020-05-04': 3,
+                    '2020-05-05': 0,
+                    '2020-05-06': 0,
+                    '2020-05-07': 6,
+                    '2020-05-08': 7,
+                    '2020-05-09': 8,
+                    '2020-05-10': 2,
+                },
+            ),
+        ],
+    )
     def test_schedule_with_extra_holidays(self, admin_user, api_client, extra_holiday_dates, expected_schedule):
-
         for date in extra_holiday_dates:
-            ExtraHolidayFactory(period=(date['start_date'], date['end_date'] + datetime.timedelta(days=1)),
-                            country_codes=['PL'])
+            ExtraHolidayFactory(
+                period=(date['start_date'], date['end_date'] + datetime.timedelta(days=1)), country_codes=['PL']
+            )
 
         start_date = datetime.date(2020, 5, 1)
         end_date = datetime.date(2020, 5, 10)
         contract = ContractFactory(
             country_calendar_code='PL',
-            period=(start_date,
-                    end_date + datetime.timedelta(days=1)),
+            period=(start_date, end_date + datetime.timedelta(days=1)),
             working_schedule={
                 'mon': 3,
                 'tue': 4,
@@ -427,7 +422,8 @@ class TestTaskAPIListView:
                 'fri': 7,
                 'sat': 8,
                 'sun': 2,
-            })
+            },
+        )
 
         response = api_client(user=admin_user).get(
             self.url(),
@@ -438,7 +434,6 @@ class TestTaskAPIListView:
             },
         )
         assert response.json()['schedule'] == expected_schedule
-
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
         project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
@@ -612,7 +607,6 @@ class TestTimeEntryAPICreateView:
     def url():
         return reverse('timesheet-api:api-time-entry-list')
 
-
     @pytest.mark.parametrize(
         ('day_shift_hours', 'optional_data'),
         (
@@ -640,15 +634,9 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists()
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         'hours_data',
         (
@@ -674,15 +662,9 @@ class TestTimeEntryAPICreateView:
         assert day_entry.special_leave_hours == 0
         assert day_entry.special_leave_reason is None
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     def test_creates_single_valid_special_leave_entry(self, api_client, admin_user):
         resource = ResourceFactory()
         reason = SpecialLeaveReasonFactory()
@@ -703,15 +685,9 @@ class TestTimeEntryAPICreateView:
         assert special_leave.special_leave_hours == 8
         assert special_leave.special_leave_reason == reason
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         ('dates', 'expected_status_code'),
         (
@@ -732,9 +708,10 @@ class TestTimeEntryAPICreateView:
             pytest.param(
                 [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
             ),
-            pytest.param( # 2024-01-06 italian holiday
+            pytest.param(  # 2024-01-06 italian holiday
                 [f'2024-01-{x}' for x in range(2, 32) if x != 6],
-                status.HTTP_201_CREATED, id='range_equal_to_validity_period'
+                status.HTTP_201_CREATED,
+                id='range_equal_to_validity_period',
             ),
         ),
     )
@@ -785,15 +762,9 @@ class TestTimeEntryAPICreateView:
             pytest.param(0, 8, 0, 0, None, status.HTTP_201_CREATED, id='holiday'),
             pytest.param(0, 0, 4, 0, False, status.HTTP_201_CREATED, id='leave'),
             pytest.param(0, 0, 0, 4, True, status.HTTP_201_CREATED, id='special_leave'),
-            pytest.param(
-                0, 0, 4, 4, True, status.HTTP_201_CREATED, id='special_leave_and_leaves'
-            ),
-            pytest.param(
-                8, 8, 0, 0, None, status.HTTP_400_BAD_REQUEST, id='sick_and_holiday'
-            ),
-            pytest.param(
-                8, 0, 4, 0, False, status.HTTP_400_BAD_REQUEST, id='sick_and_leave'
-            ),
+            pytest.param(0, 0, 4, 4, True, status.HTTP_201_CREATED, id='special_leave_and_leaves'),
+            pytest.param(8, 8, 0, 0, None, status.HTTP_400_BAD_REQUEST, id='sick_and_holiday'),
+            pytest.param(8, 0, 4, 0, False, status.HTTP_400_BAD_REQUEST, id='sick_and_leave'),
             pytest.param(
                 8,
                 0,
@@ -803,9 +774,7 @@ class TestTimeEntryAPICreateView:
                 status.HTTP_400_BAD_REQUEST,
                 id='sick_and_special_leave',
             ),
-            pytest.param(
-                0, 8, 0, 4, False, status.HTTP_400_BAD_REQUEST, id='holiday_and_leave'
-            ),
+            pytest.param(0, 8, 0, 4, False, status.HTTP_400_BAD_REQUEST, id='holiday_and_leave'),
             pytest.param(
                 0,
                 8,
@@ -815,12 +784,8 @@ class TestTimeEntryAPICreateView:
                 status.HTTP_400_BAD_REQUEST,
                 id='holiday_and_special_leave',
             ),
-            pytest.param(
-                8, 8, 4, 0, False, status.HTTP_400_BAD_REQUEST, id='all_non_special'
-            ),
-            pytest.param(
-                8, 8, 0, 4, True, status.HTTP_400_BAD_REQUEST, id='all_special'
-            ),
+            pytest.param(8, 8, 4, 0, False, status.HTTP_400_BAD_REQUEST, id='all_non_special'),
+            pytest.param(8, 8, 0, 4, True, status.HTTP_400_BAD_REQUEST, id='all_special'),
         ),
     )
     def test_accepts_time_entries_with_only_one_absence_kind(
@@ -853,15 +818,9 @@ class TestTimeEntryAPICreateView:
         created = response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(resource=resource).exists() is created
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         'hours_data',
         (
@@ -891,15 +850,9 @@ class TestTimeEntryAPICreateView:
         assert instances.count() == 5
         assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(7, 12)}
 
-    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-        'mon': 8,
-        'tue': 8,
-        'wed': 8,
-        'thu': 8,
-        'fri': 8,
-        'sat': 8,
-        'sun': 8
-    }))
+    @override_config(
+        DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+    )
     @pytest.mark.parametrize(
         'hours_data',
         (

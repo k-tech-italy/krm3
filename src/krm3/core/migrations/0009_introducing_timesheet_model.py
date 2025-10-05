@@ -8,7 +8,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0008_timeentry_day_shift_hours_range_and_more'),
     ]
@@ -27,7 +26,12 @@ class Migration(migrations.Migration):
             name='TimesheetSubmission',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('period', django.contrib.postgres.fields.ranges.DateRangeField(help_text='NB: End date is the day after the actual end date')),
+                (
+                    'period',
+                    django.contrib.postgres.fields.ranges.DateRangeField(
+                        help_text='NB: End date is the day after the actual end date'
+                    ),
+                ),
                 ('closed', models.BooleanField(default=True)),
                 ('resource', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.resource')),
             ],
@@ -35,10 +39,14 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='timeentry',
             name='timesheet',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.timesheetsubmission'),
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.timesheetsubmission'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timesheetsubmission',
-            constraint=django.contrib.postgres.constraints.ExclusionConstraint(expressions=[('period', '&&'), ('resource', '=')], name='exclude_overlapping_timesheets'),
+            constraint=django.contrib.postgres.constraints.ExclusionConstraint(
+                expressions=[('period', '&&'), ('resource', '=')], name='exclude_overlapping_timesheets'
+            ),
         ),
     ]

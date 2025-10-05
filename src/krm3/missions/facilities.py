@@ -39,7 +39,7 @@ class ReimbursementFacility:
     def check_year(self, year: int):
         min_max = self.queryset.aggregate(mi=Min('mission__year'), ma=Max('mission__year'))
         if not min_max['mi'] <= year <= min_max['ma']:
-            raise ValidationError(f"Year must be between {min_max['mi']} and {min_max['ma']}", code='year')
+            raise ValidationError(f'Year must be between {min_max["mi"]} and {min_max["ma"]}', code='year')
 
     def reimburse(self, year: int, title: str | None, month: str) -> List[Reimbursement]:
         reimbursements = []

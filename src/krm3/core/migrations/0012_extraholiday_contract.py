@@ -8,7 +8,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0011_alter_resource_first_name_alter_resource_last_name'),
     ]
@@ -18,8 +17,21 @@ class Migration(migrations.Migration):
             name='ExtraHoliday',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('period', django.contrib.postgres.fields.ranges.DateRangeField(help_text='NB: End date is the day after the actual end date')),
-                ('country_codes', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(help_text='holidays.code and optionally subdivision from holidays library'), size=None)),
+                (
+                    'period',
+                    django.contrib.postgres.fields.ranges.DateRangeField(
+                        help_text='NB: End date is the day after the actual end date'
+                    ),
+                ),
+                (
+                    'country_codes',
+                    django.contrib.postgres.fields.ArrayField(
+                        base_field=models.CharField(
+                            help_text='holidays.code and optionally subdivision from holidays library'
+                        ),
+                        size=None,
+                    ),
+                ),
                 ('reason', models.CharField()),
             ],
         ),
@@ -27,13 +39,22 @@ class Migration(migrations.Migration):
             name='Contract',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('period', django.contrib.postgres.fields.ranges.DateRangeField(help_text='NB: End date is the day after the actual end date')),
+                (
+                    'period',
+                    django.contrib.postgres.fields.ranges.DateRangeField(
+                        help_text='NB: End date is the day after the actual end date'
+                    ),
+                ),
                 ('country_calendar_code', models.CharField()),
                 ('working_schedule', models.JSONField(blank=True, null=True)),
                 ('resource', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.resource')),
             ],
             options={
-                'constraints': [django.contrib.postgres.constraints.ExclusionConstraint(expressions=[('period', '&&'), ('resource', '=')], name='exclude_overlapping_contracts')],
+                'constraints': [
+                    django.contrib.postgres.constraints.ExclusionConstraint(
+                        expressions=[('period', '&&'), ('resource', '=')], name='exclude_overlapping_contracts'
+                    )
+                ],
             },
         ),
     ]
