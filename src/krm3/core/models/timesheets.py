@@ -496,7 +496,7 @@ class TimeEntry(models.Model):
             self.does_entry_blocking_overtime_exist_for_same_day
             or self.is_special_leave
             or self.is_rest
-            or self.is_special_leave
+            or self.is_leave
         ):
             return
 

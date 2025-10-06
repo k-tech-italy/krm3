@@ -641,7 +641,7 @@ class TestTimeEntry:
 
     def test_is_saved_as_leave(self):
         """Leave hours with no work or task-related hours logged"""
-        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        entry = TimeEntryFactory(date=datetime.date(2025,9,9), day_shift_hours=8, task=TaskFactory())
         entry.day_shift_hours = 0
         entry.leave_hours = 8
 
