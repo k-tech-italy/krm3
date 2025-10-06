@@ -288,7 +288,7 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-radio")]')
+    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '4')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -297,11 +297,12 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     browser.click(f'//select[@name="specialReason"]/option[text()="{special_leave_reason.title}"]')
 
     browser.click('//button[contains(text(), "Save")]')
-
+    breakpoint()
     browser.assert_element(
-        '//*[contains(text(), "Invalid time entry for 2025-07-04: '
-        'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]'
+        'No overtime allowed when logging leave, special leave or rest hours. Maximum allowed for 2025-07-04 is 8 hours, Total hours: 9'
     )
+    save_button = browser.find_element('//button[contains(text(), "Save")]')
+    assert not save_button.is_enabled()
 
 
 @freeze_time('2025-07-13')
