@@ -22,8 +22,9 @@ class Contract(models.Model):
         blank=True,
         help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
     )
-    working_schedule = models.JSONField(blank=True, null=True)
-    meal_vaucher = models.BooleanField(default=True, help_text='Enable meal voucher for this contract')
+    preferred_in_report = models.BooleanField(default=True)
+    working_schedule = models.JSONField(blank=True, default=dict)
+    meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
     document = models.FileField(
         upload_to=contract_directory_path,
