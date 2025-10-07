@@ -159,5 +159,5 @@ changelog_start_rev = "1.5.32"
 version_files = [
     "src/krm3/__init__.py:__version__",
     "docker/Makefile:VERSION",
-    { file = "uv.lock", pattern = 'name = "my-package-name"\\nversion = "(?P<version>[0-9\\.]+)"' }
+    { file = "uv.lock", pattern = 'name = "krm3"\\nversion = "(?P<version>[0-9\\.]+)"' }
 ]
