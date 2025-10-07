@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "1.6.0"
+version = "3.0.0"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -159,5 +159,5 @@ changelog_start_rev = "1.5.32"
 version_files = [
     "src/krm3/__init__.py:__version__",
     "docker/Makefile:VERSION",
-    "uv.lock:version"
+    "uv.lock:name = \"krm3\"[\\s\\S]*?version = \".*?\""
 ]
