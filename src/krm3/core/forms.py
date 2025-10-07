@@ -11,7 +11,7 @@ class ContractForm(ModelForm):
     def clean(self) -> dict:
         ret = super().clean()
         if (
-            self.instance
+            self.instance.id
             and (new_period := self.cleaned_data.get('period'))
             and (self.cleaned_data.get('resource'))
         ):
