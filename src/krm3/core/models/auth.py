@@ -101,6 +101,7 @@ class Resource(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
+    preferred_in_report = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['last_name', 'first_name']

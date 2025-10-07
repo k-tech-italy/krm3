@@ -63,7 +63,7 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
-    list_display = ('first_name', 'last_name', 'user', 'active')
+    list_display = ('first_name', 'last_name', 'user', 'active', 'preferred_in_report')
     search_fields = ['first_name', 'last_name']
     list_filter = (('active', admin.BooleanFieldListFilter),)
 
@@ -80,7 +80,6 @@ class ContractAdmin(AdminFiltersMixin, ModelAdmin):
     list_display = [
         'resource',
         'get_period',
-        'preferred_in_report',
         'country_calendar_code',
         'working_schedule',
         'meal_voucher',
