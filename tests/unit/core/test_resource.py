@@ -58,7 +58,7 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             date(2020, 1, 1),
             date(2020, 1, 3),
             'IT-RM',
-            None,
+            {},
             {
                 datetime.date(2020, 1, 1): 0,  # New Year
                 datetime.date(2020, 1, 2): 4,
@@ -69,14 +69,14 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             date(2020, 11, 10),
             date(2020, 11, 12),
             'IT-RM',
-            None,
+            {},
             {datetime.date(2020, 11, 10): 2, datetime.date(2020, 11, 11): 3, datetime.date(2020, 11, 12): 4},
         ),
         (
             date(2020, 11, 10),
             date(2020, 11, 15),
             'PL',
-            None,
+            {},
             {
                 datetime.date(2020, 11, 10): 2,
                 datetime.date(2020, 11, 11): 0,  # polish Independence Day
@@ -161,7 +161,7 @@ def test_get_krm_days_with_contract_holidays(country_code, expected):
 @pytest.mark.parametrize(
     'schedule, expected',
     [
-        pytest.param(None, [0, 0, 8, 8, 8, 0, 0], id='default'),
+        pytest.param({}, [0, 0, 8, 8, 8, 0, 0], id='default'),
         pytest.param(
             {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}, [0, 0, 8, 8, 8, 0, 0], id='full'
         ),

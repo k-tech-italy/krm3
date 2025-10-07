@@ -309,3 +309,4 @@ class SpecialLeaveReasonFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.SpecialLeaveReason'
+        django_get_or_create = ('title',)

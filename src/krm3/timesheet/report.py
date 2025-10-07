@@ -38,37 +38,39 @@ def enrich_with_resource_calendar(
         ]
 
 
-def enrich_with_meal_vaucher(
+def enrich_with_meal_voucher(
     results: dict[Resource, dict], from_date: datetime.date, to_date: datetime.date
 ) -> dict[str, str]:
     """
     Add meal vaucher calculation to the results.
 
-    Value is 1 if resource worked >=75% of scheduled hours, empty otherwise.
-    Only calculated if contract.meal_vaucher is enabled.
+    Value is 1 if resource worked > min_meal_voucher as per Contract.meal_voucher schedule.
 
     Returns:
-        Dictionary with meal vaucher mapping for the keymap
+        Dictionary with meal voucher mapping for the keymap
 
     """
     calendar = KrmCalendar()
-    meal_vaucher_mapping = {}
+    meal_voucher_mapping = {}
 
     for resource, stats in results.items():
         days_interval = (to_date - from_date).days + 1
-        stats['meal_vaucher'] = [None] * days_interval
+        stats['meal_voucher'] = [None] * days_interval
 
         contracts = resource.get_contracts(from_date, to_date)
-        schedule = resource.get_schedule(from_date, to_date)
 
         for day_index, krm_day in enumerate(calendar.iter_dates(from_date, to_date)):
             date = krm_day.date
 
             contract = resource.contract_for_date(contracts, date)
-            if not contract or not contract.meal_vaucher:
+            if not contract:
                 continue
 
-            scheduled_hours = schedule[date]
+            min_threshold = (
+                krm_day.is_holiday(contract.country_calendar_code) and contract.meal_voucher.get('sun')
+            ) or contract.meal_voucher.get(krm_day.day_of_week_short.lower())
+            if min_threshold is None:
+                continue
 
             total_worked_hours = (
                 stats['day_shift'][day_index]
@@ -76,11 +78,11 @@ def enrich_with_meal_vaucher(
                 + stats['travel'][day_index]
                 + stats['bank_from'][day_index]
             )
-            if scheduled_hours > 0 and total_worked_hours >= scheduled_hours * 0.75:
-                stats['meal_vaucher'][day_index] = 1
+            if total_worked_hours >= min_threshold:
+                stats['meal_voucher'][day_index] = 1
 
-    meal_vaucher_mapping['meal_vaucher'] = 'Buoni pasto'
-    return meal_vaucher_mapping
+    meal_voucher_mapping['meal_voucher'] = 'Buoni pasto'
+    return meal_voucher_mapping
 
 
 def timesheet_report_raw_data(
@@ -103,16 +105,10 @@ def timesheet_report_raw_data(
     if resource:
         qs = qs.filter(resource=resource)
 
-    # resource_calendars = {}
-
     start_date = KrmDay(from_date)
     days_interval = (to_date - from_date).days + 1
     results, special_leave_mapping_dict = {}, {}
     for entry in qs:
-        # TODO: WIP
-        # resource_calendar = resource_calendars.setdefault(
-        #    entry.resource, entry.resource.get_krm_days_with_contract(from_date, to_date))
-
         date = KrmDay(entry.date)
         resource_stats = results.setdefault(entry.resource, {})
 
@@ -133,8 +129,8 @@ def timesheet_report_raw_data(
         stats['overtime'] = [D('0.00')] * days_interval
 
     enrich_with_resource_calendar(results, from_date, to_date)
-    meal_vaucher_mapping = enrich_with_meal_vaucher(results, from_date, to_date)
-    additional_mapping = special_leave_mapping_dict | meal_vaucher_mapping
+    meal_voucher_mapping = enrich_with_meal_voucher(results, from_date, to_date)
+    additional_mapping = special_leave_mapping_dict | meal_voucher_mapping
     return results, additional_mapping
 
 
@@ -143,7 +139,7 @@ def add_report_summaries(results: dict) -> None:
     for stats in results.values():
         for k, result_list in stats.items():
             if k != 'days':
-                if k == 'meal_vaucher':
+                if k == 'meal_voucher':
                     vaucher_count = sum(1 for val in result_list if val == 1)
                     result_list.insert(0, vaucher_count)
                 else:
@@ -171,7 +167,7 @@ def calculate_overtime(resource_stats: dict) -> None:
                 'overtime',
                 'days',
                 'bank_from',
-                'meal_vaucher',
+                'meal_voucher',
             ]
         ]
 

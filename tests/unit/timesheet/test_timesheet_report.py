@@ -23,10 +23,18 @@ from krm3.timesheet.report import (
 from krm3.utils.dates import KrmDay, dt
 from tests._extras.testutils.factories import ContractFactory, TimesheetSubmissionFactory
 
+
 @pytest.fixture
-def report_resource():
-    sl1 = SpecialLeaveReasonFactory(id=1)
-    sl2 = SpecialLeaveReasonFactory(id=2)
+def law104():
+    return SpecialLeaveReasonFactory(title= 'Law 104')
+
+@pytest.fixture
+def study():
+    return SpecialLeaveReasonFactory(title= 'Study')
+
+
+@pytest.fixture
+def report_resource(law104, study):
     t1 = TaskFactory()
     r1 = t1.resource
     ContractFactory(
@@ -42,6 +50,15 @@ def report_resource():
             'sat': 0,
             'sun': 0,
         },
+        meal_voucher={
+            'mon': 6,
+            'tue': 6,
+            'wed': 6,
+            'thu': 6,
+            'fri': 6,
+            'sat': 4,
+            'sun': None
+        }
     )
     t2 = TaskFactory(resource=r1)
     r1._time_entries = [
@@ -64,10 +81,10 @@ def report_resource():
             day_shift_hours=0,
             bank_from=6,
             special_leave_hours=0.5,
-            special_leave_reason=sl1,
+            special_leave_reason=law104,
         ),
         TimeEntryFactory(
-            resource=r1, date='2025-06-06', day_shift_hours=0, special_leave_hours=5, special_leave_reason=sl2
+            resource=r1, date='2025-06-06', day_shift_hours=0, special_leave_hours=5, special_leave_reason=study
         ),
     ]
     return r1
@@ -101,7 +118,7 @@ def _raw_results():
         'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.00')],
         'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
         'overtime': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
-        'meal_vaucher': [None, None, None, 1, 1, 1, 1, None],
+        'meal_voucher': [None, 1, None, 1, 1, 1, 1, None],
         'days': [
             KrmDay('2025-05-30'),
             KrmDay('2025-05-31'),
@@ -128,7 +145,7 @@ _overtime_results = {
     'special_leave|1': [D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('5.00')],
     'sick': [D('0.00'), D('0.00'), D('8.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
     'overtime': [D('0.00'), D('3.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00'), D('0.00')],
-    'meal_vaucher': [None, None, None, 1, 1, 1, 1, None],
+    'meal_voucher': [None, None, None, 1, 1, 1, 1, None],
     'days': [
         KrmDay('2025-05-30'),
         KrmDay('2025-05-31'),
