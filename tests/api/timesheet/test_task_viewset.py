@@ -157,7 +157,7 @@ class TestTaskAPIListView:
 
         _early_time_entry = _make_time_entry(date=datetime.date(2023, 7, 1), comment='Too early')
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
-        task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=6, comment='Within range')
+        task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=1, comment='Within range')
         day_entry_within_range = _make_time_entry(
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
@@ -660,7 +660,7 @@ class TestTimeEntryAPICreateView:
     def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
         time_entry_data = {
-            'dates': ['2024-01-01'],
+            'dates': ['2024-01-02'],
             'dayShiftHours': 0,
             'resourceId': resource.pk,
             'comment': 'approved',
