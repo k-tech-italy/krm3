@@ -5,7 +5,20 @@ import freezegun
 import pytest
 from django.core import exceptions
 
+from krm3.projects.forms import ProjectForm
 from testutils.factories import POFactory, ProjectFactory, TaskFactory
+
+
+class TestProjectForm:
+    @freezegun.freeze_time(datetime.date(2025, 6, 15))
+    def test_sets_start_date_default_to_today_on_new_instance(self):
+        form = ProjectForm()
+        assert form.fields['start_date'].initial == datetime.date(2025, 6, 15)
+
+    def test_no_default_override_on_existing_instance(self):
+        project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
+        form = ProjectForm(instance=project)
+        assert form.fields['start_date'].initial is None
 
 
 class TestProject:
