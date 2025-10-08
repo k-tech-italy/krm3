@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "1.6.0"
+version = "1.7.0"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -153,11 +153,10 @@ typeCheckingMode="basic"
 name = "cz_conventional_commits"
 tag_format = "$version"
 version_scheme = "pep440"
-version_provider = "pep621"
+version_provider = "uv"
 update_changelog_on_bump = true
 changelog_start_rev = "1.5.32"
 version_files = [
     "src/krm3/__init__.py:__version__",
-    "docker/Makefile:VERSION",
-    { file = "uv.lock", pattern = 'name = "krm3"\\nversion = "(?P<version>[0-9\\.]+)"' }
+    "docker/Makefile:VERSION"
 ]
