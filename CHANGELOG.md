@@ -1,3 +1,24 @@
+## 1.7.0 (2025-10-08)
+
+### Feat
+
+- **Resource.preferred_in_report**: Added flag preferred_in_report to Resource
+- **Contract**: Introduce Contract.meal_voucher_schedule in model (#134)
+
+### Fix
+
+- **Tests:test_calculate_overtime**: test_calculate_overtime expected results aligned
+- **timesheets.py**: fix overtime with leave validator (#133)
+
+### Refactor
+
+- **test_timesheet.py**: Integration tests for readOnly EditDay modal, fix exisiting tests (#132)
+
+### Perf
+
+- **models/timesheets.py**: Added protocol number field, validations and related tests (#130)
+- **availalibity_report.html**: use select2 in availability report (#126)
+
 ## 1.6.0 (2025-10-01)
 
 ### Feat
