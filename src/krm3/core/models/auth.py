@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from decimal import Decimal
 import typing
@@ -18,7 +19,6 @@ from constance import config
 if typing.TYPE_CHECKING:
     from datetime import date
     from krm3.core.models import Contract
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
@@ -101,68 +101,98 @@ class Resource(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
+    preferred_in_report = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['first_name', 'last_name']
+        ordering = ['last_name', 'first_name']
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
 
-    @property
-    def daily_work_hours_max(self) -> Decimal:
-        """Maximum number of hours a resource should work each day.
+    def scheduled_working_hours_for_day(self, day: KrmDay) -> float:
+        """Scheduled number of hours a resource should work each day.
 
-        It can be exceeded.
-
-        :return: the maximum number of hours in a work day.
+        :return: scheduled number of hours.
         """
-        return Decimal(8)
+        from krm3.core.models import Contract  # noqa: PLC0415
+        contract = Contract.objects.filter(resource=self, period__contains=day.date).first()
+        return self._get_min_working_hours(contract, day)
 
-    def _min_working_hours_for_day(self, day: KrmDay, country_calendar_code: str, schedule: dict[str, float]) -> float:
+    def _get_min_working_hours(self, contract: Contract | None, day: KrmDay) -> float:
+        """Return the minimum working hours for a given day."""
+        if contract and contract.working_schedule:
+            schedule = contract.working_schedule
+        else:
+            schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
+        if contract and contract.country_calendar_code:
+            country_calendar_code = contract.country_calendar_code
+        else:
+            country_calendar_code = settings.HOLIDAYS_CALENDAR
+
         min_working_hours = schedule[day.day_of_week_short.lower()]
         if day.is_holiday(country_calendar_code, False):
             min_working_hours = 0
         return min_working_hours
 
+    def get_krm_days_with_contract(self, start_day: date, end_day: date) -> list[KrmDay]:
+        """Return a list of Krm days tailored for the resource contract/schedule.
+
+        Attributes added to KRM Day:
+        - contract: The contract for the day if available
+        - min_working_hours: the minimum working hours for the day (Result is based on resource calendar and schedule)
+        - is_holiday (overridden method. Result is contract country calendar aware)
+        """
+        days_list = list(KrmCalendar().iter_dates(start_day, end_day))
+        contracts = self.get_contracts(start_day, end_day)
+
+        for kd in days_list:
+            kd.contract = None
+            kd.min_working_hours = 0
+
+            country_calendar_code = settings.HOLIDAYS_CALENDAR
+            for contract in contracts:
+                if contract.falls_in(kd.date):
+                    kd.contract = contract
+                    kd.min_working_hours = self._get_min_working_hours(contract, kd)
+                    if contract.country_calendar_code:
+                        country_calendar_code = contract.country_calendar_code
+                    break
+
+            if kd.is_holiday(country_calendar_code, True):
+                kd.is_holiday = lambda *args, **kwargs: True
+            else:
+                kd.is_holiday = lambda *args, **kwargs: False
+
+        return days_list
+
     def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
         """Return a list of contracts applicable to the time interval between start_day and end_day."""
-        from krm3.core.models import Contract
+        from krm3.core.models import Contract  # noqa: PLC0415
         return list(
             Contract.objects.filter(
-                period__overlap=(start_day, end_day), resource=self
+                period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
             )
         )
 
-    def contract_for_date(self, contract_list: 'list[Contract]', day: date) -> 'Contract | None':
+    def contract_for_date(self, contract_list: 'list[Contract]', day: date | KrmDay) -> 'Contract | None':
         """Select the contract applicable for the given day."""
         for contract in contract_list:
-            if contract.period.lower <= day < contract.period.upper:
+            if contract.falls_in(day):
                 return contract
         return None
 
     def get_schedule(self, start_day: date, end_day: date) -> dict[date, float]:
-        overlapping_contracts: 'list[Contract]' = self.get_contracts(start_day, end_day)
         calendar = KrmCalendar()
         days = list(calendar.iter_dates(start_day, end_day))
-        default_resource_schedule = config.DEFAULT_RESOURCE_SCHEDULE  # {'mon': 8, 'tue': 8, .... 'sat': 0, 'sun': 0}
 
         for day in days:
-            contract: Contract = self.contract_for_date(overlapping_contracts, day.date)
-            if contract and contract.working_schedule:
-                schedule = contract.working_schedule
-            else:
-                schedule = json.loads(default_resource_schedule)
-            if contract and contract.country_calendar_code:
-                country_calendar_code = contract.country_calendar_code
-            else:
-                country_calendar_code = settings.HOLIDAYS_CALENDAR
-            day.min_working_hours = self._min_working_hours_for_day(day, country_calendar_code, schedule)
+            day.min_working_hours = self.scheduled_working_hours_for_day(day)
 
         return {day.date: day.min_working_hours for day in days}
 
     def get_bank_hours_balance(self) -> Decimal:
         """Calculate bank hours balance from all time entries."""
-        from krm3.core.models import TimeEntry
+        from krm3.core.models import TimeEntry  # noqa: PLC0415
 
         queryset = TimeEntry.objects.filter(resource=self)
         result = queryset.aggregate(
@@ -170,8 +200,8 @@ class Resource(models.Model):
             total_withdrawals=Sum('bank_from')
         )
 
-        deposits = result['total_deposits'] or Decimal('0')
-        withdrawals = result['total_withdrawals'] or Decimal('0')
+        deposits = result['total_deposits'] or Decimal(0)
+        withdrawals = result['total_withdrawals'] or Decimal(0)
 
         return deposits - withdrawals
 

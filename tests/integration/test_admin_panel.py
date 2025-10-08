@@ -1,7 +1,11 @@
+import json
 import time
 import datetime
+import os
+import tempfile
 
 from freezegun import freeze_time
+from constance.test import override_config
 from krm3.core.models.missions import Mission
 import pytest
 
@@ -15,7 +19,8 @@ from testutils.factories import (
     SpecialLeaveReasonFactory,
     MissionFactory,
     ExpenseFactory,
-    ReimbursementFactory
+    ReimbursementFactory,
+    ContractFactory
 )
 from django.contrib.auth.models import Permission
 
@@ -253,6 +258,15 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
+@override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+    'mon': 8,
+    'tue': 8,
+    'wed': 8,
+    'thu': 8,
+    'fri': 8,
+    'sat': 8,
+    'sun': 8
+}))
 @freeze_time("2025-07-14")
 def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
 
@@ -398,3 +412,51 @@ def test_admin_missions_create_reibursments_get_preview(
         By.XPATH,
         '//p[contains(text(), "Are you sure you want to create a reimbursement for the following expenses?")]',
     )
+
+
+def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user_with_plain_password):
+    """
+    Test that Contract document field only accepts PDF files and rejects other file types.
+    """
+
+    contract = ContractFactory()
+
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+
+    browser.click('//a[@href="/admin/core/contract/"]')
+    browser.click(f'//a[@href="/admin/core/contract/{contract.id}/change/"]')
+
+    # Test 1: Try to upload a non-PDF file
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+        tmp_file.write(b'fake image content')
+        tmp_file_path = tmp_file.name
+
+    try:
+        file_input = browser.find_element(By.XPATH, '//input[@type="file" and @name="document"]')
+        file_input.send_keys(tmp_file_path)
+
+        browser.click('//input[@value="Save"]')
+        browser.assert_element('//ul[@class="errorlist"]//li[contains(text(), "pdf")]')
+
+    finally:
+        os.unlink(tmp_file_path)
+
+    # Test 2: Try to upload a PDF file
+    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+        tmp_file.write(b'%PDF-1.4 fake pdf content')
+        tmp_file_path = tmp_file.name
+
+    try:
+        file_input = browser.find_element(By.XPATH, '//input[@type="file" and @name="document"]')
+        file_input.send_keys(tmp_file_path)
+
+        browser.click('//input[@value="Save"]')
+        browser.assert_element('//li[@class="success"]')
+        browser.assert_element_absent('//ul[@class="errorlist"]//li[contains(text(), "pdf")]')
+
+        contract.refresh_from_db()
+        assert contract.document.name.endswith('.pdf')
+
+    finally:
+        os.unlink(tmp_file_path)

@@ -157,7 +157,7 @@ class TestTaskAPIListView:
 
         _early_time_entry = _make_time_entry(date=datetime.date(2023, 7, 1), comment='Too early')
         _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
-        task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=6, comment='Within range')
+        task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=1, comment='Within range')
         day_entry_within_range = _make_time_entry(
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
@@ -213,6 +213,7 @@ class TestTaskAPIListView:
                     'bankFrom': _as_quantized_decimal(task_entry_within_range.bank_from),
                     'bankTo': _as_quantized_decimal(day_entry_within_range.bank_to),
                     'comment': 'Within range',
+                    'protocolNumber': None,
                     'task': task.pk,
                     'taskTitle': task.title,
                 },
@@ -233,6 +234,7 @@ class TestTaskAPIListView:
                     'bankFrom': _as_quantized_decimal(day_entry_within_range.bank_from),
                     'bankTo': _as_quantized_decimal(day_entry_within_range.bank_to),
                     'comment': 'Within range (day)',
+                    'protocolNumber': None,
                     'task': None,
                     'taskTitle': None,
                 },
@@ -610,6 +612,7 @@ class TestTimeEntryAPICreateView:
     def url():
         return reverse('timesheet-api:api-time-entry-list')
 
+
     @pytest.mark.parametrize(
         ('day_shift_hours', 'optional_data'),
         (
@@ -637,6 +640,15 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists()
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         'hours_data',
         (
@@ -648,7 +660,7 @@ class TestTimeEntryAPICreateView:
     def test_creates_single_valid_day_entry(self, hours_data, admin_user, api_client):
         resource = ResourceFactory()
         time_entry_data = {
-            'dates': ['2024-01-01'],
+            'dates': ['2024-01-02'],
             'dayShiftHours': 0,
             'resourceId': resource.pk,
             'comment': 'approved',
@@ -662,11 +674,20 @@ class TestTimeEntryAPICreateView:
         assert day_entry.special_leave_hours == 0
         assert day_entry.special_leave_reason is None
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     def test_creates_single_valid_special_leave_entry(self, api_client, admin_user):
         resource = ResourceFactory()
         reason = SpecialLeaveReasonFactory()
         time_entry_data = {
-            'dates': ['2024-01-01'],
+            'dates': ['2024-01-02'],
             'dayShiftHours': 0,
             'specialLeaveHours': 8,
             'specialLeaveReason': reason.pk,
@@ -682,10 +703,19 @@ class TestTimeEntryAPICreateView:
         assert special_leave.special_leave_hours == 8
         assert special_leave.special_leave_reason == reason
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('dates', 'expected_status_code'),
         (
-            pytest.param(['2024-01-01'], status.HTTP_201_CREATED, id='one_day_at_start'),
+            pytest.param(['2024-01-02'], status.HTTP_201_CREATED, id='one_day_at_start'),
             pytest.param(['2024-01-15'], status.HTTP_201_CREATED, id='one_day_within_range'),
             pytest.param(['2024-01-31'], status.HTTP_201_CREATED, id='one_day_at_end'),
             pytest.param(['2023-12-31'], status.HTTP_400_BAD_REQUEST, id='one_day_before_start'),
@@ -702,8 +732,9 @@ class TestTimeEntryAPICreateView:
             pytest.param(
                 [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
             ),
-            pytest.param(
-                [f'2024-01-{x}' for x in range(1, 32)], status.HTTP_201_CREATED, id='range_equal_to_validity_period'
+            pytest.param( # 2024-01-06 italian holiday
+                [f'2024-01-{x}' for x in range(2, 32) if x != 6],
+                status.HTTP_201_CREATED, id='range_equal_to_validity_period'
             ),
         ),
     )
@@ -806,7 +837,7 @@ class TestTimeEntryAPICreateView:
         resource = ResourceFactory()
         reason = SpecialLeaveReasonFactory()
         time_entry_data = {
-            'dates': ['2024-01-01'],
+            'dates': ['2024-01-02'],
             'dayShiftHours': 0,
             'sickHours': sick_hours,
             'holidayHours': holiday_hours,
@@ -822,6 +853,15 @@ class TestTimeEntryAPICreateView:
         created = response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(resource=resource).exists() is created
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         'hours_data',
         (
@@ -836,7 +876,7 @@ class TestTimeEntryAPICreateView:
         task = TaskFactory()
 
         time_entry_data = {
-            'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
+            'dates': [f'2024-01-{day:02}' for day in range(7, 12)],
             'taskId': task.pk,
             'resourceId': task.resource.pk,
         } | hours_data
@@ -849,8 +889,17 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
         instances = TimeEntry.objects.filter(task=task)
         assert instances.count() == 5
-        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(1, 6)}
+        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(7, 12)}
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         'hours_data',
         (
@@ -868,7 +917,7 @@ class TestTimeEntryAPICreateView:
             hours_data['specialLeaveReason'] = SpecialLeaveReasonFactory(title='Test reason').pk
 
         time_entry_data = {
-            'dates': [f'2024-01-{day:02}' for day in range(1, 6)],
+            'dates': [f'2024-01-{day:02}' for day in range(8, 13)],
             'resourceId': resource.pk,
             'comment': 'approved',
         } | hours_data
@@ -879,7 +928,7 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
         instances = TimeEntry.objects.filter(resource=resource)
         assert instances.count() == 5
-        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(1, 6)}
+        assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(8, 13)}
 
     def test_rejects_new_time_entries_summing_up_to_more_than_24_hours(self, admin_user, api_client):
         today = datetime.date(2024, 1, 1)
@@ -992,7 +1041,7 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 1)
+        target_date = datetime.date(2024, 1, 2)
         existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, day_shift_hours=0)
 
         data = {
@@ -1019,7 +1068,7 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 1)
+        target_date = datetime.date(2024, 1, 2)
         target_task = TaskFactory(title='target', resource=resource)
         other_task = TaskFactory(title='other', resource=resource)
         existing_entry_on_target_task = TimeEntryFactory(
@@ -1053,7 +1102,7 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 1)
+        target_date = datetime.date(2024, 1, 2)
         task = TaskFactory(title='Should end up without task entries', resource=resource)
         existing_task_entry = TimeEntryFactory(resource=resource, date=target_date, task=task, day_shift_hours=4)
         existing_task_entry_id = existing_task_entry.pk
@@ -1084,7 +1133,7 @@ class TestTimeEntryAPICreateView:
         self, hours_key, existing_hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 1)
+        target_date = datetime.date(2024, 1, 2)
 
         existing_day_entry = TimeEntryFactory(
             resource=resource, date=target_date, day_shift_hours=0, **{existing_hours_field: 4}

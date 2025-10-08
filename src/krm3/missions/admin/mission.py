@@ -285,8 +285,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return HttpResponseRedirect(url)
 
 
-def build_mission_expenses_table(request: 'HttpRequest',
-    qs: 'QuerySet', sorting: str, report: bool = False, refresh: bool = True
+def build_mission_expenses_table(
+    request: 'HttpRequest', qs: 'QuerySet', sorting: str, report: bool = False, refresh: bool = True
 ) -> 'MissionExpenseBaseTable':
     klass = MissionExpenseExportTable if report else MissionExpenseTable
     if refresh:

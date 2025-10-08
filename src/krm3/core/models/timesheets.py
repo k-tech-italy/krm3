@@ -16,6 +16,7 @@ from django.db.models import QuerySet
 from constance import config
 
 from .auth import Resource
+from ...utils.dates import KrmDay
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -176,6 +177,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
             return self.all()
         return self.filter(resource__user=user)
 
+
 class TimesheetSubmissionManager(models.Manager):
     """Custom Manager for TimesheetSubmission with utility methods."""
 
@@ -186,9 +188,7 @@ class TimesheetSubmissionManager(models.Manager):
         Returns QuerySet of TimesheetSubmission objects.
         """
         return self.filter(
-            period__overlap=(from_date, to_date + datetime.timedelta(days=1)),
-            closed=True,
-            resource=resource
+            period__overlap=(from_date, to_date + datetime.timedelta(days=1)), closed=True, resource=resource
         )
 
 
@@ -214,7 +214,7 @@ class TimesheetSubmission(models.Model):
 
     def __str__(self) -> str:
         end_dt = self.period.upper - datetime.timedelta(days=1)
-        return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}'
+        return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
 
 
 class TimeEntry(models.Model):
@@ -233,8 +233,9 @@ class TimeEntry(models.Model):
     travel_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     bank_from = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
-    bank_to =  models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    bank_to = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
     comment = models.TextField(null=True, blank=True)
+    protocol_number = models.CharField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
     timesheet = models.ForeignKey(TimesheetSubmission, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -355,8 +356,12 @@ class TimeEntry(models.Model):
         return self.total_task_hours > 0.0 or self.on_call_hours > 0.0
 
     @property
-    def prevents_overtime_on_same_day(self) -> bool:
-        return self.is_leave or self.is_special_leave or self.is_rest
+    def does_entry_blocking_overtime_exist_for_same_day(self) -> bool:
+        time_entries_for_same_day = TimeEntry.objects.filter(resource=self.resource, date=self.date).exclude(pk=self.pk)
+        for time_entry in time_entries_for_same_day:
+            if time_entry.is_leave or time_entry.is_special_leave or time_entry.is_rest:
+                return True
+        return False
 
     @property
     def net_bank_hours(self) -> Decimal:
@@ -386,7 +391,6 @@ class TimeEntry(models.Model):
             self._verify_task_and_day_hours_not_logged_together,
             self._verify_at_most_one_absence,
             self._verify_honors_total_hours_restrictions,
-            self._verify_sick_time_entry_has_comment,
             self._verify_reason_only_on_special_leave,
             self._verify_special_leave_reason_is_valid,
             self._verify_no_overtime_with_leave_or_rest_entry,
@@ -394,6 +398,7 @@ class TimeEntry(models.Model):
             self._verify_bank_hours_balance_limits,
             self._verify_bank_hours_restrictions_with_day_entries,
             self._verify_bank_hours_against_scheduled_hours,
+            self._verify_protocol_number,
         )
 
         for validator in validators:
@@ -404,6 +409,14 @@ class TimeEntry(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+    def _verify_protocol_number(self) -> None:
+        if self.protocol_number and not self.is_sick_day:
+            raise ValidationError(
+                _('Protocol number can be used only for sick days'), code='protocol_number_without_sick_day'
+            )
+        if self.protocol_number and not self.protocol_number.isdigit():
+            raise ValidationError(_('Protocol number digits must be numeric'), code='protocol_number_not_numeric')
 
     def _verify_task_hours_not_logged_in_day_entry(self) -> None:
         if self.is_day_entry and self.has_task_entry_hours:
@@ -416,8 +429,7 @@ class TimeEntry(models.Model):
     def _verify_at_most_one_absence(self) -> None:
         is_one_of_the_leave_types = self.is_leave or self.is_special_leave
         has_too_many_day_entry_hours_logged = (
-            len([cond for cond in (self.is_sick_day, self.is_holiday, is_one_of_the_leave_types) if cond])
-            > 1
+            len([cond for cond in (self.is_sick_day, self.is_holiday, is_one_of_the_leave_types) if cond]) > 1
         )
         if has_too_many_day_entry_hours_logged:
             raise ValidationError(
@@ -452,10 +464,6 @@ class TimeEntry(models.Model):
                 code='too_much_total_time_logged',
             )
 
-    def _verify_sick_time_entry_has_comment(self) -> None:
-        if self.is_sick_day and not self.comment:
-            raise ValidationError(_('Comment is mandatory when logging sick days'), code='sick_without_comment')
-
     def _verify_reason_only_on_special_leave(self) -> None:
         if self.special_leave_reason and not self.special_leave_hours:
             raise ValidationError(_('Only a special leave can have a reason'), code='reason_on_non_special_leave')
@@ -484,21 +492,23 @@ class TimeEntry(models.Model):
 
         other_entries_on_same_day = all_entries.exclude(task=self.task).exclude(pk=self.pk)
 
-        # this check only involves leave (both kinds) and rest entries
-        if (
-            not self.prevents_overtime_on_same_day
-            and not other_entries_on_same_day.entries_preventing_overtime_on_same_day().exists()
+        if not (
+            self.does_entry_blocking_overtime_exist_for_same_day
+            or self.is_special_leave
+            or self.is_rest
+            or self.is_leave
         ):
             return
 
         total_hours_on_same_day = sum(entry.total_hours for entry in other_entries_on_same_day) + self.total_hours
-        if total_hours_on_same_day > self.resource.daily_work_hours_max:
+
+        if total_hours_on_same_day > self.resource.scheduled_working_hours_for_day(KrmDay(self.date)):
             raise ValidationError(
                 _(
                     'No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, got {actual_hours}'
                 ).format(
                     kind='rest' if self.is_rest else 'leave',
-                    work_hours=self.resource.daily_work_hours_max,
+                    work_hours=self.resource.scheduled_working_hours_for_day(KrmDay(self.date)),
                     actual_hours=total_hours_on_same_day,
                 ),
                 code='overtime_while_resting_or_on_leave',
@@ -508,8 +518,7 @@ class TimeEntry(models.Model):
         """Verify that we don't have both withdrawal and deposit on the same day."""
         if self.bank_from > 0.0 and self.bank_to > 0.0:
             raise ValidationError(
-                _('Cannot both withdraw from and deposit to bank hours on the same day'),
-                code='bank_both_directions'
+                _('Cannot both withdraw from and deposit to bank hours on the same day'), code='bank_both_directions'
             )
 
     def _verify_bank_hours_balance_limits(self) -> None:
@@ -521,43 +530,34 @@ class TimeEntry(models.Model):
 
         if new_balance > balance_upper:
             raise ValidationError(
-                _('This transaction would exceed the maximum bank balance of {limit} hours. '
-                  'Current balance: {current}, attempting to add: {change}').format(
-                    limit=balance_upper,
-                    current=current_balance,
-                    change=self.net_bank_hours
-                ),
-                code='bank_balance_exceeds_upper_limit'
+                _(
+                    'This transaction would exceed the maximum bank balance of {limit} hours. '
+                    'Current balance: {current}, attempting to add: {change}'
+                ).format(limit=balance_upper, current=current_balance, change=self.net_bank_hours),
+                code='bank_balance_exceeds_upper_limit',
             )
         if new_balance < balance_lower:
             raise ValidationError(
-                _('This transaction would exceed the minimum bank balance of {limit} hours. '
-                  'Current balance: {current}, attempting to change by: {change}').format(
-                    limit=balance_lower,
-                    current=current_balance,
-                    change=self.net_bank_hours
-                ),
-                code='bank_balance_exceeds_lower_limit'
+                _(
+                    'This transaction would exceed the minimum bank balance of {limit} hours. '
+                    'Current balance: {current}, attempting to change by: {change}'
+                ).format(limit=balance_lower, current=current_balance, change=self.net_bank_hours),
+                code='bank_balance_exceeds_lower_limit',
             )
+
     def _verify_bank_hours_restrictions_with_day_entries(self) -> None:
         """Verify bank hours restrictions with different types of day entries."""
         if (self.is_holiday or self.is_sick_day) and (self.bank_to > 0.0 or self.bank_from > 0.0):
             raise ValidationError(
-                _('Cannot use bank hours during holidays or sick days'),
-                code='bank_hours_not_allowed_on_holidays'
+                _('Cannot use bank hours during holidays or sick days'), code='bank_hours_not_allowed_on_holidays'
             )
 
-        day_entry_types_no_deposits = (self.is_leave or self.is_rest or
-                                       self.is_special_leave)
+        day_entry_types_no_deposits = self.is_leave or self.is_rest or self.is_special_leave
         if day_entry_types_no_deposits and self.bank_to > 0.0:
-            day_type = (
-                'leave' if self.is_leave else
-                'rest' if self.is_rest else
-                'special leave'
-            )
+            day_type = 'leave' if self.is_leave else 'rest' if self.is_rest else 'special leave'
             raise ValidationError(
                 _('Cannot deposit bank hours during a {day_type}').format(day_type=day_type),
-                code='bank_deposits_not_allowed_on_day_entries'
+                code='bank_deposits_not_allowed_on_day_entries',
             )
 
     def _verify_bank_hours_against_scheduled_hours(self) -> None:
@@ -568,30 +568,29 @@ class TimeEntry(models.Model):
         all_entries = TimeEntry.objects.filter(date=self.date, resource=self.resource)
         total_hours_on_same_day = sum(entry.total_hours for entry in all_entries)
         total_hours_with_bank_hours = total_hours_on_same_day + self.net_bank_hours
-        schedule = self.resource.get_schedule(self.date, self.date)
+        schedule = self.resource.get_schedule(self.date, self.date + datetime.timedelta(days=1))
         scheduled_hours = schedule[self.date]
         if scheduled_hours is None:
             return
 
-        if scheduled_hours > 0 and total_hours_with_bank_hours < scheduled_hours and self.bank_to > 0.0:
+        if scheduled_hours >= 0 and total_hours_with_bank_hours < scheduled_hours and self.bank_to > 0.0:
             raise ValidationError(
-                _('Cannot deposit {bank_hours} bank hours. Total hours would become {task_hours} '
-                  'which is below scheduled hours ({scheduled_hours})').format(
-                    bank_hours=self.bank_to,
-                    task_hours=total_hours_with_bank_hours,
-                    scheduled_hours=scheduled_hours
-                    ),
-                    code='bank_deposit_below_scheduled_hours'
+                _(
+                    'Cannot deposit {bank_hours} bank hours. Total hours would become {task_hours} '
+                    'which is below scheduled hours ({scheduled_hours})'
+                ).format(
+                    bank_hours=self.bank_to, task_hours=total_hours_with_bank_hours, scheduled_hours=scheduled_hours
+                ),
+                code='bank_deposit_below_scheduled_hours',
             )
 
         if total_hours_with_bank_hours > scheduled_hours and self.bank_from > 0.0:
             raise ValidationError(
-                _('Cannot withdraw bank hours when task hours ({task_hours}) are higher or equal scheduled hours'
-                  ' ({scheduled_hours})').format(
-                    task_hours=total_hours_with_bank_hours,
-                    scheduled_hours=scheduled_hours
-                    ),
-                    code='bank_withdraw_above_scheduled_hours'
+                _(
+                    'Cannot withdraw bank hours when task hours ({task_hours}) are higher or equal scheduled hours'
+                    ' ({scheduled_hours})'
+                ).format(task_hours=total_hours_with_bank_hours, scheduled_hours=scheduled_hours),
+                code='bank_withdraw_above_scheduled_hours',
             )
 
     def verify_task_hours_deletion_wont_cause_negative_hours(self) -> None:
@@ -604,19 +603,21 @@ class TimeEntry(models.Model):
 
         if remaining_total_hours < 0:
             raise ValidationError(
-                _('Cannot delete this time entry. Removing it would cause negative work hours '
-                  '({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on {date}').format(
-                    remaining_total_hours=remaining_total_hours,
-                    total_bank_deposits=total_bank_deposits,
-                    date=self.date
+                _(
+                    'Cannot delete this time entry. Removing it would cause negative work hours '
+                    '({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on {date}'
+                ).format(
+                    remaining_total_hours=remaining_total_hours, total_bank_deposits=total_bank_deposits, date=self.date
                 ),
-                code='deletion_would_cause_negative_hours'
+                code='deletion_would_cause_negative_hours',
             )
+
 
 @receiver(models.signals.pre_delete, sender=TimeEntry)
 def validate_timeentry_deletion(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     """Signal handler to validate TimeEntry deletion."""
     instance.verify_task_hours_deletion_wont_cause_negative_hours()
+
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
@@ -653,14 +654,12 @@ def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission | li
         lower, upper = instance.period[0], instance.period[1]
     else:
         lower, upper = instance.period.lower, instance.period.upper
-    TimeEntry.objects.filter(
-        resource=instance.resource, date__gte=lower, date__lt=upper
-    ).update(timesheet=instance)
+    TimeEntry.objects.filter(resource=instance.resource, date__gte=lower, date__lt=upper).update(timesheet=instance)
 
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains = instance.date).first()
+    timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains=instance.date).first()
     instance.timesheet = timesheet
 
 
@@ -676,8 +675,8 @@ class ExtraHoliday(models.Model):
         reason = shorten(self.reason, width=30, placeholder=' ...')
         end_dt = self.period.upper - datetime.timedelta(days=1)
         if self.period.lower == end_dt:
-            return  f'{self.period.lower.strftime('%Y-%m-%d')}: {reason}'
-        return f'{self.period.lower.strftime('%Y-%m-%d')} - {end_dt.strftime('%Y-%m-%d')}: {reason}'
+            return f'{self.period.lower.strftime("%Y-%m-%d")}: {reason}'
+        return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}: {reason}'
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
@@ -686,6 +685,4 @@ class ExtraHoliday(models.Model):
     def clean(self) -> None:
         super().clean()
         if self.period.upper < self.period.lower + datetime.timedelta(days=1):
-            raise ValidationError(
-                {"period": "End date must be at least one day after start date."}
-            )
+            raise ValidationError({'period': 'End date must be at least one day after start date.'})

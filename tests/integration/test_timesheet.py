@@ -4,7 +4,13 @@ import pytest
 
 from django.test import override_settings
 
-from testutils.factories import TaskFactory, TimeEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
+from testutils.factories import (
+    TaskFactory,
+    TimeEntryFactory,
+    ResourceFactory,
+    SpecialLeaveReasonFactory,
+    TimesheetSubmissionFactory,
+)
 from selenium.webdriver.common.by import By
 
 
@@ -260,7 +266,7 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-radio")]')
+    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '2')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -288,7 +294,7 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-radio")]')
+    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '4')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -298,10 +304,15 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     browser.click('//button[contains(text(), "Save")]')
 
-    browser.assert_element(
-        '//*[contains(text(), "Invalid time entry for 2025-07-04: '
-        'No overtime allowed when logging a leave. Maximum allowed is 8, got 9.00.")]'
+    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
+
+    expected_error = (
+        'No overtime allowed when logging leave, special leave or rest hours. '
+        'Maximum allowed for 2025-07-04 is 8 hours, Total hours: 9'
     )
+    actual_error = error_element.text.strip()
+
+    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
 
 
 @freeze_time('2025-07-13')
@@ -574,3 +585,97 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
     actual_error = error_element.text.strip()
 
     assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_wrong_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+
+    # Add a wrong protocol number
+    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', 'ABC3982ESA')
+
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element(
+        '//*[contains(text(), "Invalid time entry for 2025-07-04: Protocol number digits must be numeric.")]'
+    )
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_empty_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+
+    # Leaving an empty protocol number should be possible now
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+
+
+@freeze_time('2025-07-13')
+def test_sick_day_correct_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile)
+    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+
+    # Add a protocol number with correct format (only digits)
+    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', '001234985983400')
+
+    browser.click('//button[contains(text(), "Save")]')
+
+    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+
+    # check the protocol number is saved
+    browser.click_and_release(day_tile)
+    browser.assert_element(
+        '//textarea[contains(@id,"day-entry-protocol-number-input")][contains(text(), "001234985983400")]'
+    )
+
+@freeze_time('2025-07-13')
+def test_day_entry_modal_accessible_on_timesheet_submitted(
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
+):
+    freeze_frontend_time('2025-07-13T00:00:00Z')
+    resource = ResourceFactory(user=regular_user)
+    TaskFactory(resource=resource)
+
+    TimesheetSubmissionFactory(
+        resource=resource,
+        closed=True,
+        period=(datetime.date(2025, 7, 1), datetime.date(2025, 7, 31))
+    )
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
+    browser.click_and_release(day_tile) # type: ignore
+    calendar_input = browser.wait_for_element_visible('//*[contains(@value,"2025-07-04")]')
+    assert calendar_input.get_attribute('disabled') == 'true' # type: ignore
+    bank_hour_save = browser.wait_for_element_visible('//input[contains(@id, "save-bank-hour-input")]')
+    assert bank_hour_save.get_attribute('disabled') == 'true' # type: ignore
+    bank_hour_use = browser.wait_for_element_visible('//input[contains(@id, "from-bank-hour-input")]')
+    assert bank_hour_use.get_attribute('disabled') == 'true' # type: ignore

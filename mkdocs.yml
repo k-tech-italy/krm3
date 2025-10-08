@@ -14,6 +14,7 @@ extra_css:
 extra_javascript:
   - _theme/js/js.cookie.js
   - _theme/js/address.js
+  - assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js
 exclude_docs: |
   ~*
   .m_templates
@@ -86,7 +87,6 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to light mode
-
 
 plugins:
   - autorefs
@@ -173,8 +173,7 @@ nav:
           - Introduzione: guides/developers/index.md
           - How to bump a new BE version: guides/developers/bump.md
           - How to create a commit: guides/developers/commit.md
-  #- Wiki:
-      #- Overview: wiki/Overview.md
-      #- OS4D: wiki/domains/os4d.org.md
+  - Wiki:
+      - Release workflow: wiki/ReleaseWorkflow.md
   - License: license.md
   - Tags: tags.md

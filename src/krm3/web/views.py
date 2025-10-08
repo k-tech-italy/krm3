@@ -1,28 +1,27 @@
 import logging
 import typing
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import markdown
 import openpyxl
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.http import HttpRequest, HttpResponseBase, HttpResponse
-
-from django.urls import reverse
-from rest_framework.response import Response
-from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpRequest, HttpResponse
+from django.urls import reverse
+from django.views.generic import TemplateView
 
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import timesheet_report_data
 from krm3.timesheet.task_report import task_report_data
+from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, cell_alignment
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
+    from openpyxl.worksheet.worksheet import Worksheet
 
 logger = logging.getLogger(__name__)
 
@@ -39,22 +38,11 @@ class HomeView(LoginRequiredMixin, TemplateView):
             'Report': reverse('report'),
             'Report by task': reverse('task_report'),
             'Availability report': reverse('availability'),
-            'Releases': reverse('releases')
+            'Releases': reverse('releases'),
         }
         context['logout_url'] = reverse('logout')
 
         return context
-
-
-class ReportPermissionView(HomeView):
-
-    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponseBase:
-        user = cast('User', request.user)
-        if not user.is_anonymous and not user.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        ):
-            raise PermissionDenied()
-        return super().dispatch(request, *args, **kwargs)
 
 
 class AvailabilityReportView(HomeView):
@@ -64,39 +52,73 @@ class AvailabilityReportView(HomeView):
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
         selected_project = self.request.GET.get('project', '')
-        projects = {
-            '': 'All projects'
-        } | dict(Project.objects.values_list('id', 'name'))
+        projects = {'': 'All projects'} | dict(Project.objects.values_list('id', 'name'))
         data = availability_report_data(current_month, selected_project)
         data['projects'] = projects
         data['selected_project'] = selected_project
         return context | data
 
 
-def export_report(date: str) -> Response:
-    report_data = timesheet_report_data(date)
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current_row: int) -> int:
+    """Write all data rows for a resource."""
+    if not data:
+        return current_row
 
-    for resource, data in report_data['data'].items():
+    for key, value in data.items():
+        if key in report_data['keymap']:
+            safe_value = ['' if v is None else v for v in value]
+            row_data = [report_data['keymap'][key], *safe_value]
+
+            for col, cell_value in enumerate(row_data, 1):
+                cell = ws.cell(row=current_row, column=col, value=cell_value)
+                if col > 1:
+                    cell.alignment = cell_alignment
+            current_row += 1
+
+    return current_row
+
+
+def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpResponse:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'Report {date[0:4]}-{date[4:6]}'
+
+    ws.column_dimensions['A'].width = 30
+
+    current_row = 1
+
+    for resource_idx, (resource, data) in enumerate(report_data['data'].items(), start=1):
         if data is None:
             continue
+
+        # spacing between employees
+        if resource_idx > 1:
+            current_row += 2
+
         holidays = []
         overlapping_contracts: 'list[Contract]' = resource.get_contracts(min(data['days']).date, max(data['days']).date)
+
         for day in data['days']:
             contract = resource.contract_for_date(overlapping_contracts, day)
             calendar_code = contract.country_calendar_code if contract else None
             holidays.append('X' if day.is_holiday(calendar_code) else '')
 
+        # Header section
         headers = [
-            name := f'{resource.last_name.upper()} {resource.first_name}',
+            f'{resource_idx} - {resource.last_name.upper()} {resource.first_name}',
             'Tot HH',
             *holidays,
         ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=current_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = header_alignment
 
-        ws = wb.create_sheet(title=name)
-        ws.append(headers)
+        current_row += 1
 
+        # Days row
         giorni = [
             'Giorni',
             '',
@@ -106,14 +128,11 @@ def export_report(date: str) -> Response:
                 for day in data['days']
             ],
         ]
-        ws.append(giorni)
+        for col, giorno in enumerate(giorni, 1):
+            ws.cell(row=current_row, column=col, value=giorno).alignment = header_alignment
+        current_row += 1
 
-        if data:
-            for key, value in data.items():
-                if key in report_data['keymap']:
-                    safe_value = ['' if v is None else v for v in value]
-                    row = [report_data['keymap'][key], *safe_value]
-                    ws.append(row)
+        current_row = _write_resource_data(ws, data, report_data, current_row)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     filename = f'report_{date[0:4]}-{date[4:6]}.xlsx'
@@ -123,28 +142,29 @@ def export_report(date: str) -> Response:
     return response
 
 
-class ReportView(ReportPermissionView):
+class ReportView(HomeView):
     template_name = 'report.html'
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if kwargs.get('export'):
             date = kwargs.get('date')
-            return export_report(date)
+            report_data = timesheet_report_data(date, request.user)
+            return export_report(request, report_data, date)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
-        return context | timesheet_report_data(current_month)
+        return context | timesheet_report_data(current_month, user=self.request.user)
 
 
-class TaskReportView(ReportPermissionView):
+class TaskReportView(HomeView):
     template_name = 'task_report.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
-        return context | task_report_data(current_month)
+        return context | task_report_data(current_month, user=self.request.user)
 
 
 class ReleasesView(HomeView):
@@ -154,7 +174,7 @@ class ReleasesView(HomeView):
         context = super().get_context_data(**kwargs)
         project_root = Path(settings.BASE_DIR).parent.parent
         changelog_file_path = project_root / 'CHANGELOG.md'
-        changelog_html = ""
+        changelog_html = ''
 
         try:
             changelog_content = Path(changelog_file_path).read_text(encoding='utf-8')
@@ -162,8 +182,16 @@ class ReleasesView(HomeView):
 
             soup = BeautifulSoup(changelog_html, 'html.parser')
             for h2 in soup.find_all('h2'):
-                h2['class'] = h2.get('class', []) + ['text-2xl', 'text-blue-300', 'border-b',
-                                                     'border-white/20', 'pb-2', 'mb-4', 'mt-6', 'font-semibold']
+                h2['class'] = h2.get('class', []) + [
+                    'text-2xl',
+                    'text-blue-300',
+                    'border-b',
+                    'border-white/20',
+                    'pb-2',
+                    'mb-4',
+                    'mt-6',
+                    'font-semibold',
+                ]
 
             for h3 in soup.find_all('h3'):
                 h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-300', 'mb-3', 'font-medium']
@@ -182,10 +210,10 @@ class ReleasesView(HomeView):
 
             changelog_html = str(soup)
         except FileNotFoundError:
-            logger.warning(f"CHANGELOG.md file not found at {changelog_file_path}")
+            logger.warning(f'CHANGELOG.md file not found at {changelog_file_path}')
             changelog_html = "<p class='text-gray-400'>CHANGELOG.md file not found.</p>"
         except (OSError, UnicodeDecodeError) as e:
-            logger.error(f"Error parsing CHANGELOG.md: {e}")
+            logger.error(f'Error parsing CHANGELOG.md: {e}')
             changelog_html = f"<p class='text-red-400'>Error parsing CHANGELOG.md: {e}</p>"
 
         context['changelog_html'] = changelog_html

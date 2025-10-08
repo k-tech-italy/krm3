@@ -1,5 +1,6 @@
 import datetime
 import typing
+from django.contrib.auth import get_user_model
 from decimal import Decimal as D  # noqa: N817
 
 from dateutil.relativedelta import relativedelta
@@ -11,6 +12,8 @@ from krm3.utils.dates import KrmDay, KrmCalendar
 from krm3.utils.tools import format_data
 
 from django.db.models import Q
+
+User = get_user_model()
 
 if typing.TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -157,7 +160,7 @@ def timesheet_task_report_raw_data(
     return results
 
 
-def task_report_data(current_month: str | None) -> dict[str, typing.Any]:
+def task_report_data(current_month: str | None, user: User) -> dict[str, typing.Any]:
     """Prepare the data for the timesheet report."""
     if current_month is None:
         start_of_month = datetime.date.today().replace(day=1)
@@ -167,14 +170,21 @@ def task_report_data(current_month: str | None) -> dict[str, typing.Any]:
     next_month = start_of_month + relativedelta(months=1)
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    data = timesheet_task_report_raw_data(start_of_month, end_of_month)
+    resource = None
+    if not user.is_anonymous and not user.has_any_perm(
+        'core.manage_any_timesheet', 'core.view_any_timesheet'
+    ):
+        resource = user.get_resource()
+    data = timesheet_task_report_raw_data(start_of_month, end_of_month, resource=resource)
 
     for shifts in data.values():
         for key, values in shifts.items():
             if (isinstance(values, list)):
                 shifts[key] = [format_data(v) if isinstance(v, D | int) else v for v in values]
-
-    data = dict.fromkeys(Resource.objects.filter(active=True).order_by('last_name', 'first_name'), None) | data
+    resources = Resource.objects.filter(active=True)
+    if resource:
+        resources = resources.filter(pk=resource.pk)
+    data = dict.fromkeys(resources.order_by('last_name', 'first_name'), None) | data
 
     return {
         'prev_month': prev_month.strftime('%Y%m'),

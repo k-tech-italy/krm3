@@ -1,5 +1,9 @@
 # # How to bump a new BE version
 
+!!! warning
+
+    Given the automatic bumping performed by the release pipeline this guide is deprecated and we should never bump manually a release with `cz bump`. see [here](/wiki/ReleaseWorkflow/) for details.
+
 Bumping a new version allows you to publish a new Docker image in the Packages section of GitHub. To publish a new
 version, you must run the make bump command in the branch you intend to publish and then merge the branch into the develop branch.
 Running the make bump command automatically bumps and create changelog without a need to specify type of change because

@@ -6,9 +6,11 @@ import numpy as np
 from django.conf import settings
 
 
-def order_points(pts):
-    '''Rearrange coordinates to order:
-      top-left, top-right, bottom-right, bottom-left'''
+def order_points(pts: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    """Rearrange coordinates.
+
+    to order: top-left, top-right, bottom-right, bottom-left
+    """
     rect = np.zeros((4, 2), dtype='float32')
     pts = np.array(pts)
     s = pts.sum(axis=1)
@@ -26,31 +28,31 @@ def order_points(pts):
     return rect.astype('int').tolist()
 
 
-def find_dest(pts):
+def find_dest(pts: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
     (tl, tr, br, bl) = pts
     # Finding the maximum width.
-    widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-    widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-    maxWidth = max(int(widthA), int(widthB))
+    width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+    width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+    max_width = max(int(width_a), int(width_b))
 
     # Finding the maximum height.
-    heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-    heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-    maxHeight = max(int(heightA), int(heightB))
+    height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+    height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+    max_height = max(int(height_a), int(height_b))
     # Final destination co-ordinates.
-    destination_corners = [[0, 0], [maxWidth, 0], [maxWidth, maxHeight], [0, maxHeight]]
+    destination_corners = [[0, 0], [max_width, 0], [max_width, max_height], [0, max_height]]
 
     return order_points(destination_corners)
 
 
-def troubleshooting(message, img):
+def troubleshooting(message: str, img: 'cv2.typing.MatLike') -> None:
     if settings.CV2_SHOW_IMAGES:
         cv2.imshow(message, img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
 
-def rotate_90(filepath, direction: str):
+def rotate_90(filepath: str, direction: str) -> bool:
     """Turn image by 90 degrees.
 
     direction must be one of 'left', 'right'
@@ -62,7 +64,7 @@ def rotate_90(filepath, direction: str):
     return cv2.imwrite(filepath, rotated_image)
 
 
-def clean_image(filepath):
+def clean_image(filepath: str) -> 'cv2.typing.MatLike':
     img = cv2.imread(filepath)
 
     # Resize image to workable size
@@ -76,14 +78,6 @@ def clean_image(filepath):
 
     troubleshooting('resized', orig_img)
 
-    # define the contrast and brightness value
-    # contrast = 2.  # Contrast control ( 0 to 127)
-    # brightness = 1.  # Brightness control (0-100)
-    #
-    # # img = cv2.equalizeHist(img)
-    # img = cv2.addWeighted(img, contrast, img, 0, brightness)
-    # troubleshooting("enhanced", img)
-
     # Repeated Closing operation to remove text from the document.
     kernel = np.ones((5, 5), np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel, iterations=3)
@@ -92,10 +86,10 @@ def clean_image(filepath):
 
     # GrabCut
     mask = np.zeros(img.shape[:2], np.uint8)
-    bgdModel = np.zeros((1, 65), np.float64)
-    fgdModel = np.zeros((1, 65), np.float64)
+    bgd_model = np.zeros((1, 65), np.float64)
+    fgd_model = np.zeros((1, 65), np.float64)
     rect = (20, 20, img.shape[1] - 20, img.shape[0] - 20)
-    cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
+    cv2.grabCut(img, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
     img = img * mask2[:, :, np.newaxis]
 
@@ -133,14 +127,11 @@ def clean_image(filepath):
 
     h, w = orig_img.shape[:2]
     # Getting the homography.
-    M = cv2.getPerspectiveTransform(np.float32(corners), np.float32(destination_corners))
+    math_like = cv2.getPerspectiveTransform(np.float32(corners), np.float32(destination_corners))
     # Perspective transform using homography.
-    final = cv2.warpPerspective(orig_img, M, (destination_corners[2][0], destination_corners[2][1]),
-                                flags=cv2.INTER_LINEAR)
+    final = cv2.warpPerspective(
+        orig_img, math_like, (destination_corners[2][0], destination_corners[2][1]), flags=cv2.INTER_LINEAR
+    )
     troubleshooting('final', final)
 
     return final
-    # cv2.imshow("Image", orig_img)
-    # cv2.imshow("Edged", final)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()

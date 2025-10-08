@@ -43,6 +43,7 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
 class MissionNestedSerializer(serializers.ModelSerializer):
     expenses = MissionExpenseSerializer(many=True, read_only=True)
     resource = ResourceSerializer(many=False, read_only=True)
+
     class Meta:
         model = Mission
         fields = '__all__'
@@ -65,9 +66,7 @@ class MissionCreateSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        number = validated_data.get(
-            'number', None
-        )  # TODO from city ID to country default_currencies
+        number = validated_data.get('number', None)  # TODO from city ID to country default_currencies
 
         if number is None:
             last_number = Mission.objects.aggregate(Max('number'))['number__max']

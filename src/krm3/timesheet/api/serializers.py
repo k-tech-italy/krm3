@@ -44,6 +44,7 @@ class TimeEntryReadSerializer(BaseTimeEntrySerializer):
             'comment',
             'task',
             'task_title',
+            'protocol_number',
         )
         read_only_fields = fields
 
@@ -75,6 +76,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
             'comment',
             'task',
             'resource',
+            'protocol_number',
         )
 
     def validate_day_shift_hours(self, value: Hours) -> Hours:

@@ -15,7 +15,6 @@ def token_validator(value):
 
 
 class ExpenseCategorySerializer(metaclass=ModelDefaultSerializerMetaclass):
-
     class Meta:
         model = ExpenseCategory
         fields = ['id', '__str__', 'title', 'active', 'parent']
@@ -45,7 +44,6 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
 
 
 class ExpenseCreateSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Expense
         fields = (
@@ -57,12 +55,11 @@ class ExpenseCreateSerializer(serializers.ModelSerializer):
             'category',
             'document_type',
             'payment_type',
-            'image'
+            'image',
         )
 
 
 class ExpenseExportSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Expense
         fields = '__all__'

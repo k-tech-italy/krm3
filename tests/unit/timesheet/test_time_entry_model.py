@@ -1,6 +1,8 @@
 import datetime
+import json
 from contextlib import nullcontext as does_not_raise
 from decimal import Decimal
+from constance.test import override_config
 
 import pytest
 from django.core import exceptions
@@ -17,6 +19,7 @@ from testutils.factories import (
 )
 
 from krm3.core.models.timesheets import TimeEntry
+from tests._extras.testutils.factories import ContractFactory
 
 
 class TestBasket:
@@ -77,6 +80,15 @@ class TestBasket:
 
 
 class TestTimeEntry:
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('hour_field', 'expected_behavior'),
         (
@@ -93,6 +105,7 @@ class TestTimeEntry:
     def test_day_entry_is_saved_only_with_sick_holiday_rest_or_leave_hours(self, hour_field, expected_behavior):
         with expected_behavior:
             entry = TimeEntryFactory(
+                date=datetime.date(2025, 7, 14),
                 task=None,
                 day_shift_hours=0,
                 special_leave_reason=SpecialLeaveReasonFactory() if hour_field == 'special_leave_hours' else None,
@@ -424,16 +437,54 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='Cannot withdraw bank hours when task hours'):
             time_withdraw.save()
 
+
+    def test_bank_deposit_success_with_correct_custom_schedule(self):
+        start_dt = datetime.date(2020, 1, 1)
+        end_dt = datetime.date(2026, 1, 1)
+        contract = ContractFactory(
+            period=(start_dt, end_dt),
+            working_schedule={'fri': 3, 'mon': 3, 'sat': 0, 'sun': 0, 'thu': 3, 'tue': 3, 'wed': 3}
+        )
+        project = ProjectFactory()
+        resource = contract.resource
+        task = TaskFactory(project=project, resource=resource)
+        date = datetime.date(2025, 1, 14)
+        TimeEntryFactory(
+            date=date,
+            resource=resource,
+            task=task,
+            day_shift_hours=4,
+        )
+        time_deposit = TimeEntryFactory(task=None, resource=resource, date=date, day_shift_hours=0, bank_to=1)
+
+        assert time_deposit.bank_to == 1
+
     def test_bank_deposit_with_0_scheduled_hours(self):
+        date = datetime.date(2025,9,21) # Sunday
         resource = ResourceFactory()
-        date = datetime.date(2025, 8, 2)
-        with does_not_raise():
+        with pytest.raises(exceptions.ValidationError, match='Cannot deposit 1 bank hours.'):
             TimeEntryFactory(
+                task=None,
                 resource=resource,
                 date=date,
-                bank_to=3,
                 day_shift_hours=0,
+                bank_to=1
             )
+
+        TimeEntryFactory(
+            date=date,
+            resource=resource,
+            task = TaskFactory(resource=resource),
+            day_shift_hours=1
+        )
+        time_deposit_at_weekend = TimeEntryFactory(
+            task=None,
+            resource=resource,
+            date=date,
+            day_shift_hours=0,
+            bank_to=1
+        )
+        assert time_deposit_at_weekend.bank_to == 1
 
     def test_is_saved_without_hours_logged(self):
         """Valid edge case: 0 total hours on a task."""
@@ -467,7 +518,7 @@ class TestTimeEntry:
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
     def test_day_entry_overwrites_other_existing_day_entry_on_the_same_day(self, existing_hours_field, new_hours_field):
         resource = ResourceFactory()
-        absence_day = datetime.date(2024, 1, 1)
+        absence_day = datetime.date(2024, 1, 3)
         _absence_entry = TimeEntryFactory(
             date=absence_day,
             day_shift_hours=0,
@@ -555,6 +606,23 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.sick_hours == 8
 
+    def test_protocol_number_without_sick_hours(self):
+        """Protocol number field cannot be set without sick hours logged."""
+        with pytest.raises(exceptions.ValidationError, match='Protocol number can be used only for sick days'):
+            TimeEntryFactory(task=None, protocol_number='123', sick_hours=0, resource=ResourceFactory())
+
+    def test_protocol_number_with_wrong_format(self):
+        """Protocol number field values must be all digits."""
+        with pytest.raises(exceptions.ValidationError, match='Protocol number digits must be numeric'):
+            TimeEntryFactory(task=None, protocol_number='3.1415', sick_hours=8, resource=ResourceFactory())
+
+    def test_sick_hours_protocol_number_success(self):
+        """Test Protocol number with correct format with sick hours."""
+        with does_not_raise():
+            TimeEntryFactory(
+                task=None, protocol_number='00032100', sick_hours=8, day_shift_hours=0, resource=ResourceFactory()
+            )
+
     def test_is_saved_as_holiday(self):
         """Sick day with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
@@ -573,7 +641,7 @@ class TestTimeEntry:
 
     def test_is_saved_as_leave(self):
         """Leave hours with no work or task-related hours logged"""
-        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        entry = TimeEntryFactory(date=datetime.date(2025,9,9), day_shift_hours=8, task=TaskFactory())
         entry.day_shift_hours = 0
         entry.leave_hours = 8
 
@@ -587,6 +655,15 @@ class TestTimeEntry:
         assert entry.day_shift_hours == 0
         assert entry.leave_hours == 8
 
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     def test_is_saved_as_special_leave(self):
         """Special leave hours with no work or task-related hours logged"""
         entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
@@ -624,37 +701,15 @@ class TestTimeEntry:
         with pytest.raises(exceptions.ValidationError, match='task hours and non-task hours together'):
             entry.save()
 
-    @pytest.mark.parametrize(
-        ('hours_key', 'expected_to_raise'),
-        (
-            pytest.param('day_shift_hours', does_not_raise(), id='day'),
-            pytest.param('night_shift_hours', does_not_raise(), id='night'),
-            pytest.param('rest_hours', does_not_raise(), id='rest'),
-            pytest.param('travel_hours', does_not_raise(), id='travel'),
-            pytest.param('on_call_hours', does_not_raise(), id='on_call'),
-            pytest.param(
-                'sick_hours', pytest.raises(exceptions.ValidationError, match='Comment is mandatory'), id='sick'
-            ),
-            pytest.param('holiday_hours', does_not_raise(), id='holiday'),
-            pytest.param('leave_hours', does_not_raise(), id='leave'),
-            pytest.param('special_leave_hours', does_not_raise(), id='leave'),
-        ),
-    )
-    def test_raises_if_missing_mandatory_comment(self, hours_key, expected_to_raise):
-        hours = {'day_shift_hours': 0} | {hours_key: 8}
-        reason = SpecialLeaveReasonFactory() if hours_key == 'special_leave_hours' else None
-        with expected_to_raise:
-            TimeEntryFactory(
-                task=(
-                    None
-                    if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'rest', 'leave', 'special_leave')
-                    else TaskFactory()
-                ),
-                comment=None,
-                special_leave_reason=reason,
-                **hours,
-            )
-
+    @override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
+        'mon': 8,
+        'tue': 8,
+        'wed': 8,
+        'thu': 8,
+        'fri': 8,
+        'sat': 8,
+        'sun': 8
+    }))
     @pytest.mark.parametrize(
         ('hours_key', 'expected_to_raise'),
         (
@@ -704,18 +759,18 @@ class TestTimeEntry:
 
         with does_not_raise():
             entry = TimeEntryFactory(
-                date=datetime.date(2024, 1, 1),
+                date=datetime.date(2024, 1, 2),
                 day_shift_hours=0,
                 special_leave_hours=2,
                 special_leave_reason=valid_reason,
             )
 
-        expired_reason = SpecialLeaveReasonFactory(title='expired', to_date=datetime.date(2020, 1, 1))
+        expired_reason = SpecialLeaveReasonFactory(title='expired', to_date=datetime.date(2020, 1, 2))
         entry.special_leave_reason = expired_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "expired" is not valid'):
             entry.save()
 
-        upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 1))
+        upcoming_reason = SpecialLeaveReasonFactory(title='upcoming', from_date=datetime.date(2025, 1, 2))
         entry.special_leave_reason = upcoming_reason
         with pytest.raises(exceptions.ValidationError, match='Reason "upcoming" is not valid'):
             entry.save()
@@ -804,3 +859,11 @@ class TestTimeEntry:
         time_entry.date = datetime.date(2020, 6, 15)
         time_entry.save()
         assert time_entry.timesheet == timesheet_2
+
+    def test_timesheet_submission_str(self):
+        from psycopg.types.range import DateRange
+
+        timesheet = TimesheetSubmissionFactory(
+            period=DateRange(datetime.date(2020, 5, 1), datetime.date(2020, 5, 31), '[]')
+        )
+        assert str(timesheet) == '2020-05-01 - 2020-05-30'
