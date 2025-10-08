@@ -1,4 +1,4 @@
-# # How to bump a new BE version
+# How to bump a new BE version
 
 !!! warning
 
@@ -18,6 +18,7 @@ increment detected: PATCH
 ```
 When bumping, `CHANGELOG.md` is generated automatically. It includes all commits that have correct format which is `type(optional:scope): description`.
 If you want to know more about how to correctly create commits click [here](commit.md)
+
 ```
 ## 1.5.32 (2025-09-09)
 
@@ -29,6 +30,34 @@ If you want to know more about how to correctly create commits click [here](comm
 
 - update bump command with interactive mode
 ```
+
+Anytime a bump is performed, a git `tag` is also generated, is important to push such tag in the remote origin, you can do it manually or set up a configuration to have the tags automatically pushed upon normal push:
+
+### Git Configuration for Automatic Tag Push to GitHub
+In the configuration file in `~/.gitconfig`, you can add the following configuration to automatically push both local branches and tags to the remote origin when you run git push.
+
+```
+[remote "origin"]
+    url = <git_repo>
+    push = +refs/heads/*:refs/heads/*
+    push = +refs/tags/*:refs/tags/*
+```
+
++ forces the push even in case of discrepancies.
++ refs/heads/* corresponds to branches.
++ refs/tags/* corresponds to tags.
+
+### Command to Push Tags Manually
+If you prefer not to change the configuration, or only want to push tags occasionally, you can use this command:
+
+```
+git push --tags
+```
+
+This command pushes all local tags that are not yet present on the remote.
+
+
+
 Once the branch containing the bump is merged into develop with the new version, the build pipeline will publish the Docker image associated with this new version.
 
 The list of published images is available [here](https://github.com/k-tech-italy/krm3/pkgs/container/krm3) whereas the changelog of the released version can be found [here](https://github.com/k-tech-italy/krm3/blob/develop/CHANGELOG.md)
