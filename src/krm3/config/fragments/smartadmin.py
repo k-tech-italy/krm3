@@ -38,17 +38,6 @@ SMART_ADMIN_SECTIONS = {
         'core.TimesheetSubmission',
     ],
     '_hidden_': ['sites'],
-    'Security': [
-        'auth',
-        'admin.LogEntry',
-        'social_django',
-        'core.UserProfile',
-        'core.User',
-        'token_blacklist'
-    ],
-    'Configuration': [
-        'constance',
-        'flags',
-        'currencies'
-    ]
+    'Security': ['auth', 'admin.LogEntry', 'social_django', 'core.UserProfile', 'core.User', 'token_blacklist'],
+    'Configuration': ['constance', 'flags', 'currencies'],
 }

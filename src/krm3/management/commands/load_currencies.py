@@ -9,7 +9,7 @@ from krm3.currencies.models import Currency
 
 @click.command()  # noqa: C901
 @click.pass_context
-def command(ctx,  **kwargs):
+def command(ctx, **kwargs):
     """Loads currencies."""
     try:
         with (Path(__file__).parent / 'currencies.csv').open(newline='') as csvfile:
@@ -21,8 +21,8 @@ def command(ctx,  **kwargs):
                         symbol=row['Symbol or Abbrev.'],
                         iso3=row['ISO code'],
                         fractional_unit=row['Fractional unit'],
-                        base=int(row['Number to basic'])
-                    )
+                        base=int(row['Number to basic']),
+                    ),
                 )
     except Exception as e:
         capture_exception(e)

@@ -15,7 +15,7 @@ if SENTRY_DSN:
 
     sentry_logging = LoggingIntegration(
         level=_logging.INFO,  # Capture info and above as breadcrumbs
-        event_level=_logging.ERROR  # Send errors as events
+        event_level=_logging.ERROR,  # Send errors as events
     )
 
     sentry_sdk.init(
@@ -27,5 +27,5 @@ if SENTRY_DSN:
         release=__version__,
         debug=_env('SENTRY_DEBUG'),
         environment=_env('SENTRY_ENVIRONMENT'),
-        send_default_pii=True
+        send_default_pii=True,
     )

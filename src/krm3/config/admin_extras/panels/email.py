@@ -1,4 +1,5 @@
 """Email panel module."""
+
 import logging
 from functools import partial
 

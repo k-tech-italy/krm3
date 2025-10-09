@@ -4,16 +4,15 @@ import pytest
 from krm3.timesheet.task_report import timesheet_task_report_raw_data
 from testutils.factories import TimeEntryFactory, TaskFactory
 
-class TestTimesheetTaskReportRawData:
 
+class TestTimesheetTaskReportRawData:
     @pytest.fixture(autouse=True)
     def set_up_method(self):
-        task_1 = TaskFactory(start_date=datetime.date(2025, 6, 15),
-                             end_date=datetime.date(2025, 7, 30))
+        task_1 = TaskFactory(start_date=datetime.date(2025, 6, 15), end_date=datetime.date(2025, 7, 30))
 
-        task_2 = TaskFactory(start_date=datetime.date(2025, 6, 5),
-                             end_date=datetime.date(2025, 6, 10),
-                             resource=task_1.resource)
+        task_2 = TaskFactory(
+            start_date=datetime.date(2025, 6, 5), end_date=datetime.date(2025, 6, 10), resource=task_1.resource
+        )
 
         # task for different user
         task_3 = TaskFactory(start_date=datetime.date(2025, 6, 5), end_date=datetime.date(2025, 7, 10))
@@ -23,49 +22,33 @@ class TestTimesheetTaskReportRawData:
             day_shift_hours=6,
             night_shift_hours=2,
             task=task_1,
-            resource=task_1.resource
+            resource=task_1.resource,
         )
         TimeEntryFactory(
             date=datetime.date(2025, 6, 17),
             day_shift_hours=7,
             night_shift_hours=2,
             task=task_1,
-            resource=task_1.resource
+            resource=task_1.resource,
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 25),
-            day_shift_hours=0,
-            travel_hours=5,
-            task=task_1,
-            resource=task_1.resource
+            date=datetime.date(2025, 6, 25), day_shift_hours=0, travel_hours=5, task=task_1, resource=task_1.resource
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 22),
-            day_shift_hours=0,
-            on_call_hours=5,
-            task=task_1,
-            resource=task_1.resource
+            date=datetime.date(2025, 6, 22), day_shift_hours=0, on_call_hours=5, task=task_1, resource=task_1.resource
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 22),
-            day_shift_hours=0,
-            on_call_hours=3,
-            task=task_2,
-            resource=task_2.resource
+            date=datetime.date(2025, 6, 22), day_shift_hours=0, on_call_hours=3, task=task_2, resource=task_2.resource
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 23),
-            day_shift_hours=0,
-            on_call_hours=4,
-            task=task_2,
-            resource=task_2.resource
+            date=datetime.date(2025, 6, 23), day_shift_hours=0, on_call_hours=4, task=task_2, resource=task_2.resource
         )
         TimeEntryFactory(
             date=datetime.date(2025, 6, 17),
             day_shift_hours=5,
             night_shift_hours=3,
             task=task_2,
-            resource=task_1.resource
+            resource=task_1.resource,
         )
         TimeEntryFactory(
             date=datetime.date(2025, 6, 18),
@@ -79,12 +62,7 @@ class TestTimesheetTaskReportRawData:
             sick_hours=8,
             resource=task_1.resource,
         )
-        TimeEntryFactory(
-            date=datetime.date(2025, 6, 20),
-            leave_hours=3,
-            day_shift_hours=0,
-            resource=task_1.resource
-        )
+        TimeEntryFactory(date=datetime.date(2025, 6, 20), leave_hours=3, day_shift_hours=0, resource=task_1.resource)
         start = datetime.date(2025, 6, 1)
         end = datetime.date(2025, 6, 30)
 

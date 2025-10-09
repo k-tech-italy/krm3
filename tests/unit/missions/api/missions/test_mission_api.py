@@ -50,7 +50,6 @@ class TestMissionApiPermissions:
             mission.resource.id,
         }
 
-
     def test_api_view_mission_response(self, api_client, regular_user, resource):
         url = reverse('missions-api:mission-list')
 

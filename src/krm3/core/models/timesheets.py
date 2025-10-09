@@ -341,7 +341,7 @@ class TimeEntry(models.Model):
 
     @property
     def is_special_leave(self) -> bool:
-        return self.special_leave_hours > 0.0 and self.special_leave_reason
+        return self.special_leave_reason is not None
 
     @property
     def has_day_entry_hours(self) -> bool:
@@ -475,6 +475,11 @@ class TimeEntry(models.Model):
     def _verify_special_leave_reason_is_valid(self) -> None:
         if not self.is_special_leave:
             return
+        if self.special_leave_reason is None:
+            raise ValidationError(
+                _('reason is required'),
+                code='missing_special_leave_reason',
+            )
         if not self.special_leave_reason.is_valid(self.date):
             raise ValidationError(
                 _('Reason "{title}" is not valid on {date}').format(

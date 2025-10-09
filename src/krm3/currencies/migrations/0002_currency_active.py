@@ -11,7 +11,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('currencies', '0001_initial'),
     ]

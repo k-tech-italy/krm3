@@ -173,15 +173,14 @@ class TestKrmCalendar:
     def test_iter_week(self, krm_day, expected):
         assert list(KrmCalendar().iter_week(krm_day)) == expected
 
-
     @pytest.mark.parametrize(
         'start, end, expectation, result',
         [
             ('2025-07-11', '2025-07-15', does_not_raise(), ['2025-07-11', '2025-07-14', '2025-07-15']),
             ('2025-07-11', '2025-07-13', does_not_raise(), ['2025-07-11']),
             ('2025-07-12', '2025-07-13', does_not_raise(), []),
-            ('2025-06-01', '2025-06-03', does_not_raise(), ['2025-06-03']), # 2025-06-02 italian bank holiday
-            ('2025-06-02', '2025-06-01', pytest.raises(ValueError, match='Start date cannot be after end date.'), None)
+            ('2025-06-01', '2025-06-03', does_not_raise(), ['2025-06-03']),  # 2025-06-02 italian bank holiday
+            ('2025-06-02', '2025-06-01', pytest.raises(ValueError, match='Start date cannot be after end date.'), None),
         ],
     )
     def test_get_work_days(self, start, end, expectation, result):

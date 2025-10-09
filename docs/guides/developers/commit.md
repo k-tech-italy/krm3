@@ -1,4 +1,4 @@
-# # How to create a commit
+# How to create a commit
 
 With commitizen tool to include commits in an automatically created changelog you need to create commits in a correct
 name format which is `type(optional:scope): description`.
@@ -26,3 +26,9 @@ When working on a ticket it's not required to commit everytime with `cz commit`.
 commit name format but at the end to include those commits in changelog it's good practice to squash those commits and name the squash commit `type(optional:scope): description`.
 If you want to use interactive commit tool you can squash commits and run `git reset --soft HEAD~1` which will reset last commit but will keep changes staged.
 After that run `cz commit`.
+
+Based on the choice made during the `cz commit` command, the version will be updated according to the following criteria:
+
+- If `fix` is ​​selected: a `PATCH` version update will be performed during the bump.
+- If `feat` is selected: a `MINOR` version update will be performed during the bump.
+- If `Y` is selected for the question `Is this a BREAKING CHANGE?` option a MAJOR version update will be performed during the bump.

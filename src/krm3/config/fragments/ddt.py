@@ -3,6 +3,7 @@
 Add DDT_MIDDLEWARES to settings.MIDDLEWARES
 Add DDT_APPS to settings.INSTALLED_APPS
 """
+
 import logging as _logging
 import os
 import sys
@@ -11,7 +12,7 @@ from django_regex.utils import RegexList as _RegexList
 
 from ..environ import env as _env
 
-TESTING = "test" in sys.argv or "PYTEST_VERSION" in os.environ
+TESTING = 'test' in sys.argv or 'PYTEST_VERSION' in os.environ
 
 DDT_APPS = []
 DDT_MIDDLEWARES = []

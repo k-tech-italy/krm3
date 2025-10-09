@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+
 import logging
 import os
 from pathlib import Path
@@ -38,7 +39,7 @@ MEDIA_URL = env('MEDIA_URL')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
-RELOAD = env("RELOAD")
+RELOAD = env('RELOAD')
 
 INSTALLED_APPS = (
     [
@@ -55,7 +56,7 @@ INSTALLED_APPS = (
         'adminfilters',
         'rangefilter',
         'admin_extra_buttons',
-        'issues'
+        'issues',
     ]
     + SMART_ADMIN_APPS  # noqa: F405
     + DDT_APPS  # noqa: F405 we import it from smartadmin fragment
@@ -88,9 +89,9 @@ INSTALLED_APPS = (
         'django_tables2',
         'constance',
         'smart_env',
-        "tailwind",
-        "krm3.theme.apps.ThemeConfig",
-        "django_cotton.apps.SimpleAppConfig",
+        'tailwind',
+        'krm3.theme.apps.ThemeConfig',
+        'django_cotton.apps.SimpleAppConfig',
     ]
 )
 
@@ -124,9 +125,9 @@ MIDDLEWARE = (
     ]
 )
 
-if env("RELOAD"):
-    INSTALLED_APPS.append("django_browser_reload")
-    MIDDLEWARE.append("django_browser_reload.middleware.BrowserReloadMiddleware")
+if env('RELOAD'):
+    INSTALLED_APPS.append('django_browser_reload')
+    MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -137,17 +138,17 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(BASE_DIR, 'web/templates')],
         'OPTIONS': {
-            "loaders": [(
-                "django.template.loaders.cached.Loader",
-                [
-                    "django_cotton.cotton_loader.Loader",
-                    "django.template.loaders.filesystem.Loader",
-                    "django.template.loaders.app_directories.Loader",
-                ],
-            )],
-            "builtins": [
-                "django_cotton.templatetags.cotton"
+            'loaders': [
+                (
+                    'django.template.loaders.cached.Loader',
+                    [
+                        'django_cotton.cotton_loader.Loader',
+                        'django.template.loaders.filesystem.Loader',
+                        'django.template.loaders.app_directories.Loader',
+                    ],
+                )
             ],
+            'builtins': ['django_cotton.templatetags.cotton'],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -222,7 +223,7 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
-    'UNICODE_JSON': False
+    'UNICODE_JSON': False,
 }
 
 SPECTACULAR_SETTINGS = {

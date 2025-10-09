@@ -1,4 +1,5 @@
 """Sentry utilities module."""
+
 import logging
 from urllib.parse import ParseResult, urlparse
 

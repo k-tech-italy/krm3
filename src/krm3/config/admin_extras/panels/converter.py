@@ -1,6 +1,5 @@
 """Converter admin panel module."""
 
-
 from dateutil.parser import parse
 from django import forms
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -19,9 +18,7 @@ def _parse_entries(value):
         dt, amt, currency = [x.strip() for x in line.split(',') if line.count(',') == 2]
         dt = parse(dt, dayfirst=True)
         currency = currency.upper()
-        results.append(
-            {'dt': dt, 'amt': float(amt), 'currency': currency}
-        )
+        results.append({'dt': dt, 'amt': float(amt), 'currency': currency})
     return results
 
 
@@ -79,7 +76,7 @@ def panel_converter(self, request, extra_context=None):  # noqa: D103
                         e['dt'].strftime('%Y-%M-%D'),
                         e['amt'],
                         curr := e['currency'],
-                        rate.convert(e['amt'], from_currency=curr, to_currency=to_currency)
+                        rate.convert(e['amt'], from_currency=curr, to_currency=to_currency),
                     ]
                 )
             headers = ['date', 'amount', 'currency', to_currency]

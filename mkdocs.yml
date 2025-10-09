@@ -173,6 +173,7 @@ nav:
           - Introduzione: guides/developers/index.md
           - How to bump a new BE version: guides/developers/bump.md
           - How to create a commit: guides/developers/commit.md
+          - How to calculate overtime: guides/developers/overtime.md
   - Wiki:
       - Release workflow: wiki/ReleaseWorkflow.md
   - License: license.md

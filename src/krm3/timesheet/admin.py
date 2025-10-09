@@ -1,4 +1,3 @@
-
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
@@ -18,6 +17,7 @@ from django import forms
 
 
 from django.utils.html import format_html
+
 
 @admin.register(PO)
 class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
@@ -49,6 +49,7 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
         url = reverse('admin:core_timeentry_changelist') + f'?timesheet_id={pk}'
         return HttpResponseRedirect(url)
 
+
 @admin.register(TimeEntry)
 class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     list_display = ('date', 'get_resource', 'get_task', 'get_timesheet')
@@ -67,7 +68,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             return qs
         return qs.filter(resource__user=request.user)
 
-    def has_view_permission(self,  request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+    def has_view_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
@@ -93,28 +94,23 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             return True
         return super().has_add_permission(request)
 
-    def get_form(
-            self,
-            request: HttpRequest,
-            obj: TimeEntry | None = None,
-            **kwargs
-    ) -> type[forms.ModelForm]:
+    def get_form(self, request: HttpRequest, obj: TimeEntry | None = None, **kwargs) -> type[forms.ModelForm]:
         form = super().get_form(request, obj, **kwargs)
 
         is_add_view = obj is None
         user = request.user
 
-        if not user.has_perm("core.manage_any_timesheet"):
+        if not user.has_perm('core.manage_any_timesheet'):
             try:
                 resource = Resource.objects.get(user=user)
                 if is_add_view:
-                    if "resource" in form.base_fields:
-                        form.base_fields["resource"].queryset = Resource.objects.filter(pk=resource.pk)
+                    if 'resource' in form.base_fields:
+                        form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
                 else:
                     pass
             except Resource.DoesNotExist:
-                if is_add_view and "resource" in form.base_fields:
-                    form.base_fields["resource"].queryset = Resource.objects.none()
+                if is_add_view and 'resource' in form.base_fields:
+                    form.base_fields['resource'].queryset = Resource.objects.none()
 
         return form
 

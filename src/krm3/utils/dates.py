@@ -51,21 +51,22 @@ class KrmDay:
     def week_of_year(self) -> int:
         return self.date.isocalendar()[1]
 
-    def is_extra_holiday(self, country_calendar_code:str) -> bool:
+    def is_extra_holiday(self, country_calendar_code: str) -> bool:
         from krm3.core.models import ExtraHoliday
 
-        extra_holidays = ExtraHoliday.objects.filter(period__contains=self.date,
-                                                     country_codes__contains=[country_calendar_code]).first()
+        extra_holidays = ExtraHoliday.objects.filter(
+            period__contains=self.date, country_codes__contains=[country_calendar_code]
+        ).first()
         return bool(extra_holidays)
 
-    def is_holiday(self, country_calendar_code:str = None, include_sundays_as_holiday: bool = True) -> bool:
+    def is_holiday(self, country_calendar_code: str = None, include_sundays_as_holiday: bool = True) -> bool:
         if country_calendar_code and self.is_extra_holiday(country_calendar_code):
             return True
         if include_sundays_as_holiday:
             return not get_country_holidays(country_calendar_code=country_calendar_code).is_working_day(self.date)
         return self.date in get_country_holidays(country_calendar_code=country_calendar_code)
 
-    def is_non_working_day(self, country_calendar_code:str = None) -> bool:
+    def is_non_working_day(self, country_calendar_code: str = None) -> bool:
         return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar_code=country_calendar_code)
 
     @property
@@ -85,9 +86,9 @@ class KrmDay:
         return self.date.strftime('%b')
 
     def range_to(self, target: datetime.date | KrmDay) -> Iterator[KrmDay]:
-        """Iterate over all days between this day and the target day."""
+        """Iterate over all days between this day and the target day (including)."""
         if isinstance(target, datetime.date):
-            target = KrmDay(target)
+            target = self.__class__(target)
         if self.date > target.date:
             raise ValueError('Start date cannot be later than end date.')
         delta_days = (target.date - self.date).days
@@ -156,7 +157,7 @@ class KrmDay:
             delta = relativedelta(days=other.days)
         elif isinstance(other, relativedelta):
             delta = relativedelta(years=other.years, months=other.months, days=other.days)
-        return KrmDay(self.date + delta)
+        return self.__class__(self.date + delta)
 
     def __repr__(self) -> str:
         return self.date.strftime('K%Y-%m-%d')
@@ -195,7 +196,6 @@ class KrmCalendar(Calendar):
             yield KrmDay(start.date + datetime.timedelta(days=i))
 
     def get_work_days(self, from_date: _Date, to_date: _Date) -> list[KrmDay]:
-
         days_between = self.iter_dates(from_date, to_date)
 
         return [day for day in days_between if not day.is_non_working_day()]
@@ -216,7 +216,7 @@ class KrmCalendar(Calendar):
         return self.iter_dates(*self.week_for(date))
 
 
-def get_country_holidays(country_calendar_code:str = None) -> holidays.HolidayBase:
+def get_country_holidays(country_calendar_code: str = None) -> holidays.HolidayBase:
     """Generate the appropriate country holidays."""
     hol_calendar = country_calendar_code or str(env('HOLIDAYS_CALENDAR'))
     subdiv = None

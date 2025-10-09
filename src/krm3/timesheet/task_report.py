@@ -63,6 +63,7 @@ def _calculate_work_days_for_resources(
         data['NUM GIORNI'] = len(work_days) - len(work_days_without_task)
         data['TOT HH'] = data['NUM GIORNI'] * 8
 
+
 def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) -> None:
     """Handle leaves and special leaves."""
     if isinstance(resource_data['Assenze'][index], D):
@@ -72,7 +73,6 @@ def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) 
         if entry.special_leave_hours > 0:
             resource_data['Assenze'][index] += entry.special_leave_hours
             resource_data['Assenze'][1] += entry.special_leave_hours
-
 
 
 def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_date: KrmDay) -> None:
@@ -171,15 +171,13 @@ def task_report_data(current_month: str | None, user: User) -> dict[str, typing.
 
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
     resource = None
-    if not user.is_anonymous and not user.has_any_perm(
-        'core.manage_any_timesheet', 'core.view_any_timesheet'
-    ):
+    if not user.is_anonymous and not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
         resource = user.get_resource()
     data = timesheet_task_report_raw_data(start_of_month, end_of_month, resource=resource)
 
     for shifts in data.values():
         for key, values in shifts.items():
-            if (isinstance(values, list)):
+            if isinstance(values, list):
                 shifts[key] = [format_data(v) if isinstance(v, D | int) else v for v in values]
     resources = Resource.objects.filter(active=True)
     if resource:

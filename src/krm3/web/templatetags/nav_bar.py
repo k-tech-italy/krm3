@@ -4,8 +4,9 @@ from django.utils.html import format_html, format_html_join
 
 register = template.Library()
 
+
 @register.simple_tag(takes_context=True)
-def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeString | str:
+def nav_bar(context: dict, elements: dict[str, str], logout_url: str = None) -> SafeString | str:
     """
     Generate navigation bar HTML code.
 
@@ -15,7 +16,8 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
     """
 
     def nav_item_html(element: str) -> SafeString:
-        return format_html("""
+        return format_html(
+            """
             <li>
                 <a href="{}" class="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100
                     md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500
@@ -24,25 +26,29 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
                     {}
                 </a>
             </li>
-        """, elements[element], element)
+        """,
+            elements[element],
+            element,
+        )
 
-    nav_items = "\n".join(map(nav_item_html, elements.keys()))
+    nav_items = '\n'.join(map(nav_item_html, elements.keys()))
 
     nav_items = format_html_join(
-        "\n",
-    """
+        '\n',
+        """
         <li><a href="{}" class="block p-2 text-gray-900 rounded-sm hover:bg-gray-100
                     md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500
                     dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent
                     dark:border-gray-700">{}</a></li>
         """,
-        ((url, name) for name, url in elements.items())
+        ((url, name) for name, url in elements.items()),
     )
 
-    logout_button=""
+    logout_button = ''
     if logout_url:
         csrf_token = context.get('csrf_token', '')
-        logout_button = format_html("""
+        logout_button = format_html(
+            """
             <form method="post" action="{}" class="hidden md:inline" id="logout-button">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{}">
                 <button type="submit" class="block py-2 px-6 text-red-600 rounded-sm hover:bg-red-50
@@ -52,9 +58,13 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
                     Logout
                 </button>
             </form>
-        """, logout_url, csrf_token)
+        """,
+            logout_url,
+            csrf_token,
+        )
 
-    return format_html("""
+    return format_html(
+        """
             <nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
                     border-gray-200 dark:border-gray-600 mb-20">
                 <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4 md:py-0 md:px-4">
@@ -77,4 +87,7 @@ def nav_bar(context, elements: dict[str, str], logout_url: str = None) -> SafeSt
                     {}
                 </div>
             </nav>
-        """, nav_items, logout_button)
+        """,
+        nav_items,
+        logout_button,
+    )

@@ -11,7 +11,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -56,7 +55,10 @@ class Migration(migrations.Migration):
                 ('ref', models.CharField(max_length=50)),
                 ('is_billable', models.BooleanField(default=True)),
                 ('state', models.TextField(choices=[('OPEN', 'Open'), ('CLOSED', 'Closed')], default='OPEN')),
-                ('start_date', models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc))),
+                (
+                    'start_date',
+                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+                ),
                 ('end_date', models.DateField(blank=True, null=True)),
             ],
             options={
@@ -81,18 +83,69 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('password', models.CharField(max_length=128, verbose_name='password')),
                 ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
-                ('username', models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator()], verbose_name='username')),
+                (
+                    'is_superuser',
+                    models.BooleanField(
+                        default=False,
+                        help_text='Designates that this user has all permissions without explicitly assigning them.',
+                        verbose_name='superuser status',
+                    ),
+                ),
+                (
+                    'username',
+                    models.CharField(
+                        error_messages={'unique': 'A user with that username already exists.'},
+                        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
+                        max_length=150,
+                        unique=True,
+                        validators=[django.contrib.auth.validators.UnicodeUsernameValidator()],
+                        verbose_name='username',
+                    ),
+                ),
                 ('first_name', models.CharField(blank=True, max_length=150, verbose_name='first name')),
                 ('last_name', models.CharField(blank=True, max_length=150, verbose_name='last name')),
                 ('email', models.EmailField(blank=True, max_length=254, verbose_name='email address')),
-                ('is_staff', models.BooleanField(default=False, help_text='Designates whether the user can log into this admin site.', verbose_name='staff status')),
-                ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
+                (
+                    'is_staff',
+                    models.BooleanField(
+                        default=False,
+                        help_text='Designates whether the user can log into this admin site.',
+                        verbose_name='staff status',
+                    ),
+                ),
+                (
+                    'is_active',
+                    models.BooleanField(
+                        default=True,
+                        help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
+                        verbose_name='active',
+                    ),
+                ),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
                 ('picture', models.TextField(blank=True, null=True)),
                 ('social_profile', models.TextField(blank=True, null=True)),
-                ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.group', verbose_name='groups')),
-                ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.permission', verbose_name='user permissions')),
+                (
+                    'groups',
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
+                        related_name='user_set',
+                        related_query_name='user',
+                        to='auth.group',
+                        verbose_name='groups',
+                    ),
+                ),
+                (
+                    'user_permissions',
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text='Specific permissions for this user.',
+                        related_name='user_set',
+                        related_query_name='user',
+                        to='auth.permission',
+                        verbose_name='user permissions',
+                    ),
+                ),
             ],
             options={
                 'verbose_name': 'user',
@@ -106,7 +159,16 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=200)),
                 ('initial_capacity', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('follows', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.RESTRICT, related_name='followed_by', to='core.basket')),
+                (
+                    'follows',
+                    models.OneToOneField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.RESTRICT,
+                        related_name='followed_by',
+                        to='core.basket',
+                    ),
+                ),
                 ('po', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.po')),
             ],
         ),
@@ -115,7 +177,12 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=80, unique=True)),
-                ('default_currency', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='currencies.currency')),
+                (
+                    'default_currency',
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='currencies.currency'
+                    ),
+                ),
             ],
             options={
                 'verbose_name_plural': 'countries',
@@ -142,7 +209,16 @@ class Migration(migrations.Migration):
                 ('rght', models.PositiveIntegerField(editable=False)),
                 ('tree_id', models.PositiveIntegerField(db_index=True, editable=False)),
                 ('level', models.PositiveIntegerField(editable=False)),
-                ('parent', mptt.fields.TreeForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='core.expensecategory')),
+                (
+                    'parent',
+                    mptt.fields.TreeForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='children',
+                        to='core.expensecategory',
+                    ),
+                ),
             ],
             options={
                 'verbose_name_plural': 'expense categories',
@@ -153,8 +229,18 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('amount', models.DecimalField(decimal_places=2, help_text='Number of hours to charge', max_digits=10)),
-                ('basket', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invoice_entries', to='core.basket')),
-                ('invoice', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='entries', to='core.invoice')),
+                (
+                    'basket',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='invoice_entries', to='core.basket'
+                    ),
+                ),
+                (
+                    'invoice',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='entries', to='core.invoice'
+                    ),
+                ),
             ],
             options={
                 'verbose_name_plural': 'Invoice entries',
@@ -171,7 +257,16 @@ class Migration(migrations.Migration):
                 ('rght', models.PositiveIntegerField(editable=False)),
                 ('tree_id', models.PositiveIntegerField(db_index=True, editable=False)),
                 ('level', models.PositiveIntegerField(editable=False)),
-                ('parent', mptt.fields.TreeForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='core.paymentcategory')),
+                (
+                    'parent',
+                    mptt.fields.TreeForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='children',
+                        to='core.paymentcategory',
+                    ),
+                ),
             ],
             options={
                 'verbose_name_plural': 'payment categories',
@@ -189,7 +284,10 @@ class Migration(migrations.Migration):
                 ('client', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.client')),
             ],
             options={
-                'permissions': [('view_any_project', "Can view(only) everybody's projects"), ('manage_any_project', "Can view, and manage everybody's projects")],
+                'permissions': [
+                    ('view_any_project', "Can view(only) everybody's projects"),
+                    ('manage_any_project', "Can view, and manage everybody's projects"),
+                ],
             },
         ),
         migrations.AddField(
@@ -201,18 +299,45 @@ class Migration(migrations.Migration):
             name='Mission',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('SUBMITTED', 'Submitted'), ('CANCELLED', 'Cancelled')], default='DRAFT', max_length=9)),
-                ('number', models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank', null=True)),
+                (
+                    'status',
+                    models.CharField(
+                        choices=[('DRAFT', 'Draft'), ('SUBMITTED', 'Submitted'), ('CANCELLED', 'Cancelled')],
+                        default='DRAFT',
+                        max_length=9,
+                    ),
+                ),
+                (
+                    'number',
+                    models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank', null=True),
+                ),
                 ('title', models.CharField(blank=True, max_length=50, null=True)),
                 ('from_date', models.DateField()),
                 ('to_date', models.DateField()),
-                ('year', models.PositiveIntegerField(blank=True, help_text="Leave blank for defaulting to from_date's year", null=True)),
+                (
+                    'year',
+                    models.PositiveIntegerField(
+                        blank=True, help_text="Leave blank for defaulting to from_date's year", null=True
+                    ),
+                ),
                 ('city', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.city')),
-                ('default_currency', models.ForeignKey(blank=True, help_text='Leave blank for default [EUR]', null=True, on_delete=django.db.models.deletion.PROTECT, to='currencies.currency')),
+                (
+                    'default_currency',
+                    models.ForeignKey(
+                        blank=True,
+                        help_text='Leave blank for default [EUR]',
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to='currencies.currency',
+                    ),
+                ),
                 ('project', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.project')),
             ],
             options={
-                'permissions': [('view_any_mission', "Can view(only) everybody's missions"), ('manage_any_mission', "Can view, and manage everybody's missions")],
+                'permissions': [
+                    ('view_any_mission', "Can view(only) everybody's missions"),
+                    ('manage_any_mission', "Can view, and manage everybody's missions"),
+                ],
             },
         ),
         migrations.CreateModel(
@@ -220,31 +345,93 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('day', models.DateField()),
-                ('amount_currency', models.DecimalField(decimal_places=2, help_text='Amount in currency', max_digits=10)),
-                ('amount_base', models.DecimalField(blank=True, decimal_places=2, help_text='Amount in EUR', max_digits=10, null=True)),
-                ('amount_reimbursement', models.DecimalField(blank=True, decimal_places=2, help_text='Reimbursed amount', max_digits=10, null=True)),
+                (
+                    'amount_currency',
+                    models.DecimalField(decimal_places=2, help_text='Amount in currency', max_digits=10),
+                ),
+                (
+                    'amount_base',
+                    models.DecimalField(
+                        blank=True, decimal_places=2, help_text='Amount in EUR', max_digits=10, null=True
+                    ),
+                ),
+                (
+                    'amount_reimbursement',
+                    models.DecimalField(
+                        blank=True, decimal_places=2, help_text='Reimbursed amount', max_digits=10, null=True
+                    ),
+                ),
                 ('detail', models.CharField(blank=True, max_length=100, null=True)),
-                ('image', models.FileField(blank=True, null=True, upload_to=krm3.missions.media.mission_directory_path)),
+                (
+                    'image',
+                    models.FileField(blank=True, null=True, upload_to=krm3.missions.media.mission_directory_path),
+                ),
                 ('created_ts', models.DateTimeField(auto_now_add=True)),
                 ('modified_ts', models.DateTimeField(auto_now=True)),
-                ('currency', models.ForeignKey(blank=True, help_text='Leave blank to inherit from mission.default_currency', on_delete=django.db.models.deletion.PROTECT, to='currencies.currency')),
-                ('document_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.documenttype')),
+                (
+                    'currency',
+                    models.ForeignKey(
+                        blank=True,
+                        help_text='Leave blank to inherit from mission.default_currency',
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to='currencies.currency',
+                    ),
+                ),
+                (
+                    'document_type',
+                    models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.documenttype'),
+                ),
                 ('category', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.expensecategory')),
-                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='expenses', to='core.mission')),
-                ('payment_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.paymentcategory')),
-                ('reimbursement', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='expenses', to='core.reimbursement')),
+                (
+                    'mission',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='expenses', to='core.mission'
+                    ),
+                ),
+                (
+                    'payment_type',
+                    models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.paymentcategory'),
+                ),
+                (
+                    'reimbursement',
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name='expenses',
+                        to='core.reimbursement',
+                    ),
+                ),
             ],
             options={
-                'permissions': [('view_any_expense', "Can view(only) everybody's expenses"), ('manage_any_expense', "Can view, and manage everybody's expenses")],
+                'permissions': [
+                    ('view_any_expense', "Can view(only) everybody's expenses"),
+                    ('manage_any_expense', "Can view, and manage everybody's expenses"),
+                ],
             },
         ),
         migrations.CreateModel(
             name='Resource',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('first_name', models.CharField(blank=True, help_text='Overwritten by profile.first_name if profile is provided', max_length=50)),
-                ('last_name', models.CharField(blank=True, help_text='Overwritten by profile.last_name if profile is provided', max_length=50)),
-                ('user', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                (
+                    'first_name',
+                    models.CharField(
+                        blank=True, help_text='Overwritten by profile.first_name if profile is provided', max_length=50
+                    ),
+                ),
+                (
+                    'last_name',
+                    models.CharField(
+                        blank=True, help_text='Overwritten by profile.last_name if profile is provided', max_length=50
+                    ),
+                ),
+                (
+                    'user',
+                    models.OneToOneField(
+                        blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
@@ -264,7 +451,10 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(max_length=200)),
                 ('basket_title', models.CharField(blank=True, max_length=200, null=True)),
                 ('color', models.TextField(blank=True, null=True)),
-                ('start_date', models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc))),
+                (
+                    'start_date',
+                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+                ),
                 ('end_date', models.DateField(blank=True, null=True)),
                 ('work_price', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('on_call_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
@@ -292,11 +482,19 @@ class Migration(migrations.Migration):
                 ('comment', models.TextField(blank=True, null=True)),
                 ('metadata', models.JSONField(blank=True, default=dict, null=True)),
                 ('resource', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.resource')),
-                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='time_entries', to='core.task')),
+                (
+                    'task',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='time_entries', to='core.task'
+                    ),
+                ),
             ],
             options={
                 'verbose_name_plural': 'Time entries',
-                'permissions': [('view_any_timesheet', "Can view(only) everybody's timesheets"), ('manage_any_timesheet', "Can view, and manage everybody's timesheets")],
+                'permissions': [
+                    ('view_any_timesheet', "Can view(only) everybody's timesheets"),
+                    ('manage_any_timesheet', "Can view, and manage everybody's timesheets"),
+                ],
             },
         ),
         migrations.CreateModel(
@@ -305,7 +503,12 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('picture', models.TextField(blank=True, null=True)),
                 ('social_profile', models.TextField(blank=True, null=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    'user',
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
             options={
                 'abstract': False,
@@ -314,7 +517,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='resource',
             name='profile',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.userprofile'),
+            field=models.OneToOneField(
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.userprofile'
+            ),
         ),
         migrations.AddConstraint(
             model_name='city',
@@ -334,7 +539,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='reimbursement',
-            constraint=models.UniqueConstraint(models.F('year'), models.F('number'), name='unique_reimbursement_number'),
+            constraint=models.UniqueConstraint(
+                models.F('year'), models.F('number'), name='unique_reimbursement_number'
+            ),
         ),
         migrations.AddConstraint(
             model_name='mission',

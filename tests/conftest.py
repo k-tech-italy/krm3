@@ -65,7 +65,9 @@ def regular_user(db):
 @pytest.fixture
 def staff_user(db):
     from testutils.factories import UserFactory
+
     return UserFactory(is_staff=True)
+
 
 # This admin_user_with_plain_password has the _password attribute set (plaintext),
 # unlike the default Django fixture admin_user.
@@ -73,7 +75,9 @@ def staff_user(db):
 @pytest.fixture
 def admin_user_with_plain_password(db):
     from testutils.factories import UserFactory
+
     return UserFactory(is_superuser=True, is_staff=True)
+
 
 @pytest.fixture
 def payment_types(db):
@@ -198,3 +202,12 @@ def api_client():
         return client
 
     return fx
+
+
+@pytest.fixture
+def resource_client(client):
+    from testutils.factories import UserFactory, ResourceFactory
+    user = UserFactory()
+    client._resource = ResourceFactory(user = user)
+    client.login(username=user.username, password=user._password)
+    return client

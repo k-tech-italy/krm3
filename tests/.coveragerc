@@ -22,7 +22,8 @@ omit =
     src/krm3/config/environ.py
     src/krm3/config/fragments/ddt.py
     */admin_extras/*
-
+disable_warnings =
+    module-not-measured
 
 [report]
 # Regexes for lines to exclude from consideration

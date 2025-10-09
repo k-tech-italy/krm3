@@ -8,26 +8,9 @@ from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, Pa
 BASE_JSON = {
     'mission': 1,
     'day': '2023-11-23',
-    'payment_type': {
-        'id': 1,
-        '__str__': 'CC',
-        'title': 'CC',
-        'active': True,
-        'parent': None
-    },
-    'document_type': {
-        'id': 3,
-        'title': 'Fattura',
-        'active': True,
-        'default': False
-    },
-    'category': {
-        'id': 9,
-        '__str__': 'Varie:Rappresentanza',
-        'title': 'Rappresentanza',
-        'active': True,
-        'parent': 7
-    },
+    'payment_type': {'id': 1, '__str__': 'CC', 'title': 'CC', 'active': True, 'parent': None},
+    'document_type': {'id': 3, 'title': 'Fattura', 'active': True, 'default': False},
+    'category': {'id': 9, '__str__': 'Varie:Rappresentanza', 'title': 'Rappresentanza', 'active': True, 'parent': 7},
     'amount_currency': '10',
 }
 
@@ -41,7 +24,7 @@ def test_api_create_mission(expense, admin_user):
         'payment_type': PaymentCategory,
         'currency': Currency,
         'mission': Mission,
-        'reimbursement': Reimbursement
+        'reimbursement': Reimbursement,
     }
 
     counters = {fk: cls.objects.count() for fk, cls in fks.items()}
@@ -69,7 +52,7 @@ def test_api_create_mission(expense, admin_user):
         'category': expense.category_id,
         'document_type': expense.document_type_id,
         'payment_type': expense.payment_type_id,
-        'image': expdata['image']
+        'image': expdata['image'],
     }
     assert Expense.objects.count() == 2
     assert counters == {fk: cls.objects.count() for fk, cls in fks.items()}

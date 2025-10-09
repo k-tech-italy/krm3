@@ -133,9 +133,11 @@ test:
 	@-./manage.py loaddata tools/zapdata/demo/krm3.yaml
 	@cp -R tools/zapdata/demo/media/* ~media
 
+test-fast:
+	@pytest -n auto -m "selenium or not selenium"
 
 test-cov: ## run tests with coverage
-	@pytest tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \
+	@pytest -m "selenium or not selenium" tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \
         --cov-report=xml:`pwd`/~build/coverage.xml --cov-report=html --cov-report=term \
         --cov-config=tests/.coveragerc \
         --cov=krm3

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0013_timeentry_bank_from_timeentry_bank_to_and_more'),
     ]
@@ -13,6 +12,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='contract',
             name='country_calendar_code',
-            field=models.CharField(blank=True, help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries', null=True),
+            field=models.CharField(
+                blank=True,
+                help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
+                null=True,
+            ),
         ),
     ]

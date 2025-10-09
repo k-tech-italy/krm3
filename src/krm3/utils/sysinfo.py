@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 def get_commit_info(*args, **kwargs):
     try:
         import krm3.git_info as git_info
+
         return ', '.join([f'{x}={getattr(git_info, x)}' for x in dir(git_info) if not x.startswith('__')])
     except Exception as e:
         capture_exception(e)

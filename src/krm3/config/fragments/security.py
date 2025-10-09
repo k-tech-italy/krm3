@@ -52,4 +52,4 @@ else:
         },
     ]
 
-LOGOUT_REDIRECT_URL='/logout'
+LOGOUT_REDIRECT_URL = '/logout'

@@ -1,4 +1,5 @@
 """Admin panels module."""
+
 from .converter import panel_converter  # noqa
 from .email import email  # noqa
 from .sentry import sentry  # noqa

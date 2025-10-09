@@ -1,4 +1,3 @@
-
 from datetime import date, timedelta
 
 import factory
@@ -114,22 +113,20 @@ class ResourceFactory(factory.django.DjangoModelFactory):
         model = 'core.Resource'
         django_get_or_create = ('first_name', 'last_name')
 
+
 class ContractFactory(factory.django.DjangoModelFactory):
     resource = factory.SubFactory(ResourceFactory)
-    period = factory.Sequence(
-        lambda n: generate_month_period(date(2020, 1, 1), n)
-    )
+    period = factory.Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
     country_calendar_code = settings.HOLIDAYS_CALENDAR
 
     class Meta:
         model = 'core.Contract'
 
+
 class ExtraHolidayFactory(factory.django.DjangoModelFactory):
-    period = factory.Sequence(
-        lambda n: generate_month_period(date(2020, 1, 1), n)
-    )
+    period = factory.Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
     country_codes = [settings.HOLIDAYS_CALENDAR]
-    reason = "King coronation"
+    reason = 'King coronation'
 
     class Meta:
         model = 'core.ExtraHoliday'
@@ -266,9 +263,7 @@ def generate_month_period(start_date, offset):
 
 
 class TimesheetSubmissionFactory(factory.django.DjangoModelFactory):
-    period = factory.Sequence(
-        lambda n: generate_month_period(date(2020, 1, 1), n)
-    )
+    period = factory.Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
     resource = factory.SubFactory(ResourceFactory)
 
     class Meta:

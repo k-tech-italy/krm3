@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0004_rename_work_hours_timeentry_day_shift_hours_and_more'),
     ]

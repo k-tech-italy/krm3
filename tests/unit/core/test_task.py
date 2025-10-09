@@ -71,16 +71,22 @@ def test_task_spanning_contracts(project_2020_open):
             [
                 [_dt('2020-01-01'), _dt('2025-01-01')],
                 [_dt('2025-01-02'), None],
-            ], id='gap-end'),
+            ],
+            id='gap-end',
+        ),
         pytest.param(
             [
                 [_dt('2025-01-02'), None],
-            ], id='gap-start'),
+            ],
+            id='gap-start',
+        ),
         pytest.param(
             [
                 [_dt('2020-01-01'), _dt('2024-01-01')],
                 [_dt('2024-04-01'), _dt('2026-01-01')],
-            ], id='gap-middle'),
+            ],
+            id='gap-middle',
+        ),
     ],
 )
 def test_non_contiguous_contracts(contracts, project_2020_open):

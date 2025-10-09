@@ -12,7 +12,7 @@ if typing.TYPE_CHECKING:
 
 
 @pytest.fixture
-def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
+def browser(live_server, request) -> Generator['AppSeleniumTC', None, None]:
     """SeleniumBase as a pytest fixture.
     Usage example: "def test_one(sb):"
     You may need to use this for tests that use other pytest fixtures."""
@@ -20,11 +20,11 @@ def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
 
     if request.cls:
         if sb_config.reuse_class_session:
-            the_class = str(request.cls).split(".")[-1].split("'")[0]
+            the_class = str(request.cls).split('.')[-1].split("'")[0]
             if the_class != sb_config._sb_class:
                 session_helper.end_reused_class_session_as_needed()
                 sb_config._sb_class = the_class
-        request.cls.sb = AppSeleniumTC("base_method")
+        request.cls.sb = AppSeleniumTC('base_method')
         request.cls.sb.live_server_url = str(live_server)
         request.cls.sb.setUp()
         request.cls.sb._needs_tearDown = True
@@ -36,7 +36,7 @@ def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
             request.cls.sb.tearDown()
             request.cls.sb._needs_tearDown = False
     else:
-        sb = AppSeleniumTC("base_method")
+        sb = AppSeleniumTC('base_method')
         sb.live_server_url = str(live_server)
         sb.setUp()
         sb._needs_tearDown = True
@@ -49,15 +49,16 @@ def browser(live_server, request) -> Generator["AppSeleniumTC", None, None]:
             sb.tearDown()
             sb._needs_tearDown = False
 
+
 @pytest.fixture
 def freeze_frontend_time(browser):
     def _freeze(iso_date: str):
         dt = datetime.datetime.fromisoformat(iso_date.replace('Z', '+00:00'))
         timestamp_ms = int(dt.timestamp() * 1000)
         browser.driver.execute_cdp_cmd(
-            "Page.addScriptToEvaluateOnNewDocument",
+            'Page.addScriptToEvaluateOnNewDocument',
             {
-                "source": f"""
+                'source': f"""
                            const fixedTime = {timestamp_ms};
                            const OriginalDate = Date;
                            class FakeDate extends OriginalDate {{
@@ -73,6 +74,7 @@ def freeze_frontend_time(browser):
                            }}
                            Date = FakeDate;
                        """
-            }
+            },
         )
+
     return _freeze

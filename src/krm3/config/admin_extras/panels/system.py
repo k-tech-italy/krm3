@@ -1,4 +1,5 @@
 """System admin panel module."""
+
 import logging
 
 from django.contrib import messages
@@ -9,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 def get_info():  # noqa: D103
     try:
-        return {
-        }
+        return {}
     except Exception as e:
         return {'error': str(e)}
 

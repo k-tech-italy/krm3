@@ -1,9 +1,10 @@
+import datetime
 import random
 
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm, TextInput, CharField
 
-from krm3.core.models.projects import Task
+from krm3.core.models.projects import Task, Project
 
 
 def _pick_random_color(*args, **kwargs) -> str:
@@ -11,6 +12,16 @@ def _pick_random_color(*args, **kwargs) -> str:
         ['ED9B9B', '9E6B6B', 'DECECE', '9A85A8', '769DC6', '315F90', '318F90', '2ADCDF', 'B2ECA2', 'D1E2AB']
     )
 
+class ProjectForm(ModelForm):
+    class Meta:
+        model = Project
+        fields = ['name', 'client', 'start_date', 'end_date', 'metadata', 'notes']
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        if not self.instance.pk:
+            self.fields['start_date'].initial = datetime.date.today()
 
 class TaskForm(ModelForm):
     color = CharField(

@@ -33,6 +33,8 @@ def update_rates(request: 'HttpRequest', qs: 'QuerySet[Expense]') -> None:
     except OXRError as e:
         raise RateConversionError(e)
     if future_days:
-        message = (f'It was impossible to apply rate conversions for the following future days:'
-                   f' {", ".join(map(str, set(future_days)))}')
+        message = (
+            f'It was impossible to apply rate conversions for the following future days:'
+            f' {", ".join(map(str, set(future_days)))}'
+        )
         message_add_once('warning', request, message)
