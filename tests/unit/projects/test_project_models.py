@@ -5,7 +5,20 @@ import freezegun
 import pytest
 from django.core import exceptions
 
+from krm3.projects.forms import ProjectForm
 from testutils.factories import POFactory, ProjectFactory, TaskFactory
+
+
+class TestProjectForm:
+    @freezegun.freeze_time(datetime.date(2025, 6, 15))
+    def test_sets_start_date_default_to_today_on_new_instance(self):
+        form = ProjectForm()
+        assert form.fields['start_date'].initial == datetime.date(2025, 6, 15)
+
+    def test_no_default_override_on_existing_instance(self):
+        project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
+        form = ProjectForm(instance=project)
+        assert form.fields['start_date'].initial is None
 
 
 class TestProject:
@@ -14,9 +27,9 @@ class TestProject:
         'end_date',
         (pytest.param(None, id='without_end_date'), pytest.param(datetime.date(2030, 1, 1), id='with_end_date')),
     )
-    def test_generates_start_date(self, end_date):
-        project = ProjectFactory(start_date=None, end_date=end_date)
-        assert project.start_date == datetime.date.today()
+    def test_start_date_is_required(self, end_date):
+        with pytest.raises(exceptions.ValidationError, match='is required'):
+            _should_fail = ProjectFactory(start_date=None, end_date=end_date)
 
     def test_accepts_missing_end_date(self):
         """Verify that date validation doesn't trigger if `end_date` is missing."""
