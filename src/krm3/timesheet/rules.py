@@ -1,10 +1,10 @@
-from decimal import Decimal as D
 import typing
 
 from krm3.utils.dates import KrmDay, _MaybeDate
+from krm3.utils.numbers import safe_dec
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import TimeEntry, Contract
+    from krm3.core.models import Contract, TimeEntry
 
 timeentry_counters = {
     'bank': 'Banca ore',
@@ -20,15 +20,6 @@ timeentry_counters = {
     'meal_voucher': 'Buoni pasto',
 }
 
-
-def SD(val: int | float | str | D | None) -> D:
-    """Return the val in Decimal format or Decimal(0) is value is None."""
-    if val is None:
-        return D(0)
-    elif isinstance(val, D):
-        return val
-    else:
-        return D(val)
 
 class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
@@ -49,7 +40,7 @@ class Krm3Day(KrmDay):
         self.data_sick = None
         self.data_overtime = None
         self.data_meal_voucher = None
-        self.data_special_leaves = {}
+        self.data_special_leave = {}
         self.has_data = False
         self.nwd = False  # Non-working day
         self.submitted = False
@@ -57,7 +48,7 @@ class Krm3Day(KrmDay):
     def __repr__(self) -> str:
         return self.date.strftime('K+%Y-%m-%d')
 
-    def apply(self, time_entries: list['TimeEntry']):
+    def apply(self, time_entries: list['TimeEntry']) -> None:
         """Elaborates the krm3day data from the time_entries list."""
         self.time_entries = time_entries
         self.has_data = len(time_entries) > 0
@@ -67,7 +58,13 @@ class Krm3Day(KrmDay):
 
 class TimesheetRule:
     @staticmethod
-    def calculate(work_day: bool, due_hours: float, time_entries: list['TimeEntry']) -> dict:
+    def calculate(work_day: bool, due_hours: float, time_entries: list['TimeEntry']) -> dict:  # noqa: C901,PLR0912
+        """Calculate the time sheet rules for a set of time entries in a given work day.
+
+        NB: time entries must be of same day.
+        """
+        if len({te.date for te in time_entries}) > 1:
+            raise RuntimeError('Time entries must be of same day.')
         base = {
             'bank_to': None,
             'bank_from': None,
@@ -81,7 +78,9 @@ class TimesheetRule:
             'sick': None,
             'overtime': None,
             'meal_voucher': None,
-            'special_leave': {},
+            'special_leave_reason': None,
+            'special_leave_hours': None,
+            'protocol_number': None,
         }
         for te in time_entries:
             for key in [
@@ -93,30 +92,53 @@ class TimesheetRule:
                 'travel',
                 'holiday',
                 'leave',
-                'special_leave',
+                'special_leave_hours',
+                'special_leave_reason',
                 'rest',
                 'sick',
+                'protocol_number',
             ]:
-                te_key = key if key in ['bank_to', 'bank_from'] else f'{key}_hours'
-                if val := getattr(te, te_key):
-                    if key == 'special_leave':
-                        base['special_leave'][te.special_leave_reason_id] = SD(base['special_leave'].get(te.special_leave_reason_id)) + SD(val)
+                te_key = (
+                    key
+                    if key in ['bank_to', 'bank_from', 'protocol_number', 'special_leave_hours', 'special_leave_reason']
+                    else f'{key}_hours'
+                )
+                val = getattr(te, te_key)
+                if key == 'protocol_number':
+                    if val:
+                        base['protocol_number'] = val
+                elif val:
+                    if key == 'special_leave_reason':
+                        base['special_leave_reason'] = te.special_leave_reason.title
+                    elif key == 'special_leave_hours':
+                        base['special_leave_hours'] = safe_dec(val)
                     else:
-                        base[key] = SD(base[key]) + val
+                        base[key] = safe_dec(base[key]) + val
+
+        if base['protocol_number'] and not base['sick']:
+            base['protocol_number'] = None
 
         bank_to = base.pop('bank_to')
         bank_from = base.pop('bank_from')
         if bank_to or bank_from:
-            base['bank'] = SD(bank_to) - SD(bank_from)
+            base['bank'] = safe_dec(bank_to) - safe_dec(bank_from)
         else:
             base['bank'] = None
+
         special_activities = ['sick', 'holiday', 'leave']
-        special_hours = sum(SD(base[activity]) for activity in special_activities)
-        if base['special_leave']:
-            # Only 1 special leave allowed as per business rule
-            special_hours += SD(list(base['special_leave'].values())[0])
-        if special_hours == 0:
-            if (overtime := SD(base['day_shift']) + SD(base['night_shift']) - SD(base['bank']) - due_hours) > 0:
-                base['overtime'] = overtime
+        special_hours = sum(safe_dec(base[activity]) for activity in special_activities) + safe_dec(
+            base['special_leave_hours']
+        )
+        if (
+            special_hours == 0
+            and (
+                overtime := safe_dec(base['day_shift'])
+                + safe_dec(base['night_shift'])
+                + safe_dec(base['travel'])
+                - safe_dec(base['bank'])
+                - due_hours
+            )
+            > 0
+        ):
+            base['overtime'] = overtime
         return base
-        # return {k: random.randint(0, 8) if work_day else '' for k in timeentry_counters.keys() }

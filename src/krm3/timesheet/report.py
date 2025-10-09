@@ -12,13 +12,15 @@ from django.contrib.auth import get_user_model
 from krm3.config import settings
 from krm3.core.models import Contract, ExtraHoliday, Resource, TimeEntry
 from krm3.core.models.timesheets import TimesheetSubmission
-from krm3.timesheet.rules import SD, Krm3Day
+from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmCalendar, KrmDay, get_country_holidays
 from krm3.utils.tools import format_data
+from krm3.utils.numbers import normal, safe_dec
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
 
+
 class StreamWriter(typing.Protocol):
-    def write(self, data) ->None: ...  # noqa: ANN001
+    def write(self, data) -> None: ...  # noqa: ANN001
 
 
 User = get_user_model()
@@ -172,9 +174,15 @@ class TimesheetReport:
 
         top_period = to_date + datetime.timedelta(days=1) if to_date else None
 
-        self.time_entries: list[TimeEntry] = TimeEntry.objects.filter(
+        self.time_entries: list[TimeEntry] = TimeEntry.objects.select_related('special_leave_reason').filter(
             date__gte=self.from_date, date__lte=self.to_date, resource_id__in=resource_ids
         )
+
+        self.special_leave_reasons: dict[int, str] = {
+            te.special_leave_reason_id: te.special_leave_reason.title
+            for te in self.time_entries
+            if te.special_leave_reason_id
+        }
 
         self.submissions: dict[int, list[tuple[datetime.date, datetime.date]]] = {}
         for ts in TimesheetSubmission.objects.filter(
@@ -339,7 +347,7 @@ class TimesheetReport:
                         value = getattr(rkd, f'data_{key}')
                         ws.cell(row=rownum, column=dd_num, value=value).alignment = centered
                         if value is not None:
-                            tot = SD(tot) + SD(value)
+                            tot = safe_dec(tot) + safe_dec(value)
                     ws.cell(row=rownum, column=2, value='' if tot is None else tot).alignment = centered
                 current_row = rownum
 
@@ -366,8 +374,26 @@ class TimesheetReport:
                     row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
                     for rkd in resources_report_days:
                         value = getattr(rkd, f'data_{key}')
-                        row.add_cell(value).nwd = rkd.nwd
+                        row.add_cell(normal(value)).nwd = rkd.nwd
                         cell_tot_hh.value += value or decimal.Decimal(0)
+                    cell_tot_hh.value = normal(cell_tot_hh.value)
+
+                # special leaves
+                special_leave_days: dict[str, list[Krm3Day]] = {}
+                for rkd in resources_report_days:
+                    if rkd.data_special_leave_reason:
+                        special_leave_days.setdefault(rkd.data_special_leave_reason, []).append(rkd)
+
+                for sl_id, sl_days in special_leave_days.items():
+                    row = ReportRow()
+                    row.add_cell(f'Perm. speciale ({sl_id})')
+                    row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
+                    for rkd in resources_report_days:
+                        value = rkd.data_special_leave_hours if rkd in sl_days else ''
+                        row.add_cell(normal(value)).nwd = rkd.nwd
+                        cell_tot_hh.value += value or decimal.Decimal(0)
+                    cell_tot_hh.value = normal(cell_tot_hh.value)
+                    block.rows.insert(len(block.rows) - 4, row)
 
         return blocks
 

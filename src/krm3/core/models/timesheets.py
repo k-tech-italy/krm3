@@ -341,7 +341,7 @@ class TimeEntry(models.Model):
 
     @property
     def is_special_leave(self) -> bool:
-        return self.special_leave_hours > 0.0
+        return self.special_leave_reason is not None
 
     @property
     def has_day_entry_hours(self) -> bool:
