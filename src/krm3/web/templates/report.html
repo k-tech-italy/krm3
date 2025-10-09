@@ -65,7 +65,13 @@
                         <tr class="row-data">
                             <td class="row-header">{{ row.cells.0.render }}</td>
                             {% for cell in row.cells|slice:"1:" %}
-                                <td class="cell-data {% if cell.nwd %}non-workday{% endif %}">{{ cell.render }}</td>
+                                <td class="cell-data {% if cell.nwd %}non-workday{% endif %}">
+                                    {% if cell.negative %}
+                                        <span class="text-red-500">{{ cell.render }}</span>
+                                    {% else %}
+                                        {{ cell.render }}
+                                    {% endif %}
+                                </td>
                             {% endfor %}
                         </tr>
                         {% empty %}

@@ -307,11 +307,11 @@ def test_report_creation(admin_client):
     assert all(value in timeentry_key_mapping.values() for value in row_labels)
 
     first_resource_row = min(resource_rows.values())
-    assert sheet[f'C{first_resource_row + 1}'].value == '**Sun\n1**'
-    assert sheet[f'AF{first_resource_row + 1}'].value == '**Mon\n30**'
+    assert sheet[f'C{first_resource_row + 1}'].value == 'Sun\n1'
+    assert sheet[f'AF{first_resource_row + 1}'].value == 'Mon\n30'
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
-    day_shift_data_row = r1_row + 3
+    day_shift_data_row = r1_row + 2
     assert sheet[f'L{day_shift_data_row}'].value == 8
     assert sheet[f'Q{day_shift_data_row}'].value is None
 
