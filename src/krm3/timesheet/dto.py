@@ -9,6 +9,7 @@ from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
 from krm3.utils.dates import KrmCalendar
 from constance import config
 
+
 class TimesheetDTO:
     def __init__(self, requested_by: User) -> None:
         self.tasks = TaskQuerySet().none()

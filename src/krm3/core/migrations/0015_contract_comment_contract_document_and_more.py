@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0014_alter_contract_country_calendar_code'),
     ]
@@ -20,7 +19,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contract',
             name='document',
-            field=models.FileField(blank=True, help_text='Optional PDF document (PDF files only)', null=True, upload_to=krm3.missions.media.contract_directory_path, validators=[django.core.validators.FileExtensionValidator(['pdf'])]),
+            field=models.FileField(
+                blank=True,
+                help_text='Optional PDF document (PDF files only)',
+                null=True,
+                upload_to=krm3.missions.media.contract_directory_path,
+                validators=[django.core.validators.FileExtensionValidator(['pdf'])],
+            ),
         ),
         migrations.AddField(
             model_name='contract',

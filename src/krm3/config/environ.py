@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class Env(SmartEnv):
-    def __init__(self, prefix: str, **scheme: "ConfigItem"):
+    def __init__(self, prefix: str, **scheme: 'ConfigItem'):
         super().__init__(**scheme)
         self.prefix: str = prefix or ''
 
@@ -123,7 +123,7 @@ class Env(SmartEnv):
     def check_explicit(self) -> list[str]:
         missing = []
         for k, cfg in sorted(self.config.items()):
-            if cfg["explicit"] and f'{self.prefix}{k}' not in self.ENVIRON:
+            if cfg['explicit'] and f'{self.prefix}{k}' not in self.ENVIRON:
                 missing.append(k)
         return missing
 

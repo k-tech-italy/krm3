@@ -164,16 +164,7 @@ class TimesheetTaskSerializer(TaskSerializer):
     client_name = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
-        fields = (
-            'id',
-            'title',
-            'basket_title',
-            'color',
-            'start_date',
-            'end_date',
-            'project_name',
-            'client_name'
-        )
+        fields = ('id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name')
 
     def get_client_name(self, obj: Task) -> str:
         return obj.project.client.name
@@ -198,12 +189,9 @@ class TimesheetSerializer(serializers.Serializer):
         from krm3.core.models import Contract
 
         for day in timesheet.days:
-
             timesheet_submission = timesheet_submissions.filter(period__contains=day.date).first()
 
-            contract = Contract.objects.filter(
-                period__contains=day.date, resource=timesheet.resource
-            ).first()
+            contract = Contract.objects.filter(period__contains=day.date, resource=timesheet.resource).first()
 
             if timesheet_submission and timesheet_submission.closed:
                 days_result[str(day.date)] = {'closed': True}
@@ -246,9 +234,8 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     def is_valid(self, *, raise_exception: bool = False) -> bool:
         user = self.context['request'].user
         resource = user.get_resource()
-        if (
-            user.has_perm('core.manage_any_timesheet')
-            or (resource and user.resource.id == self.initial_data['resource'])
+        if user.has_perm('core.manage_any_timesheet') or (
+            resource and user.resource.id == self.initial_data['resource']
         ):
             return super().is_valid(raise_exception=raise_exception)
         if raise_exception:
@@ -259,7 +246,7 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         """Handle model constraints and return a 400 bad request if and error occurred."""
         try:
             super().save(**kwargs)
-        except IntegrityError  as e:
+        except IntegrityError as e:
             raise serializers.ValidationError({'error': str(e)})
 
     class Meta:

@@ -11,4 +11,5 @@ def _dt(x):
 
 def _dtt(x):
     from dateutil.parser import parse
+
     return parse(x)

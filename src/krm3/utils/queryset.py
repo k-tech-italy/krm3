@@ -5,12 +5,16 @@ from django.db import models
 
 class ACLMixin:
     """Restrict access to superuser, owner, or manager."""
+
     _resource_link = 'resource'
 
     def get_list_filter(self, request):
         ret = admin.ModelAdmin.get_list_filter(self, request).copy()
         if request.user.has_perm('missions.view_any_mission') or request.user.has_perm('missions.manage_any_mission'):
-            ret.insert(1, (self._resource_link, AutoCompleteFilter),)
+            ret.insert(
+                1,
+                (self._resource_link, AutoCompleteFilter),
+            )
         return ret
 
     def get_queryset(self, request):

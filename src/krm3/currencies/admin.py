@@ -14,7 +14,7 @@ from krm3.styles.buttons import NORMAL
 class CurrencyAdmin(ModelAdmin):
     list_display = ('iso3', 'symbol', 'title', 'active')
     search_fields = ('iso3', 'title')
-    list_filter = ('active', )
+    list_filter = ('active',)
 
 
 @admin.register(Rate)
@@ -27,8 +27,13 @@ class RateAdmin(ExtraButtonsMixin, ModelAdmin):
         def _action(req):
             Rate.objects.get(pk=pk).ensure_rates(force=True)
 
-        return confirm_action(self, request, _action, 'Confirm refresh rates from online service',
-                              'Successfully refreshed', )
+        return confirm_action(
+            self,
+            request,
+            _action,
+            'Confirm refresh rates from online service',
+            'Successfully refreshed',
+        )
 
     @button(html_attrs=NORMAL)
     def import_rates(self, request):  # noqa: D102
@@ -45,9 +50,4 @@ class RateAdmin(ExtraButtonsMixin, ModelAdmin):
     @staticmethod
     def _return_preview(rate_importer, request, sorting=None):
         data = rate_importer.preview(sorting=sorting)
-        return TemplateResponse(
-            request,
-            context={
-                'data': data
-            }, template='admin/currencies/import_rates_check.html'
-        )
+        return TemplateResponse(request, context={'data': data}, template='admin/currencies/import_rates_check.html')

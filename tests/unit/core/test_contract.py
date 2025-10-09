@@ -10,6 +10,7 @@ from krm3.core.forms import ContractForm
 from krm3.core.models import Contract
 from krm3.utils.dates import KrmDay
 
+
 @pytest.fixture
 def contracts_and_tasks():
     project = ProjectFactory(start_date=datetime.date(2019, 1, 1), end_date=None)
@@ -68,8 +69,8 @@ def test_create_contract_with_correct_period():
     'period, day, expected',
     [
         ((_dt('2020-01-02'), _dt('2020-02-01')), _dt('2020-01-02'), True),
-        ((_dt('2020-01-02'), _dt('2020-02-01')), _dt('2020-01-31'), True),
         ((_dt('2020-01-02'), _dt('2020-02-01')), _dt('2020-01-01'), False),
+        ((_dt('2020-01-02'), _dt('2020-02-01')), _dt('2020-01-31'), True),
         ((_dt('2020-01-02'), _dt('2020-02-01')), _dt('2020-02-01'), False),
         ((_dt('2020-01-02'), None), _dt('2020-01-02'), True),
         ((_dt('2020-01-02'), None), _dt('2020-01-01'), False),

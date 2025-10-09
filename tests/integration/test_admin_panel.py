@@ -20,7 +20,7 @@ from testutils.factories import (
     MissionFactory,
     ExpenseFactory,
     ReimbursementFactory,
-    ContractFactory
+    ContractFactory,
 )
 from django.contrib.auth.models import Permission
 
@@ -45,8 +45,9 @@ def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user
 
 def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTestBrowser', staff_user):
     resource_1 = ResourceFactory(user=staff_user)
-    staff_user.user_permissions.add(Permission.objects.get(codename='view_any_timesheet'),
-                                    Permission.objects.get(codename='view_timeentry'))
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+    )
 
     task_1 = TaskFactory()
     task_2 = TaskFactory()
@@ -108,11 +109,13 @@ def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', 
 
 
 def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_only_owned_time_entry(
-        browser: 'AppTestBrowser', staff_user):
+    browser: 'AppTestBrowser', staff_user
+):
     resource = ResourceFactory(user=staff_user)
 
-    staff_user.user_permissions.add(Permission.objects.get(codename='view_any_timesheet'),
-                                    Permission.objects.get(codename='view_timeentry'))
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+    )
 
     task_1 = TaskFactory()
     owned_time_entry = TimeEntryFactory(task=task_1, day_shift_hours=4, resource=resource)
@@ -143,10 +146,11 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_onl
 
 
 def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_time_entry(
-        browser: 'AppTestBrowser', staff_user):
-
-    staff_user.user_permissions.add(Permission.objects.get(codename='manage_any_timesheet'),
-                                    Permission.objects.get(codename='change_timeentry'))
+    browser: 'AppTestBrowser', staff_user
+):
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='change_timeentry')
+    )
     task = TaskFactory()
     time_entry = TimeEntryFactory(task=task, day_shift_hours=4)
 
@@ -165,8 +169,9 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_ti
     browser.assert_element('//input[@name="day_shift_hours" and @value="2.00"]')
 
 
-def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTestBrowser',
-                                                                 admin_user_with_plain_password):
+def test_admin_should_be_able_to_add_time_entry_for_any_resource(
+    browser: 'AppTestBrowser', admin_user_with_plain_password
+):
     task = TaskFactory()
 
     ResourceFactory(user=admin_user_with_plain_password)
@@ -197,9 +202,11 @@ def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTe
 
 
 def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_entry_for_any_resource(
-        browser: 'AppTestBrowser', staff_user):
-    staff_user.user_permissions.add(Permission.objects.get(codename='manage_any_timesheet'),
-                                    Permission.objects.get(codename='view_timeentry'))
+    browser: 'AppTestBrowser', staff_user
+):
+    staff_user.user_permissions.add(
+        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+    )
     task = TaskFactory()
 
     ResourceFactory(user=staff_user)
@@ -229,7 +236,8 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_en
 
 
 def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time_entry_only_for_owned_resource(
-        browser: 'AppTestBrowser', staff_user):
+    browser: 'AppTestBrowser', staff_user
+):
     staff_user.user_permissions.add(Permission.objects.get(codename='add_timeentry'))
 
     owned_resource = ResourceFactory(user=staff_user)
@@ -258,29 +266,38 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     browser.click('//input[@value="Save"]')
     browser.assert_element('//li[@class="success"]')
 
-@override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps({
-    'mon': 8,
-    'tue': 8,
-    'wed': 8,
-    'thu': 8,
-    'fri': 8,
-    'sat': 8,
-    'sun': 8
-}))
-@freeze_time("2025-07-14")
-def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
 
+@override_config(
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
+)
+@freeze_time('2025-07-14')
+def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
     resource = ResourceFactory(user=admin_user_with_plain_password)
 
-    TimeEntryFactory(resource=resource,task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    TimeEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
     special_leave_reason_1 = SpecialLeaveReasonFactory()
     special_leave_reason_2 = SpecialLeaveReasonFactory()
-    TimeEntryFactory(resource=resource, special_leave_hours=1, date='2025-07-04',
-                     special_leave_reason=special_leave_reason_1, day_shift_hours=0)
-    TimeEntryFactory(resource=resource, special_leave_hours=3, date='2025-07-06',
-                     special_leave_reason=special_leave_reason_1, day_shift_hours=0)
-    TimeEntryFactory(resource=resource, special_leave_hours=3, date='2025-07-05',
-                     special_leave_reason=special_leave_reason_2, day_shift_hours=0)
+    TimeEntryFactory(
+        resource=resource,
+        special_leave_hours=1,
+        date='2025-07-04',
+        special_leave_reason=special_leave_reason_1,
+        day_shift_hours=0,
+    )
+    TimeEntryFactory(
+        resource=resource,
+        special_leave_hours=3,
+        date='2025-07-06',
+        special_leave_reason=special_leave_reason_1,
+        day_shift_hours=0,
+    )
+    TimeEntryFactory(
+        resource=resource,
+        special_leave_hours=3,
+        date='2025-07-05',
+        special_leave_reason=special_leave_reason_2,
+        day_shift_hours=0,
+    )
     browser.admin_user = admin_user_with_plain_password
     browser.login()
 
@@ -288,30 +305,22 @@ def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser'
     browser.click('//a[@href="/admin/core/timeentry/report/?"]')
 
     reason_1_row = browser.find_elements(
-        By.XPATH,
-        f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_1.title})")]]/td'
+        By.XPATH, f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_1.title})")]]/td'
     )
 
     assert reason_1_row[1].text == '4'
     assert reason_1_row[5].text == '1'
     assert reason_1_row[7].text == '3'
     reason_2_row = browser.find_elements(
-        By.XPATH,
-        f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_2.title})")]]/td'
+        By.XPATH, f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_2.title})")]]/td'
     )
     assert reason_2_row[1].text == '3'
     assert reason_2_row[6].text == '3'
 
 
-def test_admin_submit_mission(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
-    mission = MissionFactory(
-        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
-    )
-    admin_user_with_plain_password.user_permissions.add(
-        Permission.objects.get(codename='manage_any_mission')
-    )
+def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user_with_plain_password):
+    mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
+    admin_user_with_plain_password.user_permissions.add(Permission.objects.get(codename='manage_any_mission'))
     browser.admin_user = admin_user_with_plain_password
     browser.login()
 
@@ -324,12 +333,8 @@ def test_admin_submit_mission(
     assert mission.number is not None
 
 
-def test_admin_missions_reset_reibursments(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
-    mission = MissionFactory(
-        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
-    )
+def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user_with_plain_password):
+    mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
     expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
     browser.admin_user = admin_user_with_plain_password
     browser.login()
@@ -345,12 +350,8 @@ def test_admin_missions_reset_reibursments(
     assert expense.amount_reimbursement is None
 
 
-def test_admin_missions_create_reibursments_mission_in_draft(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
-    mission = MissionFactory(
-        number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today()
-    )
+def test_admin_missions_create_reibursments_mission_in_draft(browser: 'AppTestBrowser', admin_user_with_plain_password):
+    mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
     expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
     browser.admin_user = admin_user_with_plain_password
     browser.login()
@@ -366,9 +367,7 @@ def test_admin_missions_create_reibursments_mission_in_draft(
     assert expense.reimbursement is None
 
 
-def test_admin_missions_create_reibursments_already_exists(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
+def test_admin_missions_create_reibursments_already_exists(browser: 'AppTestBrowser', admin_user_with_plain_password):
     mission = MissionFactory(
         number=314,
         status=Mission.MissionStatus.SUBMITTED,
@@ -390,9 +389,8 @@ def test_admin_missions_create_reibursments_already_exists(
         '//li[contains(text(), "Please select only expenses not already reimbursed.")]',
     )
 
-def test_admin_missions_create_reibursments_get_preview(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
+
+def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser', admin_user_with_plain_password):
     mission = MissionFactory(
         number=314,
         status=Mission.MissionStatus.SUBMITTED,

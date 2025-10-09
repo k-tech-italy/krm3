@@ -1,4 +1,5 @@
 """Sentry admin panel module."""
+
 import logging
 
 import sentry_sdk

@@ -1,3 +1,4 @@
+import datetime
 import logging
 import typing
 from pathlib import Path
@@ -6,18 +7,20 @@ from typing import Any
 import markdown
 import openpyxl
 from bs4 import BeautifulSoup
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
+from django.utils.text import slugify
 from django.views.generic import TemplateView
 
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
-from krm3.timesheet.report import timesheet_report_data
+from krm3.timesheet.report import TimesheetReport
 from krm3.timesheet.task_report import task_report_data
-from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, cell_alignment
+from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, centered, nwd_fill
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
@@ -27,6 +30,19 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
+
+class ReportMixin:
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['nav_bar_items'] = {
+            'Report': reverse('report'),
+            'Report by task': reverse('task_report'),
+            'Availability report': reverse('availability'),
+            'Releases': reverse('releases'),
+        }
+        context['logout_url'] = reverse('logout')
+
+        return context
 
 class HomeView(LoginRequiredMixin, TemplateView):
     login_url = '/admin/login/'
@@ -72,11 +88,10 @@ def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current
             for col, cell_value in enumerate(row_data, 1):
                 cell = ws.cell(row=current_row, column=col, value=cell_value)
                 if col > 1:
-                    cell.alignment = cell_alignment
+                    cell.alignment = centered
             current_row += 1
 
     return current_row
-
 
 def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpResponse:
     wb = openpyxl.Workbook()
@@ -128,8 +143,12 @@ def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpRes
                 for day in data['days']
             ],
         ]
-        for col, giorno in enumerate(giorni, 1):
-            ws.cell(row=current_row, column=col, value=giorno).alignment = header_alignment
+        for col, giorno in enumerate(giorni):
+            cell = ws.cell(row=current_row, column=col + 1, value=giorno)
+            cell.alignment = header_alignment
+            if col > 1 and (data['days'][col - 2].is_holiday() or data['days'][col - 2].min_working_hours == 0):
+                cell.fill = nwd_fill
+
         current_row += 1
 
         current_row = _write_resource_data(ws, data, report_data, current_row)
@@ -142,20 +161,49 @@ def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpRes
     return response
 
 
-class ReportView(HomeView):
+class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
     template_name = 'report.html'
 
-    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if kwargs.get('export'):
-            date = kwargs.get('date')
-            report_data = timesheet_report_data(date, request.user)
-            return export_report(request, report_data, date)
+    def get(self, request: HttpRequest, *args, month: str = None, export : bool = False, **kwargs) -> HttpResponse:
+        self.month = month
+        if export:
+            ctx = self._get_base_context()
+            title = ctx["title"]
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            filename = f'report_{slugify(title)}.xlsx'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            report_blocks = TimesheetReport(ctx['start'], ctx['end'], self.request.user)
+
+            report_blocks.write_excel(response, f'Report risorse {title}')
+            return response
         return super().get(request, *args, **kwargs)
 
+    def _get_base_context(self) -> dict:
+        if self.month is None:
+            start_of_month = datetime.date.today().replace(day=1)
+        else:
+            start_of_month = datetime.datetime.strptime(self.month, '%Y%m').date()
+
+        prev_month = start_of_month - relativedelta(months=1)
+        next_month = start_of_month + relativedelta(months=1)
+
+        return {
+            'start': start_of_month,
+            'end': start_of_month + relativedelta(months=1, days=-1),
+            'current_month': start_of_month.strftime('%Y%m'),
+            'prev_month': prev_month.strftime('%Y%m'),
+            'next_month': next_month.strftime('%Y%m'),
+            'title': start_of_month.strftime('%B %Y')
+        }
+
     def get_context_data(self, **kwargs) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        current_month = self.request.GET.get('month')
-        return context | timesheet_report_data(current_month, user=self.request.user)
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(self._get_base_context())
+
+        report_blocks = TimesheetReport(ctx['start'], ctx['end'], self.request.user)
+        ctx['report_blocks'] = report_blocks.report_html()
+        return ctx
 
 
 class TaskReportView(HomeView):

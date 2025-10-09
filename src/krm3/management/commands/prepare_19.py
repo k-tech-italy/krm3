@@ -4,7 +4,7 @@ from django.db import transaction, connection
 
 @click.command()  # noqa: C901
 @click.pass_context
-def command(ctx,  **kwargs):
+def command(ctx, **kwargs):
     tables = [
         'accounting_invoiceentry',
         'accounting_invoice',
@@ -28,4 +28,6 @@ def command(ctx,  **kwargs):
                 cursor.execute(f'ALTER TABLE IF EXISTS public.{old_name} RENAME TO {new_name}')
             cursor.execute("DELETE from public.django_migrations WHERE app in ('accounting', 'missions', 'timesheet')")
             cursor.execute("DELETE from public.django_migrations WHERE app = 'core' AND name <> '0001_initial'")
-            cursor.execute("UPDATE public.django_content_type set app_label='core' WHERE app_label in ('accounting', 'missions', 'timesheet')")
+            cursor.execute(
+                "UPDATE public.django_content_type set app_label='core' WHERE app_label in ('accounting', 'missions', 'timesheet')"
+            )

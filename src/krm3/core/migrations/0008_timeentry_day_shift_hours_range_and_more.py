@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0007_resource_active'),
     ]
@@ -12,38 +11,56 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('day_shift_hours__range', (0, 16))), name='day_shift_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('day_shift_hours__range', (0, 16))), name='day_shift_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('sick_hours__range', (0, 24))), name='sick_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('sick_hours__range', (0, 24))), name='sick_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('holiday_hours__range', (0, 24))), name='holiday_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('holiday_hours__range', (0, 24))), name='holiday_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('leave_hours__range', (0, 24))), name='leave_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('leave_hours__range', (0, 24))), name='leave_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('special_leave_hours__range', (0, 24))), name='special_leave_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('special_leave_hours__range', (0, 24))), name='special_leave_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('night_shift_hours__range', (0, 8))), name='night_shift_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('night_shift_hours__range', (0, 8))), name='night_shift_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('on_call_hours__range', (0, 24))), name='on_call_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('on_call_hours__range', (0, 24))), name='on_call_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('travel_hours__range', (0, 24))), name='travel_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('travel_hours__range', (0, 24))), name='travel_hours_range'
+            ),
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('rest_hours__range', (0, 24))), name='rest_hours_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('rest_hours__range', (0, 24))), name='rest_hours_range'
+            ),
         ),
     ]

@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0001_initial'),
     ]
@@ -14,6 +13,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='timeentry',
             name='task',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='time_entries', to='core.task'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='time_entries',
+                to='core.task',
+            ),
         ),
     ]

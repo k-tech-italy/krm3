@@ -13,7 +13,7 @@ class RateImporter:
 
     @staticmethod
     def _build_table_class(currencies):
-        return type('tables', (tables.Table, ), {k: tables.Column() for k in currencies})
+        return type('tables', (tables.Table,), {k: tables.Column() for k in currencies})
 
     def __init__(self, request, from_session=False) -> None:
         self.request = request
@@ -27,7 +27,8 @@ class RateImporter:
     def store(self, in_memory_file: InMemoryUploadedFile):
         """Stores the InMemoryUploadedFile to a tempfile for later processing."""
         self.request.session[RateImporter.SESSION_KEY] = {
-            'original': in_memory_file.read().decode('utf-8'), 'parsed': None
+            'original': in_memory_file.read().decode('utf-8'),
+            'parsed': None,
         }
 
     def get_data(self, sorting=None):
@@ -38,11 +39,7 @@ class RateImporter:
         currencies = self._get_currencies()
 
         header = ['day'] + list(currencies)
-        data = [
-            [d['pk']] +
-            [d['fields']['rates'].get(f, '') for f in currencies]
-            for d in data
-        ]
+        data = [[d['pk']] + [d['fields']['rates'].get(f, '') for f in currencies] for d in data]
         sortkey = 0 if sorting is None else header.index(sorting)
         data = sorted(data, key=itemgetter(sortkey), reverse=True)
         return [header] + data
@@ -62,9 +59,9 @@ class RateImporter:
             else:
                 for i, currency in enumerate(data[0]):
                     if v := rate.rates.get(currency, None) is None:
-                        d[i+1] = f'++ {d[i+1]}'
-                    elif decimal.Decimal(d[i+1]) != v:
-                        d[i+1] = f'<> {d[i+1]}'
+                        d[i + 1] = f'++ {d[i + 1]}'
+                    elif decimal.Decimal(d[i + 1]) != v:
+                        d[i + 1] = f'<> {d[i + 1]}'
         return RateImporter._build_table_class(data[0])([dict(zip(data[0], z)) for z in data[1:]])
 
     def load(self):

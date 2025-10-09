@@ -9,6 +9,7 @@ from krm3.config.environ import env
 
 CURRENCY_CHOICES = env('CURRENCY_CHOICES')
 
+
 class XeFormMixin:
     net_value = forms.DecimalField(widget=HiddenInput)
     tax_value = forms.DecimalField(widget=HiddenInput)
@@ -17,6 +18,7 @@ class XeFormMixin:
         if 'owner' in form.changed_data:
             messages.add_message(request, messages.INFO, 'Car has been sold')
         super(XeFormMixin, self).save_model(request, obj, form, change)
+
 
 class RatesImportForm(forms.Form):
     """Accepts .zip missions dump to import."""

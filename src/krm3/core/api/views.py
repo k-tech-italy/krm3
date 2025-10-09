@@ -27,7 +27,7 @@ from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
 
 class InvalidateTokenSerializer(serializers.Serializer):
-    refresh = serializers.CharField(help_text="Refresh token to blacklist")
+    refresh = serializers.CharField(help_text='Refresh token to blacklist')
 
 
 class BlacklistRefreshAPIViewSet(GenericViewSet, GenericAPIView):
@@ -36,7 +36,7 @@ class BlacklistRefreshAPIViewSet(GenericViewSet, GenericAPIView):
     @extend_schema(
         request=InvalidateTokenSerializer,
         responses={200: 400},
-        description="Blacklist a refresh token",
+        description='Blacklist a refresh token',
     )
     @action(
         methods=['post'],
@@ -73,9 +73,7 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         return Response(status=status.HTTP_200_OK)
 
 
-class ResourceAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ResourceSerializer
     queryset = Resource.objects.all()
@@ -83,9 +81,7 @@ class ResourceAPIViewSet(
     @action(methods=['get'], detail=False)
     def active(self, request: Request) -> Response:
         user = cast('User', request.user)
-        if not user.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        ):
+        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return Response(status=status.HTTP_403_FORBIDDEN)
         active_resources = self.get_queryset().filter(active=True)
         serializer = ResourceSerializer(active_resources, many=True)
@@ -110,9 +106,7 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CountryAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class CountryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CountrySerializer
     queryset = Country.objects.all()
@@ -124,9 +118,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ProjectAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ProjectAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
@@ -138,9 +130,7 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ClientAPIViewSet(
-    mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet
-):
+class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
     queryset = Client.objects.all()
@@ -154,9 +144,7 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
-        if not user.has_any_perm(
-            'core.manage_any_timesheet', 'core.view_any_timesheet'
-        ):
+        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             resource = user.get_resource()
             if resource is None:
                 return ret.none()

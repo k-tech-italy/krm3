@@ -135,7 +135,7 @@ test:
 
 
 test-cov: ## run tests with coverage
-	@pytest tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \
+	@pytest -m "selenium or not selenium" tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \
         --cov-report=xml:`pwd`/~build/coverage.xml --cov-report=html --cov-report=term \
         --cov-config=tests/.coveragerc \
         --cov=krm3

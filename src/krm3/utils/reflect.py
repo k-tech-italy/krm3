@@ -1,4 +1,5 @@
 """Reflection utilities module."""
+
 import types
 from functools import lru_cache
 from inspect import isclass

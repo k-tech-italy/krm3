@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0005_alter_task_color'),
     ]
@@ -39,6 +38,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='timeentry',
             name='special_leave_reason',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='core.specialleavereason'),
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='core.specialleavereason'
+            ),
         ),
     ]

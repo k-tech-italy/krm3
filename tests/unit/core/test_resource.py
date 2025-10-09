@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 
 
 @pytest.fixture
-def contracts_list() -> list["Contract"]:
+def contracts_list() -> list['Contract']:
     c1: Contract = ContractFactory(period=(date(2020, 1, 1), date(2020, 7, 1)))
     c2: Contract = ContractFactory(resource=c1.resource, period=(date(2020, 9, 1), date(2021, 1, 1)))
     c3: Contract = ContractFactory(resource=c1.resource, period=(date(2021, 1, 1), None))

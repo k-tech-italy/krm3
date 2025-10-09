@@ -27,12 +27,14 @@ for k, v in _mapping.items():
     for vv in v:
         mapping[vv.lower()] = k
 
+
 def match_month(title: str) -> str:
     for k, v in mapping.items():
         if k in title.lower():
             return v
     else:
         return None
+
 
 def forward(apps, schema_editor):
     R: Reimbursement = apps.get_model('core', 'Reimbursement')
@@ -44,7 +46,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0002_alter_timeentry_task'),
     ]

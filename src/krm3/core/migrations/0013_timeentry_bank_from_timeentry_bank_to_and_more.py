@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0012_extraholiday_contract'),
     ]
@@ -26,6 +25,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='timeentry',
-            constraint=models.CheckConstraint(condition=models.Q(('bank_from__range', (0, 24))), name='bank_from_range'),
+            constraint=models.CheckConstraint(
+                condition=models.Q(('bank_from__range', (0, 24))), name='bank_from_range'
+            ),
         ),
     ]

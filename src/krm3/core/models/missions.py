@@ -135,9 +135,9 @@ class Mission(models.Model):
         ):
             city = mission.city.name.lower()
             return (
-                f"M_{mission.year}_{mission.number:03}_"
-                f"{mission.from_date:%d}{mission.from_date:%b}-{mission.to_date:%d}{mission.to_date:%b}"
-                f"_{mission.resource.last_name.replace(' ', '')}_{slugify(city)}"
+                f'M_{mission.year}_{mission.number:03}_'
+                f'{mission.from_date:%d}{mission.from_date:%b}-{mission.to_date:%d}{mission.to_date:%b}'
+                f'_{mission.resource.last_name.replace(" ", "")}_{slugify(city)}'
             )
         return ''
 
@@ -264,7 +264,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
         expense_id, mission_id, ts = ref.split('|')
         return self.get(mission_id=mission_id, id=expense_id, modified_ts=ts)
 
-    def filter_acl(self, user: "User"):
+    def filter_acl(self, user: 'User'):
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -316,7 +316,7 @@ class Expense(models.Model):
     def get_updated_millis(self) -> int:
         return int(self.modified_ts.timestamp() * 1000)
 
-    def is_accessible(self, user: "User") -> bool:
+    def is_accessible(self, user: 'User') -> bool:
         if user.is_superuser or user.get_all_permissions().intersection(
             {'core.manage_any_expense', 'core.view_any_expense'}
         ):
@@ -336,7 +336,7 @@ class Expense(models.Model):
         expense_id, mission_id, ts = ref.split('|')
         return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
-    def calculate_base(self, force_rates: bool=False, force_reset: bool=False, save: bool = True) -> Decimal:
+    def calculate_base(self, force_rates: bool = False, force_reset: bool = False, save: bool = True) -> Decimal:
         """(Re)calculate the base amount."""
         if force_reset or self.amount_base is None:
             # we need to recalculate it

@@ -10,7 +10,7 @@ from krm3.utils.dates import dt
 
 
 @pytest.mark.parametrize(
-    "dataset, expected",  # noqa: PT006
+    'dataset, expected',  # noqa: PT006
     [
         pytest.param([], 1, id='empty'),
         pytest.param([1], 2, id='one'),
@@ -20,19 +20,20 @@ from krm3.utils.dates import dt
         pytest.param([1, 3], 2, id='gap'),
         pytest.param([9, 2, 1], 3, id='big-gap'),
         pytest.param([4, '-2', 1], 3, id='cancelled-gap'),
-    ]
+    ],
 )
 def test_calculate_mission_number(dataset, expected):
     from testutils.factories import MissionFactory
 
     from krm3.core.models import Mission
+
     project = ProjectFactory()
     for m in dataset:
         MissionFactory(
             number=abs(int(m)),
             status=Mission.MissionStatus.SUBMITTED if isinstance(m, int) else Mission.MissionStatus.CANCELLED,
             year=2020,
-            project=project
+            project=project,
         )
     form = MissionAdminForm()
     form.cleaned_data = {'year': 2020}
@@ -50,7 +51,7 @@ def test_calculate_mission_number(dataset, expected):
         pytest.param(1, 'S', 1, False, id='all-submitted-diff-year'),
         pytest.param('D', 'D', None, True, id='all-draft'),
         pytest.param(None, 'D', None, True, id='only-draft'),
-    ]
+    ],
 )
 def test_auto_mission_number(existing_status, this_status, expected_number, same_year, city, project, resource):
     from testutils.factories import MissionFactory
@@ -81,24 +82,35 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
 
 
 @pytest.mark.parametrize(
-    "prev, succ, next_number, expected_number, reimbursed_expenses, err_msg",  # noqa: PT006
+    'prev, succ, next_number, expected_number, reimbursed_expenses, err_msg',  # noqa: PT006
     [
         pytest.param('D', 'S', 1, 1, None, None, id='first-submitted'),
         pytest.param('S', 'D', None, None, False, None, id='no-reimbursed-expenses'),
         pytest.param('S', 'D', 1, 1, False, None, id='draft-number-not-none'),
         pytest.param('S', 'C', 1, 1, False, None, id='cancelled-number-not-none'),
         pytest.param(
-            'S', 'D', None, None, True,
+            'S',
+            'D',
+            None,
+            None,
+            True,
             'You cannot set to DRAFT a mission with reimbursed exception',
-            id='draft-with-reimbursed-expenses'),
+            id='draft-with-reimbursed-expenses',
+        ),
         pytest.param(
-            'S', 'C', None, None, True,
+            'S',
+            'C',
+            None,
+            None,
+            True,
             'You cannot set to CANCELLED a mission with reimbursed exception',
-            id='cancelled-with-reimbursed-expenses'),
-    ]
+            id='cancelled-with-reimbursed-expenses',
+        ),
+    ],
 )
 def test_mission_status_transitions(
-        prev, succ, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user):
+    prev, succ, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user
+):
     from testutils.factories import ExpenseFactory, MissionFactory, ReimbursementFactory
 
     mission = MissionFactory(number=None if prev == 'D' else 1, status=map_mission_status(prev))
@@ -126,15 +138,18 @@ def test_mission_status_transitions(
 
 def test_mission_clean(project, resource, city) -> None:
     from krm3.core.models import Mission
-    form = MissionAdminForm(data={
-        'from_date': '2025-12-27',
-        'to_date': '2026-01-05',
-        'number': 11,
-        'status': Mission.MissionStatus.SUBMITTED,
-        'city': city.id,
-        'resource': resource.id,
-        'project': project.id
-    })
+
+    form = MissionAdminForm(
+        data={
+            'from_date': '2025-12-27',
+            'to_date': '2026-01-05',
+            'number': 11,
+            'status': Mission.MissionStatus.SUBMITTED,
+            'city': city.id,
+            'resource': resource.id,
+            'project': project.id,
+        }
+    )
 
     assert form.is_valid()
-    assert form.cleaned_data['title'] == f"M_2025_011_27Dec-05Jan_{resource.last_name}_{slugify(city.name)}"
+    assert form.cleaned_data['title'] == f'M_2025_011_27Dec-05Jan_{resource.last_name}_{slugify(city.name)}'

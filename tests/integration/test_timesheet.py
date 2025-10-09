@@ -461,7 +461,7 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        'Invalid time entry for 2025-07-04: Cannot both ' 'withdraw from and deposit to bank hours on the same day.'
+        'Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit to bank hours on the same day.'
     )
     actual_error = error_element.text.strip()
 
@@ -655,6 +655,7 @@ def test_sick_day_correct_protocol_number(browser: 'AppTestBrowser', regular_use
         '//textarea[contains(@id,"day-entry-protocol-number-input")][contains(text(), "001234985983400")]'
     )
 
+
 @freeze_time('2025-07-13')
 def test_day_entry_modal_accessible_on_timesheet_submitted(
     browser: 'AppTestBrowser', regular_user, freeze_frontend_time
@@ -664,18 +665,16 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     TaskFactory(resource=resource)
 
     TimesheetSubmissionFactory(
-        resource=resource,
-        closed=True,
-        period=(datetime.date(2025, 7, 1), datetime.date(2025, 7, 31))
+        resource=resource, closed=True, period=(datetime.date(2025, 7, 1), datetime.date(2025, 7, 31))
     )
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
-    browser.click_and_release(day_tile) # type: ignore
+    browser.click_and_release(day_tile)  # type: ignore
     calendar_input = browser.wait_for_element_visible('//*[contains(@value,"2025-07-04")]')
-    assert calendar_input.get_attribute('disabled') == 'true' # type: ignore
+    assert calendar_input.get_attribute('disabled') == 'true'  # type: ignore
     bank_hour_save = browser.wait_for_element_visible('//input[contains(@id, "save-bank-hour-input")]')
-    assert bank_hour_save.get_attribute('disabled') == 'true' # type: ignore
+    assert bank_hour_save.get_attribute('disabled') == 'true'  # type: ignore
     bank_hour_use = browser.wait_for_element_visible('//input[contains(@id, "from-bank-hour-input")]')
-    assert bank_hour_use.get_attribute('disabled') == 'true' # type: ignore
+    assert bank_hour_use.get_attribute('disabled') == 'true'  # type: ignore

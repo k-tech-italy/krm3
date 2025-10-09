@@ -78,11 +78,11 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
     def get_config(self, *args) -> dict[str, Any]:
         """Return a dictionary of configuration values."""
         config = {
-            'modules':
-                [   obj
-                    for obj in LABEL_TO_FLAG_URL_MAP
-                    if flag_enabled(obj['flag'], request=self.context['request']) # type: ignore
-                ]
+            'modules': [
+                obj
+                for obj in LABEL_TO_FLAG_URL_MAP
+                if flag_enabled(obj['flag'], request=self.context['request'])  # type: ignore
+            ]
         }
 
         default = env('DEFAULT_MODULE')

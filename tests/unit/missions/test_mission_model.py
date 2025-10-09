@@ -5,6 +5,7 @@ Any modification is made in the form.
 
 1. A DRAFT mission cannot have a number
 """
+
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
@@ -19,10 +20,11 @@ if TYPE_CHECKING:
 
 def map_mission_status(status: str) -> 'Mission.MissionStatus':
     from krm3.core.models import Mission
+
     return {
         'S': Mission.MissionStatus.SUBMITTED,
         'D': Mission.MissionStatus.DRAFT,
-        'C': Mission.MissionStatus.CANCELLED
+        'C': Mission.MissionStatus.CANCELLED,
     }[status]
 
 
@@ -35,14 +37,12 @@ def map_mission_status(status: str) -> 'Mission.MissionStatus':
         pytest.param(1, 'D', pytest.raises(ValidationError), id='draft-none'),
         pytest.param(None, 'S', pytest.raises(ValidationError), id='submitted'),
         pytest.param(1, 'S', does_not_raise(), id='submitted'),
-    ]
+    ],
 )
 def test_mission_status_transitions(number, status, expectation):
     from testutils.factories import MissionFactory
 
-    mission: Mission = MissionFactory.build(
-        number=number, status=map_mission_status(status)
-    )
+    mission: Mission = MissionFactory.build(number=number, status=map_mission_status(status))
 
     with expectation:
         mission.clean()
@@ -52,17 +52,21 @@ def test_mission_status_transitions(number, status, expectation):
 @pytest.mark.parametrize(
     'from_date, to_date, expectation',  # noqa: PT007
     (
-            pytest.param(dt('2023-11-03'), dt('2023-11-02'),
-                         pytest.raises(ValidationError, match='to_date must be > from_date'),
-                         id='prev-day'),
-            pytest.param(dt('2023-12-01'), dt('2023-11-02'),
-                         pytest.raises(ValidationError, match='to_date must be > from_date'),
-                         id='prev-month'),
-            pytest.param(dt('2023-11-02'), dt('2023-11-02'), does_not_raise(),
-                         id='same-day'),
-            pytest.param(dt('2023-10-20'), dt('2023-11-02'), does_not_raise(),
-                         id='following-month'),
-    )
+        pytest.param(
+            dt('2023-11-03'),
+            dt('2023-11-02'),
+            pytest.raises(ValidationError, match='to_date must be > from_date'),
+            id='prev-day',
+        ),
+        pytest.param(
+            dt('2023-12-01'),
+            dt('2023-11-02'),
+            pytest.raises(ValidationError, match='to_date must be > from_date'),
+            id='prev-month',
+        ),
+        pytest.param(dt('2023-11-02'), dt('2023-11-02'), does_not_raise(), id='same-day'),
+        pytest.param(dt('2023-10-20'), dt('2023-11-02'), does_not_raise(), id='following-month'),
+    ),
 )
 def test_missions_validation(from_date, to_date, expectation):
     from testutils.factories import MissionFactory
@@ -70,8 +74,7 @@ def test_missions_validation(from_date, to_date, expectation):
     from krm3.core.models import Mission
 
     mission: Mission = MissionFactory.build(
-        number=1, status=Mission.MissionStatus.SUBMITTED,
-        from_date=from_date, to_date=to_date
+        number=1, status=Mission.MissionStatus.SUBMITTED, from_date=from_date, to_date=to_date
     )
 
     with expectation:
@@ -87,16 +90,14 @@ def test_calculate_number():
     assert Mission.calculate_number(None, 2023) == 1
 
     mission: Mission = MissionFactory(
-        number=2, status=Mission.MissionStatus.SUBMITTED,
-        from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+        number=2, status=Mission.MissionStatus.SUBMITTED, from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
     )
 
     assert Mission.calculate_number(None, 2023) == 1
     assert Mission.calculate_number(mission.id, 2023) == 1
 
     mission2 = MissionFactory(
-        number=1, status=Mission.MissionStatus.SUBMITTED,
-        from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+        number=1, status=Mission.MissionStatus.SUBMITTED, from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
     )
 
     assert Mission.calculate_number(None, 2023) == 3
