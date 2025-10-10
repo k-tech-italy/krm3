@@ -147,7 +147,6 @@ jobs:
       contents: read
       packages: write
     outputs:
-      #version: ${{ needs.bump-version.outputs.version }}
       image_name: ${{ steps.build.outputs.image_name }}
     steps:
     - name: Checkout code
