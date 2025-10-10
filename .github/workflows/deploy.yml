@@ -24,14 +24,13 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # :one: Checkout completo del repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # serve per tag e merge
+          token: ${{ secrets.GH_PAT }}
       # :two: Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
