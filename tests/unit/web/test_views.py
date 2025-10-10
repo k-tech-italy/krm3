@@ -311,7 +311,7 @@ def test_report_creation(admin_client):
     assert sheet[f'AF{first_resource_row + 1}'].value == 'Mon\n30'
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
-    day_shift_data_row = r1_row + 2
+    day_shift_data_row = r1_row + 3
     assert sheet[f'L{day_shift_data_row}'].value == 8
     assert sheet[f'Q{day_shift_data_row}'].value is None
 
