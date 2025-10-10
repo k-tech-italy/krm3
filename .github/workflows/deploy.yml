@@ -55,16 +55,23 @@ jobs:
           git push origin master
           git push origin --tags
       # :six: Sync develop con master
-      - name: Sync develop branch with master
+      - name: Create PR to sync develop with master
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          git fetch origin develop
-          git checkout develop
-          # merge with master if any error exit the pipeline flow
-          if ! git merge origin/master --no-edit; then
-            echo ":x: Merge conflict detected! Manual intervention required."
-            exit 1
+          echo $GH_TOKEN | gh auth login --with-token
+          pr_url=$(gh pr create \
+            --base develop \
+            --head master \
+            --title "Sync develop with master (auto)" \
+            --body "Automatic sync after version bump" \
+            --assignee "@me" \
+            --label "auto-sync" \
+            --fill \
+            --draft=false || true)
+          if [ -n "$pr_url" ]; then
+            gh pr merge "$pr_url" --merge --auto --queue || echo "PR already in merge queue"
           fi
-          git push origin develop
 
 
   build-frontend:
