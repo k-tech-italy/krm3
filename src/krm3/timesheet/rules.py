@@ -24,6 +24,7 @@ timeentry_counters = {
 
 class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
+        self.lang: str = 'IT'
         super().__init__(day, **kwargs)
         self.resource = None
         self.min_working_hours: float = 0
@@ -45,6 +46,21 @@ class Krm3Day(KrmDay):
         self.has_data = False
         self.nwd = False  # Non-working day
         self.submitted = False
+
+    @property
+    def day_of_week_short_i18n(self) -> str:
+        ret = self.date.strftime('%a')
+        if self.lang == 'IT':  # TODO:
+            ret = {
+                'Mon': 'Lun',
+                'Tue': 'Mar',
+                'Wed': 'Mer',
+                'Thu': 'Gio',
+                'Fri': 'Ven',
+                'Sat': 'Sab',
+                'Sun': 'Dom',
+            }.get(ret, ret)
+        return ret
 
     def __repr__(self) -> str:
         return self.date.strftime('K+%Y-%m-%d')

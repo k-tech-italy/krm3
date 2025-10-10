@@ -326,7 +326,7 @@ class TimesheetReport:
                 f'Giorni {working_days}',
                 'Tot HH',
                 *[
-                    f'{day.day_of_week_short}\n{day.day}'
+                    f'{day.day_of_week_short_i18n}\n{day.day}'
                     for day in resources_report_days
                 ],
             ]

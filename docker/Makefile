@@ -82,29 +82,10 @@ save:
 	@echo "Saving image ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz"
 	@docker save ${DOCKER_IMAGE_FULLNAME} | gzip > ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz
 
-release:  registrylogin  ## For now manual release until we fix nexus
-#	@scp -o ProxyJump=kjump ../dist/image-${CONTAINER_NAME}-${VERSION}.tgz khetz:/tmp
-#	@echo "Now you can run on  the server:"
-#	@echo "  docker load -i /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz && rm /tmp/image-${CONTAINER_NAME}-${VERSION}.tgz"
+release:  registrylogin  ## For manual release
 	@docker push ${DOCKER_IMAGE_FULLNAME}
 	@docker tag ${DOCKER_IMAGE_FULLNAME} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
 	@docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
-
-
-
-#release: registrylogin  ## Release the image
-#	# docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}/base:${BASE}
-#	docker push ${DOCKER_IMAGE_FULLNAME}
-#	docker images | grep ${DOCKER_IMAGE}
-#
-#nexus-release:
-#	docker tag ${DOCKER_IMAGE_FULLNAME} docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
-#	docker push docker.singlewave.co.uk/${DOCKER_IMAGE}:${VERSION}
-
-release-all: release nexus-release
-
-full-release:  build-base build release  ## build all and release
-	@echo "Done"
 
 .certs:
 	@if [ ! -f "certs/server.crt" ]; then \

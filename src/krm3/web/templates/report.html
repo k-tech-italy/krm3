@@ -52,7 +52,7 @@
                         <td>Tot HH</td>
                         {% for cell in report_block.rows.0.cells|slice:"1:" %}
                             <td class="{% if not cell.value.nwd %}workday{% endif %} {% if not cell.value.submitted %}pending{% endif %}">
-                                <p>{{ cell.value.day_of_week_short }}</p>
+                                <p>{{ cell.value.day_of_week_short_i18n }}</p>
                                 <p>{{ cell.value.date.day }}</p>
                             </td>
                         {% endfor %}
