@@ -1,3 +1,9 @@
+## 1.8.1 (2025-10-10)
+
+### Fix
+
+- **Report**: #363 implemented Italian i18n on the main report
+
 ## 1.8.0 (2025-10-10)
 
 ### Feat
