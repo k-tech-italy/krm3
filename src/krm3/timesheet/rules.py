@@ -3,6 +3,7 @@ import typing
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
 
+
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, TimeEntry
 
@@ -52,13 +53,20 @@ class Krm3Day(KrmDay):
         """Elaborates the krm3day data from the time_entries list."""
         self.time_entries = time_entries
         self.has_data = len(time_entries) > 0
-        for k, v in TimesheetRule.calculate(not self.nwd, self.min_working_hours, time_entries).items():
+        meal_voucher_threshold = None
+        if self.contract and (thresholds := self.contract.meal_voucher):
+            meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
+        for k, v in TimesheetRule.calculate(
+            not self.nwd, self.min_working_hours, meal_voucher_threshold, time_entries
+        ).items():
             setattr(self, f'data_{k}', v)
 
 
 class TimesheetRule:
     @staticmethod
-    def calculate(work_day: bool, due_hours: float, time_entries: list['TimeEntry']) -> dict:  # noqa: C901,PLR0912
+    def calculate(  # noqa: C901,PLR0912
+        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: list['TimeEntry']
+    ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 
         NB: time entries must be of same day.
@@ -113,7 +121,7 @@ class TimesheetRule:
                     elif key == 'special_leave_hours':
                         base['special_leave_hours'] = safe_dec(val)
                     else:
-                        base[key] = safe_dec(base[key]) + val
+                        base[key] = safe_dec(base[key]) + safe_dec(val)
 
         if base['protocol_number'] and not base['sick']:
             base['protocol_number'] = None
@@ -129,16 +137,11 @@ class TimesheetRule:
         special_hours = sum(safe_dec(base[activity]) for activity in special_activities) + safe_dec(
             base['special_leave_hours']
         )
-        if (
-            special_hours == 0
-            and (
-                overtime := safe_dec(base['day_shift'])
-                + safe_dec(base['night_shift'])
-                + safe_dec(base['travel'])
-                - safe_dec(base['bank'])
-                - due_hours
-            )
-            > 0
-        ):
+
+        worked_hours = sum(safe_dec(base[k]) for k in ['day_shift', 'night_shift', 'travel']) - safe_dec(base['bank'])
+        if special_hours == 0 and (overtime := worked_hours - due_hours) > 0:
             base['overtime'] = overtime
+        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours:
+            base['meal_voucher'] = 1
+
         return base

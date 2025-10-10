@@ -8,3 +8,4 @@ thin_border = Border(
     left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin')
 )
 nwd_fill = PatternFill(start_color='979797', end_color='979797', fill_type='solid')
+light_grey_fill = PatternFill(start_color='dddddd', end_color='dddddd', fill_type='solid')

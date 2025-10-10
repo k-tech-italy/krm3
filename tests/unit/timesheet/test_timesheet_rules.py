@@ -224,4 +224,4 @@ def test_timesheet_rule_calculate(work_day, due_hours, time_entries, expected):
             else:
                 time_entry['bank_from'] = bank
         tes.append(TimeEntry.objects.create(date=_dt('20251006'), resource=resource, **te_kwargs))
-    assert TimesheetRule.calculate(work_day, due_hours, tes) == expected
+    assert TimesheetRule.calculate(work_day, due_hours, None, tes) == expected

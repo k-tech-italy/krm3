@@ -16,7 +16,8 @@ from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmCalendar, KrmDay, get_country_holidays
 from krm3.utils.tools import format_data
 from krm3.utils.numbers import normal, safe_dec
-from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
+from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border, \
+    light_grey_fill
 
 
 class StreamWriter(typing.Protocol):
@@ -118,6 +119,10 @@ class ReportCell(UiElement):
         super().__init__(**kwargs)
         self.value = value
 
+    @property
+    def negative(self) -> bool:
+        """Return True if the cell value is negative."""
+        return normal(self.value).startswith('-')
 
 class ResourceCell(ReportCell):
     def render(self) -> str:
@@ -234,7 +239,7 @@ class TimesheetReport:
             ret[res_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
 
             for kd in ret[res_id]:
-                kd: Krm3Day
+                kd.resource = resource
                 for c in contracts:
                     if c.falls_in(kd):
                         kd.contract = c
@@ -284,7 +289,7 @@ class TimesheetReport:
                 result.setdefault(kd, []).extend(eh.country_codes)
         return result
 
-    def write_excel(self, stream: StreamWriter, title: str) -> None:
+    def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = title
@@ -321,34 +326,45 @@ class TimesheetReport:
                 f'Giorni {working_days}',
                 'Tot HH',
                 *[
-                    f'{"**" if not day.submitted else ""}{day.day_of_week_short}\n{day.day}'
-                    f'{"**" if not day.submitted else ""}'
+                    f'{day.day_of_week_short}\n{day.day}'
                     for day in resources_report_days
                 ],
             ]
             for col, giorno in enumerate(giorni):
                 cell = ws.cell(row=current_row, column=col + 1, value=giorno)
                 cell.alignment = header_alignment
-                if col > 1 and (
-                    resources_report_days[col - 2].is_holiday() or resources_report_days[col - 2].min_working_hours == 0
-                ):
+                cell.fill = header_fill
+                if col > 2 and resources_report_days[col-2].nwd:
                     cell.fill = nwd_fill
 
             current_row += 1
 
             if any(rkd.has_data for rkd in resources_report_days):
                 for lnum, (key, label) in enumerate(timeentry_key_mapping.items()):
-                    rownum = current_row + lnum
+                    if key != 'bank':
+                        rownum = current_row + lnum
 
-                    ws.cell(row=rownum, column=1, value=label)
-                    tot = None
+                        cell = ws.cell(row=rownum, column=1, value=label)
+                        if lnum % 2:
+                            cell.fill = light_grey_fill
+                        tot = None
 
-                    for dd_num, rkd in enumerate(resources_report_days, 3):
-                        value = getattr(rkd, f'data_{key}')
-                        ws.cell(row=rownum, column=dd_num, value=value).alignment = centered
-                        if value is not None:
-                            tot = safe_dec(tot) + safe_dec(value)
-                    ws.cell(row=rownum, column=2, value='' if tot is None else tot).alignment = centered
+                        for dd_num, rkd in enumerate(resources_report_days, 3):
+                            value = getattr(rkd, f'data_{key}')
+                            cell = ws.cell(row=rownum, column=dd_num, value=value)
+                            cell.alignment = centered
+                            if lnum % 2:
+                                cell.fill = light_grey_fill
+                            if rkd.nwd:
+                                cell.fill = nwd_fill
+                            if value is not None:
+                                tot = safe_dec(tot) + safe_dec(value)
+                        cell = ws.cell(row=rownum, column=2, value='' if tot is None else tot)
+                        cell.alignment = centered
+                        if lnum % 2:
+                            cell.fill = light_grey_fill
+                    else:
+                        current_row -= 1
                 current_row = rownum
 
             else:
