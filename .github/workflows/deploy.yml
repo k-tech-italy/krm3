@@ -19,6 +19,7 @@ permissions:
   attestations: write
   actions: write
   packages: write
+  contents: write
 
 jobs:
   bump:
