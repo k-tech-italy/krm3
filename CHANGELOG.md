@@ -1,3 +1,28 @@
+## 1.8.0 (2025-10-10)
+
+### Feat
+
+- **deploy.yml**: Enable automatic bump upon deploy
+- **Timesheet-reports**: Refactored and refreshed FE
+- **Timesheet-reports**: Big refactoring of timesheet reports
+
+### Fix
+
+- **Pipeline-deploy-bump**: Fix Pipeline deploy bump
+- **deploy-bump**: Fixing error in parsing new_version in deployment script
+- **deployment-pipeline**: Trying to fix deploy pipeline
+- **Tests**: Fixed tests/unit/web/test_views.py
+- **Timesheet-Report**: Refactored the Excel generation of the "Payslip Report" /be/report/
+- **admin.py**: set start_date mandatory for project and provide initial value in ProjectForm (#127)
+- **Contract**: Fixed regression non creating default contracts
+- **ContractForm-period.lower**: Issue when add a new contract
+
+## 1.3.1 (2025-06-10)
+
+## 1.3.0 (2025-06-10)
+
+## 1.2.6 (2025-05-21)
+
 ## 1.7.0 (2025-10-08)
 
 ### Feat
