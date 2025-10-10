@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import typing
 from django.contrib.auth import get_user_model
 from decimal import Decimal as D  # noqa: N817
@@ -6,8 +7,11 @@ from decimal import Decimal as D  # noqa: N817
 from dateutil.relativedelta import relativedelta
 
 from krm3.core.models import TimeEntry, Resource, Task
+from krm3.timesheet.report import ReportBlock, ReportRow, ReportCell
+from krm3.timesheet.rules import Krm3Day
 
 from krm3.utils.dates import KrmDay, KrmCalendar
+from krm3.utils.numbers import normal
 
 from krm3.utils.tools import format_data
 
@@ -126,6 +130,88 @@ def _calculate_num_giorni_for_body(results: dict) -> None:
             if isinstance(data, list) and data[1] is not None:
                 data[0] = data[1] / 8
 
+class TimesheetTaskReport:
+    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User) -> None:
+        if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            self.resources =  Resource.objects.all()
+        else:
+            self.resources = [user.get_resource()]
+        resource_ids = {r.id for r in self.resources}
+
+        self.from_date = from_date
+        self.to_date = to_date
+        self.user = user
+
+        self.time_entries: list[TimeEntry] = TimeEntry.objects.filter(
+            date__gte=self.from_date, date__lte=self.to_date, resource_id__in=resource_ids
+        )
+
+        self.tasks: dict[int, list[Task]] = {}
+        for task in Task.objects.filter(
+            resource_id__in=resource_ids,
+            start_date__lte=self.to_date
+        ).filter(Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)):
+            self.tasks.setdefault(task.resource_id,[]).append(task)
+
+        resource_ids_with_tasks = {te.resource_id for te in self.time_entries if te.task_id is not None}
+        self.resources = [r for r in self.resources if r.id in resource_ids_with_tasks]
+
+        self.calendars: dict[int, list[Krm3Day]] = self._get_calendars()
+
+    def _get_calendars(self) -> dict[int, list[Krm3Day]]:
+        ret: dict[int, list[Krm3Day]] = {}
+        for resource in self.resources:
+            res_id = resource.id
+            resource_tasks = self.tasks.get(res_id, [])
+
+            ret[res_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
+            work_days_on_task = {}
+
+            for kd in ret[res_id]:
+                kd.resource = resource
+                day_entries = [te for te in self.time_entries if te.resource_id == res_id and te.date == kd.date]
+                kd.apply(day_entries)
+
+                for task in resource_tasks:
+                    task_hours = sum(
+                        te.day_shift_hours + te.night_shift_hours + te.travel_hours
+                        for te in day_entries if te.task_id == task.id
+                    )
+        return ret
+
+    def report_html(self) -> list[ReportBlock]:
+        blocks=[]
+        for resource in self.resources:
+            blocks.append(block := ReportBlock(resource))
+            row = block.add_row(ReportRow())
+            resources_report_days = self.calendars[resource.id]
+
+            row.add_cell(sum([0 if kd.nwd else 1 for kd in resources_report_days]))
+            for kd in resources_report_days:
+                row.add_cell(kd)
+
+            if any(rkd.has_data for rkd in resources_report_days):
+                resource_tasks = self.tasks.get(resource.id, [])
+                for task in resource_tasks:
+                    row = block.add_row(ReportRow())
+                    row.add_cell(task.title)
+                    row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
+                    for rkd in resources_report_days:
+                        value = getattr(rkd, f'task_{task.id}_hours', None)
+                        row.add_cell(normal(value) if value else '').nwd = rkd.nwd
+                        cell_tot_hh.value += value or decimal.Decimal(0)
+                    cell_tot_hh.value = normal(cell_tot_hh.value)
+
+                for key, label in timeentry_key_mapping.items():
+                    row = block.add_row(ReportRow())
+                    row.add_cell(label)
+                    row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
+                    for rkd in resources_report_days:
+                        value = getattr(rkd, f'data_{key}', None)
+                        row.add_cell(normal(value) if value else '').nwd = rkd.nwd
+                        cell_tot_hh.value += value or decimal.Decimal(0)
+                    cell_tot_hh.value = normal(cell_tot_hh.value)
+        return blocks
 
 def timesheet_task_report_raw_data(
     from_date: datetime.date, to_date: datetime.date, resource: Resource | None = None
