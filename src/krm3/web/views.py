@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
 from krm3.timesheet.report import TimesheetReport
-from krm3.timesheet.task_report import task_report_data
+from krm3.timesheet.task_report import task_report_data, TimesheetTaskReport
 from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, centered, nwd_fill
 
 if typing.TYPE_CHECKING:
@@ -206,13 +206,42 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         return ctx
 
 
-class TaskReportView(HomeView):
+# class TaskReportView(HomeView):
+#     template_name = 'task_report.html'
+#
+#     def get_context_data(self, **kwargs) -> dict[str, Any]:
+#         context = super().get_context_data(**kwargs)
+#         current_month = self.request.GET.get('month')
+#         return context | task_report_data(current_month, user=self.request.user)
+
+class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
     template_name = 'task_report.html'
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         current_month = self.request.GET.get('month')
-        return context | task_report_data(current_month, user=self.request.user)
+
+        if current_month is None:
+            start_of_month = datetime.date.today().replace(day=1)
+        else:
+            start_of_month = datetime.datetime.strptime(current_month, '%Y%m').date()
+
+        prev_month = start_of_month - relativedelta(months=1)
+        next_month = start_of_month + relativedelta(months=1)
+        end_of_month = start_of_month + relativedelta(months=1, days=-1)
+
+        report = TimesheetTaskReport(start_of_month, end_of_month, self.request.user)
+
+        context.update({
+            'prev_month': prev_month.strftime('%Y%m'),
+            'current_month': start_of_month.strftime('%Y%m'),
+            'next_month': next_month.strftime('%Y%m'),
+            'title': start_of_month.strftime('%B %Y'),
+            'report_blocks': report.report_html(),
+        })
+
+        return context
 
 
 class ReleasesView(HomeView):
