@@ -1,3 +1,9 @@
+## 1.8.3 (2025-10-10)
+
+### Fix
+
+- **deploy.yaml**: cz commit to trigger auto bump
+
 ## 1.8.2 (2025-10-10)
 
 ### Fix
