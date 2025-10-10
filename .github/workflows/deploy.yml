@@ -47,7 +47,7 @@ jobs:
           git config --global user.name "K-Tech Bot"
           cz bump --yes
           # Read the new version from __init__.py
-          new_version=$(grep -Po '__version__\s*=\s*"\K[^"]+' src/krm3/__init__.py)
+          new_version=$(grep -Po "__version__\s*=\s*'\K[^']+" src/krm3/__init__.py)
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
       # :five: Push su master + tag
       - name: Push bump commit and tags to master
