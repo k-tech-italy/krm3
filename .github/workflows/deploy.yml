@@ -23,6 +23,8 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # :one: Checkout completo del repository
       - name: Checkout repository
@@ -40,8 +42,6 @@ jobs:
       # :four: Bump versione
       - name: Bump version with Commitizen
         id: bump
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.email "noreply@k-tech.it"
           git config --global user.name "K-Tech Bot"
@@ -68,6 +68,7 @@ jobs:
 
 
   build-frontend:
+    needs: [bump]
     runs-on: ubuntu-latest
     permissions:
       contents: read
