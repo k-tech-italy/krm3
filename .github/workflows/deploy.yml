@@ -43,6 +43,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global user.email "noreply@k-tech.it"
+          git config --global user.name "K-Tech Bot"
           cz bump --yes
           # Read the new version from __init__.py
           new_version=$(grep -Po '__version__\s*=\s*"\K[^"]+' src/krm3/__init__.py)
