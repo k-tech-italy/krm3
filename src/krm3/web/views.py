@@ -18,13 +18,15 @@ from django.views.generic import TemplateView
 
 from krm3.core.models.projects import Project
 from krm3.timesheet.availability_report import availability_report_data
-from krm3.timesheet.report import TimesheetReport
+from krm3.timesheet.report.payslip import TimesheetReportOnline
+from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.task_report import task_report_data
-from krm3.web.report_styles import header_font, header_fill, header_alignment, thin_border, centered, nwd_fill
+from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import Contract
     from openpyxl.worksheet.worksheet import Worksheet
+
+    from krm3.core.models import Contract
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ class ReportMixin:
         context['logout_url'] = reverse('logout')
 
         return context
+
 
 class HomeView(LoginRequiredMixin, TemplateView):
     login_url = '/admin/login/'
@@ -92,6 +95,7 @@ def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current
             current_row += 1
 
     return current_row
+
 
 def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpResponse:
     wb = openpyxl.Workbook()
@@ -165,17 +169,17 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'report.html'
 
-    def get(self, request: HttpRequest, *args, month: str = None, export : bool = False, **kwargs) -> HttpResponse:
+    def get(self, request: HttpRequest, *args, month: str = None, export: bool = False, **kwargs) -> HttpResponse:
         self.month = month
         if export:
             ctx = self._get_base_context()
-            title = ctx["title"]
+            title = ctx['title']
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             filename = f'report_{slugify(title)}.xlsx'
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            report_blocks = TimesheetReport(ctx['start'], ctx['end'], self.request.user)
+            report = TimesheetReportExport(ctx['start'], ctx['end'], self.request.user)
 
-            report_blocks.write_excel(response, f'Report risorse {title}')
+            report.write_excel(response, f'Report risorse {title}')
             return response
         return super().get(request, *args, **kwargs)
 
@@ -194,14 +198,28 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'current_month': start_of_month.strftime('%Y%m'),
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
-            'title': start_of_month.strftime('%B %Y')
+            'title': {
+                'January': 'Gennaio',
+                'February': 'Febbraio',
+                'March': 'Marzo',
+                'April': 'Aprile',
+                'May': 'Maggio',
+                'June': 'Giugno',
+                'July': 'Luglio',
+                'August': 'Agosto',
+                'September': 'Settembre',
+                'October': 'Ottobre',
+                'November': 'Novembre',
+                'December': 'Dicembre',
+            }.get(start_of_month.strftime('%B'))
+            + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
         ctx.update(self._get_base_context())
 
-        report_blocks = TimesheetReport(ctx['start'], ctx['end'], self.request.user)
+        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], self.request.user)
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 

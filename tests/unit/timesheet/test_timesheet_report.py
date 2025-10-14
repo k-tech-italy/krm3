@@ -8,6 +8,8 @@ from decimal import Decimal as D  # noqa: N817
 
 import pytest
 from django.contrib.auth.models import Permission
+
+from krm3.timesheet.report.payslip import online_timeentry_key_mapping
 from testutils import yaml as test_yaml
 from testutils.factories import SpecialLeaveReasonFactory, TaskFactory, TimeEntryFactory, UserFactory
 
@@ -16,7 +18,6 @@ from krm3.timesheet.report import (
     calculate_overtime,
     get_days_submission,
     get_submitted_dates,
-    timeentry_key_mapping,
     timesheet_report_data,
     timesheet_report_raw_data,
 )
@@ -169,11 +170,11 @@ class TestTimesheetReport:
         expected = {k: [D(f'{float(v):02}')] for k, v in expected.items()}
         result_base = {k: [D('0.00')] for k in _overtime_results if not k.startswith('special')}
         data = result_base | data
-        expected_dict = {timeentry_key_mapping.get(k, k): v for k, v in result_base.items()} | expected
+        expected_dict = {online_timeentry_key_mapping.get(k, k): v for k, v in result_base.items()} | expected
 
         data = {'<resource>': data}
         calculate_overtime(data)
-        result = {timeentry_key_mapping.get(k, k): v for k, v in data['<resource>'].items()}
+        result = {online_timeentry_key_mapping.get(k, k): v for k, v in data['<resource>'].items()}
         assert result == expected_dict
 
     def test_report_raw_data(self, report_resource):
