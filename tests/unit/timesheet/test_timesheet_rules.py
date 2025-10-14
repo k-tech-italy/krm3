@@ -1,253 +1,197 @@
+from collections import namedtuple
 from decimal import Decimal as D  # noqa: N817
 
 import pytest
-from testutils.date_utils import _dt
-from testutils.factories import ResourceFactory, SpecialLeaveReasonFactory, TaskFactory
+import tablib
+from testutils.factories import SpecialLeaveReasonFactory
 
-from krm3.core.models import TimeEntry
 from krm3.timesheet.rules import TimesheetRule
+from krm3.utils.dates import dt
+from krm3.utils.numbers import safe_dec
 
-base_te = {
-    'day-entry': False,
-    'bank': D(0),
-    'day_shift': D(0),
-    'night_shift': D(0),
-    'on_call': D(0),
-    'travel': D(0),
-    'holiday': D(0),
-    'leave': D(0),
-    'rest': D(0),
-    'sick': D(0),
-    'special_leave_reason': None,
-    'special_leave_hours': D(0),
-    'protocol_number': None,
-}
+# Mock TimeEntry model
 
-base_results = {
-    'bank': None,
-    'day_shift': None,
-    'night_shift': None,
-    'on_call': None,
-    'travel': None,
-    'holiday': None,
-    'leave': None,
-    'rest': None,
-    'sick': None,
-    'special_leave_reason': None,
-    'special_leave_hours': None,
-    'special_leave_title': None,
-    'overtime': None,
-    'meal_voucher': None,
-    'regular_hours': None,
-    'protocol_number': None,
-    'fulfilled': True,
+out_fields = {
+    'Ore Ordinarie': None,
+    'Ore Notturne': 'night_hours',
+    'Ore Straordinarie': 'overtime',
+    'Reperibilità': 'on_call_hours',
+    'Riposo': 'rest_hours',
+    'Ferie': 'holiday_hours',
+    'Permessi': 'leave_hours',
+    'Permessi Speciali reason ({})': None,
+    'Malattie n. prot 546456456': None,
+    'Buoni pasto': 'meal_voucher',
 }
 
 
-@pytest.mark.parametrize(
-    'work_day, due_hours, meal_v_schedule, time_entries, expected',
+out_fields = {
+    'bank': 'bank',
+    'day_shift': 'day_shift_hours',
+    'regular_hours': 'regular_hours',
+    'night_shift': 'night_shift_hours',
+    'on_call': 'on_call_hours',
+    'holiday': 'holiday_hours',
+    'leave': 'leave_hours',
+    'rest': 'rest_hours',
+    'sick': 'sick_hours',
+    'travel': 'travel_hours',
+    'special_leave_reason': 'special_leave_reason',
+    'special_leave_hours': 'special_leave_hours',
+    'special_leave_reason_id': 'special_leave_reason_id',
+    'overtime': 'overtime',
+    'meal_voucher': 'meal_voucher',
+    'fulfilled': 'fulfilled',
+}
+
+
+TimeEntryMock = namedtuple(
+    'TimeEntryMock',
     [
-        pytest.param(True, 0, {}, [], base_results, id='0due-empty-wd'),
-        pytest.param(False, 0, {}, [], base_results, id='0due-empty-nwd'),
-        pytest.param(True, 8, {}, [], base_results | {'fulfilled': False}, id='8due-empty-wd'),
-        pytest.param(False, 8, {}, [], base_results | {'fulfilled': False}, id='8due-empty-nwd'),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 5, 'night_shift': 3}],
-            base_results | {'day_shift': 5, 'night_shift': 3, 'regular_hours': 8},
-            id='8due-normal-wd',
-        ),
-        pytest.param(
-            False,
-            0,
-            {},
-            [{'day_shift': 5, 'night_shift': 3}],
-            base_results | {'day_shift': 5, 'night_shift': 3, 'overtime': 8},
-            id='0due-normal-nwd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 4, 'night_shift': 2}, {'night_shift': 3}],
-            base_results | {'day_shift': 4, 'night_shift': 5, 'overtime': 1, 'regular_hours': 8},
-            id='8due-2tasks-wd-overtime',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'sick': 8, 'day-entry': True}],
-            base_results | {'sick': 8},
-            id='8due-sick-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'sick': 8, 'protocol_number': '1234', 'day-entry': True}],
-            base_results | {'sick': 8, 'protocol_number': '1234'},
-            id='8due-8sick-with-protocol_number-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'holiday': 8, 'day-entry': True}],
-            base_results | {'holiday': 8},
-            id='8due-8holiday',
-        ),
-        pytest.param(
-            False,
-            0,
-            {},
-            [{'sick': 8, 'protocol_number': '101', 'day-entry': True}],
-            base_results | {'sick': 8, 'protocol_number': '101'},
-            id='8due-8sick-with-protocol_number-nwd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'leave': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'leave': 4, 'day_shift': 4, 'regular_hours': 4},
-            id='8due-4leave-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'rest': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'rest': 4, 'day_shift': 4, 'regular_hours': 4},
-            id='8due-4rest-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'on_call': 4}],
-            base_results | {'on_call': 4, 'fulfilled': False},
-            id='8due-4on_call-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'travel': 10}],
-            base_results | {'travel': 10, 'overtime': 2, 'regular_hours': 8},
-            id='8due-10travel-with-overtime',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'travel': 4}, {'day_shift': 4}, {'night_shift': 2}, {'on_call': 2}],
-            base_results | {'travel': 4, 'day_shift': 4, 'night_shift': 2, 'on_call': 2, 'overtime': 2,
-                            'regular_hours': 8},
-            id='8due-4travel-8-day-night_shift-2on_call-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [
-                {'special_leave_reason': 'study', 'special_leave_hours': 6, 'day-entry': True},
-                {'leave': 3, 'day-entry': True},
-            ],
-            base_results | {'leave': 3, 'special_leave_reason': 'study', 'special_leave_hours': 6},
-            id='8due-special_leave-with-leave-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'special_leave_reason': 'Law 104', 'special_leave_hours': 6, 'day-entry': True}],
-            base_results | {'special_leave_reason': 'Law 104', 'special_leave_hours': 6},
-            id='8due-special_leave-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'bank_from': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'bank': -4, 'day_shift': 4, 'regular_hours': 8},
-            id='8due-4bank_from-4-day_shift-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 10}, {'bank_to': 2, 'day-entry': True}],
-            base_results | {'bank': 2, 'day_shift': 10, 'regular_hours': 8},
-            id='8due-10-day_shit-2bank_to-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 10}, {'bank_to': 1, 'day-entry': True}],
-            base_results | {'bank': 1, 'day_shift': 10, 'overtime': 1, 'regular_hours': 8},
-            id='8due-1bank_to-10day_shift-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 2}, {'bank_from': 2, 'day-entry': True}, {'leave': 4, 'day-entry': True}],
-            base_results | {'bank': -2, 'leave': 4, 'day_shift': 2, 'regular_hours': 4},
-            id='8due-4leave-2bank_from-2normal-wd',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'day_shift': 4.5}, {'night_shift': 4.25}],
-            base_results | {'day_shift': 4.5, 'night_shift': 4.25, 'overtime': 0.75, 'regular_hours': 8},
-            id='8due-fractional_hours',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'sick': 4, 'day-entry': True}, {'day_shift': 5}],
-            base_results | {'sick': 4, 'day_shift': 5, 'regular_hours': 5},
-            id='8due-4sick-5day_shift-without-overtime',
-        ),
-        pytest.param(
-            True,
-            8,
-            {},
-            [{'special_leave_reason': 'Study', 'special_leave_hours': 2, 'day-entry': True}, {'day_shift': 5}],
-            base_results | {'special_leave_reason': 'Study', 'special_leave_hours': 2, 'day_shift': 5},
-            id='8due-2special_leave-5-day_shift-wd',
-        ),
+        'date',
+        'protocol_number',
+        'bank_to',
+        'bank_from',
+        'day_shift_hours',
+        'night_shift_hours',
+        'on_call_hours',
+        'travel_hours',
+        'holiday_hours',
+        'leave_hours',
+        'rest_hours',
+        'sick_hours',
+        'special_leave_reason',
+        'special_leave_hours',
     ],
 )
-def test_timesheet_rule_calculate(work_day, due_hours, meal_v_schedule, time_entries, expected):
-    resource = ResourceFactory()
-    tes = []
-    for time_entry in time_entries:
-        te_kwargs = base_te | time_entry
 
-        day_entry = te_kwargs.pop('day-entry')
-        bank = te_kwargs.pop('bank', None)
-        te_kwargs = {
-            k
-            if k in ['bank_from', 'bank_to', 'protocol_number', 'special_leave_hours', 'special_leave_reason']
-            else f'{k}_hours': v
-            for k, v in te_kwargs.items()
+
+def column_index_to_name(n):
+    """
+    Converts a zero-based column index to a spreadsheet-style column name.
+    (e.g., 0 -> 'A', 1 -> 'B', 26 -> 'AA').
+    """
+    name = ''
+    while n >= 0:
+        n, remainder = divmod(n, 26)
+        name = chr(65 + remainder) + name
+        n = n - 1
+    return name
+
+
+def _get_raw_scenarios(file_path: str) -> dict:
+    with open(file_path, 'rb') as f:
+        data = tablib.Dataset().load(f, 'ods')
+
+    raw_scenarios = {}
+    for row in data.dict:
+        if header_name := row[0]:
+            for col in range(1, len(row)):
+                scen_name = column_index_to_name(col)
+                d = raw_scenarios.setdefault(scen_name, {})
+                d[header_name] = row[col]
+    return raw_scenarios
+
+
+def iterate_scenarios(raw_scenarios) -> tuple[str, float | None, float | None, dict, dict]:
+    for name, scenario in raw_scenarios.items():
+        if scenario['special_leave_reason']:
+            special_leave_reason = SpecialLeaveReasonFactory.build(title=scenario['special_leave_reason'])
+        else:
+            special_leave_reason = None
+        time_entry = TimeEntryMock(
+            date=dt('2020-04-13'),
+            special_leave_reason=special_leave_reason,
+            protocol_number=scenario['n. prot.'] if scenario['n. prot.'] else None,
+            bank_from=safe_dec(scenario['bank_from (prelevo)'])
+            if scenario['bank_from (prelevo)'] not in ('', None)
+            else None,
+            bank_to=safe_dec(scenario['bank_to (aggiungo)'])
+            if scenario['bank_to (aggiungo)'] not in ('', None)
+            else None,
+            **{
+                field: scenario[field]
+                for field in [
+                    'day_shift_hours',
+                    'night_shift_hours',
+                    'on_call_hours',
+                    'travel_hours',
+                    'holiday_hours',
+                    'leave_hours',
+                    'rest_hours',
+                    'sick_hours',
+                    'special_leave_hours',
+                ]
+            },
+        )
+
+        if val := scenario['special_leave_reason']:
+            special_leave_title = val
+        else:
+            special_leave_title = None
+
+        if bf := scenario['bank_from (prelevo)']:
+            bank = -safe_dec(bf)
+        elif bt := scenario['bank_to (aggiungo)']:
+            bank = safe_dec(bt)
+        else:
+            bank = None
+
+        expected = {
+            'day_shift': safe_dec(scenario['day_shift_hours'])
+            if scenario['day_shift_hours'] not in ('', None)
+            else None,
+            'night_shift': safe_dec(scenario['Ore Notturne']) if scenario['Ore Notturne'] not in ('', None) else None,
+            'on_call': safe_dec(scenario['Reperibilità']) if scenario['Reperibilità'] not in ('', None) else None,
+            'travel': safe_dec(scenario['travel_hours']) if scenario['travel_hours'] not in ('', None) else None,
+            'holiday': safe_dec(scenario['Ferie']) if scenario['Ferie'] not in ('', None) else None,
+            'leave': safe_dec(scenario['Permessi']) if scenario['Permessi'] not in ('', None) else None,
+            'rest': safe_dec(scenario['Riposo']) if scenario['Riposo'] not in ('', None) else None,
+            'sick': safe_dec(scenario['Malattie ']) if scenario['Malattie '] not in ('', None) else None,
+            'special_leave_hours': scenario['Permessi Speciali ']
+            if scenario['Permessi Speciali '] not in ('', None)
+            else None,
+            'special_leave_reason': special_leave_reason,
+            'special_leave_title': special_leave_title,
+            'protocol_number': scenario['n. prot.'] if scenario['n. prot.'] not in ('', None) else None,
+            'regular_hours': safe_dec(scenario['Ore Ordinarie']) if scenario['Ore Ordinarie'] else None,
+            'overtime': safe_dec(scenario['Ore Straordinarie']) if scenario['Ore Straordinarie'] else None,
+            'meal_voucher': 1 if scenario['Buoni pasto'] == 1 else None,
+            'bank': bank,
+            'fulfilled': scenario['fulfilled'] == 'T',
         }
-        if reason := te_kwargs.pop('special_leave_reason'):
-            te_kwargs['special_leave_reason'] = SpecialLeaveReasonFactory(title=reason)
 
-        if not day_entry:
-            te_kwargs['task'] = TaskFactory(resource=resource)
-        if bank is not None:
-            if bank > 0:
-                time_entry['bank_to'] = bank
-            else:
-                time_entry['bank_from'] = bank
-        tes.append(TimeEntry.objects.create(date=_dt('20251006'), resource=resource, **te_kwargs))
-    assert TimesheetRule.calculate(work_day, due_hours, None, tes) == expected
+        due_hours = D(scenario['due_hours']) if scenario['due_hours'] not in ('', None) else None
+        meal_threshold = D(scenario['meal_threshold']) if scenario['meal_threshold'] not in ('', None) else None
+
+        yield name, due_hours, meal_threshold, time_entry, expected
+
+
+def load_ods_data(file_path):
+    """Loads test data from an ODS file."""
+    raw_scenarios = _get_raw_scenarios(file_path)
+
+    params = []
+    for name, due_hours, meal_threshold, time_entry, expected in iterate_scenarios(raw_scenarios):
+        params.append(pytest.param(due_hours, meal_threshold, [time_entry], expected, id=name))
+    return params
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'due_hours, meal_threshold, time_entries, expected', load_ods_data('tests/examples/ReportPresenze (scenari).ods')
+)
+def test_calculate_from_ods(due_hours, meal_threshold, time_entries, expected, db):
+    """
+    Tests the TimesheetRule.calculate function using data from an ODS file.
+    """
+    # The 'description' parameter is not used in the test itself, but it's useful for debugging.
+    # It's loaded from the ODS file and also used as the test ID.
+
+    te = time_entries[0]
+    if reason := te.special_leave_reason:
+        reason.save()
+
+    result = TimesheetRule.calculate(False, due_hours, meal_threshold, time_entries)
+
+    assert result == expected

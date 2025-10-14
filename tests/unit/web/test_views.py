@@ -196,15 +196,15 @@ def test_report_view_current_month(client):
     assert response.status_code == 200
     content = response.content.decode()
     assert f'{resource.last_name}</strong> {resource.first_name}' in content
-    assert 'Report August 2025</h1>' in content
+    assert 'Report Agosto 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Report September 2025', id='next_month'),
-        pytest.param('202507', 'Report July 2025', id='previous_month'),
+        pytest.param('202509', 'Report Settembre 2025', id='next_month'),
+        pytest.param('202507', 'Report Luglio 2025', id='previous_month'),
     ],
 )
 def test_report_view_next_previous_month(client, month, expected_result):
@@ -279,11 +279,10 @@ def test_report_creation(admin_client):
     assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
-
     r1_name = f'{task_1.resource.last_name.upper()} {task_1.resource.first_name}'
     r2_name = f'{task_2.resource.last_name.upper()} {task_2.resource.first_name}'
     assert len(workbook.sheetnames) == 1
-    sheet_name = 'Report risorse June 2025'
+    sheet_name = 'Report risorse Giugno 2025'
     assert sheet_name in workbook.sheetnames
     sheet = workbook[sheet_name]
 
