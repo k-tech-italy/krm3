@@ -109,7 +109,6 @@ class TimesheetRule:
         }
         for te in time_entries:
             for key in [
-                'special_leave_reason',
                 'bank_to',
                 'bank_from',
                 'day_shift',
@@ -118,6 +117,7 @@ class TimesheetRule:
                 'travel',
                 'holiday',
                 'leave',
+                'special_leave_reason',
                 'special_leave_hours',
                 'protocol_number',
                 'rest',

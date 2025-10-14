@@ -80,11 +80,31 @@ class TimesheetReportExport(TimesheetReport):
             current_row += 1
 
             if any(rkd.has_data for rkd in resources_report_days):
-                base_mapping = report_timeentry_key_mapping
-
+                dynamic_mapping = {}
                 # TODO: insert in base_mapping Permessi Speciali and Malattie
+                special_leave_days = {}
+                sick_days_by_protocol = {}
+                for rkd in resources_report_days:
+                    if rkd.data_special_leave_reason:
+                        special_leave_days.setdefault(rkd.data_special_leave_reason.title, []).append(rkd)
+                    if rkd.data_sick:
+                        protocol = rkd.data_protocol_number
+                        sick_days_by_protocol.setdefault(protocol, []).append(rkd)
 
-                for lnum, (key, label) in enumerate(base_mapping.items()):
+                for key, label in report_timeentry_key_mapping.items():
+                    dynamic_mapping[key] = label
+                    if key == 'leave':
+                        if special_leave_days:
+                            for sl_title in special_leave_days:
+                                dynamic_mapping[f'special_leave_{sl_title}'] = f'Perm. speciale ({sl_title})'
+                        if None in sick_days_by_protocol:
+                            dynamic_mapping['sick_days'] = 'Malattia'
+
+                        for protocol in sick_days_by_protocol:
+                            if protocol:
+                                dynamic_mapping[f'sick_days_{protocol}'] = f'Malattia {protocol}'
+
+                for lnum, (key, label) in enumerate(dynamic_mapping.items()):
                     rownum = current_row + lnum
 
                     cell = ws.cell(row=rownum, column=1, value=label)
@@ -94,7 +114,18 @@ class TimesheetReportExport(TimesheetReport):
                     tot = None
 
                     for dd_num, rkd in enumerate(resources_report_days, 3):
-                        value = getattr(rkd, f'data_{key}')
+                        if key.startswith('sick_days'):
+                            if key == 'sick_days':
+                                value = rkd.data_sick if (rkd in sick_days_by_protocol.get(None, [])) else None
+                            else:
+                                protocol = key.replace('sick_days_', '')
+                                value = rkd.data_sick if (rkd in sick_days_by_protocol.get(protocol, [])) else None
+                        elif key.startswith('special_leave_') and key != 'special_leave_hours':
+                            reason_title = key.replace('special_leave_', '')
+                            value = rkd.data_special_leave_hours if rkd in special_leave_days.get(reason_title, []) \
+                                else None
+                        else:
+                            value = getattr(rkd, f'data_{key}')
                         cell = ws.cell(row=rownum, column=dd_num, value=value)
                         cell.alignment = centered
                         if rkd.nwd:

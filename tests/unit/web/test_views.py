@@ -9,7 +9,7 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth.models import Permission
 
-from krm3.timesheet.report import report_timeentry_key_mapping
+from krm3.timesheet.report.base import online_timeentry_key_mapping
 
 from testutils.factories import (
     ProjectFactory,
@@ -304,7 +304,7 @@ def test_report_creation(admin_client):
     assert sheet[f'A{r1_row + 1}'].value == 'Giorni 0'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
-    assert all(value in report_timeentry_key_mapping.values() for value in row_labels)
+    assert all(value in online_timeentry_key_mapping.values() for value in row_labels)
 
     first_resource_row = min(resource_rows.values())
     assert sheet[f'C{first_resource_row + 1}'].value == 'Dom\n1'

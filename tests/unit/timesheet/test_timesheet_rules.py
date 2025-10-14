@@ -20,6 +20,7 @@ base_te = {
     'sick': D(0),
     'special_leave_reason': None,
     'special_leave_hours': D(0),
+    'protocol_number': None,
 }
 
 base_results = {
@@ -34,25 +35,28 @@ base_results = {
     'sick': None,
     'special_leave_reason': None,
     'special_leave_hours': None,
+    'special_leave_title': None,
     'overtime': None,
     'meal_voucher': None,
+    'regular_hours': None,
     'protocol_number': None,
+    'fulfilled': True,
 }
 
 
 @pytest.mark.parametrize(
     'work_day, due_hours, meal_v_schedule, time_entries, expected',
     [
-        pytest.param(True, {}, 0, [], base_results, id='0due-empty-wd'),
-        pytest.param(False, {}, 0, [], base_results, id='0due-empty-nwd'),
-        pytest.param(True, {}, 8, [], base_results, id='8due-empty-wd'),
-        pytest.param(False, {}, 8, [], base_results, id='8due-empty-nwd'),
+        pytest.param(True, 0, {}, [], base_results, id='0due-empty-wd'),
+        pytest.param(False, 0, {}, [], base_results, id='0due-empty-nwd'),
+        pytest.param(True, 8, {}, [], base_results | {'fulfilled': False}, id='8due-empty-wd'),
+        pytest.param(False, 8, {}, [], base_results | {'fulfilled': False}, id='8due-empty-nwd'),
         pytest.param(
             True,
             8,
             {},
             [{'day_shift': 5, 'night_shift': 3}],
-            base_results | {'day_shift': 5, 'night_shift': 3},
+            base_results | {'day_shift': 5, 'night_shift': 3, 'regular_hours': 8},
             id='8due-normal-wd',
         ),
         pytest.param(
@@ -68,7 +72,7 @@ base_results = {
             8,
             {},
             [{'day_shift': 4, 'night_shift': 2}, {'night_shift': 3}],
-            base_results | {'day_shift': 4, 'night_shift': 5, 'overtime': 1},
+            base_results | {'day_shift': 4, 'night_shift': 5, 'overtime': 1, 'regular_hours': 8},
             id='8due-2tasks-wd-overtime',
         ),
         pytest.param(
@@ -108,7 +112,7 @@ base_results = {
             8,
             {},
             [{'leave': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'leave': 4, 'day_shift': 4},
+            base_results | {'leave': 4, 'day_shift': 4, 'regular_hours': 4},
             id='8due-4leave-wd',
         ),
         pytest.param(
@@ -116,7 +120,7 @@ base_results = {
             8,
             {},
             [{'rest': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'rest': 4, 'day_shift': 4},
+            base_results | {'rest': 4, 'day_shift': 4, 'regular_hours': 4},
             id='8due-4rest-wd',
         ),
         pytest.param(
@@ -124,7 +128,7 @@ base_results = {
             8,
             {},
             [{'on_call': 4}],
-            base_results | {'on_call': 4},
+            base_results | {'on_call': 4, 'fulfilled': False},
             id='8due-4on_call-wd',
         ),
         pytest.param(
@@ -132,7 +136,7 @@ base_results = {
             8,
             {},
             [{'travel': 10}],
-            base_results | {'travel': 10, 'overtime': 2},
+            base_results | {'travel': 10, 'overtime': 2, 'regular_hours': 8},
             id='8due-10travel-with-overtime',
         ),
         pytest.param(
@@ -140,7 +144,8 @@ base_results = {
             8,
             {},
             [{'travel': 4}, {'day_shift': 4}, {'night_shift': 2}, {'on_call': 2}],
-            base_results | {'travel': 4, 'day_shift': 4, 'night_shift': 2, 'on_call': 2, 'overtime': 2},
+            base_results | {'travel': 4, 'day_shift': 4, 'night_shift': 2, 'on_call': 2, 'overtime': 2,
+                            'regular_hours': 8},
             id='8due-4travel-8-day-night_shift-2on_call-wd',
         ),
         pytest.param(
@@ -151,7 +156,7 @@ base_results = {
                 {'special_leave_reason': 'study', 'special_leave_hours': 6, 'day-entry': True},
                 {'leave': 3, 'day-entry': True},
             ],
-            base_results | {'leave': D(3), 'special_leave_reason': 'study', 'special_leave_hours': 6},
+            base_results | {'leave': 3, 'special_leave_reason': 'study', 'special_leave_hours': 6},
             id='8due-special_leave-with-leave-wd',
         ),
         pytest.param(
@@ -167,7 +172,7 @@ base_results = {
             8,
             {},
             [{'bank_from': 4, 'day-entry': True}, {'day_shift': 4}],
-            base_results | {'bank': -4, 'day_shift': 4},
+            base_results | {'bank': -4, 'day_shift': 4, 'regular_hours': 8},
             id='8due-4bank_from-4-day_shift-wd',
         ),
         pytest.param(
@@ -175,7 +180,7 @@ base_results = {
             8,
             {},
             [{'day_shift': 10}, {'bank_to': 2, 'day-entry': True}],
-            base_results | {'bank': 2, 'day_shift': 10},
+            base_results | {'bank': 2, 'day_shift': 10, 'regular_hours': 8},
             id='8due-10-day_shit-2bank_to-wd',
         ),
         pytest.param(
@@ -183,7 +188,7 @@ base_results = {
             8,
             {},
             [{'day_shift': 10}, {'bank_to': 1, 'day-entry': True}],
-            base_results | {'bank': 1, 'day_shift': 10, 'overtime': 1},
+            base_results | {'bank': 1, 'day_shift': 10, 'overtime': 1, 'regular_hours': 8},
             id='8due-1bank_to-10day_shift-wd',
         ),
         pytest.param(
@@ -191,7 +196,7 @@ base_results = {
             8,
             {},
             [{'day_shift': 2}, {'bank_from': 2, 'day-entry': True}, {'leave': 4, 'day-entry': True}],
-            base_results | {'bank': -2, 'leave': 4, 'day_shift': 2},
+            base_results | {'bank': -2, 'leave': 4, 'day_shift': 2, 'regular_hours': 4},
             id='8due-4leave-2bank_from-2normal-wd',
         ),
         pytest.param(
@@ -199,7 +204,7 @@ base_results = {
             8,
             {},
             [{'day_shift': 4.5}, {'night_shift': 4.25}],
-            base_results | {'day_shift': 4.5, 'night_shift': 4.25, 'overtime': 0.75},
+            base_results | {'day_shift': 4.5, 'night_shift': 4.25, 'overtime': 0.75, 'regular_hours': 8},
             id='8due-fractional_hours',
         ),
         pytest.param(
@@ -207,15 +212,15 @@ base_results = {
             8,
             {},
             [{'sick': 4, 'day-entry': True}, {'day_shift': 5}],
-            base_results | {'sick': 4, 'day_shift': 5},
+            base_results | {'sick': 4, 'day_shift': 5, 'regular_hours': 5},
             id='8due-4sick-5day_shift-without-overtime',
         ),
         pytest.param(
             True,
             8,
             {},
-            [{'special_leave_reason': 'study', 'special_leave_hours': 2, 'day-entry': True}, {'day_shift': 5}],
-            base_results | {'special_leave_reason': 'study', 'special_leave_hours': 2, 'day_shift': 5},
+            [{'special_leave_reason': 'Study', 'special_leave_hours': 2, 'day-entry': True}, {'day_shift': 5}],
+            base_results | {'special_leave_reason': 'Study', 'special_leave_hours': 2, 'day_shift': 5},
             id='8due-2special_leave-5-day_shift-wd',
         ),
     ],

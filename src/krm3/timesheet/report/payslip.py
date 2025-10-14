@@ -1,8 +1,8 @@
 import decimal
 import typing
 
-from krm3.timesheet.report import ReportBlock, ReportCell, ReportRow
-from krm3.timesheet.report.base import TimesheetReport, online_timeentry_key_mapping
+from .online import ReportBlock, ReportCell, ReportRow
+from .base import TimesheetReport, online_timeentry_key_mapping
 from krm3.utils.numbers import normal
 
 if typing.TYPE_CHECKING:
