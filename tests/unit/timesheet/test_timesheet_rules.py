@@ -12,20 +12,6 @@ from krm3.utils.numbers import safe_dec
 # Mock TimeEntry model
 
 out_fields = {
-    'Ore Ordinarie': None,
-    'Ore Notturne': 'night_hours',
-    'Ore Straordinarie': 'overtime',
-    'Reperibilità': 'on_call_hours',
-    'Riposo': 'rest_hours',
-    'Ferie': 'holiday_hours',
-    'Permessi': 'leave_hours',
-    'Permessi Speciali reason ({})': None,
-    'Malattie n. prot 546456456': None,
-    'Buoni pasto': 'meal_voucher',
-}
-
-
-out_fields = {
     'bank': 'bank',
     'day_shift': 'day_shift_hours',
     'regular_hours': 'regular_hours',
