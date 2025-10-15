@@ -1,8 +1,8 @@
+import decimal
 import typing
 
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
-
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, TimeEntry
@@ -27,7 +27,7 @@ class Krm3Day(KrmDay):
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
         self.resource = None
-        self.min_working_hours: float = 0
+        self.data_due_hours: float = 0
         self.contract: Contract | None = None
         self.holiday: bool = False
         self.time_entries: list[TimeEntry] = []
@@ -46,6 +46,8 @@ class Krm3Day(KrmDay):
         self.has_data = False
         self.nwd = False  # Non-working day
         self.submitted = False
+        self.data_special_leave_reason = None
+        self.data_protocol_number = None
 
     @property
     def day_of_week_short_i18n(self) -> str:
@@ -73,7 +75,7 @@ class Krm3Day(KrmDay):
         if self.contract and (thresholds := self.contract.meal_voucher):
             meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
         for k, v in TimesheetRule.calculate(
-            not self.nwd, self.min_working_hours, meal_voucher_threshold, time_entries
+            not self.nwd, self.data_due_hours, meal_voucher_threshold, time_entries
         ).items():
             setattr(self, f'data_{k}', v)
 
@@ -95,8 +97,8 @@ class TimesheetRule:
             'day_shift': None,
             'night_shift': None,
             'on_call': None,
-            'travel': None,
             'holiday': None,
+            'travel': None,
             'leave': None,
             'rest': None,
             'sick': None,
@@ -104,7 +106,6 @@ class TimesheetRule:
             'meal_voucher': None,
             'special_leave_reason': None,
             'special_leave_hours': None,
-            'protocol_number': None,
         }
         for te in time_entries:
             for key in [
@@ -116,11 +117,11 @@ class TimesheetRule:
                 'travel',
                 'holiday',
                 'leave',
-                'special_leave_hours',
                 'special_leave_reason',
+                'special_leave_hours',
+                'protocol_number',
                 'rest',
                 'sick',
-                'protocol_number',
             ]:
                 te_key = (
                     key
@@ -129,18 +130,18 @@ class TimesheetRule:
                 )
                 val = getattr(te, te_key)
                 if key == 'protocol_number':
+                    base['protocol_number'] = val or None
+                elif key == 'special_leave_reason':
+                    base['special_leave_reason'] = val or None
                     if val:
-                        base['protocol_number'] = val
+                        base['special_leave_title'] = val.title
+                    else:
+                        base['special_leave_title'] = None
                 elif val:
-                    if key == 'special_leave_reason':
-                        base['special_leave_reason'] = te.special_leave_reason.title
-                    elif key == 'special_leave_hours':
+                    if key == 'special_leave_hours':
                         base['special_leave_hours'] = safe_dec(val)
                     else:
                         base[key] = safe_dec(base[key]) + safe_dec(val)
-
-        if base['protocol_number'] and not base['sick']:
-            base['protocol_number'] = None
 
         bank_to = base.pop('bank_to')
         bank_from = base.pop('bank_from')
@@ -149,15 +150,22 @@ class TimesheetRule:
         else:
             base['bank'] = None
 
+        worked_hours = sum(safe_dec(base[k]) for k in ['day_shift', 'night_shift', 'travel']) + safe_dec(bank_from)
+
         special_activities = ['sick', 'holiday', 'leave']
         special_hours = sum(safe_dec(base[activity]) for activity in special_activities) + safe_dec(
             base['special_leave_hours']
         )
 
-        worked_hours = sum(safe_dec(base[k]) for k in ['day_shift', 'night_shift', 'travel']) - safe_dec(base['bank'])
-        if special_hours == 0 and (overtime := worked_hours - due_hours) > 0:
+        if special_hours == 0 and (overtime := worked_hours - safe_dec(due_hours) - safe_dec(bank_to)) > 0:
             base['overtime'] = overtime
-        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours:
+        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours - safe_dec(bank_from):
             base['meal_voucher'] = 1
 
+        base['fulfilled'] = worked_hours + special_hours + safe_dec(base['leave']) + safe_dec(base['rest']) >= safe_dec(
+            due_hours
+        )
+
+        regular_hours = min(worked_hours, safe_dec(due_hours)) if worked_hours else None
+        base['regular_hours'] = regular_hours if regular_hours != decimal.Decimal(0) else None
         return base

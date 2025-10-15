@@ -9,8 +9,6 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth.models import Permission
 
-from krm3.timesheet.report import timeentry_key_mapping
-
 from testutils.factories import (
     ProjectFactory,
     UserFactory,
@@ -19,10 +17,13 @@ from testutils.factories import (
     TimeEntryFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
+    ContractFactory
 )
 from urllib.parse import urlencode
 
 from freezegun import freeze_time
+
+from krm3.timesheet.report.payslip_report import report_timeentry_key_mapping
 
 
 def _assert_homepage_content(response):
@@ -196,15 +197,15 @@ def test_report_view_current_month(client):
     assert response.status_code == 200
     content = response.content.decode()
     assert f'{resource.last_name}</strong> {resource.first_name}' in content
-    assert 'Report August 2025</h1>' in content
+    assert 'Report Agosto 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Report September 2025', id='next_month'),
-        pytest.param('202507', 'Report July 2025', id='previous_month'),
+        pytest.param('202509', 'Report Settembre 2025', id='next_month'),
+        pytest.param('202507', 'Report Luglio 2025', id='previous_month'),
     ],
 )
 def test_report_view_next_previous_month(client, month, expected_result):
@@ -250,28 +251,52 @@ def test_task_report_view_next_previous_month(client, month, expected_result):
 
 @pytest.mark.django_db
 def test_report_creation(admin_client):
-    task_1 = TaskFactory()
-    task_2 = TaskFactory()
+    contract_1 = ContractFactory()
+    contract_2 = ContractFactory()
+    r1=contract_1.resource
+    r2=contract_2.resource
+
+    task_1 = TaskFactory(resource=r1)
 
     TimeEntryFactory(
-        date=datetime.date(2025, 6, 10),
+        date=datetime.date(2025, 6, 5),
         day_shift_hours=8,
         task=task_1,
-        resource=task_1.resource,
+        resource=r1,
     )
     TimeEntryFactory(
-        date=datetime.date(2025, 6, 12),
+        date=datetime.date(2025, 6, 6),
         day_shift_hours=6,
         task=task_1,
-        resource=task_1.resource,
+        resource=r1,
+    )
+    TimeEntryFactory(
+        date=datetime.date(2025, 6, 9),
+        day_shift_hours=0,
+        sick_hours=8,
+        protocol_number=12321,
+        resource=r1,
+    )
+    TimeEntryFactory(
+        date=datetime.date(2025, 6, 10),
+        day_shift_hours=0,
+        sick_hours=8,
+        resource=r1,
+    )
+    TimeEntryFactory(
+        date=datetime.date(2025, 6, 11),
+        day_shift_hours=0,
+        sick_hours=8,
+        resource=r1,
     )
 
     TimeEntryFactory(
         date=datetime.date(2025, 6, 13),
         night_shift_hours=7,
         task=task_1,
-        resource=task_2.resource,
+        resource=r2,
     )
+
     date_arg = '202506'
     url = reverse('export_report', args=[date_arg])
     response = admin_client.get(url)
@@ -279,11 +304,10 @@ def test_report_creation(admin_client):
     assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
-
-    r1_name = f'{task_1.resource.last_name.upper()} {task_1.resource.first_name}'
-    r2_name = f'{task_2.resource.last_name.upper()} {task_2.resource.first_name}'
+    r1_name = f'{r1.last_name.upper()} {r1.first_name}'
+    r2_name = f'{r2.last_name.upper()} {r2.first_name}'
     assert len(workbook.sheetnames) == 1
-    sheet_name = 'Report risorse June 2025'
+    sheet_name = 'Report risorse Giugno 2025'
     assert sheet_name in workbook.sheetnames
     sheet = workbook[sheet_name]
 
@@ -299,23 +323,31 @@ def test_report_creation(admin_client):
     assert 'r2' in resource_rows, f"Resource 2 '{r2_name}' not found in sheet"
 
     r1_row = resource_rows['r1']
+    r2_row = resource_rows['r2']
 
     assert sheet[f'A{r1_row}'].value.split(' - ')[-1] == r1_name
-    assert sheet[f'A{r1_row + 1}'].value == 'Giorni 0'
+    assert sheet[f'A{r1_row + 1}'].value == 'Giorni 20'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
-    assert all(value in timeentry_key_mapping.values() for value in row_labels)
+    assert all(value in report_timeentry_key_mapping.values() for value in
+               [label for label in row_labels if label != 'Malattia 12321'])
 
     first_resource_row = min(resource_rows.values())
     assert sheet[f'C{first_resource_row + 1}'].value == 'Dom\n1'
     assert sheet[f'AF{first_resource_row + 1}'].value == 'Lun\n30'
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
-    day_shift_data_row = r1_row + 2
-    assert sheet[f'L{day_shift_data_row}'].value == 8
-    assert sheet[f'Q{day_shift_data_row}'].value is None
-
-    assert sheet[f'B{day_shift_data_row}'].value == 14
+    regular_hours_data_row = r1_row + 2
+    sick_hours_data_row = r1_row + 8
+    nigh_shift_hours_data_row = r2_row + 3
+    assert sheet[f'G{regular_hours_data_row}'].value == 8
+    assert sheet[f'H{regular_hours_data_row}'].value == 6
+    assert sheet[f'K{regular_hours_data_row}'].value is None
+    assert sheet[f'B{regular_hours_data_row}'].value == 14
+    assert sheet[f'L{sick_hours_data_row}'].value == 8
+    assert sheet[f'K{sick_hours_data_row+1}'].value == 8
+    assert sheet[f'B{sick_hours_data_row}'].value == 16
+    assert sheet[f'O{nigh_shift_hours_data_row}'].value == 7
 
 
 @patch(

@@ -1,9 +1,0 @@
-scenario:
-  day_shift: 8
-  night_shift: 5
-expected:
-  Ore ordinarie: 8
-  Ore notturne: 5
-
-# Example with only night hours
-# ...
