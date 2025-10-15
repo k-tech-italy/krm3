@@ -1,9 +1,9 @@
 import datetime
 import typing
 import pytest
-
+import re
 from django.test import override_settings
-
+from constance import config
 from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
@@ -20,6 +20,25 @@ if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
 
 pytestmark = pytest.mark.selenium
+
+
+def rgb_to_hex(rgb_string):
+    """Convert RGB color string to hexadecimal"""
+    # Handle rgba format by extracting just the RGB values
+    if rgb_string.startswith('rgba'):
+        # Extract numbers from rgba(r, g, b, a) format
+        numbers = re.findall(r'\d+', rgb_string)
+        r, g, b = int(numbers[0]), int(numbers[1]), int(numbers[2])
+    elif rgb_string.startswith('rgb'):
+        # Extract numbers from rgb(r, g, b) format
+        numbers = re.findall(r'\d+', rgb_string)
+        r, g, b = int(numbers[0]), int(numbers[1]), int(numbers[2])
+    else:
+        # Color might already be in hex or named format
+        return rgb_string
+
+    # Convert to hex
+    return f'#{r:02x}{g:02x}{b:02x}'
 
 
 @pytest.fixture(autouse=True)
@@ -678,3 +697,110 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     assert bank_hour_save.get_attribute('disabled') == 'true'  # type: ignore
     bank_hour_use = browser.wait_for_element_visible('//input[contains(@id, "from-bank-hour-input")]')
     assert bank_hour_use.get_attribute('disabled') == 'true'  # type: ignore
+
+
+@freeze_time('2025-06-25')
+@pytest.mark.selenium
+@pytest.mark.django_db
+def test_timesheet_scheduled_hours_exact_colors(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
+    resource = resource_factory(user=regular_user)
+    freeze_frontend_time('2025-06-25T00:00:00Z')
+    TaskFactory(
+        resource=resource,
+        start_date=datetime.date(2025, 6, 1),
+        end_date=datetime.date(2025, 6, 30),
+    )
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    header_element = browser.wait_for_element_visible(By.XPATH, '//div[@data-testid="header-2025-06-24"]')
+    header_color = header_element.value_of_css_property('background-color')
+    assert rgb_to_hex(header_color) == config.LESS_THAN_SCHEDULE_COLOR_DARK_THEME
+
+    element = browser.wait_for_element_visible(
+        By.XPATH, '//div[@role="button" and starts-with(@id, "Tue Jun 24 2025")]'
+    )
+
+    browser.click_and_release(element)
+
+    browser.find_element(By.XPATH, '//button[text()="8h"]').click()
+    element_path = (
+        '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
+        f' "{config.EXACT_SCHEDULE_COLOR_DARK_THEME}")]'
+    )
+    browser.wait_for_element_visible(element_path)
+
+
+@freeze_time('2025-06-25')
+@pytest.mark.selenium
+@pytest.mark.django_db
+def test_timesheet_scheduled_hours_less_colors(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
+    resource = resource_factory(user=regular_user)
+    freeze_frontend_time('2025-06-25T00:00:00Z')
+    TaskFactory(
+        resource=resource,
+        start_date=datetime.date(2025, 6, 1),
+        end_date=datetime.date(2025, 6, 30),
+    )
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    header_element = browser.wait_for_element_visible(By.XPATH, '//div[@data-testid="header-2025-06-24"]')
+    header_color = header_element.value_of_css_property('background-color')
+    assert rgb_to_hex(header_color) == config.LESS_THAN_SCHEDULE_COLOR_DARK_THEME
+
+    element = browser.wait_for_element_visible(
+        By.XPATH, '//div[@role="button" and starts-with(@id, "Tue Jun 24 2025")]'
+    )
+
+    browser.click_and_release(element)
+
+    browser.find_element(By.XPATH, '//button[text()="4h"]').click()
+    element_path = (
+        '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
+        f' "{config.LESS_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
+    )
+    browser.wait_for_element_visible(element_path)
+
+
+@freeze_time('2025-06-25')
+@pytest.mark.selenium
+@pytest.mark.django_db
+def test_timesheet_scheduled_hours_more_colors(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
+    resource = resource_factory(user=regular_user)
+    freeze_frontend_time('2025-06-25T00:00:00Z')
+    TaskFactory(
+        resource=resource,
+        start_date=datetime.date(2025, 6, 1),
+        end_date=datetime.date(2025, 6, 30),
+    )
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    header_element = browser.wait_for_element_visible(By.XPATH, '//div[@data-testid="header-2025-06-24"]')
+    header_color = header_element.value_of_css_property('background-color')
+    assert rgb_to_hex(header_color) == config.LESS_THAN_SCHEDULE_COLOR_DARK_THEME
+
+    element = browser.wait_for_element_visible(
+        By.XPATH, '//div[@role="button" and starts-with(@id, "Tue Jun 24 2025")]'
+    )
+
+    browser.click_and_release(element)
+
+    browser.click('//*[contains(text(), "More")]')
+    browser.fill('//input[@id="daytime-input"]', '13')
+    browser.click('//*[contains(text(), "Save")]')
+    element_path = (
+        '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
+        f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
+    )
+    browser.wait_for_element_visible(element_path)
