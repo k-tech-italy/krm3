@@ -304,7 +304,6 @@ def test_report_creation(admin_client):
     assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
     workbook = openpyxl.load_workbook(filename=io.BytesIO(response.content))
-    workbook.save('.tmp.xlsx')
     r1_name = f'{r1.last_name.upper()} {r1.first_name}'
     r2_name = f'{r2.last_name.upper()} {r2.first_name}'
     assert len(workbook.sheetnames) == 1
