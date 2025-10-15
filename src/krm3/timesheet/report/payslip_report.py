@@ -21,6 +21,7 @@ report_timeentry_key_mapping = {
     'travel': 'Viaggio',
     'holiday': 'Ferie',
     'leave': 'Permessi',
+    'sick': 'Malattia',
     'rest': 'Riposo',
     'overtime': 'Ore straordinarie',
     'meal_voucher': 'Buoni pasto',
@@ -74,35 +75,29 @@ class TimesheetReportExport(TimesheetReport):
                 cell = ws.cell(row=current_row, column=col + 1, value=giorno)
                 cell.alignment = header_alignment
                 cell.fill = header_fill
-                if col > 2 and resources_report_days[col - 2].nwd:
+                if col > 1 and resources_report_days[col - 2].nwd:
                     cell.fill = nwd_fill
 
             current_row += 1
 
             if any(rkd.has_data for rkd in resources_report_days):
                 dynamic_mapping = {}
-                # TODO: insert in base_mapping Permessi Speciali and Malattie
                 special_leave_days = {}
-                sick_days_by_protocol = {}
+                sick_days_with_protocol = {}
                 for rkd in resources_report_days:
                     if rkd.data_special_leave_reason:
                         special_leave_days.setdefault(rkd.data_special_leave_reason.title, []).append(rkd)
-                    if rkd.data_sick:
-                        protocol = rkd.data_protocol_number
-                        sick_days_by_protocol.setdefault(protocol, []).append(rkd)
+                    if rkd.data_sick and rkd.data_protocol_number:
+                        sick_days_with_protocol.setdefault(rkd.data_protocol_number, []).append(rkd)
 
                 for key, label in report_timeentry_key_mapping.items():
                     dynamic_mapping[key] = label
-                    if key == 'leave':
-                        if special_leave_days:
-                            for sl_title in special_leave_days:
-                                dynamic_mapping[f'special_leave_{sl_title}'] = f'Perm. speciale ({sl_title})'
-                        if None in sick_days_by_protocol:
-                            dynamic_mapping['sick_days'] = 'Malattia'
-
-                        for protocol in sick_days_by_protocol:
-                            if protocol:
-                                dynamic_mapping[f'sick_days_{protocol}'] = f'Malattia {protocol}'
+                    if key == 'leave' and special_leave_days:
+                        for sl_title in special_leave_days:
+                            dynamic_mapping[f'special_leave_{sl_title}'] = f'Perm. speciale ({sl_title})'
+                    if key == 'sick':
+                        for protocol in sick_days_with_protocol:
+                            dynamic_mapping[f'sick_days_{protocol}'] = f'Malattia {protocol}'
 
                 for lnum, (key, label) in enumerate(dynamic_mapping.items()):
                     rownum = current_row + lnum
@@ -114,12 +109,11 @@ class TimesheetReportExport(TimesheetReport):
                     tot = None
 
                     for dd_num, rkd in enumerate(resources_report_days, 3):
-                        if key.startswith('sick_days'):
-                            if key == 'sick_days':
-                                value = rkd.data_sick if (rkd in sick_days_by_protocol.get(None, [])) else None
-                            else:
-                                protocol = key.replace('sick_days_', '')
-                                value = rkd.data_sick if (rkd in sick_days_by_protocol.get(protocol, [])) else None
+                        if key == 'sick':
+                            value = rkd.data_sick if (rkd.data_sick and not rkd.data_protocol_number) else None
+                        elif key.startswith('sick_days_'):
+                            protocol = key.replace('sick_days_', '')
+                            value = rkd.data_sick if (rkd.data_sick and rkd.data_protocol_number == protocol) else None
                         elif key.startswith('special_leave_') and key != 'special_leave_hours':
                             reason_title = key.replace('special_leave_', '')
                             value = rkd.data_special_leave_hours if rkd in special_leave_days.get(reason_title, []) \

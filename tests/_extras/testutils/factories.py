@@ -116,7 +116,7 @@ class ResourceFactory(factory.django.DjangoModelFactory):
 
 class ContractFactory(factory.django.DjangoModelFactory):
     resource = factory.SubFactory(ResourceFactory)
-    period = factory.Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
+    period = (date(2020, 1, 1), None)
     country_calendar_code = settings.HOLIDAYS_CALENDAR
 
     class Meta:
