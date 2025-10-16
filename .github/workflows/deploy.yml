@@ -190,7 +190,7 @@ jobs:
       - name: build
         id: build
         run: |
-          VERSION=$( uvx --with hatch-vcs hatchling metadata version )
+          VERSION=${{ needs.bump.outputs.new_version }}
           cat pyproject.toml
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
