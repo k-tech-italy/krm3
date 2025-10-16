@@ -1,3 +1,9 @@
+## 1.9.7 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: exported bumped out variable
+
 ## 1.9.6 (2025-10-16)
 
 ### Fix
