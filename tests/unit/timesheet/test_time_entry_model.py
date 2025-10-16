@@ -7,6 +7,7 @@ from constance.test import override_config
 import pytest
 from django.core import exceptions
 
+from testutils.date_utils import _dt
 from testutils.factories import (
     BasketFactory,
     InvoiceEntryFactory,
@@ -636,7 +637,7 @@ class TestTimeEntry:
     )
     def test_is_saved_as_special_leave(self):
         """Special leave hours with no work or task-related hours logged"""
-        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), date=_dt('20250102'))
         entry.day_shift_hours = 0
         entry.special_leave_hours = 8
         entry.task = None

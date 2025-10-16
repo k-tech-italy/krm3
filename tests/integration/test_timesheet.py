@@ -4,6 +4,7 @@ import pytest
 import re
 from django.test import override_settings
 from constance import config
+
 from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
@@ -726,12 +727,17 @@ def test_timesheet_scheduled_hours_exact_colors(
 
     browser.click_and_release(element)
 
-    browser.find_element(By.XPATH, '//button[text()="8h"]').click()
+    btn = browser.wait_for_element_visible('//button[text()="8h"]')
+    btn.click()
     element_path = (
         '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
         f' "{config.EXACT_SCHEDULE_COLOR_DARK_THEME}")]'
     )
-    browser.wait_for_element_visible(element_path)
+    try:
+        browser.wait_for_element_visible(element_path)
+    except Exception:  # noqa: BLE001 may have failed as clicking is too quickly retrying once
+        btn.click()
+        browser.wait_for_element_visible(element_path)
 
 
 @freeze_time('2025-06-25')
