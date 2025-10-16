@@ -1,3 +1,9 @@
+## 1.9.5 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: fix cached file in deploy.yaml
+
 ## 1.9.4 (2025-10-16)
 
 ### Fix
