@@ -52,27 +52,33 @@ jobs:
 
       # Push commit and tag
       - name: Push bump commit and tags to develop
-        run: |
-          git push origin develop
-          git push origin --tags
-
-      # Sync master with develop
-      - name: Sync master with develop
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh auth setup-git
-          gh pr list --base master --head develop || \
-          gh pr create \
-            --base master \
-            --head develop \
-            --title "Sync master with develop (auto)" \
-            --body "Automatic sync after version bump" \
-            --assignee "@me" \
-            --label "auto-sync" \
-            --fill \
-            --draft=false \
-            --merge
+          git push origin develop
+          git push origin --tags
+          git co master
+          git pull
+          git merge develop
+          git push
+
+#      # Sync master with develop
+#      - name: Sync master with develop
+#        env:
+#          GH_TOKEN: ${{ secrets.GH_PAT }}
+#        run: |
+#          gh auth setup-git
+#          gh pr list --base master --head develop || \
+#          gh pr create \
+#            --base master \
+#            --head develop \
+#            --title "Sync master with develop (auto)" \
+#            --body "Automatic sync after version bump" \
+#            --assignee "@me" \
+#            --label "auto-sync" \
+#            --fill \
+#            --draft=false \
+#            --merge
 
   build-frontend:
     needs: [bump]
