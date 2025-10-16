@@ -183,6 +183,7 @@ jobs:
         id: build
         run: |
           VERSION=$( uvx --with hatch-vcs hatchling metadata version )
+          cat pyproject.toml
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
