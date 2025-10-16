@@ -1,3 +1,9 @@
+## 1.9.8 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: changed retrive version variable value
+
 ## 1.9.7 (2025-10-16)
 
 ### Fix
