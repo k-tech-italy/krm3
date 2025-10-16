@@ -1,9 +1,10 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches:
-      - master
+  release:
+    types:
+      - published
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,11 +37,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-     
+
       # Install Commitizen
       - name: Install Commitizen
         run: pip install commitizen
-     
+
       # Bump version
       - name: Bump version with Commitizen
         id: bump
@@ -53,29 +54,28 @@ jobs:
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
       # Push commit and tag
-      - name: Push bump commit and tags to master
+      - name: Push bump commit and tags to develop
         run: |
-          git push origin master
+          git push origin develop
           git push origin --tags
 
-      # Sync develop with master
-      - name: Sync develop with master
+      # Sync master with develop
+      - name: Sync master with develop
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh auth setup-git
-          gh pr list --base develop --head master || \
+          gh pr list --base master --head develop || \
           gh pr create \
-            --base develop \
-            --head master \
-            --title "Sync develop with master (auto)" \
+            --base master \
+            --head develop \
+            --title "Sync master with develop (auto)" \
             --body "Automatic sync after version bump" \
             --assignee "@me" \
             --label "auto-sync" \
             --fill \
             --draft=false \
             --merge
-
 
   build-frontend:
     needs: [bump]
@@ -248,7 +248,7 @@ jobs:
             exit 1
           fi
           echo "Deployment successful"
-# release part 
+# release part
   release:
     needs: [deploy]
     if: needs.deploy.result == 'success'
@@ -281,12 +281,3 @@ jobs:
             exit 1
           fi
           echo "Redeploy successful after release"
-
-
-
-
-
-
-
-
-
