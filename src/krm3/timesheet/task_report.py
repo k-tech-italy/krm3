@@ -1,139 +1,34 @@
 import datetime
 import decimal
-import typing
+import json
+
+from constance import config
 from django.contrib.auth import get_user_model
 from decimal import Decimal as D  # noqa: N817
 
-from dateutil.relativedelta import relativedelta
 
-from krm3.core.models import TimeEntry, Resource, Task
-from krm3.timesheet.report import ReportBlock, ReportRow, ReportCell
+from krm3.config import settings
+from krm3.core.models import TimeEntry, Resource, Task, ExtraHoliday, Contract
+from krm3.timesheet.report.online import ReportBlock, ReportRow, ReportCell
 from krm3.timesheet.rules import Krm3Day
 
-from krm3.utils.dates import KrmDay, KrmCalendar
+from krm3.utils.dates import KrmDay, get_country_holidays
 from krm3.utils.numbers import normal
-
-from krm3.utils.tools import format_data
 
 from django.db.models import Q
 
 User = get_user_model()
 
-if typing.TYPE_CHECKING:
-    from django.db.models import QuerySet
-
-timeentry_key_mapping = {
-    'night_shift_hours': 'Notturni',
-    'on_call_hours': 'Reperibilità',
-    'travel_hours': 'Ore Trasferta',
+task_timeentry_key_mapping = {
+    'night_shift': 'Notturni',
+    'on_call': 'Reperibilità',
+    'travel': 'Ore Trasferta',
 }
-
-
-def _initialize_report_data(tasks: typing.Iterable[Task], days_interval: int) -> dict:
-    """Initialize the results dictionary with tasks and default values."""
-    results = {}
-    for task in tasks:
-        if task.resource not in results:
-            results[task.resource] = {
-                'Tot per Giorno': [D('0.00')] * (days_interval + 2),
-                **{label: [D('0.00')] * (days_interval + 2) for label in timeentry_key_mapping.values()},
-                'Assenze': [D('0.00')] * (days_interval + 2),
-                'NUM GIORNI': 0,
-            }
-        results[task.resource][task] = [D('0.00')] * (days_interval + 2)
-
-    return results
-
-
-def _calculate_work_days_for_resources(
-    results: dict,
-    tasks: 'QuerySet[Task]',
-    from_date: datetime.date,
-    to_date: datetime.date,
-) -> None:
-    """Calculate NUM GIORNI and TOT HH for each resource."""
-    calendar = KrmCalendar()
-    work_days = calendar.get_work_days(from_date, to_date)
-    for resource, data in results.items():
-        owned_tasks = tasks.filter(resource=resource)
-        work_days_without_task = [*work_days]
-        for task in owned_tasks:
-            work_days_without_task = [
-                day
-                for day in work_days_without_task
-                if not (task.start_date <= day.date and (task.end_date is None or day.date <= task.end_date))
-            ]
-
-        data['NUM GIORNI'] = len(work_days) - len(work_days_without_task)
-        data['TOT HH'] = data['NUM GIORNI'] * 8
-
-
-def _handles_leaves(entry: TimeEntry, resource_data: dict, index: int | KrmDay) -> None:
-    """Handle leaves and special leaves."""
-    if isinstance(resource_data['Assenze'][index], D):
-        if entry.leave_hours > 0:
-            resource_data['Assenze'][index] += entry.leave_hours
-            resource_data['Assenze'][1] += entry.leave_hours
-        if entry.special_leave_hours > 0:
-            resource_data['Assenze'][index] += entry.special_leave_hours
-            resource_data['Assenze'][1] += entry.special_leave_hours
-
-
-def _process_time_entries(results: dict, entries: 'QuerySet[TimeEntry]', start_date: KrmDay) -> None:
-    """Process time entries and populates the results dictionary."""
-    for entry in entries:
-
-        resource_data = results[entry.resource]
-        date = KrmDay(entry.date)
-        index = date - start_date + 2
-
-        if entry.task:
-            total_hours = entry.day_shift_hours + entry.night_shift_hours + entry.travel_hours
-            resource_data[entry.task][1] += total_hours
-            resource_data[entry.task][index] = total_hours
-            resource_data['Tot per Giorno'][1] += total_hours
-            resource_data['Tot per Giorno'][index] += total_hours
-
-        # Absences
-        if entry.is_holiday:
-            resource_data['Assenze'][index] = 'F'
-            resource_data['Assenze'][1] += 8
-        elif entry.is_sick_day:
-            resource_data['Assenze'][index] = 'M'
-            resource_data['Assenze'][1] += 8
-        elif entry.leave_hours > 0 or entry.special_leave_hours > 0:
-            _handles_leaves(entry, resource_data, index)
-
-        # Other time entries
-        for attr_name, label in timeentry_key_mapping.items():
-            value = getattr(entry, attr_name)
-            if value:
-                resource_data[label][1] += value
-                resource_data[label][index] += value
-
-
-def _order_results(results: dict) -> dict:
-    """Order the keys in the results dictionary for consistent output."""
-    no_task_keys = [*list(timeentry_key_mapping.values()), 'Assenze', 'Tot per Giorno']
-    ordered_results = {}
-    for resource, data in results.items():
-        task_items = {k: v for k, v in data.items() if k not in no_task_keys}
-        no_task_items = {k: v for k, v in data.items() if k in no_task_keys}
-        ordered_results[resource] = {**task_items, **no_task_items}
-    return ordered_results
-
-
-def _calculate_num_giorni_for_body(results: dict) -> None:
-    """Calculate the 'num giorni' (day count) for the table body."""
-    for body in results.values():
-        for data in body.values():
-            if isinstance(data, list) and data[1] is not None:
-                data[0] = data[1] / 8
 
 class TimesheetTaskReport:
     def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User) -> None:
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            self.resources =  Resource.objects.all()
+            self.resources = Resource.objects.filter(preferred_in_report=True)
         else:
             self.resources = [user.get_resource()]
         resource_ids = {r.id for r in self.resources}
@@ -142,139 +37,150 @@ class TimesheetTaskReport:
         self.to_date = to_date
         self.user = user
 
+        self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
+        top_period = to_date + datetime.timedelta(days=1) if to_date else None
+
+        self.country_codes: set[str] = {settings.HOLIDAYS_CALENDAR}
+        self.resource_contracts: dict[int, list[Contract]] = {}
+
         self.time_entries: list[TimeEntry] = TimeEntry.objects.filter(
             date__gte=self.from_date, date__lte=self.to_date, resource_id__in=resource_ids
         )
 
-        self.tasks: dict[int, list[Task]] = {}
-        for task in Task.objects.filter(
-            resource_id__in=resource_ids,
-            start_date__lte=self.to_date
-        ).filter(Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)):
-            self.tasks.setdefault(task.resource_id,[]).append(task)
+        for contract in list(
+            Contract.objects.filter(period__overlap=(from_date, top_period), resource_id__in=resource_ids)
+        ):
+            self.resource_contracts.setdefault(contract.resource_id, []).append(contract)
+            if contract.country_calendar_code and contract.country_calendar_code not in self.country_codes:
+                self.country_codes.add(contract.country_calendar_code)
 
-        resource_ids_with_tasks = {te.resource_id for te in self.time_entries if te.task_id is not None}
-        self.resources = [r for r in self.resources if r.id in resource_ids_with_tasks]
+        resources_with_entries = {te.resource_id for te in self.time_entries}
+        self.resources = [r for r in self.resources if r.id in resources_with_entries]
+
+        self.tasks: dict[int, list[Task]] = {}
+        self._load_tasks()
+
+        self.extra_holidays = self._get_extra_holidays()
+        self._holiday_cache = {}
 
         self.calendars: dict[int, list[Krm3Day]] = self._get_calendars()
 
+    def _get_holiday(self, kd: 'KrmDay', country_calendar_code: str) -> bool:
+        """Return True if the day is holiday."""
+        if res := self._holiday_cache.get((kd.date, country_calendar_code)):
+            return res
+        if (eh := self.extra_holidays.get(kd)) and (
+            country_calendar_code in eh or country_calendar_code.split('-')[0] in eh
+        ):
+            hol = True
+        else:
+            cal = get_country_holidays(country_calendar_code=country_calendar_code)
+            hol = not cal.is_working_day(kd.date)
+        return self._holiday_cache.setdefault((kd.date, country_calendar_code), hol)
+
+    def _get_extra_holidays(self) -> dict[KrmDay, list[str]]:
+        """Retrieve the extra holidays for the given country codes."""
+        short_codes = {x.split('-')[0] for x in self.country_codes}
+        result = {}
+        extra_holidays = list(
+            ExtraHoliday.objects.filter(
+                country_codes__overlap=list(self.country_codes.union(short_codes)),
+                period__overlap=(self.from_date, self.to_date),
+            )
+        )
+
+        for eh in extra_holidays:
+            for kd in KrmDay(eh.period.lower).range_to(eh.period.upper - datetime.timedelta(days=1)):
+                result.setdefault(kd, []).extend(eh.country_codes)
+        return result
+
+    def _load_tasks(self) -> None:
+        """Load tasks for all resources in the report."""
+        resource_ids = {r.id for r in self.resources}
+
+        for task in Task.objects.filter(
+                resource_id__in=resource_ids,
+                start_date__lte=self.to_date
+        ).filter(Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)):
+            self.tasks.setdefault(task.resource_id, []).append(task)
+
     def _get_calendars(self) -> dict[int, list[Krm3Day]]:
+        """Build calendars with task data."""
         ret: dict[int, list[Krm3Day]] = {}
         for resource in self.resources:
             res_id = resource.id
-            resource_tasks = self.tasks.get(res_id, [])
+            contracts: list[Contract] = self.resource_contracts.get(res_id) or []
 
             ret[res_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
-            work_days_on_task = {}
 
             for kd in ret[res_id]:
                 kd.resource = resource
+                for c in contracts:
+                    if c.falls_in(kd):
+                        kd.contract = c
+                        break
+
+                country_calendar_code = (
+                    kd.contract.country_calendar_code
+                    if kd.contract and kd.contract.country_calendar_code
+                    else settings.HOLIDAYS_CALENDAR
+                )
+                kd.holiday = self._get_holiday(kd, country_calendar_code)
                 day_entries = [te for te in self.time_entries if te.resource_id == res_id and te.date == kd.date]
                 kd.apply(day_entries)
 
+                resource_tasks = self.tasks.get(res_id, [])
                 for task in resource_tasks:
                     task_hours = sum(
-                        te.day_shift_hours + te.night_shift_hours + te.travel_hours
-                        for te in day_entries if te.task_id == task.id
+                        (te.day_shift_hours or 0) +
+                        (te.night_shift_hours or 0) +
+                        (te.travel_hours or 0)
+                        for te in day_entries
+                        if te.task_id == task.id
                     )
+                    if task_hours > 0:
+                        setattr(kd, f'task_{task.id}_hours', D(task_hours))
+
         return ret
 
+class TimesheetTaskReportOnline(TimesheetTaskReport):
     def report_html(self) -> list[ReportBlock]:
-        blocks=[]
+        blocks = []
         for resource in self.resources:
             blocks.append(block := ReportBlock(resource))
             row = block.add_row(ReportRow())
             resources_report_days = self.calendars[resource.id]
-
             row.add_cell(sum([0 if kd.nwd else 1 for kd in resources_report_days]))
             for kd in resources_report_days:
                 row.add_cell(kd)
 
             if any(rkd.has_data for rkd in resources_report_days):
-                resource_tasks = self.tasks.get(resource.id, [])
-                for task in resource_tasks:
-                    row = block.add_row(ReportRow())
-                    row.add_cell(task.title)
-                    row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
-                    for rkd in resources_report_days:
-                        value = getattr(rkd, f'task_{task.id}_hours', None)
-                        row.add_cell(normal(value) if value else '').nwd = rkd.nwd
-                        cell_tot_hh.value += value or decimal.Decimal(0)
-                    cell_tot_hh.value = normal(cell_tot_hh.value)
+                self._add_task_rows(block, resource)
 
-                for key, label in timeentry_key_mapping.items():
+                for key, label in task_timeentry_key_mapping.items():
                     row = block.add_row(ReportRow())
                     row.add_cell(label)
                     row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
                     for rkd in resources_report_days:
                         value = getattr(rkd, f'data_{key}', None)
-                        row.add_cell(normal(value) if value else '').nwd = rkd.nwd
+                        row.add_cell(normal(value)).nwd = rkd.nwd
                         cell_tot_hh.value += value or decimal.Decimal(0)
                     cell_tot_hh.value = normal(cell_tot_hh.value)
+
         return blocks
 
-def timesheet_task_report_raw_data(
-    from_date: datetime.date, to_date: datetime.date, resource: Resource | None = None
-) -> dict['Resource', dict[str, list[D]]]:
-    """
-    Prepare the data for the timesheet report.
+    def _add_task_rows(self, block: ReportBlock, resource: Resource) -> None:
+        """Add rows for each task associated with the resource."""
+        resources_report_days: list[Krm3Day] = self.calendars[block.resource.id]
+        resource_tasks = self.tasks.get(resource.id, [])
 
-    If the resource is not provided, the report will be for all resources.
-    """
-    entry_qs = TimeEntry.objects.filter(date__gte=from_date, date__lte=to_date, resource__active=True).order_by(
-        'resource', 'date'
-    )
-    task_qs = Task.objects.filter(start_date__lte=to_date).filter(Q(end_date__gte=from_date) | Q(end_date__isnull=True))
-
-    if resource:
-        entry_qs = entry_qs.filter(resource=resource)
-        task_qs = task_qs.filter(resource=resource)
-
-    days_interval = (to_date - from_date).days + 1
-
-    results = _initialize_report_data(task_qs, days_interval)
-
-    _calculate_work_days_for_resources(results, task_qs, from_date, to_date)
-
-    start_date = KrmDay(from_date)
-    _process_time_entries(results, entry_qs, start_date)
-
-    results = _order_results(results)
-
-    _calculate_num_giorni_for_body(results)
-
-    return results
-
-
-def task_report_data(current_month: str | None, user: User) -> dict[str, typing.Any]:
-    """Prepare the data for the timesheet report."""
-    if current_month is None:
-        start_of_month = datetime.date.today().replace(day=1)
-    else:
-        start_of_month = datetime.datetime.strptime(current_month, '%Y%m').date()
-    prev_month = start_of_month - relativedelta(months=1)
-    next_month = start_of_month + relativedelta(months=1)
-
-    end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    resource = None
-    if not user.is_anonymous and not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-        resource = user.get_resource()
-    data = timesheet_task_report_raw_data(start_of_month, end_of_month, resource=resource)
-
-    for shifts in data.values():
-        for key, values in shifts.items():
-            if isinstance(values, list):
-                shifts[key] = [format_data(v) if isinstance(v, D | int) else v for v in values]
-    resources = Resource.objects.filter(active=True)
-    if resource:
-        resources = resources.filter(pk=resource.pk)
-    data = dict.fromkeys(resources.order_by('last_name', 'first_name'), None) | data
-
-    return {
-        'prev_month': prev_month.strftime('%Y%m'),
-        'current_month': start_of_month.strftime('%Y%m'),
-        'next_month': next_month.strftime('%Y%m'),
-        'title': start_of_month.strftime('%B %Y'),
-        'days': list(KrmDay(start_of_month.strftime('%Y-%m-%d')).range_to(end_of_month)),
-        'table_data': data,
-    }
+        for task in resource_tasks:
+            row = ReportRow()
+            row.add_cell(task.title)
+            row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
+            for rkd in resources_report_days:
+                value = getattr(rkd, f'task_{task.id}_hours', None)
+                row.add_cell(normal(value) if value else '').nwd = rkd.nwd
+                cell_tot_hh.value += value or decimal.Decimal(0)
+            cell_tot_hh.value = normal(cell_tot_hh.value)
+            block.rows.append(row)
