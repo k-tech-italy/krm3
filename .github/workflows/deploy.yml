@@ -24,28 +24,41 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
-      # :one: Checkout completo del repository
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
-      # :two: Bump versione e aggiornamento changelog
-      - name: "Bump version and update the changelog"
-        id: commitizen
-        uses: commitizen-tools/commitizen-action@master
+     # Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          changelog_increment_filename: "INCREMENTAL-CHANGELOG.md"
+          python-version: "3.x"
+     
+      # Install Commitizen
+      - name: Install Commitizen
+        run: pip install commitizen
+     
+      # Bump version
+      - name: Bump version with Commitizen
+        id: bump
+        run: |
+          git config --global user.email "noreply@k-tech.it"
+          git config --global user.name "K-Tech Bot"
+          cz bump --yes
+          # Read the new version from __init__.py
+          new_version=$(grep -Po "__version__\s*=\s*'\K[^']+" src/krm3/__init__.py)
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-      # :three: Push commit e tag generati
+      # Push commit and tag
       - name: Push bump commit and tags to master
         run: |
           git push origin master
           git push origin --tags
 
-      # :four: Sync develop con master
+      # Sync develop with master
       - name: Sync develop with master
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
