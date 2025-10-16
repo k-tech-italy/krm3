@@ -48,7 +48,9 @@ jobs:
           cz bump --yes
           # Read the new version from __init__.py
           new_version=$(grep -Po "__version__\s*=\s*'\K[^']+" src/krm3/__init__.py)
+          new_commit=$(git rev-parse HEAD)
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "new_commit=$new_commit" >> $GITHUB_OUTPUT
 
       # Push commit and tag
       - name: Push bump commit and tags to develop
@@ -89,6 +91,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.bump.outputs.new_commit }}
           fetch-depth: 0
 
       - name: Install the latest version of uv
@@ -158,6 +161,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.1.7
         with:
+          ref: ${{ needs.bump.outputs.new_commit }}
           fetch-depth: 0
 
       - name: Install the latest version of uv
@@ -269,6 +273,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.bump.outputs.new_commit }}
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
