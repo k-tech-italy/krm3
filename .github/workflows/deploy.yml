@@ -170,6 +170,7 @@ jobs:
           cache-dependency-glob: |
             **/pyproject.toml
             **/uv.lock
+            **/.git/HEAD
           python-version: 3.12.1
 
       - name: Download built frontend
