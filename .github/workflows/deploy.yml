@@ -152,7 +152,7 @@ jobs:
           if-no-files-found: warn
 
   build-and-push:
-    needs: [build-frontend]
+    needs: [bump, build-frontend]
     if: always() && needs.build-frontend.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -191,7 +191,6 @@ jobs:
         id: build
         run: |
           VERSION=${{ needs.bump.outputs.new_version }}
-          cat pyproject.toml
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
