@@ -1,3 +1,9 @@
+## 1.9.4 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: test version variable in deploy.yaml
+
 ## 1.9.3 (2025-10-16)
 
 ### Fix
