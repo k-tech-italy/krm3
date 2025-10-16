@@ -1,3 +1,10 @@
+## 1.9.2 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: fix syntax in deploy.yaml
+- **deploy.yaml**: fix syntax in deploy.yaml
+
 ## 1.9.1 (2025-10-16)
 
 ### Fix
