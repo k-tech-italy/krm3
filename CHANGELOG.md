@@ -1,3 +1,9 @@
+## 1.9.3 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: fix git co command with checkout command
+
 ## 1.9.2 (2025-10-16)
 
 ### Fix
