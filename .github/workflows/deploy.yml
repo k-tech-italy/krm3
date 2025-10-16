@@ -21,6 +21,9 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      new_commit: ${{ steps.bump.outputs.new_commit }}
     steps:
       # Checkout repository
       - name: Checkout repository
