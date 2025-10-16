@@ -1,3 +1,21 @@
+## 1.9.0 (2025-10-16)
+
+### Feat
+
+- **Timesheet-report**: New style export and online implemented for payslip report
+
+### Fix
+
+- **deploy.yaml**: fix syntax in yaml file
+- **FE**: Fixed issue #321
+- **deploy.yaml**: using custom cz commmit rule
+- **deploy.yaml**: added configuration for specific env deploy in deploy pipeline
+- **deploy.yaml**: fixed code syntax
+- **deploy.yaml**: added release in deploy.yaml
+- **deploy.yml**: another attempt for deploy pipeline
+- **deploy.yaml**: sync develo branch fix
+- **deploy.yaml**: cz commit to trigger auto bump
+
 ## 1.8.3 (2025-10-10)
 
 ### Fix
