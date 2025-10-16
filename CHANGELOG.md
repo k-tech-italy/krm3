@@ -1,3 +1,9 @@
+## 1.9.6 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: retrive fresh repo after bump
+
 ## 1.9.5 (2025-10-16)
 
 ### Fix
