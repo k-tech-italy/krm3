@@ -1,3 +1,9 @@
+## 1.9.9 (2025-10-16)
+
+### Fix
+
+- **deploy.yaml**: fix build and deploy dependencies
+
 ## 1.9.8 (2025-10-16)
 
 ### Fix
