@@ -130,8 +130,8 @@ jobs:
       - name: Install yarn and build frontend
         run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
 
-      - name: Build static folder
-        run: uv venv && uv run make release && uv run manage.py collectstatic
+      - name: Build release.json
+        run: uv venv && uv run make release
 
       - name: Move the release.json file into the FE folder
         run: cp src/krm3/core/static/release.json krm3-fe/dist
