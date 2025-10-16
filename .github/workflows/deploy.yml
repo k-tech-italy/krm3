@@ -57,7 +57,7 @@ jobs:
         run: |
           git push origin develop
           git push origin --tags
-          git co master
+          git checkout master
           git pull
           git merge develop
           git push
