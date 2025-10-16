@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - docs/**
   schedule:
     - cron: '37 23 * * 2'
 
