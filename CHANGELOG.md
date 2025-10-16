@@ -1,3 +1,9 @@
+## 1.9.1 (2025-10-16)
+
+### Fix
+
+- **Build-pipeline**: Moving release to manual trigger from develop
+
 ## 1.9.0 (2025-10-16)
 
 ### Feat
