@@ -1,3 +1,10 @@
+## 1.9.10 (2025-10-17)
+
+### Fix
+
+- **krm3-fe**: Fix release.json cached in the frontend
+- **Tests**: Fix for #403 TimeEntryFactory have a random date that may select a public holiday
+
 ## 1.9.9 (2025-10-16)
 
 ### Fix
