@@ -9,6 +9,7 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth.models import Permission
 
+from testutils.date_utils import _dt
 from testutils.factories import (
     ProjectFactory,
     UserFactory,
@@ -139,13 +140,13 @@ def test_availability_view_filtered_by_project(client):
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,
-        date=datetime.date.today(),
+        date=_dt('20251017'),
         holiday_hours=8,
     )
     TimeEntryFactory(
         resource=another_resource,
         day_shift_hours=0,
-        date=datetime.date.today(),
+        date=_dt('20251017'),
         leave_hours=3,
     )
     client.login(username='user00', password='pass123')
@@ -250,7 +251,7 @@ def test_task_report_view_next_previous_month(client, month, expected_result):
 
 
 @pytest.mark.django_db
-def test_report_creation(admin_client):
+def test_report_creation(admin_client):  # noqa: PLR0915
     contract_1 = ContractFactory()
     contract_2 = ContractFactory()
     r1=contract_1.resource
