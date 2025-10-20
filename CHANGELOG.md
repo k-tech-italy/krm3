@@ -1,3 +1,10 @@
+## 1.9.11 (2025-10-20)
+
+### Fix
+
+- **Timesheet-Report**: Report: error with permessi
+- **Task**: #406 Check for orphan TimeEntries when changing Task period
+
 ## 1.9.10 (2025-10-17)
 
 ### Fix
