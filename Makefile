@@ -133,8 +133,8 @@ test:
 	@-./manage.py loaddata tools/zapdata/demo/krm3.yaml
 	@cp -R tools/zapdata/demo/media/* ~media
 
-test-fast:
-	@pytest -n auto -m "selenium or not selenium"
+test-fast: ## runtest integration and unit tests in parallel
+	@pytest -n auto -m "selenium or not selenium" --no-cov
 
 test-cov: ## run tests with coverage
 	@pytest -m "selenium or not selenium" tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \

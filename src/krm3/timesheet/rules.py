@@ -21,6 +21,22 @@ timeentry_counters = {
     'meal_voucher': 'Buoni pasto',
 }
 
+te_calc_map = {
+    'bank_to': 'bank_to',
+    'bank_from': 'bank_from',
+    'day_shift_hours': 'day_shift',
+    'night_shift_hours': 'night_shift',
+    'on_call_hours': 'on_call',
+    'travel_hours': 'travel',
+    'holiday_hours': 'holiday',
+    'leave_hours': 'leave',
+    'special_leave_reason': 'special_leave_reason',
+    'special_leave_hours': 'special_leave_hours',
+    'protocol_number': 'protocol_number',
+    'rest_hours': 'rest',
+    'sick_hours': 'sick',
+}
+
 
 class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
@@ -105,44 +121,20 @@ class TimesheetRule:
             'overtime': None,
             'meal_voucher': None,
             'special_leave_reason': None,
+            'special_leave_title': None,
             'special_leave_hours': None,
+            'protocol_number': None
         }
         for te in time_entries:
-            for key in [
-                'bank_to',
-                'bank_from',
-                'day_shift',
-                'night_shift',
-                'on_call',
-                'travel',
-                'holiday',
-                'leave',
-                'special_leave_reason',
-                'special_leave_hours',
-                'protocol_number',
-                'rest',
-                'sick',
-            ]:
-                te_key = (
-                    key
-                    if key in ['bank_to', 'bank_from', 'protocol_number', 'special_leave_hours', 'special_leave_reason']
-                    else f'{key}_hours'
-                )
-                val = getattr(te, te_key)
-                if key == 'protocol_number':
-                    base['protocol_number'] = val or None
-                elif key == 'special_leave_reason':
-                    base['special_leave_reason'] = val or None
+            for fname, key in te_calc_map.items():
+                val = getattr(te, fname)
+                if fname in ['protocol_number', 'special_leave_reason']:
                     if val:
-                        base['special_leave_title'] = val.title
-                    else:
-                        base['special_leave_title'] = None
+                        base[key] = val
                 elif val:
-                    if key == 'special_leave_hours':
-                        base['special_leave_hours'] = safe_dec(val)
-                    else:
-                        base[key] = safe_dec(base[key]) + safe_dec(val)
-
+                    base[key] = safe_dec(base[key]) + safe_dec(val)
+            if val := base['special_leave_reason']:
+                base['special_leave_title'] = val.title
         bank_to = base.pop('bank_to')
         bank_from = base.pop('bank_from')
         if bank_to or bank_from:
