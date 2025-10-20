@@ -18,7 +18,6 @@ report_timeentry_key_mapping = {
     'regular_hours': 'Ore ordinarie',
     'night_shift': 'Ore notturne',
     'on_call': 'Reperibilità',
-    'travel': 'Viaggio',
     'holiday': 'Ferie',
     'leave': 'Permessi',
     'sick': 'Malattia',
@@ -33,7 +32,7 @@ class StreamWriter(typing.Protocol):
 
 
 class TimesheetReportExport(TimesheetReport):
-    def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912
+    def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912,PLR0915
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = title

@@ -2,6 +2,7 @@ from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
+from adminfilters.num import NumberFilter
 from django.db.models import QuerySet
 from django.contrib import admin
 from django.contrib.admin.widgets import AdminDateWidget
@@ -52,13 +53,24 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
-    list_display = ('date', 'get_resource', 'get_task', 'get_timesheet')
+    list_display = ('date', 'get_resource', 'get_task', 'get_timesheet', 'holiday_hours', 'sick_hours')
     search_fields = ('date', 'category')
 
     list_filter = [
         ('resource', AutoCompleteFilter),
         ('task', AutoCompleteFilter),
         ('date', DateRangeFilter),
+        ('day_shift_hours', NumberFilter),
+        ('night_shift_hours', NumberFilter),
+        ('travel_hours', NumberFilter),
+        ('rest_hours', NumberFilter),
+        ('on_call_hours', NumberFilter),
+        ('special_leave_hours', NumberFilter),
+        ('leave_hours', NumberFilter),
+        ('sick_hours', NumberFilter),
+        ('holiday_hours', NumberFilter),
+        ('bank_from', NumberFilter),
+        ('bank_to', NumberFilter),
     ]
     list_select_related = ('task__project', 'resource', 'timesheet')
 

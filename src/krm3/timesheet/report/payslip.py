@@ -9,7 +9,6 @@ if typing.TYPE_CHECKING:
     from krm3.timesheet.rules import Krm3Day
 
 
-
 class TimesheetReportOnline(TimesheetReport):
     def report_html(self) -> list[ReportBlock]:
         blocks = []
