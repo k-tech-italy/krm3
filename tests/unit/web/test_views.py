@@ -339,7 +339,7 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
     regular_hours_data_row = r1_row + 2
-    sick_hours_data_row = r1_row + 8
+    sick_hours_data_row = r1_row + 7
     nigh_shift_hours_data_row = r2_row + 3
     assert sheet[f'G{regular_hours_data_row}'].value == 8
     assert sheet[f'H{regular_hours_data_row}'].value == 6
