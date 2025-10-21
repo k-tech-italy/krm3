@@ -79,6 +79,7 @@ dependencies = [
     "seleniumbase>=4.39.2",
     "django-flags>=5.0.14",
     "django-online-issues>=0.3",
+    "django-pwa>=2.0.1",
 ]
 
 [project.optional-dependencies]
