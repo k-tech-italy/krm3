@@ -1,7 +1,7 @@
 {% extends "home.html" %}
 
-{% load tailwind_tags report_line %}
-{% load web_filters %}
+{% load tailwind_tags static reports %}
+
 
 {% block extrastyle %}
     {% tailwind_css %}
@@ -10,64 +10,65 @@
 {% block body %}
     {{ block.super }}
     <div class="w-9/10 mx-auto pt-20">
-          <div class="flex flex-row justify-between mt-2">
-              <a href="{% querystring month=prev_month %}"
-                 class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
-              <div class="flex flex-col">
-                  <h1 class="text-3xl font-bold text-center mb-1">Task Report {{ title }}</h1>
-              </div>
-              <a href="{% querystring month=next_month %}"
-                 class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
+        <div class="flex flex-row justify-between mt-2">
+            <a href="{% url "task-report-month" prev_month %}" class="button">Prev month</a>
+            <div class="flex flex-col">
+                <h1 class="title">Task Report {{ title }}</h1>
             </div>
-
-    {% for resource, stats in table_data.items %}
-        {% if stats %}
-
-            <div class="overflow-x-auto rounded-md shadow mb-4">
-                <table class="min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse">
+            <a href="{% url "task-report-month" next_month %}" class="button">Next month</a>
+        </div>
+        {% for report_block in report_blocks %}
+            <div class="report-container">
+                <table class="report-table">
                     <thead>
-                        <tr class="bg-gray-400! dark:bg-blue-900! ">
-                            <td class="text-left p-1 border border-1" >
-                                <strong>{{ resource.last_name }}</strong> {{ resource.first_name }}
+                    <tr class="table-header-row">
+                        <td class="row-header">
+                            <strong>{{ report_block.resource.last_name }}</strong> {{ report_block.resource.first_name }}
+                        </td>
+                        <td class="row-header">Giorni {{ report_block.rows.0.cells.0.render }}</td>
+                        <td>Tot HH {{ report_block.rows.0.cells.1.render }}</td>
+                        {% for cell in report_block.rows.0.cells|slice:"2:" %}
+                            <td class="pending">
+                                <p>{{ cell.value.day_of_week_short_i18n }}</p>
+                                <p>{{ cell.value.date.day }}</p>
                             </td>
-                            <td class="p-1 border border-1 text-center">
-                                <strong>NUM GIORNI</strong>
-                                <strong><p class="mt-3">{{ stats|get:"NUM GIORNI" }}</p></strong>
-                            </td>
-                            <td class="text-left p-1 border border-1">
-                                <strong>TOT HH</strong>
-                                <strong><p class="mt-3">{{ stats|get:"TOT HH" }}</p></strong>
-                            </td>
-                            {% for day in days %}
-                               <td class="p-1 text-center border border-1">
-                                   <p>{{ day.date|weekday_short_it }}</p>
-                                   <p>{{ day.date|date:"j" }}</p>
-                               </td>
-                            {% endfor %}
-                        </tr>
+                        {% endfor %}
+
+                    </tr>
                     </thead>
                     <tbody>
-                        {% for key, data in stats.items %}
-                            {% if data|is_list %}
-                                {% report_line key key stats forloop.counter0|divisibleby:"2" %}
-                            {% endif %}
+                    {% if not report_block.has_tasks %}
+                        <!-- Show message when no tasks are assigned -->
+                        <tr class="row-data">
+                            <td class="text-left" colspan="{{ report_block.width|default:'30' }}">No tasks assigned</td>
+                        </tr>
+                    {% else %}
+                        <!-- Show task rows when tasks exist -->
+                        {% for row in report_block.rows|slice:"1:" %}
+                            <tr class="row-data">
+                                <td class="row-header">{{ row.cells.0.render }}</td>
+
+                                {% if "Tot per Giorno" in row.cells.0.render %}
+                                    {% for cell in row.cells|slice:"1:" %}
+                                        <td class="cell-data {% if cell.nwd %}non-workday{% endif %}">
+                                            {{ cell.render }}
+                                        </td>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for cell in row.cells|slice:"1:" %}
+                                        <td class="cell-data {% if cell.nwd %}non-workday{% endif %}">
+                                            {{ cell.render }}
+                                        </td>
+                                    {% endfor %}
+                                    <td></td>
+                                {% endif %}
+                            </tr>
                         {% endfor %}
+                    {% endif %}
                     </tbody>
                 </table>
             </div>
-        {% else %}
-            <div class="overflow-x-auto rounded-md text-zinc-900 shadow mb-4">
-                <table class="min-w-full leading-normal text-right border">
-                    <thead class="bg-gray-200">
-                    <tr>
-                        <td class="text-left p-1 w-1/6" colspan="2"><strong>{{ resource.last_name }}</strong> {{ resource.first_name }}</td>
-                        <td class="text-left" colspan="{{ days|length }}">No data available</td>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
-        {% endif %}
-    {% endfor %}
+        {% endfor %}
 
     </div>
 

@@ -710,6 +710,7 @@ class TestTimeEntry:
         reason = SpecialLeaveReasonFactory()
         with expected_to_raise:
             TimeEntryFactory(
+                date=datetime.date(2025,10,21),
                 task=(
                     None
                     if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave', 'special_leave')

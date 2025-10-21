@@ -17,10 +17,10 @@ from django.utils.text import slugify
 from django.views.generic import TemplateView
 
 from krm3.core.models.projects import Project
-from krm3.timesheet.availability_report import availability_report_data
+from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
-from krm3.timesheet.task_report import task_report_data
+from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
 
 if typing.TYPE_CHECKING:
@@ -64,18 +64,61 @@ class HomeView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class AvailabilityReportView(HomeView):
+class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
     template_name = 'availability_report.html'
+
+    def get(self, request: HttpRequest, *args, month: str = None, **kwargs) -> HttpResponse:
+        self.month = month
+        return super().get(request, *args, **kwargs)
+
+    def _get_base_context(self) -> dict:
+        if self.month is None:
+            start_of_month = datetime.date.today().replace(day=1)
+        else:
+            start_of_month = datetime.datetime.strptime(self.month, '%Y%m').date()
+
+        prev_month = start_of_month - relativedelta(months=1)
+        next_month = start_of_month + relativedelta(months=1)
+
+        return {
+            'start': start_of_month,
+            'end': start_of_month + relativedelta(months=1, days=-1),
+            'current_month': start_of_month.strftime('%Y%m'),
+            'prev_month': prev_month.strftime('%Y%m'),
+            'next_month': next_month.strftime('%Y%m'),
+            'title': {
+                         'January': 'Gennaio',
+                         'February': 'Febbraio',
+                         'March': 'Marzo',
+                         'April': 'Aprile',
+                         'May': 'Maggio',
+                         'June': 'Giugno',
+                         'July': 'Luglio',
+                         'August': 'Agosto',
+                         'September': 'Settembre',
+                         'October': 'Ottobre',
+                         'November': 'Novembre',
+                         'December': 'Dicembre',
+                     }.get(start_of_month.strftime('%B'))
+                     + f'{start_of_month.strftime(" %Y")}',
+        }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        current_month = self.request.GET.get('month')
+        ctx = self._get_base_context()
+        context.update(ctx)
+
         selected_project = self.request.GET.get('project', '')
+        project_param = selected_project if selected_project else None
+
         projects = {'': 'All projects'} | dict(Project.objects.values_list('id', 'name'))
-        data = availability_report_data(current_month, selected_project)
-        data['projects'] = projects
-        data['selected_project'] = selected_project
-        return context | data
+        context['projects'] = projects
+        context['selected_project'] = selected_project
+        report_blocks = AvailabilityReportOnline(ctx['start'], ctx['end'], self.request.user, project_param)
+        context['report_blocks'] = report_blocks.report_html()
+
+        return context
 
 
 def _write_resource_data(ws: 'Worksheet', data: dict, report_data: dict, current_row: int) -> int:
@@ -223,14 +266,55 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 
-
-class TaskReportView(HomeView):
+class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
     template_name = 'task_report.html'
+
+    def get(self, request: HttpRequest, *args, month: str = None, export: bool = False, **kwargs) -> HttpResponse:
+        self.month = month
+        return super().get(request, *args, **kwargs)
+
+    def _get_base_context(self) -> dict:
+        if self.month is None:
+            start_of_month = datetime.date.today().replace(day=1)
+        else:
+            start_of_month = datetime.datetime.strptime(self.month, '%Y%m').date()
+
+        prev_month = start_of_month - relativedelta(months=1)
+        next_month = start_of_month + relativedelta(months=1)
+
+        return {
+            'start': start_of_month,
+            'end': start_of_month + relativedelta(months=1, days=-1),
+            'current_month': start_of_month.strftime('%Y%m'),
+            'prev_month': prev_month.strftime('%Y%m'),
+            'next_month': next_month.strftime('%Y%m'),
+            'title': {
+                         'January': 'Gennaio',
+                         'February': 'Febbraio',
+                         'March': 'Marzo',
+                         'April': 'Aprile',
+                         'May': 'Maggio',
+                         'June': 'Giugno',
+                         'July': 'Luglio',
+                         'August': 'Agosto',
+                         'September': 'Settembre',
+                         'October': 'Ottobre',
+                         'November': 'Novembre',
+                         'December': 'Dicembre',
+                     }.get(start_of_month.strftime('%B'))
+                     + f'{start_of_month.strftime(" %Y")}',
+        }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        current_month = self.request.GET.get('month')
-        return context | task_report_data(current_month, user=self.request.user)
+        ctx = self._get_base_context()
+        context.update(ctx)
+
+        report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], self.request.user)
+        context['report_blocks'] = report_blocks.report_html()
+
+        return context
 
 
 class ReleasesView(HomeView):
