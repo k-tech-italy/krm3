@@ -92,6 +92,7 @@ INSTALLED_APPS = (
         'tailwind',
         'krm3.theme.apps.ThemeConfig',
         'django_cotton.apps.SimpleAppConfig',
+        'pwa'
     ]
 )
 
@@ -253,3 +254,5 @@ TAILWIND_APP_NAME = 'krm3.theme'
 
 
 HOLIDAYS_CALENDAR = env('HOLIDAYS_CALENDAR')
+
+PWA_APP_NAME = 'Krm3'
