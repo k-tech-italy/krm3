@@ -76,7 +76,7 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
 class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ResourceSerializer
-    queryset = Resource.objects.all()
+    queryset = Resource.objects.order_by('last_name', 'first_name')
 
     @action(methods=['get'], detail=False)
     def active(self, request: Request) -> Response:
