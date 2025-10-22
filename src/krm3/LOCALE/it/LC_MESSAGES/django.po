@@ -1,0 +1,229 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-22 10:42+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
+msgid "Please correct the error below."
+msgstr ""
+
+#: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
+msgid "Please correct the errors below."
+msgstr ""
+
+#: src/krm3/core/models/missions.py:45
+msgid "Draft"
+msgstr ""
+
+#: src/krm3/core/models/missions.py:46
+msgid "Submitted"
+msgstr ""
+
+#: src/krm3/core/models/missions.py:47
+msgid "Cancelled"
+msgstr ""
+
+#: src/krm3/core/models/missions.py:103
+msgid ""
+"If a mission is in DRAFT then number must empty, otherwise it is mandatory"
+msgstr ""
+
+#: src/krm3/core/models/missions.py:106
+msgid "to_date must be > from_date"
+msgstr ""
+
+#: src/krm3/core/models/projects.py:70
+msgid "\"start_date\" is required"
+msgstr ""
+
+#: src/krm3/core/models/projects.py:73 src/krm3/core/models/projects.py:122
+#: src/krm3/core/models/projects.py:241
+msgid "\"start_date\" must not be later than \"end_date\""
+msgstr ""
+
+#: src/krm3/core/models/projects.py:81
+msgid "Open"
+msgstr ""
+
+#: src/krm3/core/models/projects.py:82
+msgid "Closed"
+msgstr ""
+
+#: src/krm3/core/models/projects.py:246
+#, python-brace-format
+msgid ""
+"A task must not start before its related project - task \"{task_title}\" is "
+"supposed to start on {task_start_date}, but related project "
+"\"{project_name}\" starts on {project_start_date}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:84
+msgid "\"from_date\" must not be later than \"to_date\""
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:198
+#: src/krm3/core/models/timesheets.py:672
+msgid "N.B.: End date is the day after the actual end date"
+msgstr "N.B.: La data fine è il giorno successivo a quello effettivo"
+
+#: src/krm3/core/models/timesheets.py:416
+msgid "Protocol number can be used only for sick days"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:419
+msgid "Protocol number digits must be numeric"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:423
+msgid "You cannot log task hours in a day entry"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:427
+msgid "You cannot log non-task hours in a task entry"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:436
+msgid "You cannot log more than one kind of non-task hours in a day"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:443
+msgid "You cannot log task hours and non-task hours together"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:448
+#, python-brace-format
+msgid "Total hours on this time entry ({total_hours}) is over 24 hours"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:461
+#, python-brace-format
+msgid ""
+"Total hours on all time entries on {date} ({total_hours}) is over 24 hours"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:469
+msgid "Only a special leave can have a reason"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:472
+msgid "Reason is required when logging a special leave"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:480
+msgid "reason is required"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:485
+#, python-brace-format
+msgid "Reason \"{title}\" is not valid on {date}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:513
+#, python-brace-format
+msgid ""
+"No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, "
+"got {actual_hours}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:526
+msgid "Cannot both withdraw from and deposit to bank hours on the same day"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:539
+#, python-brace-format
+msgid ""
+"This transaction would exceed the maximum bank balance of {limit} hours. "
+"Current balance: {current}, attempting to add: {change}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:547
+#, python-brace-format
+msgid ""
+"This transaction would exceed the minimum bank balance of {limit} hours. "
+"Current balance: {current}, attempting to change by: {change}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:557
+msgid "Cannot use bank hours during holidays or sick days"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:564
+#, python-brace-format
+msgid "Cannot deposit bank hours during a {day_type}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:584
+#, python-brace-format
+msgid ""
+"Cannot deposit {bank_hours} bank hours. Total hours would become "
+"{task_hours} which is below scheduled hours ({scheduled_hours})"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:595
+#, python-brace-format
+msgid ""
+"Cannot withdraw bank hours when task hours ({task_hours}) are higher or "
+"equal scheduled hours ({scheduled_hours})"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:612
+#, python-brace-format
+msgid ""
+"Cannot delete this time entry. Removing it would cause negative work hours "
+"({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on "
+"{date}"
+msgstr ""
+
+#: src/krm3/core/models/timesheets.py:675
+msgid "holidays.code and optionally subdivision from holidays library"
+msgstr "holidays.code e, opzionale, l'area geografica"
+
+#: src/krm3/fe/views.py:33
+#, python-format
+msgid "“%(path)s” does not exist"
+msgstr ""
+
+#: src/krm3/missions/templates/admin/missions/expense/expense_qr.html:9
+#: src/krm3/missions/templates/admin/missions/reimbursement/preview.html:5
+#: src/krm3/missions/templates/admin/missions/reimbursement/results.html:5
+#: src/krm3/missions/templates/admin/missions/reimbursement/summary.html:20
+msgid "Django administration"
+msgstr ""
+
+#: src/krm3/timesheet/api/serializers.py:118
+#, python-brace-format
+msgid "Hours must not be negative, got {value}."
+msgstr ""
+
+#: src/krm3/timesheet/api/serializers.py:145
+#, python-brace-format
+msgid "Reason for special leave is not valid yet: \"{value}\""
+msgstr ""
+
+#: src/krm3/timesheet/api/serializers.py:150
+#, python-brace-format
+msgid "Reason for special leave is expired: \"{value}\""
+msgstr ""
+
+#: src/krm3/utils/filters.py:9 src/krm3/utils/filters.py:21
+msgid "Recent"
+msgstr ""
+
+#: src/krm3/utils/filters.py:22
+msgid "All"
+msgstr ""

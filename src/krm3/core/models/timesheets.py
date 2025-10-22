@@ -195,7 +195,7 @@ class TimesheetSubmissionManager(models.Manager):
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
 
-    period = DateRangeField(help_text='NB: End date is the day after the actual end date')
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
 
@@ -669,10 +669,10 @@ def link_to_timesheet(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> 
 
 
 class ExtraHoliday(models.Model):
-    period = DateRangeField(help_text='NB: End date is the day after the actual end date')
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     # see https://holidays.readthedocs.io/en/latest/
     country_codes = ArrayField(
-        models.CharField(help_text='holidays.code and optionally subdivision from holidays library')
+        models.CharField(help_text=_('holidays.code and optionally subdivision from holidays library'))
     )
     reason = models.CharField()
 
