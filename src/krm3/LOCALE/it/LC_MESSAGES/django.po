@@ -3,66 +3,66 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-10-22 10:42+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2025-10-22 14:36+0000\n"
+"Last-Translator: armadillo <noreply@singlewave.co.uk>\n"
+"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/backend/it/>\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.13.3\n"
 
 #: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
 msgid "Please correct the error below."
-msgstr ""
+msgstr "Correggere l'errore indicato."
 
 #: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
 msgid "Please correct the errors below."
-msgstr ""
+msgstr "Correggere gli errori indicati."
 
 #: src/krm3/core/models/missions.py:45
 msgid "Draft"
-msgstr ""
+msgstr "Bozza"
 
 #: src/krm3/core/models/missions.py:46
 msgid "Submitted"
-msgstr ""
+msgstr "Inviato"
 
 #: src/krm3/core/models/missions.py:47
 msgid "Cancelled"
-msgstr ""
+msgstr "Cancellato"
 
 #: src/krm3/core/models/missions.py:103
 msgid ""
 "If a mission is in DRAFT then number must empty, otherwise it is mandatory"
-msgstr ""
+msgstr "Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è obbligatorio"
 
 #: src/krm3/core/models/missions.py:106
 msgid "to_date must be > from_date"
-msgstr ""
+msgstr "to_date deve essere > from_date"
 
 #: src/krm3/core/models/projects.py:70
 msgid "\"start_date\" is required"
-msgstr ""
+msgstr "\"data inzio\" `e obbligatoria"
 
 #: src/krm3/core/models/projects.py:73 src/krm3/core/models/projects.py:122
 #: src/krm3/core/models/projects.py:241
 msgid "\"start_date\" must not be later than \"end_date\""
-msgstr ""
+msgstr "\"data inizio\" non può essere successiva a \"data fine\""
 
 #: src/krm3/core/models/projects.py:81
 msgid "Open"
-msgstr ""
+msgstr "Aperto"
 
 #: src/krm3/core/models/projects.py:82
 msgid "Closed"
-msgstr ""
+msgstr "Chiuso"
 
 #: src/krm3/core/models/projects.py:246
 #, python-brace-format
@@ -70,7 +70,7 @@ msgid ""
 "A task must not start before its related project - task \"{task_title}\" is "
 "supposed to start on {task_start_date}, but related project "
 "\"{project_name}\" starts on {project_start_date}"
-msgstr ""
+msgstr "Un task non può iniziare prima del progetto cui appartiene - il task \"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto \"{project_name}\" inizia il {project_start_date}"
 
 #: src/krm3/core/models/timesheets.py:84
 msgid "\"from_date\" must not be later than \"to_date\""
