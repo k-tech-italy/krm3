@@ -183,6 +183,7 @@ LANGUAGE_CODE = 'en-uk'
 LANGUAGES = [
     ("en-uk", gettext_lazy("English")),
     ("it", gettext_lazy("Italian")),
+    ("pl", gettext_lazy("Polish")),
 ]
 
 TIME_ZONE = 'UTC'
