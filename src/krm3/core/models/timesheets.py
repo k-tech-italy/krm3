@@ -198,6 +198,7 @@ class TimesheetSubmission(models.Model):
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+    timesheet = models.JSONField(default={})
 
     objects = TimesheetSubmissionManager()
 
@@ -213,6 +214,8 @@ class TimesheetSubmission(models.Model):
         ]
 
     def __str__(self) -> str:
+        if self.period.lower.day == self.period.upper.day == 1:
+            return self.period.lower.strftime('%Y %b')
         end_dt = self.period.upper - datetime.timedelta(days=1)
         return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
 

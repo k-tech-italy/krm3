@@ -13,6 +13,7 @@ from django.urls import reverse
 from rangefilter.filters import DateRangeFilter
 
 from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission, Resource
+from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
 from django import forms
 
@@ -34,7 +35,10 @@ class BasketAdmin(admin.ModelAdmin):
 @admin.register(TimesheetSubmission)
 class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     list_display = ('get_period', 'resource', 'closed')
-    list_filter = [('resource', AutoCompleteFilter)]
+    list_filter = [
+        ('resource', AutoCompleteFilter),
+        ('period', DateRangeOverlapFilter),
+    ]
 
     formfield_overrides = {
         # Tell Django to use our custom widget for all DateRangeFields in this admin.
