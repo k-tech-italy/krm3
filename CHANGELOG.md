@@ -1,3 +1,15 @@
+## 1.10.0 (2025-10-23)
+
+### Feat
+
+- configure pwa (#156)
+
+### Fix
+
+- **Timesheet**: Fixed Timesheet combo box sorting
+- **Tests**: Fixed tests/unit/web/test_views.py::test_report_creation
+- **Timesheet-Report**: Removed trave from exported payslip report
+
 ## 1.9.11 (2025-10-20)
 
 ### Fix
