@@ -1,86 +1,86 @@
 {% extends "home.html" %}
 
-{% load report_line %}
+{% load tailwind_tags static reports %}
 
 
 {% block extrastyle %}
     <style>
-      html {
-        background-color: white;
-      }
+        html {
+            background-color: white;
+            color-scheme: dark !important;
+        }
+
+        body {
+            color-scheme: dark !important;
+        }
+
+        * {
+            color-scheme: dark !important;
+        }
     </style>
 {% endblock %}
 
 {% block body %}
     {{ block.super }}
-    <div class="w-9/10 mx-auto mt-20">
+    <div class="w-9/10 mx-auto pt-20">
         <div class="flex flex-row justify-between mt-2">
-            <a href="{% querystring month=prev_month %}"
-                class="flex p-2 mb-8 bg-blue-500 dark:bg-blue-700 text-white! shadow rounded-xl text-md hover:bg-blue-600 items-center">Prev month</a>
+            <a href="{% url "availability-report-month" prev_month %}" class="button">Prev month</a>
             <div class="flex flex-col">
-                <h1 class="text-3xl font-bold text-center mb-1">{{ title }}</h1>
+                <h1 class="title">Availability Report {{ title }}</h1>
             </div>
-            <a href="{% querystring month=next_month %}"
-                class="flex items-center p-2 mb-8 bg-blue-500 text-white! shadow rounded-xl text-md hover:bg-blue-600 ">Next month</a>
+            <a href="{% url "availability-report-month" next_month %}" class="button">Next month</a>
         </div>
+
         <div class="mb-10">
-            <label for="country" class="block text-sm/6 font-medium">Filter for project</label>
+            <label for="project" class="block text-sm/6 font-medium">Filter for project</label>
             <div class="mt-2 grid grid-cols-1">
-                    <select id="project" name="project" autocomplete="project-name">
-                        {% for id, project in projects.items %}
-                            <option value="{{ id }}">{{ project }}</option>
-                        {% endfor %}
-                    </select>
-                    <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4">
-                    </svg>
+                <select id="project" name="project" autocomplete="project-name">
+                    {% for id, project in projects.items %}
+                        <option value="{{ id }}" {% if id == selected_project %}selected{% endif %}>{{ project }}</option>
+                    {% endfor %}
+                </select>
+                <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4">
+                </svg>
             </div>
         </div>
-         {% if data %}
-            <div class="overflow-x-auto rounded-md shadow mb-4">
-                <table class="min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse">
+
+        {% if report_blocks %}
+            <div class="report-container">
+                <table class="report-table">
                     <thead>
-                    <tr class="bg-gray-400! dark:bg-blue-900! ">
-                        <td class="text-left p-1 border border-1">
-                            <strong>Bank holidays</strong>
-                        </td>
-                        {% for day in days %}
-                        <td class="p-1 text-center border border-1">
-                            {% if day.is_holiday %}X{% endif %}
-                        </td>
+                    <tr class="table-header-row">
+                        {% for cell in report_blocks.0.rows.0.cells %}
+                            <td class="{% if forloop.first %}row-header{% else %}text-center workday{% endif %}">
+                                {{ cell.render|linebreaks }}
+                            </td>
                         {% endfor %}
                     </tr>
-
                     </thead>
                     <tbody>
-
-                   <tr class="bg-gray-400! dark:bg-blue-900!">
-                       <td class="text-left p-1 border border-1">Days</td>
-                       {% for day in days %}
-                       <td class="p-1 text-center border border-1 bg-yellow-600">
-                           <p>{{ day.date|date:"D" }}</p>
-                           <p>{{ day.date|date:"j" }}</p>
-                       </td>
-                       {% endfor %}
-                   </tr>
-
-                    {% for resource, values in data.items %}
-                        {% report_line 'absences' resource values True %}
+                    {% for row in report_blocks.0.rows|slice:"1:" %}
+                        <tr class="row-data">
+                            {% for cell in row.cells %}
+                                <td class="{% if forloop.first %}row-header{% else %}cell-data{% endif %} {% if cell.nwd %}non-workday{% endif %} text-center">
+                                    {{ cell.render }}
+                                </td>
+                            {% endfor %}
+                        </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-                <div class="flex justify-center">No data found for this month or this project</div>
-            {% endif %}
+        {% else %}
+            <div class="flex justify-center">No data found for this month or this project</div>
+        {% endif %}
 
     </div>
 {% endblock body %}
 
-    {% block js-frameworks %}
-        {{ block.super }}
-<script>
-    $(document).ready(function() {
-        const $select = $('#project');
+{% block js-frameworks %}
+    {{ block.super }}
+    <script>
+        $(document).ready(function() {
+            const $select = $('#project');
 
         {% if selected_project %}
             $select.val("{{ selected_project }}")
@@ -88,15 +88,15 @@
 
         $select.select2();
 
-        $select.on('change', function () {
-            const url = new URL(window.location);
-            url.searchParams.set('project', this.value);
-            window.location.href = url.toString();
-        });
+            $select.on('change', function () {
+                const url = new URL(window.location);
+                url.searchParams.set('project', this.value);
+                window.location.href = url.toString();
+            });
 
-        $select.on('select2:open', function() {
-            $('#select2-project-results').addClass('text-black');
+            $select.on('select2:open', function() {
+                $('#select2-project-results').addClass('text-black');
+            });
         });
-    });
-</script>
-    {% endblock js-frameworks %}
+    </script>
+{% endblock js-frameworks %}
