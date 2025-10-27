@@ -76,7 +76,6 @@ dependencies = [
     "django-admin-extra-buttons>=2.1.1",
     "django-smart-admin[sysinfo]>=3.0",
     "holidays>=0.73",
-    "seleniumbase>=4.39.2",
     "django-flags>=5.0.14",
     "django-online-issues>=0.3",
     "django-pwa>=2.0.1",
@@ -108,6 +107,7 @@ dev = [
     "pytest-race>=0.2.0",
     "pytest-seleniumbase>=4.37.10",
     "responses>=0.25.7",
+    "seleniumbase>=4.41.6",
     "tox>=4.26.0",
 ]
 docs = [

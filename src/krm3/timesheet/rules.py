@@ -151,7 +151,7 @@ class TimesheetRule:
 
         if special_hours == 0 and (overtime := worked_hours - safe_dec(due_hours) - safe_dec(bank_to)) > 0:
             base['overtime'] = overtime
-        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours - safe_dec(bank_from):
+        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours:
             base['meal_voucher'] = 1
 
         base['fulfilled'] = worked_hours + special_hours + safe_dec(base['leave']) + safe_dec(base['rest']) >= safe_dec(
