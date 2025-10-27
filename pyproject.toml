@@ -79,6 +79,7 @@ dependencies = [
     "django-flags>=5.0.14",
     "django-online-issues>=0.3",
     "django-pwa>=2.0.1",
+    "bs4>=0.0.2",
 ]
 
 [project.optional-dependencies]
