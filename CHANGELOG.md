@@ -1,3 +1,13 @@
+## 1.11.0 (2025-10-27)
+
+### Feat
+
+- **TimesheetSubmission**: Introduced timesheet JSONField for persistence. Logic to be implemented
+
+### Fix
+
+- **Timesheet-Meal-Vouchers**: Fixed #422 threshold calcultaion with bank from
+
 ## 1.10.0 (2025-10-23)
 
 ### Feat
