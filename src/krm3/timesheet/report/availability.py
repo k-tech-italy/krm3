@@ -12,28 +12,24 @@ User = get_user_model()
 
 
 class AvailabilityReport(TimesheetReport):
-    """Availability report that extends the base TimesheetReport."""
-
     def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User,
-                 project: str | None = None) -> None:
-        super().__init__(from_date, to_date, user)
+                 project: str| None = None) -> None:
         self.project = project
-        self._filter_resources_by_project()
+        super().__init__(from_date, to_date, user, project=project)
         self._enrich_calendars_with_availability_data()
 
-    def _filter_resources_by_project(self) -> None:
-        """Filter resources by project if specified."""
-        if self.project is not None:
-            project_resource_ids = set(
-                Resource.objects.filter(task__project=self.project).values_list('id', flat=True)
-            )
-            self.resources = [r for r in self.resources if r.id in project_resource_ids]
+    def _set_resources(self, user: User, **kwargs) -> None:
+        base_filter = {'preferred_in_report': True} if user.has_any_perm('core.manage_any_timesheet',
+                                                                         'core.view_any_timesheet') else {
+            'id': user.get_resource().id}
 
-            self.calendars = {
-                res_id: calendar_days
-                for res_id, calendar_days in self.calendars.items()
-                if res_id in project_resource_ids
-            }
+        if self.project is not None:
+            base_filter['task__project'] = self.project
+
+        self.resources = list(Resource.objects.filter(**base_filter).distinct())
+
+        if not self.resources and not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            self.resources = [user.get_resource()]
 
     def _enrich_calendars_with_availability_data(self) -> None:
         """Add availability/absence data to existing calendar days."""

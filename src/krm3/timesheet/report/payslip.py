@@ -1,9 +1,12 @@
+import datetime
 import decimal
 import typing
 
 from .online import ReportBlock, ReportCell, ReportRow
 from .base import TimesheetReport, online_timeentry_key_mapping
 from krm3.utils.numbers import normal
+from ...core.models import TimesheetSubmission, ExtraHoliday
+from ...utils.dates import KrmDay
 
 if typing.TYPE_CHECKING:
     from krm3.timesheet.rules import Krm3Day
@@ -81,3 +84,26 @@ class TimesheetReportOnline(TimesheetReport):
             for rkd in resources_report_days:
                 row.add_cell('').nwd = rkd.nwd
             block.rows.insert(len(block.rows) - 3, row)
+
+    def _load_submissions(self, from_date: datetime.date, top_period: datetime.date, resource_ids: set[int]) -> (
+            dict[int, list[tuple[datetime.date, datetime.date]]] | None):
+        self.submissions: dict[int, list[tuple[datetime.date, datetime.date]]] = {}
+        for ts in TimesheetSubmission.objects.filter(
+                resource_id__in=resource_ids, closed=True, period__overlap=(from_date, top_period)
+        ):
+            self.submissions.setdefault(ts.resource_id, []).append((ts.period.lower, ts.period.upper))
+
+    def _load_extra_holidays(self) -> dict[KrmDay, list[str]] | None:
+        """Retrieve the extra holidays for the given country codes."""
+        short_codes = {x.split('-')[0] for x in self.country_codes}
+        result = {}
+        extra_holidays = list(
+            ExtraHoliday.objects.filter(
+                country_codes__overlap=list(self.country_codes.union(short_codes)),
+                period__overlap=(self.from_date, self.to_date),
+            )
+        )
+        for eh in extra_holidays:
+            for kd in KrmDay(eh.period.lower).range_to(eh.period.upper - datetime.timedelta(days=1)):
+                result.setdefault(kd, []).extend(eh.country_codes)
+        return result
