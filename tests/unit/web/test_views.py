@@ -8,7 +8,6 @@ import openpyxl
 import pytest
 from django.urls import reverse
 from django.contrib.auth.models import Permission
-
 from testutils.date_utils import _dt
 from testutils.factories import (
     ProjectFactory,
@@ -24,6 +23,7 @@ from testutils.factories import (
 from freezegun import freeze_time
 
 from krm3.timesheet.report.payslip_report import report_timeentry_key_mapping
+from tests._extras.testutils.factories import TimesheetSubmissionFactory
 
 
 def _assert_homepage_content(response):
@@ -159,6 +159,26 @@ def test_availability_view_filtered_by_project(client):
     assert 'H' in content
     assert 'L 3.00' not in content
 
+@freeze_time('2025-08-22')
+def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
+    """Test that unprivileged user gets their own resource when project filter excludes them."""
+    user = UserFactory(username='user00', password='pass123')
+    user_resource = ResourceFactory(user=user, profile=user.profile, preferred_in_report=False)
+
+    project = ProjectFactory()
+    other_resource = ResourceFactory(preferred_in_report=True)
+    TaskFactory(project=project, resource=other_resource)
+
+    client.login(username='user00', password='pass123')
+
+    url = reverse('availability')
+    response = client.get(f'{url}?project={project.id}')
+
+    assert response.status_code == 200
+    content = response.content.decode()
+
+    assert f'{user_resource.first_name} {user_resource.last_name}' in content
+    assert f'{other_resource.first_name} {other_resource.last_name}' not in content
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
@@ -400,3 +420,17 @@ def test_releases_view_with_file_read_error(mock_open_func, client):
     assert response.status_code == 200
     assert 'Changelog' in content
     assert 'Error parsing CHANGELOG.md' in content
+
+
+def test_payslip_report_with_timesheet_submissions(client):
+    """Test payslip report includes timesheet submissions in coverage."""
+    SuperUserFactory(username='user00', password='pass123')
+    resource = ResourceFactory()
+
+    TimesheetSubmissionFactory(resource=resource)
+
+    client.login(username='user00', password='pass123')
+    url = reverse('export_report', args=['202001'])
+    response = client.get(url)
+
+    assert response.status_code == 200
