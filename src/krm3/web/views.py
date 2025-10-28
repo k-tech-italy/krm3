@@ -15,6 +15,7 @@ from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
+from django.utils.translation import gettext_lazy as _
 
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
@@ -222,7 +223,7 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             report = TimesheetReportExport(ctx['start'], ctx['end'], self.request.user)
 
-            report.write_excel(response, f'Report risorse {title}')
+            report.write_excel(response, _('Resource report {title}').format(title=title))
             return response
         return super().get(request, *args, **kwargs)
 
@@ -242,18 +243,18 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                'January': 'Gennaio',
-                'February': 'Febbraio',
-                'March': 'Marzo',
-                'April': 'Aprile',
-                'May': 'Maggio',
-                'June': 'Giugno',
-                'July': 'Luglio',
-                'August': 'Agosto',
-                'September': 'Settembre',
-                'October': 'Ottobre',
-                'November': 'Novembre',
-                'December': 'Dicembre',
+                'January': _('January'),
+                'February': _('February'),
+                'March': _('March'),
+                'April': _('April'),
+                'May': _('May'),
+                'June': _('June'),
+                'July': _('July'),
+                'August': _('August'),
+                'September': _('September'),
+                'October': _('October'),
+                'November': _('November'),
+                'December': _('December'),
             }.get(start_of_month.strftime('%B'))
             + f'{start_of_month.strftime(" %Y")}',
         }

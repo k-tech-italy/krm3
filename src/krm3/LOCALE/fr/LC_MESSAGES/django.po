@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-22 12:58+0000\n"
+"POT-Creation-Date: 2025-10-28 16:15+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
 #: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
 msgid "Please correct the error below."
 msgstr ""
@@ -231,10 +232,199 @@ msgstr ""
 msgid "Reason for special leave is expired: \"{value}\""
 msgstr ""
 
+#: src/krm3/timesheet/report/base.py:17
+msgid "Bank hours"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:18
+msgid "Due hours"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:19
+#: src/krm3/timesheet/report/payslip_report.py:19
+msgid "Regular hours"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:20
+msgid "Day shift hours"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:21
+msgid "Night shift hours"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:22
+#: src/krm3/timesheet/report/payslip_report.py:21
+msgid "On call"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:23
+msgid "Travel"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:24
+#: src/krm3/timesheet/report/payslip_report.py:22
+msgid "Holiday"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:25
+#: src/krm3/timesheet/report/payslip_report.py:23
+msgid "Leave"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:26
+#: src/krm3/timesheet/report/payslip_report.py:25
+msgid "Rest"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:27
+#: src/krm3/timesheet/report/payslip_report.py:26
+msgid "Overtime"
+msgstr ""
+
+#: src/krm3/timesheet/report/base.py:28
+#: src/krm3/timesheet/report/payslip_report.py:27
+msgid "Meal voucher"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip.py:49
+#, python-brace-format
+msgid "Special leave ({title})"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip.py:69
+#, python-brace-format
+msgid "Sick {title}"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip.py:80
+#: src/krm3/timesheet/report/payslip_report.py:24
+msgid "Sick"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip_report.py:20
+msgid "Night shift"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip_report.py:97
+#, python-brace-format
+msgid "Special leave ({sl_title})"
+msgstr ""
+
+#: src/krm3/timesheet/report/payslip_report.py:101
+#, python-brace-format
+msgid "Sick {protocol}"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:73
+msgid "Mon"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:74
+msgid "Tue"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:75
+msgid "Wed"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:76
+msgid "Thu"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:77
+msgid "Fri"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:78
+msgid "Sat"
+msgstr ""
+
+#: src/krm3/timesheet/rules.py:79
+msgid "Sun"
+msgstr ""
+
 #: src/krm3/utils/filters.py:9 src/krm3/utils/filters.py:21
 msgid "Recent"
 msgstr ""
 
 #: src/krm3/utils/filters.py:22
 msgid "All"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:26
+msgid "Prev month"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:30
+msgid "Next month"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:33
+msgid "Download report"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:51
+msgid "Days"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:52
+msgid "Total HH"
+msgstr ""
+
+#: src/krm3/web/templates/report.html:79
+msgid "No time entries available"
+msgstr ""
+
+#: src/krm3/web/views.py:183
+#, python-brace-format
+msgid "Resource report {title}"
+msgstr ""
+
+#: src/krm3/web/views.py:203
+msgid "January"
+msgstr ""
+
+#: src/krm3/web/views.py:204
+msgid "February"
+msgstr ""
+
+#: src/krm3/web/views.py:205
+msgid "March"
+msgstr ""
+
+#: src/krm3/web/views.py:206
+msgid "April"
+msgstr ""
+
+#: src/krm3/web/views.py:207
+msgid "May"
+msgstr ""
+
+#: src/krm3/web/views.py:208
+msgid "June"
+msgstr ""
+
+#: src/krm3/web/views.py:209
+msgid "July"
+msgstr ""
+
+#: src/krm3/web/views.py:210
+msgid "August"
+msgstr ""
+
+#: src/krm3/web/views.py:211
+msgid "September"
+msgstr ""
+
+#: src/krm3/web/views.py:212
+msgid "October"
+msgstr ""
+
+#: src/krm3/web/views.py:213
+msgid "November"
+msgstr ""
+
+#: src/krm3/web/views.py:214
+msgid "December"
 msgstr ""

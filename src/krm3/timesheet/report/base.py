@@ -3,6 +3,7 @@ import json
 
 from constance import config
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
 
 from krm3.config import settings
@@ -14,18 +15,18 @@ User = get_user_model()
 
 
 online_timeentry_key_mapping = {
-    'bank': 'Banca ore',
-    'due_hours': 'Ore lavorative',
-    'regular_hours': 'Ore ordinarie',
-    'day_shift': 'Ore diurne',
-    'night_shift': 'Ore notturne',
-    'on_call': 'Reperibilità',
-    'travel': 'Viaggio',
-    'holiday': 'Ferie',
-    'leave': 'Permessi',
-    'rest': 'Riposo',
-    'overtime': 'Ore straordinarie',
-    'meal_voucher': 'Buoni pasto',
+    'bank': _('Bank hours'),
+    'due_hours': _('Due hours'),
+    'regular_hours': _('Regular hours'),
+    'day_shift': _('Day shift hours'),
+    'night_shift': _('Night shift hours'),
+    'on_call': _('On call'),
+    'travel': _('Travel'),
+    'holiday': _('Holiday'),
+    'leave': _('Leave'),
+    'rest': _('Rest'),
+    'overtime': _('Overtime'),
+    'meal_voucher': _('Meal voucher'),
 }
 
 

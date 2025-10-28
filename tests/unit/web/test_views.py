@@ -214,15 +214,15 @@ def test_report_view_current_month(client):
     assert response.status_code == 200
     content = response.content.decode()
     assert f'{resource.last_name}</strong> {resource.first_name}' in content
-    assert 'Report Agosto 2025</h1>' in content
+    assert 'Report August 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Report Settembre 2025', id='next_month'),
-        pytest.param('202507', 'Report Luglio 2025', id='previous_month'),
+        pytest.param('202509', 'Report September 2025', id='next_month'),
+        pytest.param('202507', 'Report July 2025', id='previous_month'),
     ],
 )
 def test_report_view_next_previous_month(client, month, expected_result):
@@ -323,7 +323,7 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     r1_name = f'{r1.last_name.upper()} {r1.first_name}'
     r2_name = f'{r2.last_name.upper()} {r2.first_name}'
     assert len(workbook.sheetnames) == 1
-    sheet_name = 'Report risorse Giugno 2025'
+    sheet_name = 'Resource report June 2025'
     assert sheet_name in workbook.sheetnames
     sheet = workbook[sheet_name]
 

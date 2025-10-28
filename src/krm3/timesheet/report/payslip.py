@@ -5,6 +5,7 @@ import typing
 from .online import ReportBlock, ReportCell, ReportRow
 from .base import TimesheetReport, online_timeentry_key_mapping
 from krm3.utils.numbers import normal
+from django.utils.translation import gettext_lazy as _
 from ...core.models import TimesheetSubmission, ExtraHoliday
 from ...utils.dates import KrmDay
 
@@ -48,7 +49,7 @@ class TimesheetReportOnline(TimesheetReport):
 
         for title, sl_days in special_leave_days.items():
             row = ReportRow()
-            row.add_cell(f'Perm. speciale ({title})')
+            row.add_cell(_('Special leave ({title})').format(title=title))
             row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
             for rkd in resources_report_days:
                 value = rkd.data_special_leave_hours if rkd in sl_days else ''
@@ -68,7 +69,7 @@ class TimesheetReportOnline(TimesheetReport):
         for title in sorted(sick_days):
             sl_days = sick_days[title]
             row = ReportRow()
-            row.add_cell(f'Malattia {title}')
+            row.add_cell(_('Sick {title}').format(title=title))
             row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
             for rkd in resources_report_days:
                 value = rkd.data_sick if rkd in sl_days else ''
@@ -79,7 +80,7 @@ class TimesheetReportOnline(TimesheetReport):
 
         if not sick_days:
             row = ReportRow()
-            row.add_cell('Malattia')
+            row.add_cell(_('Sick'))
             row.add_cell('0')
             for rkd in resources_report_days:
                 row.add_cell('').nwd = rkd.nwd

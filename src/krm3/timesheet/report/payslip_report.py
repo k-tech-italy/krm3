@@ -2,6 +2,7 @@ import typing
 
 import openpyxl
 
+from django.utils.translation import gettext as _
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.utils.numbers import safe_dec
 from krm3.web.report_styles import (
@@ -15,15 +16,15 @@ from krm3.web.report_styles import (
 )
 
 report_timeentry_key_mapping = {
-    'regular_hours': 'Ore ordinarie',
-    'night_shift': 'Ore notturne',
-    'on_call': 'Reperibilità',
-    'holiday': 'Ferie',
-    'leave': 'Permessi',
-    'sick': 'Malattia',
-    'rest': 'Riposo',
-    'overtime': 'Ore straordinarie',
-    'meal_voucher': 'Buoni pasto',
+    'regular_hours': _('Regular hours'),
+    'night_shift': _('Night shift'),
+    'on_call': _('On call'),
+    'holiday': _('Holiday'),
+    'leave': _('Leave'),
+    'sick': _('Sick'),
+    'rest': _('Rest'),
+    'overtime': _('Overtime'),
+    'meal_voucher': _('Meal voucher'),
 }
 
 
@@ -93,10 +94,12 @@ class TimesheetReportExport(TimesheetReport):
                     dynamic_mapping[key] = label
                     if key == 'leave' and special_leave_days:
                         for sl_title in special_leave_days:
-                            dynamic_mapping[f'special_leave_{sl_title}'] = f'Perm. speciale ({sl_title})'
+                            dynamic_mapping[f'special_leave_{sl_title}'] = (_('Special leave ({sl_title})')
+                                                                            .format(sl_title=sl_title))
                     if key == 'sick':
                         for protocol in sick_days_with_protocol:
-                            dynamic_mapping[f'sick_days_{protocol}'] = f'Malattia {protocol}'
+                            dynamic_mapping[f'sick_days_{protocol}'] = (_('Sick {protocol}')
+                                                                        .format(protocol=protocol))
 
                 for lnum, (key, label) in enumerate(dynamic_mapping.items()):
                     rownum = current_row + lnum

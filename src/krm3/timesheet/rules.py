@@ -3,6 +3,7 @@ import typing
 
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
+from django.utils.translation import gettext_lazy as _
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, TimeEntry
@@ -68,17 +69,15 @@ class Krm3Day(KrmDay):
     @property
     def day_of_week_short_i18n(self) -> str:
         ret = self.date.strftime('%a')
-        if self.lang == 'IT':  # TODO:
-            ret = {
-                'Mon': 'Lun',
-                'Tue': 'Mar',
-                'Wed': 'Mer',
-                'Thu': 'Gio',
-                'Fri': 'Ven',
-                'Sat': 'Sab',
-                'Sun': 'Dom',
-            }.get(ret, ret)
-        return ret
+        return {
+            'Mon': _('Mon'),
+            'Tue': _('Tue'),
+            'Wed': _('Wed'),
+            'Thu': _('Thu'),
+            'Fri': _('Fri'),
+            'Sat': _('Sat'),
+            'Sun': _('Sun'),
+        }.get(ret, ret)
 
     def __repr__(self) -> str:
         return self.date.strftime('K+%Y-%m-%d')

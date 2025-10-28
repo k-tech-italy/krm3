@@ -1,7 +1,7 @@
 {% extends "home.html" %}
 
 {% load tailwind_tags static reports %}
-
+{% load i18n %}
 
 {% block extrastyle %}
     <style>
@@ -23,14 +23,14 @@
     {{ block.super }}
     <div class="w-9/10 mx-auto pt-20">
         <div class="flex flex-row justify-between mt-2">
-            <a href="{% url "report-month" prev_month %}" class="button">Prev month</a>
+            <a href="{% url "report-month" prev_month %}" class="button">{% translate "Prev month" %}</a>
             <div class="flex flex-col">
                 <h1 class="title">Report {{ title }}</h1>
             </div>
-            <a href="{% url "report-month" next_month %}" class="button">Next month</a>
+            <a href="{% url "report-month" next_month %}" class="button">{% translate "Next month" %}</a>
         </div>
         <div class="flex justify-center">
-            <a href="{% url 'export_report' current_month %}" class="button">Download report</a>
+            <a href="{% url 'export_report' current_month %}" class="button">{% translate "Download report" %}</a>
         </div>
         {% for report_block in report_blocks %}
             <div class="report-container">
@@ -48,8 +48,8 @@
                         {% endfor %}
                     </tr>
                     <tr class="table-header-row">
-                        <td class="row-header">Giorni {{ report_block.rows.0.cells.0.render }}</td>
-                        <td>Tot HH</td>
+                        <td class="row-header">{% translate "Days" %} {{ report_block.rows.0.cells.0.render }}</td>
+                        <td>{% translate "Total HH" %}</td>
                         {% for cell in report_block.rows.0.cells|slice:"1:" %}
                             <td class="{% if not cell.value.nwd %}workday{% endif %} {% if not cell.value.submitted %}pending{% endif %}">
                                 <p>{{ cell.value.day_of_week_short_i18n }}</p>
@@ -76,7 +76,7 @@
                         </tr>
                         {% empty %}
                         <tr class="row-data">
-                            <td class="text-left" colspan="{{ report_block.width }}">No time entries available</td>
+                            <td class="text-left" colspan="{{ report_block.width }}">{% translate "No time entries available" %}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
