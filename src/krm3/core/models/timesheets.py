@@ -198,7 +198,7 @@ class TimesheetSubmission(models.Model):
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    timesheet = models.JSONField(default={})
+    timesheet = models.JSONField(default=dict)
 
     objects = TimesheetSubmissionManager()
 
@@ -321,6 +321,10 @@ class TimeEntry(models.Model):
             + Decimal(self.bank_from)
             - Decimal(self.bank_to)
         )
+
+    @property
+    def is_submitted(self) -> bool:
+        return not (self.timesheet is None or self.timesheet.closed is False)
 
     @property
     def is_day_entry(self) -> bool:

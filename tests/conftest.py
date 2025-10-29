@@ -1,9 +1,14 @@
 import sys
+import typing
 from pathlib import Path
+from typing import cast
 
 import pytest
 import responses
 from rest_framework.test import APIClient
+
+if typing.TYPE_CHECKING:
+    from krm3.core.models import Resource
 
 
 def pytest_configure(config):
@@ -171,7 +176,7 @@ def resource(db):
 
 @pytest.fixture
 def resource_factory():
-    from testutils.factories import ResourceFactory
+    from testutils.factories import ResourceFactory  # noqa: PLC0415
 
     def _make(*args, **kwargs):
         return ResourceFactory(*args, **kwargs)
@@ -188,7 +193,7 @@ def project(db):
 
 @pytest.fixture
 def krm3client(db):
-    from testutils.factories import ClientFactory
+    from testutils.factories import ClientFactory  # noqa: PLC0415
 
     return ClientFactory()
 
@@ -206,8 +211,33 @@ def api_client():
 
 @pytest.fixture
 def resource_client(client):
-    from testutils.factories import UserFactory, ResourceFactory
+    from testutils.factories import ResourceFactory, UserFactory  # noqa: PLC0415
+
     user = UserFactory()
-    client._resource = ResourceFactory(user = user)
+    client._resource = ResourceFactory(user=user)
     client.login(username=user.username, password=user._password)
     return client
+
+
+@pytest.fixture
+def resources(admin_user):
+    from testutils.factories import ResourceFactory, UserFactory  # noqa: PLC0415
+    from testutils.permissions import add_permissions  # noqa: PLC0415
+
+    r_admin = ResourceFactory(user=admin_user)
+    r_viewer = ResourceFactory(user=UserFactory(username='viewer'))
+    r_manager = ResourceFactory(user=UserFactory(username='manager'))
+    r_regular = ResourceFactory(user=UserFactory(username='regular'))
+    r_other = ResourceFactory(user=UserFactory(username='other'))
+    cast('Resource', r_viewer)
+    cast('Resource', r_manager)
+    add_permissions(r_viewer.user, 'core.view_any_timesheet')
+    add_permissions(r_manager.user, 'core.manage_any_timesheet')
+
+    return {
+        'admin': r_admin,
+        'viewer': r_viewer,
+        'manager': r_manager,
+        'regular': r_regular,
+        'other': r_other,
+    }

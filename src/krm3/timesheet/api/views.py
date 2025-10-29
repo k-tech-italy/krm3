@@ -1,15 +1,15 @@
 import datetime
-
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
 from django.db import transaction
-from django.db.models import QuerySet, ExpressionWrapper, Q, BooleanField
+from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
+from django.utils.translation import gettext as _
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
 
 from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
@@ -17,15 +17,14 @@ from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
-    TimeEntryReadSerializer,
     TimeEntryCreateSerializer,
+    TimeEntryReadSerializer,
     TimesheetSerializer,
 )
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 if TYPE_CHECKING:
-    from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
     from krm3.core.models import User
+    from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
 
 
 class TimesheetAPIViewSet(viewsets.GenericViewSet):
@@ -86,19 +85,30 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
         return Response(serializer.data)
 
 
-class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class TimeEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        return super().list(request, *args, **kwargs)
 
     @override
     def get_queryset(self) -> QuerySet[TimeEntry]:
         user = cast('User', self.request.user)
-        if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            return TimeEntry.objects.all()
         return TimeEntry.objects.filter_acl(user=user)  # pyright: ignore
+
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        if resp := self.check_modify_allowed(request):
+            return resp
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        if resp := self.check_modify_allowed(request):
+            return resp
+        return super().destroy(request, *args, **kwargs)
 
     @override
     def get_serializer_class(self) -> type[BaseTimeEntrySerializer]:
-        if self.request.method == 'POST':
+        if self.request.method in ['POST', 'PUT']:
             return TimeEntryCreateSerializer
         return TimeEntryReadSerializer
 
@@ -142,7 +152,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             ),
         ],
     )
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # noqa: C901
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
@@ -171,8 +181,14 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         request.data['task'] = request.data.pop('task_id', None)
         request.data['resource'] = resource_id
 
+        is_day_entry = request.data.get('task', None) is None
+
         with transaction.atomic():
             try:
+                if is_day_entry and len(dates) == 1:  # TODO: Provisional fix for #423. Will allow single day edits
+                    TimeEntry.objects.filter(
+                        resource_id=resource_id, task__isnull=is_day_entry, date__in=dates
+                    ).delete()
                 for date in dates:
                     time_entry_data = request.data.copy()
                     time_entry_data.setdefault('date', date)
@@ -189,7 +205,7 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(status=status.HTTP_201_CREATED, headers=headers)
 
     @action(methods=['post'], detail=False)
-    def clear(self, request: Request) -> Response:
+    def clear(self, request: Request) -> Response:  # noqa: C901
         requested_entry_ids = request.data.get('ids', [])
         if not requested_entry_ids:
             return Response(data={'error': 'No time entry ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -230,6 +246,15 @@ class TimeEntryAPIViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 entry.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def check_modify_allowed(self, request: Request) -> Response | None:
+        """Check if TimeEntry can be modified by user and it is not belonging to a submitted Timesheet."""
+        time_entry: TimeEntry = self.get_object()
+        if time_entry.resource.user != request.user and not request.user.has_perm('core.manage_any_timesheet'):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if time_entry.is_submitted:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
+        return None
 
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):

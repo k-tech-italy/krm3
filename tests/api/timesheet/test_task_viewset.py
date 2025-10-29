@@ -1007,7 +1007,7 @@ class TestTimeEntryAPICreateView:
 
         response = api_client(user=admin_user).post(self.url(), data=data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
-        existing_day_entry.refresh_from_db()
+        existing_day_entry = TimeEntry.objects.get(resource=resource, date=target_date, task__isnull=True)
         assert getattr(existing_day_entry, hours_field) == 8
 
     @pytest.mark.parametrize(

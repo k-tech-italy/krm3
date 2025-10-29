@@ -1,21 +1,19 @@
 import datetime
-import typing
-import pytest
 import re
-from django.test import override_settings
-from constance import config
+import typing
 
+import pytest
+from constance import config
+from django.test import override_settings
+from freezegun import freeze_time
+from selenium.webdriver.common.by import By
 from testutils.factories import (
-    TaskFactory,
-    TimeEntryFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
+    TaskFactory,
+    TimeEntryFactory,
     TimesheetSubmissionFactory,
 )
-from selenium.webdriver.common.by import By
-
-
-from freezegun import freeze_time
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
@@ -480,9 +478,9 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
 
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
-    expected_error = (
-        'Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit to bank hours on the same day.'
-    )
+    expected_error = ('Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit '
+                      'to bank hours on the same day; Cannot deposit 2.00 bank hours. Total hours '
+                      'would become 6.00 which is below scheduled hours (8).')
     actual_error = error_element.text.strip()
 
     assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
@@ -810,3 +808,4 @@ def test_timesheet_scheduled_hours_more_colors(
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
     )
     browser.wait_for_element_visible(element_path)
+    assert True
