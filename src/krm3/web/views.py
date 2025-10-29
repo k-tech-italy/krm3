@@ -89,20 +89,20 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                         'January': 'Gennaio',
-                         'February': 'Febbraio',
-                         'March': 'Marzo',
-                         'April': 'Aprile',
-                         'May': 'Maggio',
-                         'June': 'Giugno',
-                         'July': 'Luglio',
-                         'August': 'Agosto',
-                         'September': 'Settembre',
-                         'October': 'Ottobre',
-                         'November': 'Novembre',
-                         'December': 'Dicembre',
-                     }.get(start_of_month.strftime('%B'))
-                     + f'{start_of_month.strftime(" %Y")}',
+                'January': _('January'),
+                'February': _('February'),
+                'March': _('March'),
+                'April': _('April'),
+                'May': _('May'),
+                'June': _('June'),
+                'July': _('July'),
+                'August': _('August'),
+                'September': _('September'),
+                'October': _('October'),
+                'November': _('November'),
+                'December': _('December'),
+             }.get(start_of_month.strftime('%B'))
+             + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -113,7 +113,7 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         selected_project = self.request.GET.get('project', '')
         project_param = selected_project if selected_project else None
 
-        projects = {'': 'All projects'} | dict(Project.objects.values_list('id', 'name'))
+        projects = {'': _('All projects')} | dict(Project.objects.values_list('id', 'name'))
         context['projects'] = projects
         context['selected_project'] = selected_project
         report_blocks = AvailabilityReportOnline(ctx['start'], ctx['end'], self.request.user, project_param)
@@ -291,20 +291,20 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                         'January': 'Gennaio',
-                         'February': 'Febbraio',
-                         'March': 'Marzo',
-                         'April': 'Aprile',
-                         'May': 'Maggio',
-                         'June': 'Giugno',
-                         'July': 'Luglio',
-                         'August': 'Agosto',
-                         'September': 'Settembre',
-                         'October': 'Ottobre',
-                         'November': 'Novembre',
-                         'December': 'Dicembre',
-                     }.get(start_of_month.strftime('%B'))
-                     + f'{start_of_month.strftime(" %Y")}',
+                'January': _('January'),
+                'February': _('February'),
+                'March': _('March'),
+                'April': _('April'),
+                'May': _('May'),
+                'June': _('June'),
+                'July': _('July'),
+                'August': _('August'),
+                'September': _('September'),
+                'October': _('October'),
+                'November': _('November'),
+                'December': _('December'),
+             }.get(start_of_month.strftime('%B'))
+             + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:

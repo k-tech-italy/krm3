@@ -125,7 +125,7 @@ def test_availability_view_current_month(client):
     assert f'{resource.first_name} {resource.last_name}' in content
     assert 'H' in content
     assert 'L 6.00' in content
-    assert '<h1 class="title">Availability Report Agosto 2025</h1>' in content
+    assert '<h1 class="title">Availability Report August 2025</h1>' in content
 
 
 def test_availability_view_filtered_by_project(client):
@@ -184,8 +184,8 @@ def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Availability Report Settembre 2025', id='next_month'),
-        pytest.param('202507', 'Availability Report Luglio 2025', id='previous_month'),
+        pytest.param('202509', 'Availability Report September 2025', id='next_month'),
+        pytest.param('202507', 'Availability Report July 2025', id='previous_month'),
     ],
 )
 def test_availability_view_next_previous_month(client, month, expected_result):
@@ -245,15 +245,15 @@ def test_task_report_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert '<h1 class="title">Task Report Agosto 2025</h1>' in content
+    assert '<h1 class="title">Task Report August 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Task Report Settembre 2025', id='next_month'),
-        pytest.param('202507', 'Task Report Luglio 2025', id='previous_month'),
+        pytest.param('202509', 'Task Report September 2025', id='next_month'),
+        pytest.param('202507', 'Task Report July 2025', id='previous_month'),
     ],
 )
 def test_task_report_view_next_previous_month(client, month, expected_result):
@@ -342,15 +342,15 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     r2_row = resource_rows['r2']
 
     assert sheet[f'A{r1_row}'].value.split(' - ')[-1] == r1_name
-    assert sheet[f'A{r1_row + 1}'].value == 'Giorni 20'
+    assert sheet[f'A{r1_row + 1}'].value == 'Days 20'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
     assert all(value in report_timeentry_key_mapping.values() for value in
-               [label for label in row_labels if label != 'Malattia 12321'])
+               [label for label in row_labels if label != 'Sick 12321'])
 
     first_resource_row = min(resource_rows.values())
-    assert sheet[f'C{first_resource_row + 1}'].value == 'Dom\n1'
-    assert sheet[f'AF{first_resource_row + 1}'].value == 'Lun\n30'
+    assert sheet[f'C{first_resource_row + 1}'].value == 'Sun\n1'
+    assert sheet[f'AF{first_resource_row + 1}'].value == 'Mon\n30'
     assert sheet[f'AG{first_resource_row + 1}'].value is None
 
     regular_hours_data_row = r1_row + 2

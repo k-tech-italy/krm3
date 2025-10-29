@@ -25,7 +25,7 @@
         <div class="flex flex-row justify-between mt-2">
             <a href="{% url "report-month" prev_month %}" class="button">{% translate "Prev month" %}</a>
             <div class="flex flex-col">
-                <h1 class="title">Report {{ title }}</h1>
+                <h1 class="title">{% blocktranslate %}Report {{ title }}{% endblocktranslate %}</h1>
             </div>
             <a href="{% url "report-month" next_month %}" class="button">{% translate "Next month" %}</a>
         </div>

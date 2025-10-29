@@ -15,18 +15,20 @@ from krm3.web.report_styles import (
     thin_border,
 )
 
-report_timeentry_key_mapping = {
-    'regular_hours': _('Regular hours'),
-    'night_shift': _('Night shift'),
-    'on_call': _('On call'),
-    'holiday': _('Holiday'),
-    'leave': _('Leave'),
-    'sick': _('Sick'),
-    'rest': _('Rest'),
-    'overtime': _('Overtime'),
-    'meal_voucher': _('Meal voucher'),
-}
+def get_report_timeentry_key_mapping() -> dict[str,str]:
+    return {
+        'regular_hours': _('Regular hours'),
+        'night_shift': _('Night shift'),
+        'on_call': _('On call'),
+        'holiday': _('Holiday'),
+        'leave': _('Leave'),
+        'sick': _('Sick'),
+        'rest': _('Rest'),
+        'overtime': _('Overtime'),
+        'meal_voucher': _('Meal voucher'),
+    }
 
+report_timeentry_key_mapping = get_report_timeentry_key_mapping()
 
 class StreamWriter(typing.Protocol):
     def write(self, data) -> None: ...  # noqa: ANN001
@@ -34,6 +36,7 @@ class StreamWriter(typing.Protocol):
 
 class TimesheetReportExport(TimesheetReport):
     def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912,PLR0915
+        mapping = get_report_timeentry_key_mapping()
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = title
@@ -67,8 +70,8 @@ class TimesheetReportExport(TimesheetReport):
             # Days row
             working_days = sum([0 if kd.nwd else 1 for kd in resources_report_days])
             giorni = [
-                f'Giorni {working_days}',
-                'Tot HH',
+                _('Days {working_days}').format(working_days=working_days),
+                _('Total HH'),
                 *[f'{day.day_of_week_short_i18n}\n{day.day}' for day in resources_report_days],
             ]
             for col, giorno in enumerate(giorni):
@@ -90,7 +93,7 @@ class TimesheetReportExport(TimesheetReport):
                     if rkd.data_sick and rkd.data_protocol_number:
                         sick_days_with_protocol.setdefault(rkd.data_protocol_number, []).append(rkd)
 
-                for key, label in report_timeentry_key_mapping.items():
+                for key, label in mapping.items():
                     dynamic_mapping[key] = label
                     if key == 'leave' and special_leave_days:
                         for sl_title in special_leave_days:
@@ -138,7 +141,7 @@ class TimesheetReportExport(TimesheetReport):
                 current_row = rownum
 
             else:
-                ws.cell(row=current_row, column=1, value='No data available')
+                ws.cell(row=current_row, column=1, value=_('No data available'))
                 current_row += 1
 
         wb.save(stream)

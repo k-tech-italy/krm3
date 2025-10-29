@@ -3,6 +3,7 @@ from decimal import Decimal as D  # noqa: N817
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
 
 from krm3.core.models import Resource, Task
 from krm3.timesheet.report.base import TimesheetReport
@@ -13,9 +14,9 @@ from krm3.utils.numbers import normal
 User = get_user_model()
 
 task_timeentry_key_mapping = {
-    'night_shift': 'Notturni',
-    'on_call': 'Reperibilità',
-    'travel': 'Ore Trasferta',
+    'night_shift': _('Night shift'),
+    'on_call': _('On call'),
+    'travel': _('Travel'),
 }
 
 
@@ -139,7 +140,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
         daily_totals = self._calculate_daily_totals(resources_report_days, resource_tasks)
 
         row = ReportRow()
-        row.add_cell("Tot per Giorno")
+        row.add_cell(_("Total per day"))
 
         total_giorni = D(0)
         total_hours = sum(daily_totals.values())
@@ -216,7 +217,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                          resources_report_days: list[Krm3Day]) -> None:
         """Add a row showing absence markers with schedule-based calculation."""
         row = ReportRow()
-        row.add_cell("Assenze")
+        row.add_cell(_("Absences"))
 
         total_absence_giorni = D(0)
         total_absence_hours = D(0)
