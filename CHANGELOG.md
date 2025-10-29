@@ -1,3 +1,13 @@
+## 1.12.0 (2025-10-29)
+
+### Feat
+
+- **TimesheetTaskReport-AvailabilityReport**: refactor of task and av… (#157)
+
+### Fix
+
+- **Timesheet**: Workaround fix for #423
+
 ## 1.11.1 (2025-10-27)
 
 ### Fix
