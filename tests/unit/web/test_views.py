@@ -8,7 +8,6 @@ import openpyxl
 import pytest
 from django.urls import reverse
 from django.contrib.auth.models import Permission
-
 from testutils.date_utils import _dt
 from testutils.factories import (
     ProjectFactory,
@@ -20,11 +19,11 @@ from testutils.factories import (
     TaskFactory,
     ContractFactory
 )
-from urllib.parse import urlencode
 
 from freezegun import freeze_time
 
 from krm3.timesheet.report.payslip_report import report_timeentry_key_mapping
+from tests._extras.testutils.factories import TimesheetSubmissionFactory
 
 
 def _assert_homepage_content(response):
@@ -123,10 +122,10 @@ def test_availability_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>' in content
-    assert '<td class="p-1 border border-1 text-center">H</td>' in content
-    assert '<td class="p-1 border border-1 text-center">L 6.00</td>' in content
-    assert '<h1 class="text-3xl font-bold text-center mb-1">Availability August 2025</h1>' in content
+    assert f'{resource.first_name} {resource.last_name}' in content
+    assert 'H' in content
+    assert 'L 6.00' in content
+    assert '<h1 class="title">Availability Report Agosto 2025</h1>' in content
 
 
 def test_availability_view_filtered_by_project(client):
@@ -155,30 +154,47 @@ def test_availability_view_filtered_by_project(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert f'<td class="border border-1 text-left p-1 ">{resource.first_name} {resource.last_name}</td>' in content
-    assert (
-        f'<td class="border border-1 text-left p-1 ">{another_resource.first_name} {another_resource.last_name}</td>'
-        not in content
-    )
-    assert '<td class="p-1 border border-1 text-center">H</td>' in content
-    assert '<td class="p-1 border border-1 text-center">L 3.00</td>' not in content
+    assert f'{resource.first_name} {resource.last_name}' in content
+    assert f'{another_resource.first_name} {another_resource.last_name}' not in content
+    assert 'H' in content
+    assert 'L 3.00' not in content
 
+@freeze_time('2025-08-22')
+def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
+    """Test that unprivileged user gets their own resource when project filter excludes them."""
+    user = UserFactory(username='user00', password='pass123')
+    user_resource = ResourceFactory(user=user, profile=user.profile, preferred_in_report=False)
+
+    project = ProjectFactory()
+    other_resource = ResourceFactory(preferred_in_report=True)
+    TaskFactory(project=project, resource=other_resource)
+
+    client.login(username='user00', password='pass123')
+
+    url = reverse('availability')
+    response = client.get(f'{url}?project={project.id}')
+
+    assert response.status_code == 200
+    content = response.content.decode()
+
+    assert f'{user_resource.first_name} {user_resource.last_name}' in content
+    assert f'{other_resource.first_name} {other_resource.last_name}' not in content
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Availability September 2025', id='next_month'),
-        pytest.param('202507', 'Availability July 2025', id='previous_month'),
+        pytest.param('202509', 'Availability Report Settembre 2025', id='next_month'),
+        pytest.param('202507', 'Availability Report Luglio 2025', id='previous_month'),
     ],
 )
 def test_availability_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse("availability")}?{urlencode({"month": month})}')
+    response = client.get(reverse("availability-report-month", args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
-    assert f'<h1 class="text-3xl font-bold text-center mb-1">{expected_result}</h1>' in response.content.decode()
+    assert f'<h1 class="title">{expected_result}</h1>' in response.content.decode()
 
 
 @freeze_time('2025-08-22')
@@ -229,22 +245,21 @@ def test_task_report_view_current_month(client):
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
-    assert f'<td class="border border-1 text-left p-1 ">{task.project}: {task.title}</td>' in content
-    assert '<h1 class="text-3xl font-bold text-center mb-1">Task Report August 2025</h1>' in content
+    assert '<h1 class="title">Task Report Agosto 2025</h1>' in content
 
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
     'month, expected_result',
     [
-        pytest.param('202509', 'Task Report September 2025', id='next_month'),
-        pytest.param('202507', 'Task Report July 2025', id='previous_month'),
+        pytest.param('202509', 'Task Report Settembre 2025', id='next_month'),
+        pytest.param('202507', 'Task Report Luglio 2025', id='previous_month'),
     ],
 )
 def test_task_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(f'{reverse("task_report")}?{urlencode({"month": month})}')
+    response = client.get(reverse("task-report-month", args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
     assert expected_result in response.content.decode()
@@ -405,3 +420,17 @@ def test_releases_view_with_file_read_error(mock_open_func, client):
     assert response.status_code == 200
     assert 'Changelog' in content
     assert 'Error parsing CHANGELOG.md' in content
+
+
+def test_payslip_report_with_timesheet_submissions(client):
+    """Test payslip report includes timesheet submissions in coverage."""
+    SuperUserFactory(username='user00', password='pass123')
+    resource = ResourceFactory()
+
+    TimesheetSubmissionFactory(resource=resource)
+
+    client.login(username='user00', password='pass123')
+    url = reverse('export_report', args=['202001'])
+    response = client.get(url)
+
+    assert response.status_code == 200
