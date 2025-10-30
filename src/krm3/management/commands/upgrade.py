@@ -14,7 +14,8 @@ from krm3.sentry import capture_exception
 User = get_user_model()
 
 
-def configure_dirs(prompt, verbosity):
+def configure_dirs(prompt: bool, verbosity: int) -> None:
+    """Create media and static directories."""
     for _dir in ('MEDIA_ROOT', 'STATIC_ROOT'):
         target = Path(env.str(_dir))
         if not target.exists():
@@ -33,6 +34,7 @@ def configure_dirs(prompt, verbosity):
 @click.option('--demo/--no-nodemo', default=False, is_flag=True, help='Load demo data', show_default=True)
 @click.option('--migrate/--no-migrate', default=True, is_flag=True, help='Run database migrations', show_default=True)
 @click.option('--static/--no-static', default=False, is_flag=True, help='Collect static assets', show_default=True)
+@click.option('--i18n/--no-18n', default=True, is_flag=True, help='Run compilemessages', show_default=True)
 @click.option('--traceback', '-tb', default=False, is_flag=True, help='Raise on exceptions', show_default=True)
 @click.option(
     '-v',
@@ -60,21 +62,22 @@ def configure_dirs(prompt, verbosity):
 )
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
-def command(
-    ctx,
-    prompt,
-    demo,
-    migrate,
-    static,
-    verbosity,  # noqa: C901
-    traceback,
-    admin_username,
-    admin_firstname,
-    admin_lastname,
-    admin_email,
-    admin_password,
-    **kwargs,
-):
+def command(  # noqa: PLR0912, PLR0913, C901
+    ctx : dict,
+    prompt : bool,
+    demo : bool,
+    migrate : bool,
+    static : bool,
+    i18n : bool,
+    verbosity : int,
+    traceback,  # noqa: ANN001
+    admin_username : str,
+    admin_firstname : str,
+    admin_lastname : str,
+    admin_email : str,
+    admin_password : str,
+    **kwargs : dict,
+) -> None:
     """Perform any pending database migrations and upgrades."""
     try:
         extra = {'interactive': prompt, 'verbosity': verbosity - 1}
@@ -90,6 +93,11 @@ def command(
             if verbosity >= 1:
                 click.echo('Run migrations')
             call_command('migrate', **extra)
+
+        if i18n:
+            if verbosity >= 1:
+                click.echo('Run compilemessages')
+            call_command('compilemessages')
 
         if admin_email:
             try:
@@ -123,8 +131,8 @@ def command(
                 click.secho(f'Loading tools/zapdata/demo/{z}.yaml')
                 try:
                     call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
-                except Exception as e:
-                    print(f'WARNING: {e}')
+                except Exception as e:  # noqa: BLE001
+                    click.secho(f'WARNING: {e}', fg='yellow')
 
     except Exception as e:
         if traceback:
