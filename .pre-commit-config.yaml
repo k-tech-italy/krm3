@@ -72,6 +72,15 @@ repos:
         stages: [pre-commit]
         additional_dependencies: [ setuptools ]
 
+  - repo: local
+    hooks:
+    -   id: compilemessages
+        name: Compile Django message files
+        entry: .github/hooks/compilemessages.sh
+        language: system
+        files: '(\.po)$'
+        pass_filenames: false
+
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.0.0
     hooks:
