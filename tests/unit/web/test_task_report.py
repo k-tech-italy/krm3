@@ -174,7 +174,7 @@ class TestTimesheetTaskReport:
 
         tot_row = None
         for row in resource1_block.rows:
-            if row.cells[0].render() == "Tot per Giorno":
+            if row.cells[0].render() == "Total per day":
                 tot_row = row
                 break
 
@@ -194,7 +194,7 @@ class TestTimesheetTaskReport:
 
         absence_row = None
         for row in resource1_block.rows:
-            if row.cells[0].render() == "Assenze":
+            if row.cells[0].render() == "Absences":
                 absence_row = row
                 break
 

@@ -1,7 +1,7 @@
 {% extends "home.html" %}
 
 {% load tailwind_tags static reports %}
-
+{% load i18n %}
 
 {% block extrastyle %}
     {% tailwind_css %}
@@ -11,11 +11,11 @@
     {{ block.super }}
     <div class="w-9/10 mx-auto pt-20">
         <div class="flex flex-row justify-between mt-2">
-            <a href="{% url "task-report-month" prev_month %}" class="button">Prev month</a>
+            <a href="{% url "task-report-month" prev_month %}" class="button">{% translate "Prev month" %}</a>
             <div class="flex flex-col">
-                <h1 class="title">Task Report {{ title }}</h1>
+                <h1 class="title">{% blocktranslate %}Task Report {{ title }}{% endblocktranslate %}</h1>
             </div>
-            <a href="{% url "task-report-month" next_month %}" class="button">Next month</a>
+            <a href="{% url "task-report-month" next_month %}" class="button">{% translate "Next month" %}</a>
         </div>
         {% for report_block in report_blocks %}
             <div class="report-container">
@@ -25,8 +25,8 @@
                         <td class="row-header">
                             <strong>{{ report_block.resource.last_name }}</strong> {{ report_block.resource.first_name }}
                         </td>
-                        <td class="row-header">Giorni {{ report_block.rows.0.cells.0.render }}</td>
-                        <td>Tot HH {{ report_block.rows.0.cells.1.render }}</td>
+                        <td class="row-header">{% translate "Days" %} {{ report_block.rows.0.cells.0.render }}</td>
+                        <td>{% translate "Total HH" %} {{ report_block.rows.0.cells.1.render }}</td>
                         {% for cell in report_block.rows.0.cells|slice:"2:" %}
                             <td class="pending">
                                 <p>{{ cell.value.day_of_week_short_i18n }}</p>
@@ -40,7 +40,7 @@
                     {% if not report_block.has_tasks %}
                         <!-- Show message when no tasks are assigned -->
                         <tr class="row-data">
-                            <td class="text-left" colspan="{{ report_block.width|default:'30' }}">No tasks assigned</td>
+                            <td class="text-left" colspan="{{ report_block.width|default:'30' }}">{% translate "No tasks assigned" %}</td>
                         </tr>
                     {% else %}
                         <!-- Show task rows when tasks exist -->

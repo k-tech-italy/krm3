@@ -305,14 +305,14 @@ def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser'
     browser.click('//a[@href="/admin/core/timeentry/report/?"]')
 
     reason_1_row = browser.find_elements(
-        By.XPATH, f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_1.title})")]]/td'
+        By.XPATH, f'//tr[./td[contains(text(), "Special leave ({special_leave_reason_1.title})")]]/td'
     )
 
     assert reason_1_row[1].text == '4'
     assert reason_1_row[5].text == '1'
     assert reason_1_row[7].text == '3'
     reason_2_row = browser.find_elements(
-        By.XPATH, f'//tr[./td[contains(text(), "Perm. speciale ({special_leave_reason_2.title})")]]/td'
+        By.XPATH, f'//tr[./td[contains(text(), "Special leave ({special_leave_reason_2.title})")]]/td'
     )
     assert reason_2_row[1].text == '3'
     assert reason_2_row[6].text == '3'

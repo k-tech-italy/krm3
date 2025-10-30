@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal as D  # noqa: N817
 
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 from krm3.core.models import Resource
 from krm3.timesheet.report.base import TimesheetReport
@@ -72,7 +73,7 @@ class AvailabilityReportOnline(AvailabilityReport):
         calendar_days = self.calendars[self.resources[0].id]
 
         days_row = ReportRow()
-        days_row.add_cell("Days")
+        days_row.add_cell(_("Days"))
         for kd in calendar_days:
             days_row.add_cell(f"{kd.day_of_week_short_i18n}\n{kd.date.day}")
         block.rows.append(days_row)
