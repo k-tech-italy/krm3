@@ -2,6 +2,8 @@ import typing
 
 import pytest
 from rest_framework.reverse import reverse
+
+from krm3.core.models import TimeEntry
 from testutils.date_utils import _dt
 from testutils.factories import TaskFactory, TimeEntryFactory
 
@@ -118,18 +120,42 @@ def test_time_entry_can_update(usr: str, expected: int, scenario_time_entries, a
 
 
 @pytest.mark.parametrize(
-    'closed, updated_status, deleteed_status',
+    'usr, expected',
+    [
+        pytest.param('admin', 204, id='admin'),
+        pytest.param('viewer', 403, id='viewer'),
+        pytest.param('manager', 204, id='manager'),
+        pytest.param('regular', 404, id='regular'),
+    ],
+)
+def test_time_entry_can_delete(usr: str, expected: int, scenario_time_entries, api_client):
+    pk = scenario_time_entries['time_entries'][1].id
+    url = reverse('timesheet-api:api-time-entry-detail', kwargs={'pk': pk})
+    requestor = scenario_time_entries['resources'][usr].user
+
+    response = api_client(user=requestor).delete(url)
+    assert response.status_code == expected, response.data.get('detail')
+
+    assert TimeEntry.objects.filter(pk=pk).count() == 0 if expected == 204 else 1
+
+
+@pytest.mark.parametrize(
+    'closed, updated_status, deleted_status',
     [
         pytest.param(False, 200, 204, id='open'),
         pytest.param(True, 400, 400, id='closed'),
     ],
 )
 def test_time_entry_update_locked_by_timesheet(
-    closed, updated_status, deleteed_status, scenario_time_entries, admin_user, api_client
+    closed, updated_status, deleted_status, scenario_time_entries, admin_user, api_client
 ):
     from krm3.core.models import TimesheetSubmission  # noqa: PLC0415
 
-    url = reverse('timesheet-api:api-time-entry-detail', kwargs={'pk': scenario_time_entries['time_entries'][1].id})
+    pk = scenario_time_entries['time_entries'][1].id
+    url = reverse(
+        'timesheet-api:api-time-entry-detail',
+        kwargs={'pk': pk}
+    )
 
     task: 'Task' = scenario_time_entries['tasks']['t1']
     TimesheetSubmission.objects.create(period=['2025-08-24', '2025-08-31'], resource=task.resource, closed=closed)
@@ -144,4 +170,4 @@ def test_time_entry_update_locked_by_timesheet(
         assert response.data['day_shift_hours'] == '4.00'
 
     response = api_client(user=admin_user).delete(url)
-    assert response.status_code == deleteed_status, response.data.get('detail')
+    assert response.status_code == deleted_status, response.data.get('detail')
