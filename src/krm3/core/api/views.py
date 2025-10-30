@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
+import logging
 from krm3.core.api.serializers import UserSerializer, ResourceSerializer
 from krm3.core.models import (
     City,
@@ -95,8 +96,9 @@ class GoogleOAuthView(APIView):
             redirect_uri = state_data.get('redirect_uri')
             original_oauth_state = state_data.get('state')
         except Exception as e:
+            logging.exception("Failed to decode OAuth state parameter.")
             return Response(
-                {'error': f'Failed to decode state: {str(e)}'},
+                {'error': 'Failed to decode state.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
