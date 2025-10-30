@@ -62,7 +62,7 @@ class RateImporter:
                         d[i + 1] = f'++ {d[i + 1]}'
                     elif decimal.Decimal(d[i + 1]) != v:
                         d[i + 1] = f'<> {d[i + 1]}'
-        return RateImporter._build_table_class(data[0])([dict(zip(data[0], z)) for z in data[1:]])
+        return RateImporter._build_table_class(data[0])([dict(zip(data[0], z, strict=False)) for z in data[1:]])
 
     def load(self):
         data = self.get_data()

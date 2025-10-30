@@ -32,10 +32,10 @@ def dummy_currencies(settings):
 def currencies(db):
     from krm3.currencies.models import Currency
 
-    Currency.objects.create(iso3='GBP', title='GBP', symbol='£', fractional_unit='cents', base=100, active=True)
-    Currency.objects.create(iso3='EUR', title='EUR', symbol='€', fractional_unit='cents', base=100, active=True)
-    Currency.objects.create(iso3='USD', title='USD', symbol='$', fractional_unit='cents', base=100, active=True)
-    Currency.objects.create(iso3='CHF', title='CHF', symbol='CHF', fractional_unit='cents', base=100, active=True)
+    Currency.objects.get_or_create(iso3='GBP', defaults={'title': 'GBP', 'symbol': '£', 'fractional_unit': 'cents', 'base': 100, 'active': True})
+    Currency.objects.get_or_create(iso3='EUR', defaults={'title': 'EUR', 'symbol': '€', 'fractional_unit': 'cents', 'base': 100, 'active': True})
+    Currency.objects.get_or_create(iso3='USD', defaults={'title': 'USD', 'symbol': '$', 'fractional_unit': 'cents', 'base': 100, 'active': True})
+    Currency.objects.get_or_create(iso3='CHF', defaults={'title': 'CHF', 'symbol': 'CHF', 'fractional_unit': 'cents', 'base': 100, 'active': True})
 
 
 @pytest.fixture

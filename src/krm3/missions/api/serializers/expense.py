@@ -1,6 +1,5 @@
 from cryptography.fernet import InvalidToken
 from django.conf import settings
-from drf_extra_fields.fields import HybridImageField
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
