@@ -17,12 +17,10 @@ def fqn(o, silent=False, from_module=None):
         return o
     if not hasattr(o, '__module__'):
         if silent:
-            return
+            return None
         raise ValueError('Invalid argument `%s` %s' % (type(o), o))
     parts.append(o.__module__)
-    if isclass(o):
-        parts.append(o.__name__)
-    elif isinstance(o, types.FunctionType):
+    if isclass(o) or isinstance(o, types.FunctionType):
         parts.append(o.__name__)
     else:
         parts.append(o.__class__.__name__)

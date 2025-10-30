@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 ('state', models.TextField(choices=[('OPEN', 'Open'), ('CLOSED', 'Closed')], default='OPEN')),
                 (
                     'start_date',
-                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.UTC)),
                 ),
                 ('end_date', models.DateField(blank=True, null=True)),
             ],
@@ -453,7 +453,7 @@ class Migration(migrations.Migration):
                 ('color', models.TextField(blank=True, null=True)),
                 (
                     'start_date',
-                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)),
+                    models.DateField(default=datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.UTC)),
                 ),
                 ('end_date', models.DateField(blank=True, null=True)),
                 ('work_price', models.DecimalField(decimal_places=2, max_digits=10)),

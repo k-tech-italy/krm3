@@ -2,10 +2,10 @@ import typing
 
 from django import template
 from django.utils.safestring import SafeString
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html
 
 if typing.TYPE_CHECKING:
-    from krm3.timesheet.report import ReportBlock, ReportRow, ReportCell
+    from krm3.timesheet.report import ReportBlock
 
 register = template.Library()
 

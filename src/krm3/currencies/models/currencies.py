@@ -64,7 +64,8 @@ class Rate(models.Model):
 
     def convert(self, from_value, from_currency: str, to_currency: str = None, force=False):
         """Converts a value from a specific currency to another.
-        If target currency is not specified it will be using settings.BASE_CURRENCY"""
+        If target currency is not specified it will be using settings.BASE_CURRENCY
+        """
         if isinstance(from_currency, Currency):
             from_currency = from_currency.iso3
         if isinstance(to_currency, Currency):
