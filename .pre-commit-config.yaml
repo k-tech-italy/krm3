@@ -76,7 +76,7 @@ repos:
     hooks:
     -   id: compilemessages
         name: Compile Django message files
-        entry: .github/hooks/compilemessages.sh
+        entry: ./manage.py compilemessages
         language: system
         files: '(\.po)$'
         pass_filenames: false
