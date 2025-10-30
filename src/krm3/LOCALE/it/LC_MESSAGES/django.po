@@ -8,10 +8,9 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-10-29 15:01+0000\n"
-"PO-Revision-Date: 2025-10-22 14:36+0000\n"
+"PO-Revision-Date: 2025-10-30 08:14+0000\n"
 "Last-Translator: armadillo <noreply@singlewave.co.uk>\n"
-"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/"
-"backend/it/>\n"
+"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/backend/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -29,15 +28,15 @@ msgstr "Correggere gli errori indicati."
 
 #: src/krm3/config/settings.py:184
 msgid "English"
-msgstr ""
+msgstr "Inglese"
 
 #: src/krm3/config/settings.py:185
 msgid "Italian"
-msgstr ""
+msgstr "Italiano"
 
 #: src/krm3/config/settings.py:186
 msgid "Polish"
-msgstr ""
+msgstr "Polacco"
 
 #: src/krm3/core/models/missions.py:45
 msgid "Draft"
@@ -54,9 +53,7 @@ msgstr "Cancellato"
 #: src/krm3/core/models/missions.py:103
 msgid ""
 "If a mission is in DRAFT then number must empty, otherwise it is mandatory"
-msgstr ""
-"Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è "
-"obbligatorio"
+msgstr "Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è obbligatorio"
 
 #: src/krm3/core/models/missions.py:106
 msgid "to_date must be > from_date"
@@ -85,14 +82,11 @@ msgid ""
 "A task must not start before its related project - task \"{task_title}\" is "
 "supposed to start on {task_start_date}, but related project "
 "\"{project_name}\" starts on {project_start_date}"
-msgstr ""
-"Un task non può iniziare prima del progetto cui appartiene - il task "
-"\"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto "
-"\"{project_name}\" inizia il {project_start_date}"
+msgstr "Un task non può iniziare prima del progetto cui appartiene - il task \"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto \"{project_name}\" inizia il {project_start_date}"
 
 #: src/krm3/core/models/timesheets.py:84
 msgid "\"from_date\" must not be later than \"to_date\""
-msgstr ""
+msgstr "\"data da\" non può essere maggiore di \"data a\""
 
 #: src/krm3/core/models/timesheets.py:198
 #: src/krm3/core/models/timesheets.py:675
@@ -101,15 +95,15 @@ msgstr "N.B.: La data fine è il giorno successivo a quello effettivo"
 
 #: src/krm3/core/models/timesheets.py:419
 msgid "Protocol number can be used only for sick days"
-msgstr ""
+msgstr "Il numero di protocollo può essere usato solamente con malattia"
 
 #: src/krm3/core/models/timesheets.py:422
 msgid "Protocol number digits must be numeric"
-msgstr ""
+msgstr "Il numero di protocollo può contenere solo caratteri numerici"
 
 #: src/krm3/core/models/timesheets.py:426
 msgid "You cannot log task hours in a day entry"
-msgstr ""
+msgstr "Non si possono inserire ora sul task se vi sono malattie o ferie"
 
 #: src/krm3/core/models/timesheets.py:430
 msgid "You cannot log non-task hours in a task entry"
