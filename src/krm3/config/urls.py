@@ -24,7 +24,6 @@ from django.contrib.admin import site
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from debug_toolbar.toolbar import debug_toolbar_urls
 
 from krm3.config.environ import env
 
@@ -64,6 +63,8 @@ if settings.DEBUG:
     )
 
 if not settings.TESTING:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
     urlpatterns = debug_toolbar_urls() + urlpatterns
 
 if settings.RELOAD:

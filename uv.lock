@@ -663,15 +663,15 @@ wheels = [
 
 [[package]]
 name = "django-debug-toolbar"
-version = "6.0.0"
+version = "5.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "sqlparse" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/d5/5fc90234532088aeec5faa48d5b09951cc7eab6626030ed427d3bd8cd9bc/django_debug_toolbar-6.0.0.tar.gz", hash = "sha256:6eb9fa6f4a5884bf04004700ffb5a44043f1fff38784447fc52c1633448c8c14", size = 305331, upload-time = "2025-07-25T13:11:48.68Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/9f/97ba2648f66fa208fc7f19d6895586d08bc5f0ab930a1f41032e60f31a41/django_debug_toolbar-5.2.0.tar.gz", hash = "sha256:9e7f0145e1a1b7d78fcc3b53798686170a5b472d9cf085d88121ff823e900821", size = 297901, upload-time = "2025-04-29T05:23:57.533Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/b5/4724a8c18fcc5b09dca7b7a0e70c34208317bb110075ad12484d6588ae91/django_debug_toolbar-6.0.0-py3-none-any.whl", hash = "sha256:0cf2cac5c307b77d6e143c914e5c6592df53ffe34642d93929e5ef095ae56841", size = 266967, upload-time = "2025-07-25T13:11:47.265Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/c2/ed3cb815002664349e9e50799b8c00ef15941f4cad797247cadbdeebab02/django_debug_toolbar-5.2.0-py3-none-any.whl", hash = "sha256:15627f4c2836a9099d795e271e38e8cf5204ccd79d5dbcd748f8a6c284dcd195", size = 262834, upload-time = "2025-04-29T05:23:55.472Z" },
 ]
 
 [[package]]
@@ -1437,7 +1437,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.4" },
     { name = "sentry-sdk", extras = ["django"], specifier = "==1.45.1" },
     { name = "social-auth-app-django", specifier = ">=5.4.3" },
-    { name = "tablib", extras = ["html", "ods", "xlsx", "yaml"], specifier = ">=3.8.0" },
+    { name = "tablib", extras = ["html", "ods", "xlsx", "yaml"], specifier = "==3.8.0" },
     { name = "tabulate", specifier = ">=0.9.0" },
 ]
 provides-extras = ["sysingo"]
@@ -2810,14 +2810,14 @@ wheels = [
 
 [[package]]
 name = "pytest-seleniumbase"
-version = "4.44.2"
+version = "4.44.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "seleniumbase" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/d2/15df5ae7ad6717871fea99fd1122b43cfb9620113055d9cdac6eb23d62e9/pytest_seleniumbase-4.44.2.tar.gz", hash = "sha256:461fb936d09dc5898d2a39b91ad777f295d8e9497e3fd66acef1b255cfac19d7", size = 68041, upload-time = "2025-10-30T06:23:56.518Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/04/e5aab1dae56b8ca9cba6a3e7deed719df3280f547c5fca0d814f59e59100/pytest_seleniumbase-4.44.3.tar.gz", hash = "sha256:c450996d86bdeb0bb87b0ff22fec519b89621cd40c860b7c3bc16eab527a97f7", size = 68038, upload-time = "2025-10-31T07:31:57.752Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/5b/fca521d8010a562997a5f31cb34ef456f98ce89b3105b4713c7e50eb37d1/pytest_seleniumbase-4.44.2-py3-none-any.whl", hash = "sha256:898575c7ba7be033c890ffd679807d01b9603112143cb023dd5e6556294bc777", size = 23473, upload-time = "2025-10-30T06:23:54.831Z" },
+    { url = "https://files.pythonhosted.org/packages/29/05/fa2019d855100419b57f291ab71304b102d1d7f7fb84291289f561811eca/pytest_seleniumbase-4.44.3-py3-none-any.whl", hash = "sha256:0417cf2ceff8a988ab7b9a9814e2362f865dd313c580b4d62f92c4eca294ee98", size = 23474, upload-time = "2025-10-31T07:31:55.882Z" },
 ]
 
 [[package]]
@@ -3187,7 +3187,7 @@ wheels = [
 
 [[package]]
 name = "seleniumbase"
-version = "4.44.2"
+version = "4.44.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -3251,9 +3251,9 @@ dependencies = [
     { name = "wheel" },
     { name = "wsproto" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/42/5a0abc94c08cd038f5c7bdd2b9da9441cd99bfe5df3ac45e7bc785fda961/seleniumbase-4.44.2.tar.gz", hash = "sha256:c1d44f740c1bc7a99c72b71362691b6dcbef4a3422700a05372092ef9afe5c89", size = 640571, upload-time = "2025-10-30T06:22:56.795Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/5e/60116b932b4d8c69dd8d45d7719d0f824dc60367ea73fe0abc1e3a99a4f3/seleniumbase-4.44.3.tar.gz", hash = "sha256:c6cd2dc2650dd7109d011676ab95d80c508af464e27fb324ce7e320e04427a2c", size = 640679, upload-time = "2025-10-31T07:27:57.529Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/6c/802dace2d9fb4428c5f777bbf7e58ad587592442b40f25afa4565771da56/seleniumbase-4.44.2-py3-none-any.whl", hash = "sha256:8fea3a32f8719ef8abbf1a43587f98022ac5c319fdef4d5063096745c3cdf8e3", size = 646355, upload-time = "2025-10-30T06:22:52.926Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/56/321cdf1ed6c862858a8f658f1285a17d82beeb29799a05f0f897e75f7611/seleniumbase-4.44.3-py3-none-any.whl", hash = "sha256:96510267fb664a9c1268c36326ff1f38e56f55fa7481d0e6b8b913aa85f16704", size = 646438, upload-time = "2025-10-31T07:27:52.837Z" },
 ]
 
 [[package]]
@@ -3393,11 +3393,11 @@ wheels = [
 
 [[package]]
 name = "tablib"
-version = "3.9.0"
+version = "3.8.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/11/00/416d2ba54d7d58a7f7c61bf62dfeb48fd553cf49614daf83312f2d2c156e/tablib-3.9.0.tar.gz", hash = "sha256:1b6abd8edb0f35601e04c6161d79660fdcde4abb4a54f66cc9f9054bd55d5fe2", size = 125565, upload-time = "2025-10-15T18:21:56.263Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/cc/fe19d9c2ac1088794a51fc72f49b7226f88a0361f924fb3d17a9ec80e657/tablib-3.8.0.tar.gz", hash = "sha256:94d8bcdc65a715a0024a6d5b701a5f31e45bd159269e62c73731de79f048db2b", size = 122247, upload-time = "2025-01-22T15:29:27.276Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/6b/32e51d847148b299088fc42d3d896845fd09c5247190133ea69dbe71ba51/tablib-3.9.0-py3-none-any.whl", hash = "sha256:eda17cd0d4dda614efc0e710227654c60ddbeb1ca92cdcfc5c3bd1fc5f5a6e4a", size = 49580, upload-time = "2025-10-15T18:21:44.185Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/95/6542f54ebd90539b12ed6189cb54a6550a28407b1c503c2e55190c29a4c9/tablib-3.8.0-py3-none-any.whl", hash = "sha256:35bdb9d4ec7052232f8803908f9c7a9c3c65807188b70618fa7a7d8ccd560b4d", size = 47935, upload-time = "2025-01-22T15:28:44.499Z" },
 ]
 
 [package.optional-dependencies]
@@ -3491,7 +3491,7 @@ wheels = [
 
 [[package]]
 name = "trio"
-version = "0.31.0"
+version = "0.32.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -3501,9 +3501,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/76/8f/c6e36dd11201e2a565977d8b13f0b027ba4593c1a80bed5185489178e257/trio-0.31.0.tar.gz", hash = "sha256:f71d551ccaa79d0cb73017a33ef3264fde8335728eb4c6391451fe5d253a9d5b", size = 605825, upload-time = "2025-09-09T15:17:15.242Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/ce/0041ddd9160aac0031bcf5ab786c7640d795c797e67c438e15cfedf815c8/trio-0.32.0.tar.gz", hash = "sha256:150f29ec923bcd51231e1d4c71c7006e65247d68759dd1c19af4ea815a25806b", size = 605323, upload-time = "2025-10-31T07:18:17.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/5b/94237a3485620dbff9741df02ff6d8acaa5fdec67d81ab3f62e4d8511bf7/trio-0.31.0-py3-none-any.whl", hash = "sha256:b5d14cd6293d79298b49c3485ffd9c07e3ce03a6da8c7dfbe0cb3dd7dc9a4774", size = 512679, upload-time = "2025-09-09T15:17:13.821Z" },
+    { url = "https://files.pythonhosted.org/packages/41/bf/945d527ff706233636c73880b22c7c953f3faeb9d6c7e2e85bfbfd0134a0/trio-0.32.0-py3-none-any.whl", hash = "sha256:4ab65984ef8370b79a76659ec87aa3a30c5c7c83ff250b4de88c29a8ab6123c5", size = 512030, upload-time = "2025-10-31T07:18:15.885Z" },
 ]
 
 [[package]]
