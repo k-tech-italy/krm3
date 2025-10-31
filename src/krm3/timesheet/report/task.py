@@ -34,10 +34,9 @@ class TimesheetTaskReport(TimesheetReport):
         """Load tasks for all resources in the report."""
         resource_ids = [r.id for r in self.resources]
 
-        tasks = Task.objects.filter(
-            resource_id__in=resource_ids,
-            start_date__lte=self.to_date
-        ).filter(Q(end_date__gte=self.from_date) | Q(end_date__isnull=True))
+        tasks = Task.objects.filter(resource_id__in=resource_ids, start_date__lte=self.to_date).filter(
+            Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)
+        )
 
         for task in tasks:
             self.tasks.setdefault(task.resource_id, []).append(task)
@@ -52,16 +51,11 @@ class TimesheetTaskReport(TimesheetReport):
 
     def _calculate_task_hours_for_day(self, kd: Krm3Day, tasks: list[Task], resource_id: int) -> None:
         """Calculate task hours for a specific day."""
-        day_entries = [
-            te for te in self.time_entries
-            if te.resource_id == resource_id and te.date == kd.date
-        ]
+        day_entries = [te for te in self.time_entries if te.resource_id == resource_id and te.date == kd.date]
 
         for task in tasks:
             task_hours = sum(
-                (te.day_shift_hours or 0) +
-                (te.night_shift_hours or 0) +
-                (te.travel_hours or 0)
+                (te.day_shift_hours or 0) + (te.night_shift_hours or 0) + (te.travel_hours or 0)
                 for te in day_entries
                 if te.task_id == task.id
             )
@@ -71,6 +65,8 @@ class TimesheetTaskReport(TimesheetReport):
 
 class TimesheetTaskReportOnline(TimesheetTaskReport):
     """Online HTML report for task-focused timesheets."""
+
+    need = {'extra_holidays'}
 
     def report_html(self) -> list[ReportBlock]:
         blocks = []
@@ -133,14 +129,15 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 value = getattr(rkd, f'data_{key}', None)
                 row.add_cell(normal(value) if value else '').nwd = rkd.nwd
 
-    def _add_days_per_task_row(self, block: ReportBlock, resource: Resource,
-                               resources_report_days: list[Krm3Day]) -> None:
+    def _add_days_per_task_row(
+        self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]
+    ) -> None:
         """Add a row showing total hours per day from all tasks."""
         resource_tasks = self.tasks.get(resource.id, [])
         daily_totals = self._calculate_daily_totals(resources_report_days, resource_tasks)
 
         row = ReportRow()
-        row.add_cell(_("Total per day"))
+        row.add_cell(_('Total per day'))
 
         total_giorni = D(0)
         total_hours = sum(daily_totals.values())
@@ -163,8 +160,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
         block.rows.append(row)
 
-    def _calculate_daily_totals(self, resources_report_days: list[Krm3Day],
-                                resource_tasks: list[Task]) -> dict:
+    def _calculate_daily_totals(self, resources_report_days: list[Krm3Day], resource_tasks: list[Task]) -> dict:
         """Calculate daily totals for all tasks."""
         daily_totals = {}
 
@@ -213,11 +209,10 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
             block.rows.append(row)
 
-    def _add_absence_row(self, block: ReportBlock, resource: Resource,
-                         resources_report_days: list[Krm3Day]) -> None:
+    def _add_absence_row(self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]) -> None:
         """Add a row showing absence markers with schedule-based calculation."""
         row = ReportRow()
-        row.add_cell(_("Absences"))
+        row.add_cell(_('Absences'))
 
         total_absence_giorni = D(0)
         total_absence_hours = D(0)

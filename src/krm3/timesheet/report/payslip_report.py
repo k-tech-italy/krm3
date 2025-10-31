@@ -87,11 +87,11 @@ class TimesheetReportExport(TimesheetReport):
                     cell.fill = nwd_fill
 
             current_row += 1
+            sick_days_with_protocol = {}
 
             if any(rkd.has_data for rkd in resources_report_days):
                 dynamic_mapping = {}
                 special_leave_days = {}
-                sick_days_with_protocol = {}
                 for rkd in resources_report_days:
                     if rkd.data_special_leave_reason:
                         special_leave_days.setdefault(rkd.data_special_leave_reason.title, []).append(rkd)
