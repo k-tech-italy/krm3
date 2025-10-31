@@ -1,3 +1,11 @@
+## 1.12.1 (2025-10-31)
+
+### Fix
+
+- **Timesheet-report**: Aligned tests
+- **Timesheet-report**: Fix #412 empty sick row when sick protocol exists (#160)
+- **i18n**: Compiling messages in upgrade command
+
 ## 1.12.0 (2025-10-29)
 
 ### Feat
