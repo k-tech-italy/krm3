@@ -34,7 +34,7 @@ def configure_dirs(prompt: bool, verbosity: int) -> None:
 @click.option('--demo/--no-nodemo', default=False, is_flag=True, help='Load demo data', show_default=True)
 @click.option('--migrate/--no-migrate', default=True, is_flag=True, help='Run database migrations', show_default=True)
 @click.option('--static/--no-static', default=False, is_flag=True, help='Collect static assets', show_default=True)
-@click.option('--i18n/--no-18n', default=True, is_flag=True, help='Run compilemessages', show_default=True)
+@click.option('--i18n/--no-18n', default=False, is_flag=True, help='Run compilemessages', show_default=True)
 @click.option('--traceback', '-tb', default=False, is_flag=True, help='Raise on exceptions', show_default=True)
 @click.option(
     '-v',
