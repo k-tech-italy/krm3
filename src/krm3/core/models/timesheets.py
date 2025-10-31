@@ -198,7 +198,7 @@ class TimesheetSubmission(models.Model):
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    timesheet = models.JSONField(default=dict)
+    timesheet = models.JSONField(null=True, blank=True, default=dict)
 
     objects = TimesheetSubmissionManager()
 

@@ -1,4 +1,6 @@
 from typing import cast
+
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import logout as djlogout
 from django.db.models import QuerySet
 from rest_framework import mixins, permissions, serializers, status, viewsets
@@ -24,6 +26,7 @@ from krm3.core.models import (
     TimesheetSubmission,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
+from krm3.utils.dates import dt
 
 
 class InvalidateTokenSerializer(serializers.Serializer):
@@ -150,3 +153,14 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
                 return ret.none()
             ret = ret.filter(resource_id=resource.id)
         return ret
+
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Create a new Timesheet submission or replace an existing opened one."""
+        period = request.data['period'][:]
+        period[1] = (dt(period[1]) + relativedelta(days=1)).strftime('%Y-%m-%d')
+        ts = TimesheetSubmission.objects.filter(
+            resource_id=request.data['resource'], period=period, closed=False
+        ).first()
+        if ts:
+            ts.delete()
+        return super().create(request, *args, **kwargs)
