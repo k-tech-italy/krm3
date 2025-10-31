@@ -13,16 +13,19 @@ User = get_user_model()
 
 
 class AvailabilityReport(TimesheetReport):
-    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User,
-                 project: str| None = None) -> None:
+    def __init__(
+        self, from_date: datetime.date, to_date: datetime.date, user: User, project: str | None = None
+    ) -> None:
         self.project = project
         super().__init__(from_date, to_date, user, project=project)
         self._enrich_calendars_with_availability_data()
 
     def _set_resources(self, user: User, **kwargs) -> None:
-        base_filter = {'preferred_in_report': True} if user.has_any_perm('core.manage_any_timesheet',
-                                                                         'core.view_any_timesheet') else {
-            'id': user.get_resource().id}
+        base_filter = (
+            {'preferred_in_report': True}
+            if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet')
+            else {'id': user.get_resource().id}
+        )
 
         if self.project is not None:
             base_filter['task__project'] = self.project
@@ -40,10 +43,7 @@ class AvailabilityReport(TimesheetReport):
 
     def _calculate_availability_for_day(self, kd: Krm3Day, resource_id: int) -> None:
         """Calculate availability status for a specific day."""
-        day_entries = [
-            te for te in self.time_entries
-            if te.resource_id == resource_id and te.date == kd.date
-        ]
+        day_entries = [te for te in self.time_entries if te.resource_id == resource_id and te.date == kd.date]
 
         for te in day_entries:
             if te.holiday_hours and te.holiday_hours > 0:
@@ -63,6 +63,8 @@ class AvailabilityReport(TimesheetReport):
 class AvailabilityReportOnline(AvailabilityReport):
     """Online HTML report for availability/absences."""
 
+    need = {'extra_holidays'}
+
     def report_html(self) -> list[ReportBlock]:
         """Return a single ReportBlock containing all resources in one table."""
         if not self.resources:
@@ -73,14 +75,14 @@ class AvailabilityReportOnline(AvailabilityReport):
         calendar_days = self.calendars[self.resources[0].id]
 
         days_row = ReportRow()
-        days_row.add_cell(_("Days"))
+        days_row.add_cell(_('Days'))
         for kd in calendar_days:
-            days_row.add_cell(f"{kd.day_of_week_short_i18n}\n{kd.date.day}")
+            days_row.add_cell(f'{kd.day_of_week_short_i18n}\n{kd.date.day}')
         block.rows.append(days_row)
 
         for resource in self.resources:
             resource_row = ReportRow()
-            resource_name = f"{resource.first_name} {resource.last_name}"
+            resource_name = f'{resource.first_name} {resource.last_name}'
             resource_row.add_cell(resource_name)
 
             resource_days = self.calendars[resource.id]
