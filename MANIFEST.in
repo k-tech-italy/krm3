@@ -17,3 +17,4 @@ recursive-include src/krm *.html
 recursive-include src/krm *.json
 
 recursive-exclude src/**/node_modules *.*
+exclude ~build

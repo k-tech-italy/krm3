@@ -8,7 +8,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 
 from krm3.missions.media import contract_directory_path
-from krm3.utils.dates import DATE_INFINITE, KrmDay
+from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Task
@@ -64,6 +64,16 @@ class Contract(models.Model):
             raise ValidationError({'period': 'Start date is required.'})
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError({'period': 'End date must be at least one day after start date.'})
+
+        if self.country_calendar_code:
+            try:
+                get_country_holidays(country_calendar_code=self.country_calendar_code)
+            except NotImplementedError:
+                raise ValidationError(
+                    {
+                        'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'
+                    }
+                )
 
     def falls_in(self, day: datetime.date | KrmDay) -> bool:
         """Check if the provided day falls into the contract period."""

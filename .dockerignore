@@ -19,3 +19,8 @@ uv-cache/
 .uv-cache/
 **/.uv-cache
 **/uv-cache
+
+
+coverage.xml
+junit.xml
+manage.py

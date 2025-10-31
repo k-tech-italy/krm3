@@ -49,6 +49,7 @@ ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
 RUN apt-get update && \
     apt-get install -y --no-install-suggests --no-install-recommends \
     gosu libpcre3 libxml2 \
+    gettext libgettextpo-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1024 -r ktech && \
