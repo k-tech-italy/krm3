@@ -20,8 +20,7 @@ def _add_data(data, param, id, data1):
             data1 = data1.default_serializer(data1, depth=0).data
         data[param][id] = data1
         return data1
-    else:
-        return data[param][id]
+    return data[param][id]
 
 
 class MissionExporter:

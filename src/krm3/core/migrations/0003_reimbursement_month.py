@@ -32,8 +32,7 @@ def match_month(title: str) -> str:
     for k, v in mapping.items():
         if k in title.lower():
             return v
-    else:
-        return None
+    return None
 
 
 def forward(apps, schema_editor):

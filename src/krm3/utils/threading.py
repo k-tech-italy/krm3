@@ -5,12 +5,11 @@ import time
 from functools import partial
 from signal import SIGTSTP, pthread_kill
 from threading import Thread
-from typing import List
 
 logger = logging.getLogger(__name__)
 
 
-def wait_for_tasks(tasks: List[Thread], timeout=10):  # noqa: D103
+def wait_for_tasks(tasks: list[Thread], timeout=10):  # noqa: D103
     start = time.time()
     for p in tasks:
         p.start()

@@ -1,4 +1,3 @@
-from django.shortcuts import reverse
 from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated

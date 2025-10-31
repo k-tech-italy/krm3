@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import TYPE_CHECKING, Union
 
 from django.db.models import Max, Min
 from django.forms import ValidationError
@@ -26,7 +26,7 @@ class ReimbursementFacility:
             expense: Expense
             self.resources.setdefault(expense.mission.resource, {}).setdefault(expense.mission, []).append(expense)
 
-    def render(self) -> Dict['Resource', dict]:
+    def render(self) -> dict['Resource', dict]:
         """Generate the expense breakdown by resource and missions eventually rendered with tables2."""
         results = {}
 
@@ -41,7 +41,7 @@ class ReimbursementFacility:
         if not min_max['mi'] <= year <= min_max['ma']:
             raise ValidationError(f'Year must be between {min_max["mi"]} and {min_max["ma"]}', code='year')
 
-    def reimburse(self, year: int, title: str | None, month: str) -> List[Reimbursement]:
+    def reimburse(self, year: int, title: str | None, month: str) -> list[Reimbursement]:
         reimbursements = []
 
         number = Reimbursement.objects.filter(year=year).aggregate(Max('number'))['number__max'] or 0

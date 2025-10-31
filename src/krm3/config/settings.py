@@ -81,14 +81,11 @@ INSTALLED_APPS = (
         'django_filters',
         'rest_framework',
         'drf_spectacular',
-        'djoser',
         'corsheaders',
         'flags',
         'mptt',
         'social_django',
         'crispy_forms',
-        'rest_framework_simplejwt',
-        'rest_framework_simplejwt.token_blacklist',
         'django_tables2',
         'constance',
         'smart_env',
@@ -217,7 +214,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
