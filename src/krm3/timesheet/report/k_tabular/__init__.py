@@ -1,5 +1,8 @@
 from enum import Enum
+
+from gettext import gettext as _
 from typing import Any
+from decimal import Decimal as D
 
 from rich.table import Table
 
@@ -15,6 +18,7 @@ class Referrable:
     def __init__(self, reference: str | None = None):
         self.ref = reference if reference is not None else hash(self)
 
+
 class Stylable:
     def __init__(self, style: Style | None = None):
         self.style = style
@@ -23,9 +27,9 @@ class Stylable:
 class HtmlStyle(Style):
     pass
 
+
 class ExcelStyle(Style):
     pass
-
 
 
 class TableOrganisation(Enum):
@@ -35,13 +39,14 @@ class TableOrganisation(Enum):
 
 
 class Observer:
-
     def __init__(self, sensor: str):
         self.sensor = sensor
 
 
-class Cell:
-    def __init__(self, data: Any, reference: str | None = None, rowspan: int = 1, colspan = 1, observer:Observer = None) -> None:
+class Cell(Referrable):
+    def __init__(
+        self, data: Any, reference: str | None = None, rowspan: int = 1, colspan=1, observer: Observer = None
+    ) -> None:
         super().__init__(reference)
         self.data = data
         self.rowspan = rowspan
@@ -52,15 +57,19 @@ class Cell:
         return self.data
 
 
-class Vector:
-    def __init__(self, reference: str | None = None, cells : list[Cell] = None, style: Style | None = None, hidden: bool = False) -> None:
+class Vector(Stylable):
+    def __init__(
+        self, reference: str | None = None, cells: list[Cell] = None, style: Style | None = None, hidden: bool = False
+    ) -> None:
         super().__init__(reference)
         self.cells: list[Cell] = cells or []
-        self.style = style
+        self.style = style if style is not None else Style()
         self.hidden = hidden
+
 
 class Row(Vector):
     pass
+
 
 class Column(Vector):
     pass
@@ -93,8 +102,8 @@ class Table(Referrable, Stylable):
         elif self.organisation == TableOrganisation.BY_COLUMNS:
             self.y += 1
 
-    def add(self, vector: Vector):
-        self.vectors.append(vector)
+    def add(self, vectors: list[Vector]) -> None:
+        self.vectors.extend(vectors)
 
 
 class GreyedStyle(Style):
@@ -102,10 +111,6 @@ class GreyedStyle(Style):
 
 
 class HolObserver(Observer):
-
-    def __init__(self, sensor: str):
-        super().__init__(sensor)
-
     def handle(self, target: Cell, origin: Cell):
         origin_data: Krm3Day = origin.data
         if origin_data.is_holiday:
@@ -114,20 +119,44 @@ class HolObserver(Observer):
             target.style = GreyedStyle()
 
 
+class SumDecimalObserver(Observer):
+    def handle(self, target: Cell, origin: Cell):
+        origin_data: D | None = origin.data
+        if origin_data is not None:
+            target.data += D(origin_data)
+
+
 table = Table(reference='caminiti')
 
 table.add(
-    Row(
-        reference='hol',
-        style=HtmlStyle(),
-        cells=[Cell(data='', colspan=2)] + [Cell(data='', observer=HolObserver(f'caminiti\.day-{i}')) for i in range(1, 31)]),
-    ),
-    Row(
-        reference='day',
+    vectors=[
+        Row(
+            reference='hol',
+            cells=[Cell('', colspan=2)]
+            + [Cell('', observer=HolObserver(f'caminiti\.day\.{i}')) for i in range(1, 31)],
+        ),
+        Row(
+            reference='day',
+            cells=[
+                Cell(
+                    0,
+                    renderer=lambda cell: _('Days: {days}'.format(days=cell.data)),
+                ),
+                Cell('Tot HH'),
+                [Cell(Krm3Day('20250801') + d, reference=str(d+1)) for d in range(20)],
+            ],
+        ),
+        Row(
+            reference='bank',
+            cells=[
+                Cell('Banca ore'),
+                Cell(0, observer=SumDecimalObserver(f'caminiti\.bank.\d+')),
+                []
+            ]
+        ),
 
+    ]
 )
 
-
-
-caminiti.column.day-4
-observers=Observer(r'caminiti\.column.day-\d+', lambda obj, origin: if origin.data.is_holiday: obj.data = 'X'))
+# caminiti.column.day-4
+# observers=Observer(r'caminiti\.column.day-\d+', lambda obj, origin: if origin.data.is_holiday: obj.data = 'X'))
