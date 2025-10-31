@@ -2,6 +2,7 @@ import typing
 
 import openpyxl
 
+from decimal import Decimal as D  # noqa: N817
 from django.utils.translation import gettext as _
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.utils.numbers import safe_dec
@@ -15,7 +16,8 @@ from krm3.web.report_styles import (
     thin_border,
 )
 
-def get_report_timeentry_key_mapping() -> dict[str,str]:
+
+def get_report_timeentry_key_mapping() -> dict[str, str]:
     return {
         'regular_hours': _('Regular hours'),
         'night_shift': _('Night shift'),
@@ -28,13 +30,16 @@ def get_report_timeentry_key_mapping() -> dict[str,str]:
         'meal_voucher': _('Meal voucher'),
     }
 
+
 report_timeentry_key_mapping = get_report_timeentry_key_mapping()
+
 
 class StreamWriter(typing.Protocol):
     def write(self, data) -> None: ...  # noqa: ANN001
 
 
 class TimesheetReportExport(TimesheetReport):
+    need = { 'extra_holidays'}
     def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912,PLR0915
         mapping = get_report_timeentry_key_mapping()
         wb = openpyxl.Workbook()
@@ -97,15 +102,20 @@ class TimesheetReportExport(TimesheetReport):
                     dynamic_mapping[key] = label
                     if key == 'leave' and special_leave_days:
                         for sl_title in special_leave_days:
-                            dynamic_mapping[f'special_leave_{sl_title}'] = (_('Special leave ({sl_title})')
-                                                                            .format(sl_title=sl_title))
+                            dynamic_mapping[f'special_leave_{sl_title}'] = _('Special leave ({sl_title})').format(
+                                sl_title=sl_title
+                            )
                     if key == 'sick':
                         for protocol in sick_days_with_protocol:
-                            dynamic_mapping[f'sick_days_{protocol}'] = (_('Sick {protocol}')
-                                                                        .format(protocol=protocol))
+                            dynamic_mapping[f'sick_days_{protocol}'] = _('Sick {protocol}').format(protocol=protocol)
+
+                plain_sick_row: int = 0
+                plain_sick_dec: float = D(0)
 
                 for lnum, (key, label) in enumerate(dynamic_mapping.items()):
                     rownum = current_row + lnum
+                    if key == 'sick':
+                        plain_sick_row = rownum
 
                     cell = ws.cell(row=rownum, column=1, value=label)
                     if lnum % 2:
@@ -116,13 +126,17 @@ class TimesheetReportExport(TimesheetReport):
                     for dd_num, rkd in enumerate(resources_report_days, 3):
                         if key == 'sick':
                             value = rkd.data_sick if (rkd.data_sick and not rkd.data_protocol_number) else None
+                            plain_sick_dec += safe_dec(value)
                         elif key.startswith('sick_days_'):
                             protocol = key.replace('sick_days_', '')
                             value = rkd.data_sick if (rkd.data_sick and rkd.data_protocol_number == protocol) else None
                         elif key.startswith('special_leave_') and key != 'special_leave_hours':
                             reason_title = key.replace('special_leave_', '')
-                            value = rkd.data_special_leave_hours if rkd in special_leave_days.get(reason_title, []) \
+                            value = (
+                                rkd.data_special_leave_hours
+                                if rkd in special_leave_days.get(reason_title, [])
                                 else None
+                            )
                         else:
                             value = getattr(rkd, f'data_{key}')
                         cell = ws.cell(row=rownum, column=dd_num, value=value)
@@ -143,5 +157,10 @@ class TimesheetReportExport(TimesheetReport):
             else:
                 ws.cell(row=current_row, column=1, value=_('No data available'))
                 current_row += 1
+
+            # Deleting empty sick row if all sick days have protocol
+            if sick_days_with_protocol and not plain_sick_dec:
+                ws.delete_rows(plain_sick_row)
+                current_row -= 1
 
         wb.save(stream)
