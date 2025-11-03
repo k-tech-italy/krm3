@@ -128,6 +128,7 @@ def test_availability_view_current_month(client):
     assert '<h1 class="title">Availability Report August 2025</h1>' in content
 
 
+@freeze_time('2025-10-17')
 def test_availability_view_filtered_by_project(client):
     SuperUserFactory(username='user00', password='pass123')
     project = ProjectFactory()

@@ -70,8 +70,8 @@ def _get_raw_scenarios(file_path: str) -> dict:
         data = tablib.Dataset().load(f, 'ods')
 
     raw_scenarios = {}
-    for row in data.dict:
-        if header_name := row[0]:
+    for row in data:
+        if row and (header_name := row[0]):
             for col in range(1, len(row)):
                 scen_name = column_index_to_name(col)
                 d = raw_scenarios.setdefault(scen_name, {})

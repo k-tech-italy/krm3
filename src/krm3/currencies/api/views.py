@@ -1,4 +1,3 @@
-from typing import Optional
 
 from django.conf import settings
 from rest_framework import mixins
@@ -32,7 +31,7 @@ class RateAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         permission_classes=[],
         url_path=r'convert/(?P<from_cur>[A-Z]{3})/(?P<amount>(-)?[\d]+(\.\d+)?)/(?P<to_cur>[A-Z]{3})',
     )
-    def convert(self, request, pk, from_cur: str, amount, to_cur: Optional[str] = None):
+    def convert(self, request, pk, from_cur: str, amount, to_cur: str | None = None):
         """Convert the amount."""
         converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(
             from_value=amount, from_currency=from_cur, to_currency=to_cur

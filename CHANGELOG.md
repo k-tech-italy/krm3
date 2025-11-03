@@ -1,3 +1,9 @@
+## 1.13.1 (2025-11-03)
+
+### Fix
+
+- **TimesheetSubmission-with-the-same-resource-and-overlapping-period**: TimesheetSubmission with the same resource and overlapping period
+
 ## 1.13.0 (2025-10-31)
 
 ### Feat

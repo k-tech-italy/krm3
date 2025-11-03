@@ -158,3 +158,13 @@ class TestTimesheetSubmissionModelAPIListView:
             f'DETAIL:  Key (period, resource_id)=([2024-01-06,2024-01-16), {resource.pk})'
             f' conflicts with existing key (period, resource_id)=([2024-01-01,2024-01-07), {resource.pk}).'
         }
+
+
+    def test_resubmit_open_timesheet(self, api_client, regular_user):
+        resource: Resource = ResourceFactory(user=regular_user)
+        # create and existing TimesheetSubmission with the same resource and overlapping period
+        TimesheetSubmissionFactory(resource=resource, period=('2024-01-01', '2024-01-08'), closed=False)
+        response = api_client(user=regular_user).post(
+            self.url(), data={'resource': resource.pk, 'period': ('2024-01-01', '2024-01-07')}, format='json'
+        )
+        assert response.status_code == status.HTTP_201_CREATED

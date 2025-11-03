@@ -18,4 +18,4 @@ def test_login_ok(browser: 'AppTestBrowser', regular_user):
 def test_login_nok(browser: 'AppTestBrowser', regular_user):
     regular_user._password = 'wrong'
     browser.login_as_user(regular_user)
-    browser.assert_text('No active account found with the given credentials', selector='span', timeout=2)
+    browser.assert_text('Invalid username or password', selector='span', timeout=2)
