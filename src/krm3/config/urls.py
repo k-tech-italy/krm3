@@ -24,7 +24,6 @@ from django.contrib.admin import site
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from debug_toolbar.toolbar import debug_toolbar_urls
 
 from krm3.config.environ import env
 
@@ -41,9 +40,6 @@ urlpatterns = [
     path('', include('pwa.urls')),
     path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('admin/', admin.site.urls),
-    path('api/v1/', include('djoser.urls')),
-    path('api/v1/', include('djoser.urls.jwt')),
-    path('api/v1/', include('djoser.social.urls')),  # Needed for social authentication
     path('oauth/', include('social_django.urls', namespace='social')),
     # http://localhost:8000/oauth/complete/google-oauth2/
     path('be/', include('krm3.web.urls')),
@@ -67,6 +63,8 @@ if settings.DEBUG:
     )
 
 if not settings.TESTING:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
     urlpatterns = debug_toolbar_urls() + urlpatterns
 
 if settings.RELOAD:

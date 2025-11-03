@@ -5,9 +5,11 @@ from django.http import FileResponse, Http404, HttpResponseNotModified
 from django.utils._os import safe_join
 from django.utils.http import http_date
 from django.utils.translation import gettext as _
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.static import was_modified_since
 
 
+@ensure_csrf_cookie
 def serve(request, document_root=None, show_indexes: bool = False):
     """
     Serve static files below a given point in the directory structure.

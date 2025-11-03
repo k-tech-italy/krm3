@@ -90,8 +90,7 @@ def panel_sql(self, request, extra_context=None):  # noqa: D103
         else:
             response['error'] = str(form.errors)
         return JsonResponse(response)
-    else:
-        form = SQLForm()
+    form = SQLForm()
     context['form'] = form
     return render(request, 'admin/console/sql.html', context)
 

@@ -50,7 +50,6 @@ class Env(SmartEnv):
 
         :returns: Value from environment or default (if set)
         """
-
         if raw:
             env_var = var
         else:
@@ -70,9 +69,8 @@ class Env(SmartEnv):
 
                 if default is self.NOTSET:
                     default = var_info[1]
-            else:
-                if not cast:
-                    cast = var_info
+            elif not cast:
+                cast = var_info
 
         try:
             value = self.ENVIRON[env_var]
@@ -105,7 +103,7 @@ class Env(SmartEnv):
 
         try:
             content = Path(env_file).read_text()
-        except IOError:  # pragma: no cover
+        except OSError:  # pragma: no cover
             raise ImproperlyConfigured(f'{env_file} not found')
 
         for line in content.splitlines():

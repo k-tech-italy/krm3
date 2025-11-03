@@ -19,4 +19,4 @@ class SentryForm(forms.Form):  # noqa: D101
 
 class RedisCLIForm(forms.Form):  # noqa: D101
     command = forms.CharField()
-    connection = forms.ChoiceField(choices=zip(settings.CACHES.keys(), settings.CACHES.keys()))
+    connection = forms.ChoiceField(choices=zip(settings.CACHES.keys(), settings.CACHES.keys(), strict=False))

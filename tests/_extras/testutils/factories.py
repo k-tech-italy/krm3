@@ -166,7 +166,6 @@ class MissionFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'core.Mission'
-        django_get_or_create = ('year', 'number')
 
 
 class ExpenseCategoryFactory(factory.django.DjangoModelFactory):
