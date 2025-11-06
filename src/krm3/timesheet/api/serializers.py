@@ -2,16 +2,15 @@ import datetime
 from decimal import Decimal
 from typing import Any, override
 
+from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
 from psycopg.types.range import DateRange
-from django.db import IntegrityError
+from rest_framework import exceptions, serializers
 
 from krm3.core.models.projects import Task
 from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission, TimeEntry
-from rest_framework import serializers
-
+from krm3.core.models.contracts import Contract
 from krm3.timesheet import dto
-from rest_framework import exceptions
 
 type Hours = Decimal | float | int
 
@@ -187,24 +186,22 @@ class TimesheetSerializer(serializers.Serializer):
 
         timesheet_submissions = TimesheetSubmission.objects.filter(resource=timesheet.resource)
 
-        from krm3.core.models import Contract
-
         for day in timesheet.days:
             timesheet_submission = timesheet_submissions.filter(period__contains=day.date).first()
+            this_day_data = {'closed': timesheet_submission is not None and timesheet_submission.closed}
 
-            contract = Contract.objects.filter(period__contains=day.date, resource=timesheet.resource).first()
-
-            if timesheet_submission and timesheet_submission.closed:
-                days_result[str(day.date)] = {'closed': True}
-            else:
-                days_result[str(day.date)] = {'closed': False}
+            contract = timesheet.contracts.filter(period__contains=day.date).first()
 
             if contract and contract.country_calendar_code:
-                days_result[str(day.date)]['hol'] = day.is_holiday(contract.country_calendar_code)
-                days_result[str(day.date)]['nwd'] = day.is_non_working_day(contract.country_calendar_code)
+                this_day_data['hol'] = day.is_holiday(contract.country_calendar_code)
+                this_day_data['nwd'] = day.is_non_working_day(contract.country_calendar_code)
+                this_day_data['meal_voucher'] = contract.meal_voucher
             else:
-                days_result[str(day.date)]['hol'] = day.is_holiday()
-                days_result[str(day.date)]['nwd'] = day.is_non_working_day()
+                this_day_data['hol'] = day.is_holiday()
+                this_day_data['nwd'] = day.is_non_working_day()
+                this_day_data['meal_voucher'] = None
+
+            days_result[str(day.date)] = this_day_data
 
         return days_result
 

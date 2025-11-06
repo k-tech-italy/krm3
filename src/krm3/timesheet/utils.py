@@ -1,4 +1,5 @@
-import datetime
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
 from dateutil.relativedelta import relativedelta
 
@@ -6,9 +7,12 @@ from krm3.core.models import Resource, User, TimesheetSubmission
 from krm3.timesheet.api.serializers import TimesheetSerializer
 from krm3.timesheet.dto import TimesheetDTO
 
+if TYPE_CHECKING:
+    import datetime
+
 
 def get_resource_timesheet(
-    end_date: datetime.date, resource: 'Resource', start_date: datetime.date, requestor: 'User'
+    end_date: datetime.date, resource: Resource, start_date: datetime.date, requestor: User
 ) -> dict:
     """Retrieve the resource timesheet for a specific date interval."""
     tms = TimesheetSubmission.objects.filter(

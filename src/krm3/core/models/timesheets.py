@@ -236,9 +236,8 @@ class TimesheetSubmission(models.Model):
         from krm3.timesheet.api.serializers import TimesheetSerializer  # noqa: PLC0415
         from krm3.timesheet.dto import TimesheetDTO  # noqa: PLC0415
 
-        lower, upper = self.period.lower, self.period.upper
-        if isinstance(upper, str):
-            upper = KrmDay(upper).date
+        lower = KrmDay(self.period.lower).date
+        upper = KrmDay(self.period.upper).date
         timesheet = TimesheetDTO().fetch(self.resource, lower, upper + relativedelta(days=1))
         return TimesheetSerializer(timesheet).data
 

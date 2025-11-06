@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import decimal
 import typing
 
+from krm3.utils import i18n
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
-from django.utils.translation import gettext_lazy as _
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, TimeEntry
@@ -60,32 +62,26 @@ class Krm3Day(KrmDay):
         self.data_overtime = None
         self.data_meal_voucher = None
         self.data_special_leave = {}
-        self.has_data = False
         self.nwd = False  # Non-working day
         self.submitted = False
         self.data_special_leave_reason = None
         self.data_protocol_number = None
 
     @property
+    def has_data(self) -> bool:
+        """Returns whether this day is holding time entry data."""
+        return bool(self.time_entries)
+
+    @property
     def day_of_week_short_i18n(self) -> str:
-        ret = self.date.strftime('%a')
-        return {
-            'Mon': _('Mon'),
-            'Tue': _('Tue'),
-            'Wed': _('Wed'),
-            'Thu': _('Thu'),
-            'Fri': _('Fri'),
-            'Sat': _('Sat'),
-            'Sun': _('Sun'),
-        }.get(ret, ret)
+        return i18n.short_day_of_week(self.date)
 
     def __repr__(self) -> str:
         return self.date.strftime('K+%Y-%m-%d')
 
-    def apply(self, time_entries: list['TimeEntry']) -> None:
-        """Elaborates the krm3day data from the time_entries list."""
+    def apply(self, time_entries: list[TimeEntry]) -> None:
+        """Compute the krm3day data from the time_entries list."""
         self.time_entries = time_entries
-        self.has_data = len(time_entries) > 0
         meal_voucher_threshold = None
         if self.contract and (thresholds := self.contract.meal_voucher):
             meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
@@ -105,7 +101,7 @@ class TimesheetRule:
         NB: time entries must be of same day.
         """
         if len({te.date for te in time_entries}) > 1:
-            raise RuntimeError('Time entries must be of same day.')
+            raise RuntimeError('Time entries must belong to the same day.')
         base = {
             'bank_to': None,
             'bank_from': None,
@@ -122,16 +118,15 @@ class TimesheetRule:
             'special_leave_reason': None,
             'special_leave_title': None,
             'special_leave_hours': None,
-            'protocol_number': None
+            'protocol_number': None,
         }
         for te in time_entries:
             for fname, key in te_calc_map.items():
-                val = getattr(te, fname)
-                if fname in ['protocol_number', 'special_leave_reason']:
-                    if val:
+                if val := getattr(te, fname):
+                    if fname in ['protocol_number', 'special_leave_reason']:
                         base[key] = val
-                elif val:
-                    base[key] = safe_dec(base[key]) + safe_dec(val)
+                    else:
+                        base[key] = safe_dec(base[key]) + safe_dec(val)
             if val := base['special_leave_reason']:
                 base['special_leave_title'] = val.title
         bank_to = base.pop('bank_to')
