@@ -29,7 +29,6 @@ class AvailabilityReport(TimesheetReport):
         qs = Resource.objects.prefetch_related('contract_set').filter(
             contract__period__overlap=(self.from_date, self.to_date + relativedelta(days=1))
         )
-
         if self.project is not None:
             qs = qs.prefetch_related('task_set').filter(task__project=self.project)
 

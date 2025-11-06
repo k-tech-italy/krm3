@@ -30,7 +30,6 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
     # Session-based authentication configuration
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = not _env('DEBUG', default=False)  # True in production, False in dev
 
     SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
