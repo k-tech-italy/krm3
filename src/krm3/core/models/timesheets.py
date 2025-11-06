@@ -5,6 +5,7 @@ from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
+from dateutil.relativedelta import relativedelta
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -16,7 +17,7 @@ from django.db.models import QuerySet
 from constance import config
 
 from .auth import Resource
-from ...utils.dates import KrmDay
+from krm3.utils.dates import KrmDay
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -218,6 +219,28 @@ class TimesheetSubmission(models.Model):
             return self.period.lower.strftime('%Y %b')
         end_dt = self.period.upper - datetime.timedelta(days=1)
         return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
+
+    @override
+    def save(self, *, force_insert: bool = False, force_update: bool = False, using=None, update_fields=None) -> None:  # noqa: D102, ANN001
+        # We do not check for constraints as we want to surface the detailed errors from the DB when saving
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+
+    @override
+    def clean(self) -> None:
+        super().clean()
+        self.timesheet = self.calculate_timesheet() if self.closed else None
+
+    def calculate_timesheet(self) -> dict:
+        """Retrieve the resource timesheet data (DTO dict) for a specific date interval."""
+        from krm3.timesheet.api.serializers import TimesheetSerializer  # noqa: PLC0415
+        from krm3.timesheet.dto import TimesheetDTO  # noqa: PLC0415
+
+        lower, upper = self.period.lower, self.period.upper
+        if isinstance(upper, str):
+            upper = KrmDay(upper).date
+        timesheet = TimesheetDTO().fetch(self.resource, lower, upper + relativedelta(days=1))
+        return TimesheetSerializer(timesheet).data
 
 
 class TimeEntry(models.Model):
