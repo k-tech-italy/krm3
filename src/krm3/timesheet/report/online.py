@@ -3,10 +3,12 @@ import typing
 from krm3.core.models import Resource
 from krm3.utils.numbers import normal
 
+
 class UiElement:
     def __init__(self, **kwargs: dict) -> None:
         self.klass = None
         self.styles = None
+        self.value = None
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -48,7 +50,7 @@ class ReportRow(UiElement):
 
 
 class ReportBlock(UiElement):
-    def __init__(self, resource: Resource) -> None:
+    def __init__(self, resource: Resource | None) -> None:
         super().__init__()
         self.rows: list[ReportRow] = []
         self.resource = resource

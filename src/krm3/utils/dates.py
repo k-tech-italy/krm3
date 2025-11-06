@@ -66,7 +66,7 @@ class KrmDay:
             return not get_country_holidays(country_calendar_code=country_calendar_code).is_working_day(self.date)
         return self.date in get_country_holidays(country_calendar_code=country_calendar_code)
 
-    def is_non_working_day(self, country_calendar_code: str = None) -> bool:
+    def is_non_working_day(self, country_calendar_code: str | None = None) -> bool:
         return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar_code=country_calendar_code)
 
     @property
@@ -85,7 +85,7 @@ class KrmDay:
     def month_name_short(self) -> str:
         return self.date.strftime('%b')
 
-    def range_to(self, target: datetime.date | KrmDay) -> Iterator[KrmDay]:
+    def range_to(self, target: datetime.date | KrmDay) -> Iterator[Self]:
         """Iterate over all days between this day and the target day (including)."""
         if isinstance(target, datetime.date):
             target = self.__class__(target)

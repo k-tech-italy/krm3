@@ -4,11 +4,14 @@ import datetime
 import typing
 from typing import Self
 
+from constance import config
+from django.contrib.postgres.fields import ranges
+
 from krm3.core.models.auth import Resource, User
+from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task, TaskQuerySet
 from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
 from krm3.utils.dates import KrmCalendar
-from constance import config
 
 if typing.TYPE_CHECKING:
     from krm3.config.fragments.constance import ConstanceTyping
@@ -23,13 +26,19 @@ class TimesheetDTO:
         self.schedule = {}
         self.timesheet_colors = {}
         self.bank_hours = 0.0
+        self.contracts = Contract.objects.none()
 
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         """Fetch the resource timesheet for a specific date interval."""
-        task_qs = Task.objects.filter_acl(self._requested_by) if self._requested_by else Task.objects
+        task_qs = Task.objects.filter_acl(self._requested_by) if self._requested_by else Task.objects.all()
         self.tasks = task_qs.active_between(start_date, end_date).assigned_to(resource=resource)
-        te_qs = TimeEntry.objects.filter_acl(self._requested_by) if self._requested_by else TimeEntry.objects
+        te_qs = TimeEntry.objects.filter_acl(self._requested_by) if self._requested_by else TimeEntry.objects.all()
         self.time_entries = te_qs.filter(resource=resource, date__range=(start_date, end_date))
+
+        self.contracts = Contract.objects.filter(
+            resource=resource, period__overlap=ranges.DateRange(start_date, end_date)
+        )
+
         calendar = KrmCalendar()
 
         self.days = calendar.iter_dates(start_date, end_date)

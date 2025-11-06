@@ -2,16 +2,16 @@ import datetime
 from decimal import Decimal
 from typing import Any, override
 
-from django.utils.translation import gettext_lazy as _
-from psycopg.types.range import DateRange
 from django.db import IntegrityError
+from django.utils.translation import gettext_lazy as _
+from krm3.timesheet.rules import Krm3Day
+from psycopg.types.range import DateRange
+from rest_framework import exceptions, serializers
 
+from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task
-from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission, TimeEntry
-from rest_framework import serializers
-
-from krm3.timesheet import dto
-from rest_framework import exceptions
+from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntryQuerySet, TimesheetSubmission, TimeEntry
+from krm3.timesheet import dto, utils
 
 type Hours = Decimal | float | int
 
@@ -187,26 +187,63 @@ class TimesheetSerializer(serializers.Serializer):
 
         timesheet_submissions = TimesheetSubmission.objects.filter(resource=timesheet.resource)
 
-        from krm3.core.models import Contract
-
         for day in timesheet.days:
             timesheet_submission = timesheet_submissions.filter(period__contains=day.date).first()
+            this_day_data = {'closed': timesheet_submission is not None and timesheet_submission.closed}
 
-            contract = Contract.objects.filter(period__contains=day.date, resource=timesheet.resource).first()
-
-            if timesheet_submission and timesheet_submission.closed:
-                days_result[str(day.date)] = {'closed': True}
-            else:
-                days_result[str(day.date)] = {'closed': False}
+            contract = timesheet.contracts.filter(period__contains=day.date).first()
 
             if contract and contract.country_calendar_code:
-                days_result[str(day.date)]['hol'] = day.is_holiday(contract.country_calendar_code)
-                days_result[str(day.date)]['nwd'] = day.is_non_working_day(contract.country_calendar_code)
+                this_day_data['hol'] = day.is_holiday(contract.country_calendar_code)
+                is_non_working_day = this_day_data['nwd'] = day.is_non_working_day(contract.country_calendar_code)
             else:
-                days_result[str(day.date)]['hol'] = day.is_holiday()
-                days_result[str(day.date)]['nwd'] = day.is_non_working_day()
+                this_day_data['hol'] = day.is_holiday()
+                is_non_working_day = this_day_data['nwd'] = day.is_non_working_day()
+
+            meal_voucher_thresholds = contract.meal_voucher if contract else {}
+            this_day_data['meal_voucher'] = meal_voucher_thresholds.get(
+                'sun' if is_non_working_day else day.day_of_week_short.casefold()
+            )
+
+            this_day_time_entries = timesheet.time_entries.filter(date=day.date)
+            this_day_data['day_shift_hours'] = float(sum(entry.day_shift_hours for entry in this_day_time_entries))
+            this_day_data['night_shift_hours'] = float(sum(entry.night_shift_hours for entry in this_day_time_entries))
+            this_day_data['on_call_hours'] = float(sum(entry.on_call_hours for entry in this_day_time_entries))
+            this_day_data['travel_hours'] = float(sum(entry.travel_hours for entry in this_day_time_entries))
+            this_day_data['holiday_hours'] = float(sum(entry.holiday_hours for entry in this_day_time_entries))
+            this_day_data['leave_hours'] = float(sum(entry.leave_hours for entry in this_day_time_entries))
+            this_day_data['rest_hours'] = float(sum(entry.rest_hours for entry in this_day_time_entries))
+            this_day_data['sick_hours'] = float(sum(entry.sick_hours for entry in this_day_time_entries))
+
+            bank_from = sum(entry.bank_from for entry in this_day_time_entries)
+            bank_to = sum(entry.bank_to for entry in this_day_time_entries)
+            this_day_data['bank_from'] = float(bank_from)
+            this_day_data['bank_to'] = float(bank_to)
+
+            special_leave_hours, special_leave_reason = self._get_special_leave_data(this_day_time_entries)
+            this_day_data['special_leave_hours'] = 0.0 if special_leave_hours is None else float(special_leave_hours)
+            this_day_data['special_leave_reason'] = special_leave_reason
+
+            due_hours = self._get_due_hours(contract, day)
+            overtime = utils.overtime(this_day_time_entries, due_hours)
+            this_day_data['overtime'] = 0.0 if overtime is None else float(overtime)
+
+            days_result[str(day.date)] = this_day_data
 
         return days_result
+
+    def _get_special_leave_data(self, time_entries: TimeEntryQuerySet) -> tuple[Decimal, str] | tuple[None, None]:
+        try:
+            entry = time_entries.special_leaves().get()
+        except (TimeEntry.DoesNotExist, TimeEntry.MultipleObjectsReturned):
+            return (None, None)
+
+        return (entry.special_leave_hours, entry.special_leave_reason.title)
+
+    def _get_due_hours(self, contract: Contract | None, day: Krm3Day) -> Decimal:
+        if contract:
+            return contract.get_due_hours(day.date)
+        return Contract.get_default_schedule(day)
 
 
 class StartEndDateRangeField(serializers.Field):
