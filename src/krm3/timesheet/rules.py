@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import decimal
-import typing
+from typing import Self, TYPE_CHECKING
 
+from krm3.core.models import TimesheetSubmission
 from krm3.utils import i18n
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
 
-if typing.TYPE_CHECKING:
-    from krm3.core.models import Contract, TimeEntry
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from krm3.core.models import Contract, TimeEntry, Resource
 
 timeentry_counters = {
     'bank': 'Banca ore',
@@ -45,7 +47,7 @@ class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
-        self.resource = None
+        self.resource: Resource | None = None
         self.data_due_hours: float = 0
         self.contract: Contract | None = None
         self.holiday: bool = False
@@ -62,18 +64,21 @@ class Krm3Day(KrmDay):
         self.data_overtime = None
         self.data_meal_voucher = None
         self.data_special_leave = {}
-        self.has_data = False
-        self.nwd = False  # Non-working day
+        self.has_data: bool = False
+
+        self.nwd: bool = False
+        """`True` if this is a non-working day, `False` otherwise."""
+
         self.submitted = False
         self.data_special_leave_reason = None
-        self.data_protocol_number = None
+        self.data_protocol_number: str | None = None
+
+    def __repr__(self) -> str:
+        return self.date.strftime('K+%Y-%m-%d')
 
     @property
     def day_of_week_short_i18n(self) -> str:
         return i18n.short_day_of_week(self.date)
-
-    def __repr__(self) -> str:
-        return self.date.strftime('K+%Y-%m-%d')
 
     def apply(self, time_entries: list[TimeEntry]) -> None:
         """Compute the krm3day data from the time_entries list."""
@@ -86,6 +91,9 @@ class Krm3Day(KrmDay):
             not self.nwd, self.data_due_hours, meal_voucher_threshold, time_entries
         ).items():
             setattr(self, f'data_{k}', v)
+
+    @classmethod
+    def from_submission(cls, submission: TimesheetSubmission) -> Iterator[Self]: ...
 
 
 class TimesheetRule:

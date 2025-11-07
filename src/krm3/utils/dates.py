@@ -85,7 +85,7 @@ class KrmDay:
     def month_name_short(self) -> str:
         return self.date.strftime('%b')
 
-    def range_to(self, target: datetime.date | KrmDay) -> Iterator[KrmDay]:
+    def range_to(self, target: datetime.date | KrmDay) -> Iterator[Self]:
         """Iterate over all days between this day and the target day (including)."""
         if isinstance(target, datetime.date):
             target = self.__class__(target)
