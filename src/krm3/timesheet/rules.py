@@ -62,15 +62,11 @@ class Krm3Day(KrmDay):
         self.data_overtime = None
         self.data_meal_voucher = None
         self.data_special_leave = {}
+        self.has_data = False
         self.nwd = False  # Non-working day
         self.submitted = False
         self.data_special_leave_reason = None
         self.data_protocol_number = None
-
-    @property
-    def has_data(self) -> bool:
-        """Returns whether this day is holding time entry data."""
-        return bool(self.time_entries)
 
     @property
     def day_of_week_short_i18n(self) -> str:
@@ -82,6 +78,7 @@ class Krm3Day(KrmDay):
     def apply(self, time_entries: list[TimeEntry]) -> None:
         """Compute the krm3day data from the time_entries list."""
         self.time_entries = time_entries
+        self.has_data = bool(time_entries)
         meal_voucher_threshold = None
         if self.contract and (thresholds := self.contract.meal_voucher):
             meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
