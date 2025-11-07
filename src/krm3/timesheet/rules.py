@@ -81,7 +81,7 @@ class Krm3Day(KrmDay):
         self.has_data = bool(time_entries)
         meal_voucher_threshold = None
         if self.contract and (thresholds := self.contract.meal_voucher):
-            meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
+            meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
         for k, v in TimesheetRule.calculate(
             not self.nwd, self.data_due_hours, meal_voucher_threshold, time_entries
         ).items():
