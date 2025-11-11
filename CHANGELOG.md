@@ -1,3 +1,13 @@
+## 1.14.0 (2025-11-11)
+
+### Feat
+
+- **TimesheetSubmission**: Fix #421 Implement persisted calculations
+
+### Fix
+
+- **Availability-report**: Fix #446 Availability report - missing all employees
+
 ## 1.13.1 (2025-11-03)
 
 ### Fix
