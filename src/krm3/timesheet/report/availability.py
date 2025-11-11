@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
-from krm3.core.models import Resource
+from krm3.core.models import Project, Resource
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
@@ -17,17 +17,21 @@ class AvailabilityReport(TimesheetReport):
     def __init__(
         self, from_date: datetime.date, to_date: datetime.date, user: User, project: str | None = None
     ) -> None:
-        self.project = project
-        super().__init__(from_date, to_date, user, project=project)
+        self.project = Project.objects.get(id=project) if project else None
+        super().__init__(from_date, to_date, user)
         self._enrich_calendars_with_availability_data()
 
     def _set_resources(self, user: User, **kwargs) -> None:
+        """Set the resource list.
+
+        Will filter for resources with contracts overlapping current period and eventually by project.
+        """
         qs = Resource.objects.prefetch_related('contract_set').filter(
             contract__period__overlap=(self.from_date, self.to_date + relativedelta(days=1))
         )
 
         if self.project is not None:
-            qs = qs.filter(task__project=self.project)
+            qs = qs.prefetch_related('task_set').filter(task__project=self.project)
 
         self.resources = list(qs.distinct())
 
