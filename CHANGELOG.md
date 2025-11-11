@@ -1,3 +1,15 @@
+## 2.0.0 (2025-11-11)
+
+### Feat
+
+- **missions/views.py**: Form to upload images or get from camera (#161)
+- **TimesheetSubmission**: Fix #421 Implement persisted calculations
+
+### Fix
+
+- **README**: Just a fake commit to make Commitizen work!
+- **Availability-report**: Fix #446 Availability report - missing all employees
+
 ## 1.13.1 (2025-11-03)
 
 ### Fix

@@ -1,14 +1,15 @@
 import datetime
 from decimal import Decimal
 from typing import Any, override
+
 from django.utils.translation import gettext_lazy as _
 from psycopg.types.range import DateRange
 from django.db import IntegrityError
 
-from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission
+from krm3.core.models.projects import Task
+from krm3.core.models.timesheets import SpecialLeaveReason, TimesheetSubmission, TimeEntry
 from rest_framework import serializers
 
-from krm3.core.models import Task, TimeEntry
 from krm3.timesheet import dto
 from rest_framework import exceptions
 

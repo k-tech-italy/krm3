@@ -1,10 +1,11 @@
 import datetime
 from decimal import Decimal as D  # noqa: N817
 
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
-from krm3.core.models import Resource
+from krm3.core.models import Project, Resource
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
@@ -16,24 +17,22 @@ class AvailabilityReport(TimesheetReport):
     def __init__(
         self, from_date: datetime.date, to_date: datetime.date, user: User, project: str | None = None
     ) -> None:
-        self.project = project
-        super().__init__(from_date, to_date, user, project=project)
+        self.project = Project.objects.get(id=project) if project else None
+        super().__init__(from_date, to_date, user)
         self._enrich_calendars_with_availability_data()
 
     def _set_resources(self, user: User, **kwargs) -> None:
-        base_filter = (
-            {'preferred_in_report': True}
-            if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet')
-            else {'id': user.get_resource().id}
+        """Set the resource list.
+
+        Will filter for resources with contracts overlapping current period and eventually by project.
+        """
+        qs = Resource.objects.prefetch_related('contract_set').filter(
+            contract__period__overlap=(self.from_date, self.to_date + relativedelta(days=1))
         )
-
         if self.project is not None:
-            base_filter['task__project'] = self.project
+            qs = qs.prefetch_related('task_set').filter(task__project=self.project)
 
-        self.resources = list(Resource.objects.filter(**base_filter).distinct())
-
-        if not self.resources and not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            self.resources = [user.get_resource()]
+        self.resources = list(qs.distinct())
 
     def _enrich_calendars_with_availability_data(self) -> None:
         """Add availability/absence data to existing calendar days."""

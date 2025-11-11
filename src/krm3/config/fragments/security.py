@@ -15,7 +15,7 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = _env('CSRF_COOKIE_SAMESITE')
 SESSION_COOKIE_SAMESITE = _env('SESSION_COOKIE_SAMESITE')
 SECURE_SSL_REDIRECT = _env('SECURE_SSL_REDIRECT')
-SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT
+SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT or not _env('DEBUG', default=False)
 
 # CSRF cookie must NOT be HttpOnly so JavaScript can read it and send it in X-CSRFToken header
 # Security is maintained by SameSite policy, Secure flag, and Django's CSRF validation

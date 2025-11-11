@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+import typing
 from unittest.mock import patch
 from constance.test import override_config
 
@@ -17,13 +18,16 @@ from testutils.factories import (
     TimeEntryFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
-    ContractFactory
+    ContractFactory,
 )
 
 from freezegun import freeze_time
 
 from krm3.timesheet.report.payslip_report import report_timeentry_key_mapping
 from tests._extras.testutils.factories import TimesheetSubmissionFactory
+
+if typing.TYPE_CHECKING:
+    from krm3.core.models import Resource
 
 
 def _assert_homepage_content(response):
@@ -52,10 +56,13 @@ def test_resource_user_should_see_all_be_views(resource_client, url):
     _assert_homepage_content(response)
 
 
-@pytest.mark.parametrize('url', [
-    pytest.param('/be/report/', id='report'),
-    pytest.param('/be/task_report/', id='task_report'),
-])
+@pytest.mark.parametrize(
+    'url',
+    [
+        pytest.param('/be/report/', id='report'),
+        pytest.param('/be/task_report/', id='task_report'),
+    ],
+)
 def test_user_without_permission_should_only_see_its_reports(url, resource_client):
     another_user = UserFactory(username='user01', password='pass123')
     another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
@@ -102,6 +109,7 @@ def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
 def test_availability_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     resource = ResourceFactory()
+    ContractFactory(resource=resource)
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,
@@ -133,9 +141,11 @@ def test_availability_view_filtered_by_project(client):
     SuperUserFactory(username='user00', password='pass123')
     project = ProjectFactory()
     resource = ResourceFactory()
+    ContractFactory(resource=resource)
     TaskFactory(project=project, resource=resource)
     another_project = ProjectFactory()
     another_resource = ResourceFactory()
+    ContractFactory(resource=another_resource)
     TaskFactory(project=another_project, resource=another_resource)
     TimeEntryFactory(
         resource=resource,
@@ -160,17 +170,24 @@ def test_availability_view_filtered_by_project(client):
     assert 'H' in content
     assert 'L 3.00' not in content
 
+
 @freeze_time('2025-08-22')
-def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
+def test_availability_report_only_resources_with_contract(client):
     """Test that unprivileged user gets their own resource when project filter excludes them."""
-    user = UserFactory(username='user00', password='pass123')
-    user_resource = ResourceFactory(user=user, profile=user.profile, preferred_in_report=False)
-
     project = ProjectFactory()
-    other_resource = ResourceFactory(preferred_in_report=True)
-    TaskFactory(project=project, resource=other_resource)
 
-    client.login(username='user00', password='pass123')
+    r_current: 'Resource' = ResourceFactory()
+    ContractFactory(resource=r_current)
+    r_past = ResourceFactory()
+    ContractFactory(resource=r_past, period=(_dt('2020-01-01'), _dt('2021-01-01')))
+    r_future = ResourceFactory()
+    ContractFactory(resource=r_future, period=(_dt('2025-09-01'), _dt('2026-01-01')))
+
+    TaskFactory(project=project, resource=r_current)
+    TaskFactory(project=project, resource=r_past, end_date=_dt('20201231'))
+    TaskFactory(project=project, resource=r_future)
+
+    client.login(username=r_current.user.username, password=r_current.user._password)
 
     url = reverse('availability')
     response = client.get(f'{url}?project={project.id}')
@@ -178,8 +195,10 @@ def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
     assert response.status_code == 200
     content = response.content.decode()
 
-    assert f'{user_resource.first_name} {user_resource.last_name}' in content
-    assert f'{other_resource.first_name} {other_resource.last_name}' not in content
+    assert f'{r_current.first_name} {r_current.last_name}' in content
+    assert f'{r_past.first_name} {r_past.last_name}' not in content
+    assert f'{r_future.first_name} {r_future.last_name}' not in content
+
 
 @freeze_time('2025-08-22')
 @pytest.mark.parametrize(
@@ -192,7 +211,7 @@ def test_availability_report_unprivileged_user_fallback_to_own_resource(client):
 def test_availability_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(reverse("availability-report-month", args=[month]))
+    response = client.get(reverse('availability-report-month', args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
     assert f'<h1 class="title">{expected_result}</h1>' in response.content.decode()
@@ -229,7 +248,7 @@ def test_report_view_current_month(client):
 def test_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(reverse("report-month", args=[month]))
+    response = client.get(reverse('report-month', args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
     assert expected_result in response.content.decode()
@@ -260,7 +279,7 @@ def test_task_report_view_current_month(client):
 def test_task_report_view_next_previous_month(client, month, expected_result):
     SuperUserFactory(username='user00', password='pass123')
     client.login(username='user00', password='pass123')
-    response = client.get(reverse("task-report-month", args=[month]))
+    response = client.get(reverse('task-report-month', args=[month]))
     _assert_homepage_content(response)
     assert response.status_code == 200
     assert expected_result in response.content.decode()
@@ -270,8 +289,8 @@ def test_task_report_view_next_previous_month(client, month, expected_result):
 def test_report_creation(admin_client):  # noqa: PLR0915
     contract_1 = ContractFactory()
     contract_2 = ContractFactory()
-    r1=contract_1.resource
-    r2=contract_2.resource
+    r1 = contract_1.resource
+    r2 = contract_2.resource
 
     task_1 = TaskFactory(resource=r1)
 
@@ -346,8 +365,10 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     assert sheet[f'A{r1_row + 1}'].value == 'Days 20'
     row_labels = [sheet[f'A{r1_row + 2 + i}'].value for i in range(9)]
     row_labels = [label for label in row_labels if label]
-    assert all(value in report_timeentry_key_mapping.values() for value in
-               [label for label in row_labels if label != 'Sick 12321'])
+    assert all(
+        value in report_timeentry_key_mapping.values()
+        for value in [label for label in row_labels if label != 'Sick 12321']
+    )
 
     first_resource_row = min(resource_rows.values())
     assert sheet[f'C{first_resource_row + 1}'].value == 'Sun\n1'
@@ -362,7 +383,7 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     assert sheet[f'K{regular_hours_data_row}'].value is None
     assert sheet[f'B{regular_hours_data_row}'].value == 14
     assert sheet[f'L{sick_hours_data_row}'].value == 8
-    assert sheet[f'K{sick_hours_data_row+1}'].value == 8
+    assert sheet[f'K{sick_hours_data_row + 1}'].value == 8
     assert sheet[f'B{sick_hours_data_row}'].value == 16
     assert sheet[f'O{nigh_shift_hours_data_row}'].value == 7
 

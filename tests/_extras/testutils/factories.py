@@ -108,6 +108,8 @@ class CurrencyFactory(factory.django.DjangoModelFactory):
 class ResourceFactory(factory.django.DjangoModelFactory):
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
+    user = factory.SubFactory(UserFactory)
+    preferred_in_report = True
 
     class Meta:
         model = 'core.Resource'
