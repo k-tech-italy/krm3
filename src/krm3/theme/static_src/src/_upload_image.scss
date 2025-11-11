@@ -1,0 +1,160 @@
+.upload-image-body {
+  @apply font-sans max-w-[800px] my-12 mx-auto p-5;
+}
+
+.upload-image-login-bar {
+  @apply bg-gray-100 p-2.5 text-right border-b border-gray-300 -m-5 mb-5 rounded-t-lg;
+
+  a {
+    @apply no-underline py-2 px-4 rounded inline-block;
+  }
+}
+
+.upload-image-expense-info {
+  @apply mb-5 bg-white rounded p-4 shadow-sm;
+}
+
+.upload-image-expense-table {
+  @apply w-full border-collapse;
+
+  th {
+    @apply text-left py-2 px-3 font-bold text-gray-700 w-[30%] border-b border-gray-200;
+  }
+
+  td {
+    @apply py-2 px-3 text-gray-800 border-b border-gray-200;
+  }
+
+  tr:last-child th,
+  tr:last-child td {
+    @apply border-b-0;
+  }
+}
+
+.upload-image-container {
+  @apply bg-gray-100 p-8 rounded-lg shadow;
+}
+
+.upload-image-heading {
+  @apply text-gray-800 mb-8 mr-5 text-center;
+
+  @media (min-width: 768px) {
+    @apply text-left;
+  }
+}
+
+.upload-image-header-section {
+  @apply flex flex-col gap-5 mb-5;
+
+  @media (min-width: 768px) {
+    @apply flex-row items-center justify-between;
+
+    .upload-image-heading {
+      @apply mb-0 flex-1 text-gray-800 mb-8 mr-5;
+    }
+
+    .upload-image-button-group:first-child {
+      @apply ml-auto;
+    }
+  }
+}
+
+.upload-image-button-group {
+  @apply flex gap-2.5 justify-center;
+}
+
+.upload-image-button {
+  @apply py-3 px-6 text-base border-0 rounded cursor-pointer transition-colors duration-300;
+
+  &:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
+}
+
+.upload-image-btn-primary {
+  @apply bg-blue-600 text-white;
+
+  &:hover:not(:disabled) {
+    @apply bg-blue-700;
+  }
+}
+
+.upload-image-btn-success {
+  @apply bg-green-600 text-white;
+
+  &:hover:not(:disabled) {
+    @apply bg-green-700;
+  }
+}
+
+.upload-image-file-input {
+  @apply hidden;
+}
+
+.upload-image-preview {
+  @apply mt-5 hidden relative w-fit mx-auto;
+
+  img {
+    @apply max-w-full h-auto rounded shadow-lg block;
+  }
+}
+
+.upload-image-preview-img {
+  @apply max-w-full h-auto rounded shadow-lg block;
+}
+
+.upload-image-remove-btn {
+  @apply absolute top-2.5 right-2.5 w-10 h-10 rounded-full bg-red-600 text-white text-2xl font-bold flex items-center justify-center cursor-pointer border-2 border-white shadow-md p-0 leading-none;
+
+  &:hover {
+    @apply bg-red-700;
+  }
+}
+
+.upload-image-recapture-btn {
+  @apply absolute top-[60px] right-2.5 w-10 h-10 rounded-full bg-black/20 hidden items-center justify-center cursor-pointer border-2 border-white shadow-md p-0;
+
+  &:hover {
+    @apply bg-black/40;
+  }
+
+  img {
+    @apply w-6 h-6;
+  }
+}
+
+.upload-image-video {
+  @apply max-w-full h-auto rounded mt-5 mx-auto hidden;
+}
+
+.upload-image-video-container {
+  @apply flex flex-col items-center;
+}
+
+.upload-image-capture-btn {}
+
+#submitBtn.upload-image-btn-success {
+  @apply hidden mt-5 mx-auto;
+}
+
+.upload-image-message {
+  @apply p-3 mt-5 rounded hidden;
+
+  &.success {
+    @apply bg-green-100 text-green-900 border border-green-300;
+  }
+
+  &.error {
+    @apply bg-red-100 text-red-900 border border-red-300;
+  }
+}
+
+.upload-image-spinner {
+  @apply border-4 border-gray-200 border-t-blue-600 rounded-full w-10 h-10 mx-auto my-5 hidden;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

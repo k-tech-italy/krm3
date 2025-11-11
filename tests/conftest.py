@@ -22,6 +22,13 @@ def krm3app(django_app_factory):
 
 
 @pytest.fixture(autouse=True)
+def session_settings(settings):
+    # Ensure session cookies work in test environment (HTTP, not HTTPS)
+    settings.SESSION_COOKIE_SECURE = False
+    settings.DEBUG = False
+
+
+@pytest.fixture(autouse=True)
 def dummy_currencies(settings):
     settings.CURRENCIES = ['GBP', 'EUR', 'USD']
     settings.OPEN_EXCHANGE_RATES_APP_ID = 'abc'
@@ -32,10 +39,22 @@ def dummy_currencies(settings):
 def currencies(db):
     from krm3.currencies.models import Currency
 
-    Currency.objects.get_or_create(iso3='GBP', defaults={'title': 'GBP', 'symbol': '£', 'fractional_unit': 'cents', 'base': 100, 'active': True})
-    Currency.objects.get_or_create(iso3='EUR', defaults={'title': 'EUR', 'symbol': '€', 'fractional_unit': 'cents', 'base': 100, 'active': True})
-    Currency.objects.get_or_create(iso3='USD', defaults={'title': 'USD', 'symbol': '$', 'fractional_unit': 'cents', 'base': 100, 'active': True})
-    Currency.objects.get_or_create(iso3='CHF', defaults={'title': 'CHF', 'symbol': 'CHF', 'fractional_unit': 'cents', 'base': 100, 'active': True})
+    Currency.objects.get_or_create(
+        iso3='GBP',
+        defaults={'title': 'GBP', 'symbol': '£', 'fractional_unit': 'cents', 'base': 100, 'active': True},
+    )
+    Currency.objects.get_or_create(
+        iso3='EUR',
+        defaults={'title': 'EUR', 'symbol': '€', 'fractional_unit': 'cents', 'base': 100, 'active': True},
+    )
+    Currency.objects.get_or_create(
+        iso3='USD',
+        defaults={'title': 'USD', 'symbol': '$', 'fractional_unit': 'cents', 'base': 100, 'active': True},
+    )
+    Currency.objects.get_or_create(
+        iso3='CHF',
+        defaults={'title': 'CHF', 'symbol': 'CHF', 'fractional_unit': 'cents', 'base': 100, 'active': True},
+    )
 
 
 @pytest.fixture
