@@ -34,11 +34,11 @@ class TimesheetReport:
     need: set = set()  # allowed values: 'submissions', 'extra_holidays'
 
     def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs) -> None:
-        self._set_resources(user, **kwargs)
-        resource_ids = {r.id for r in self.resources}
-
         self.from_date = from_date
         self.to_date = to_date
+
+        self._set_resources(user, **kwargs)
+        resource_ids = {r.id for r in self.resources}
 
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
 

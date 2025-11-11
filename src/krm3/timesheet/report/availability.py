@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal as D  # noqa: N817
 
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
@@ -21,19 +22,14 @@ class AvailabilityReport(TimesheetReport):
         self._enrich_calendars_with_availability_data()
 
     def _set_resources(self, user: User, **kwargs) -> None:
-        base_filter = (
-            {'preferred_in_report': True}
-            if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet')
-            else {'id': user.get_resource().id}
+        qs = Resource.objects.prefetch_related('contract_set').filter(
+            contract__period__overlap=(self.from_date, self.to_date + relativedelta(days=1))
         )
 
         if self.project is not None:
-            base_filter['task__project'] = self.project
+            qs = qs.filter(task__project=self.project)
 
-        self.resources = list(Resource.objects.filter(**base_filter).distinct())
-
-        if not self.resources and not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            self.resources = [user.get_resource()]
+        self.resources = list(qs.distinct())
 
     def _enrich_calendars_with_availability_data(self) -> None:
         """Add availability/absence data to existing calendar days."""
