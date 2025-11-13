@@ -3,7 +3,7 @@ from cgi import parse_multipart
 from io import BytesIO
 
 from django.core.files.base import ContentFile
-from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import reverse
 from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
@@ -11,7 +11,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import FormView
 from django.views.generic.base import View
 from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
 
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.forms import MissionsReimbursementForm
@@ -54,15 +53,52 @@ class ReimbursementResultsView(View):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UploadImageView(View):
-    http_method_names = ['patch']
+    http_method_names = ['get', 'patch']
 
-    def patch(self, request, pk: int):
+    @staticmethod
+    def _validate_otp_and_get_expense(pk: int, otp_value: str) -> Expense | None:
+        """
+        Validate OTP and return expense if valid, None otherwise.
+
+        Args:
+            pk: The expense primary key
+            otp_value: The OTP value to validate
+
+        Returns:
+            Expense object if OTP is valid, None otherwise
+
+        """
+        try:
+            expense = get_object_or_404(Expense, pk=pk)
+            if expense.check_otp(otp_value):
+                return expense
+        except Exception:
+            logger.exception('Error validating OTP for expense %s', pk)
+        return None
+
+    def get(self, request: HttpRequest, pk: int) -> HttpResponse:
+        otp_value = request.GET.get('otp', '')
+
+        expense = self._validate_otp_and_get_expense(pk, otp_value)
+
+        if not expense:
+            return HttpResponseBadRequest('Invalid otp.')
+
+        # Build the current URL with query parameters for the login redirect
+        current_url = request.get_full_path()
+
+        ctx = {
+            'expense': expense,
+            'is_authenticated': request.user.is_authenticated,
+            'current_url': current_url,
+        }
+        return TemplateResponse(request, 'admin/missions/mission/upload_image.html', ctx)
+
+    def patch(self, request: HttpRequest, pk: int) -> HttpResponse:
         content_type = request.META.get('CONTENT_TYPE', '')
 
         if not content_type.startswith('multipart/form-data;'):
             return HttpResponseBadRequest('Invalid Content-Type. Expected multipart/form-data.')
-
-        expense = get_object_or_404(Expense, pk=pk)
 
         try:
             # Extract the boundary from the Content-Type header
@@ -75,12 +111,18 @@ class UploadImageView(View):
             otp_values = form_data.get('otp', [])
             image_files = form_data.get('image', [])
 
-            otp_value = otp_values[0] if otp_values else None
+            otp_value = otp_values[0] if otp_values else ''
 
-            if image_files and expense.check_otp(otp_value):
-                expense.image.save(f'expense{expense.id:09}.png', ContentFile(image_files[0]), save=True)
-                return Response(status=204)
-            return HttpResponseBadRequest('Invalid otp or no image file found in the request.')
+            expense = self._validate_otp_and_get_expense(pk, otp_value)
+
+            if not expense:
+                return HttpResponseBadRequest('Invalid otp.')
+
+            if not image_files:
+                return HttpResponseBadRequest('No image file found in the request.')
+
+            expense.image.save(f'expense{expense.id:09}.png', ContentFile(image_files[0]), save=True)
+            return HttpResponse(status=204)
 
         except Exception as e:
             logger.exception(f'Error parsing multipart data: {e}')

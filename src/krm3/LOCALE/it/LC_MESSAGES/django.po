@@ -7,10 +7,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-29 15:01+0000\n"
+"POT-Creation-Date: 2025-11-07 15:45+0000\n"
 "PO-Revision-Date: 2025-10-30 08:28+0000\n"
 "Last-Translator: armadillo <noreply@singlewave.co.uk>\n"
-"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/backend/it/>\n"
+"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/"
+"backend/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -26,15 +27,15 @@ msgstr "Correggere l'errore indicato."
 msgid "Please correct the errors below."
 msgstr "Correggere gli errori indicati."
 
-#: src/krm3/config/settings.py:184
+#: src/krm3/config/settings.py:181
 msgid "English"
 msgstr "Inglese"
 
-#: src/krm3/config/settings.py:185
+#: src/krm3/config/settings.py:182
 msgid "Italian"
 msgstr "Italiano"
 
-#: src/krm3/config/settings.py:186
+#: src/krm3/config/settings.py:183
 msgid "Polish"
 msgstr "Polacco"
 
@@ -53,7 +54,9 @@ msgstr "Cancellato"
 #: src/krm3/core/models/missions.py:103
 msgid ""
 "If a mission is in DRAFT then number must empty, otherwise it is mandatory"
-msgstr "Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è obbligatorio"
+msgstr ""
+"Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è "
+"obbligatorio"
 
 #: src/krm3/core/models/missions.py:106
 msgid "to_date must be > from_date"
@@ -82,118 +85,121 @@ msgid ""
 "A task must not start before its related project - task \"{task_title}\" is "
 "supposed to start on {task_start_date}, but related project "
 "\"{project_name}\" starts on {project_start_date}"
-msgstr "Un task non può iniziare prima del progetto cui appartiene - il task \"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto \"{project_name}\" inizia il {project_start_date}"
+msgstr ""
+"Un task non può iniziare prima del progetto cui appartiene - il task "
+"\"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto "
+"\"{project_name}\" inizia il {project_start_date}"
 
 #: src/krm3/core/models/timesheets.py:84
 msgid "\"from_date\" must not be later than \"to_date\""
 msgstr "\"data da\" non può essere maggiore di \"data a\""
 
 #: src/krm3/core/models/timesheets.py:198
-#: src/krm3/core/models/timesheets.py:675
+#: src/krm3/core/models/timesheets.py:679
 msgid "N.B.: End date is the day after the actual end date"
 msgstr "N.B.: La data fine è il giorno successivo a quello effettivo"
 
-#: src/krm3/core/models/timesheets.py:419
+#: src/krm3/core/models/timesheets.py:423
 msgid "Protocol number can be used only for sick days"
 msgstr "Il numero di protocollo può essere usato solamente con malattia"
 
-#: src/krm3/core/models/timesheets.py:422
+#: src/krm3/core/models/timesheets.py:426
 msgid "Protocol number digits must be numeric"
 msgstr "Il numero di protocollo può contenere solo caratteri numerici"
 
-#: src/krm3/core/models/timesheets.py:426
+#: src/krm3/core/models/timesheets.py:430
 msgid "You cannot log task hours in a day entry"
 msgstr "Non si possono inserire ora sul task se vi sono malattie o ferie"
 
-#: src/krm3/core/models/timesheets.py:430
+#: src/krm3/core/models/timesheets.py:434
 msgid "You cannot log non-task hours in a task entry"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:439
+#: src/krm3/core/models/timesheets.py:443
 msgid "You cannot log more than one kind of non-task hours in a day"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:446
+#: src/krm3/core/models/timesheets.py:450
 msgid "You cannot log task hours and non-task hours together"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:451
+#: src/krm3/core/models/timesheets.py:455
 #, python-brace-format
 msgid "Total hours on this time entry ({total_hours}) is over 24 hours"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:464
+#: src/krm3/core/models/timesheets.py:468
 #, python-brace-format
 msgid ""
 "Total hours on all time entries on {date} ({total_hours}) is over 24 hours"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:472
+#: src/krm3/core/models/timesheets.py:476
 msgid "Only a special leave can have a reason"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:475
+#: src/krm3/core/models/timesheets.py:479
 msgid "Reason is required when logging a special leave"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:483
+#: src/krm3/core/models/timesheets.py:487
 msgid "reason is required"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:488
+#: src/krm3/core/models/timesheets.py:492
 #, python-brace-format
 msgid "Reason \"{title}\" is not valid on {date}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:516
+#: src/krm3/core/models/timesheets.py:520
 #, python-brace-format
 msgid ""
 "No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, "
 "got {actual_hours}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:529
+#: src/krm3/core/models/timesheets.py:533
 msgid "Cannot both withdraw from and deposit to bank hours on the same day"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:542
+#: src/krm3/core/models/timesheets.py:546
 #, python-brace-format
 msgid ""
 "This transaction would exceed the maximum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to add: {change}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:550
+#: src/krm3/core/models/timesheets.py:554
 #, python-brace-format
 msgid ""
 "This transaction would exceed the minimum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to change by: {change}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:560
+#: src/krm3/core/models/timesheets.py:564
 msgid "Cannot use bank hours during holidays or sick days"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:567
+#: src/krm3/core/models/timesheets.py:571
 #, python-brace-format
 msgid "Cannot deposit bank hours during a {day_type}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:587
+#: src/krm3/core/models/timesheets.py:591
 #, python-brace-format
 msgid ""
 "Cannot deposit {bank_hours} bank hours. Total hours would become "
 "{task_hours} which is below scheduled hours ({scheduled_hours})"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:598
+#: src/krm3/core/models/timesheets.py:602
 #, python-brace-format
 msgid ""
 "Cannot withdraw bank hours when task hours ({task_hours}) are higher or "
 "equal scheduled hours ({scheduled_hours})"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:615
+#: src/krm3/core/models/timesheets.py:619
 #, python-brace-format
 msgid ""
 "Cannot delete this time entry. Removing it would cause negative work hours "
@@ -201,11 +207,11 @@ msgid ""
 "{date}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:678
+#: src/krm3/core/models/timesheets.py:682
 msgid "holidays.code and optionally subdivision from holidays library"
 msgstr "holidays.code e, opzionale, l'area geografica"
 
-#: src/krm3/fe/views.py:33
+#: src/krm3/fe/views.py:35
 #, python-format
 msgid "“%(path)s” does not exist"
 msgstr ""
@@ -216,6 +222,72 @@ msgstr ""
 #: src/krm3/missions/templates/admin/missions/reimbursement/summary.html:20
 msgid "Django administration"
 msgstr ""
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:5
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:53
+#, python-format
+msgid "Upload image for %(title)s"
+msgstr "Carica immagine per %(title)"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:18
+msgid "Login"
+msgstr "Accedi"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:20
+msgid "Back"
+msgstr "Indietro"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:28
+msgid "Day"
+msgstr "Giorno"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:32
+msgid "Mission"
+msgstr "Missione"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:36
+msgid "Project"
+msgstr "Progetto"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:40
+msgid "City"
+msgstr "Città"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:44
+msgid "Resource"
+msgstr "Risorsa"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:56
+msgid "Choose File"
+msgstr "Scegli file"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:57
+msgid "Use Camera"
+msgstr "Usa fotocamera"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:65
+msgid "Capture Photo"
+msgstr "Scatta foto"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:69
+msgid "Image preview"
+msgstr "Anteprima immagine"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:70
+msgid "Remove image"
+msgstr "Rimuovi immagine"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:71
+msgid "Recapture photo"
+msgstr "Scatta di nuovo"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:72
+msgid "Recapture"
+msgstr "Riscatta"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:76
+msgid "Submit Image"
+msgstr "Invia immagine"
 
 #: src/krm3/timesheet/api/serializers.py:118
 #, python-brace-format
@@ -232,7 +304,11 @@ msgstr ""
 msgid "Reason for special leave is expired: \"{value}\""
 msgstr ""
 
-#: src/krm3/timesheet/report/availability.py:76
+#: src/krm3/timesheet/api/views.py:256
+msgid "Timesheet already submitted."
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:78
 #: src/krm3/web/templates/report.html:51
 #: src/krm3/web/templates/task_report.html:28
 msgid "Days"
@@ -247,7 +323,7 @@ msgid "Due hours"
 msgstr "Ore lavorative"
 
 #: src/krm3/timesheet/report/base.py:20
-#: src/krm3/timesheet/report/payslip_report.py:25
+#: src/krm3/timesheet/report/payslip_report.py:22
 msgid "Regular hours"
 msgstr "Ore ordinarie"
 
@@ -260,7 +336,7 @@ msgid "Night shift hours"
 msgstr "Ore notturne"
 
 #: src/krm3/timesheet/report/base.py:23
-#: src/krm3/timesheet/report/payslip_report.py:27
+#: src/krm3/timesheet/report/payslip_report.py:24
 #: src/krm3/timesheet/report/task.py:18
 msgid "On call"
 msgstr "Reperibilità"
@@ -270,80 +346,80 @@ msgid "Travel"
 msgstr "Viaggio"
 
 #: src/krm3/timesheet/report/base.py:25
-#: src/krm3/timesheet/report/payslip_report.py:28
+#: src/krm3/timesheet/report/payslip_report.py:25
 msgid "Holiday"
 msgstr "Ferie"
 
 #: src/krm3/timesheet/report/base.py:26
-#: src/krm3/timesheet/report/payslip_report.py:29
+#: src/krm3/timesheet/report/payslip_report.py:26
 msgid "Leave"
 msgstr "Permessi"
 
 #: src/krm3/timesheet/report/base.py:27
-#: src/krm3/timesheet/report/payslip_report.py:31
+#: src/krm3/timesheet/report/payslip_report.py:28
 msgid "Rest"
 msgstr "Riposo"
 
 #: src/krm3/timesheet/report/base.py:28
-#: src/krm3/timesheet/report/payslip_report.py:32
+#: src/krm3/timesheet/report/payslip_report.py:29
 msgid "Overtime"
 msgstr "Ore straordinarie"
 
 #: src/krm3/timesheet/report/base.py:29
-#: src/krm3/timesheet/report/payslip_report.py:33
+#: src/krm3/timesheet/report/payslip_report.py:30
 msgid "Meal voucher"
 msgstr "Buoni pasto"
 
-#: src/krm3/timesheet/report/payslip.py:52
+#: src/krm3/timesheet/report/payslip.py:53
 #, python-brace-format
 msgid "Special leave ({title})"
 msgstr "Perm. speciale ({title})"
 
-#: src/krm3/timesheet/report/payslip.py:72
+#: src/krm3/timesheet/report/payslip.py:73
 #, python-brace-format
 msgid "Sick {title}"
 msgstr "Malattia {title}"
 
-#: src/krm3/timesheet/report/payslip.py:83
-#: src/krm3/timesheet/report/payslip_report.py:30
+#: src/krm3/timesheet/report/payslip.py:84
+#: src/krm3/timesheet/report/payslip_report.py:27
 msgid "Sick"
 msgstr "Malattia"
 
-#: src/krm3/timesheet/report/payslip_report.py:26
+#: src/krm3/timesheet/report/payslip_report.py:23
 #: src/krm3/timesheet/report/task.py:17
 msgid "Night shift"
 msgstr "Ore notturne"
 
-#: src/krm3/timesheet/report/payslip_report.py:69
+#: src/krm3/timesheet/report/payslip_report.py:78
 #, python-brace-format
 msgid "Days {working_days}"
 msgstr "Giorni {working_days}"
 
-#: src/krm3/timesheet/report/payslip_report.py:70
+#: src/krm3/timesheet/report/payslip_report.py:79
 #: src/krm3/web/templates/report.html:52
 #: src/krm3/web/templates/task_report.html:29
 msgid "Total HH"
 msgstr "Tot HH"
 
-#: src/krm3/timesheet/report/payslip_report.py:96
+#: src/krm3/timesheet/report/payslip_report.py:105
 #, python-brace-format
 msgid "Special leave ({sl_title})"
 msgstr "Perm. speciale ({sl_title})"
 
-#: src/krm3/timesheet/report/payslip_report.py:100
+#: src/krm3/timesheet/report/payslip_report.py:110
 #, python-brace-format
 msgid "Sick {protocol}"
 msgstr "Malattia {protocol}"
 
-#: src/krm3/timesheet/report/payslip_report.py:140
+#: src/krm3/timesheet/report/payslip_report.py:158
 msgid "No data available"
 msgstr "Nessun dato disponibile"
 
-#: src/krm3/timesheet/report/task.py:143
+#: src/krm3/timesheet/report/task.py:140
 msgid "Total per day"
 msgstr "Tot per giorno"
 
-#: src/krm3/timesheet/report/task.py:220
+#: src/krm3/timesheet/report/task.py:215
 msgid "Absences"
 msgstr "Assenze"
 

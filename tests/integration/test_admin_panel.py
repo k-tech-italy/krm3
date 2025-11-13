@@ -92,7 +92,6 @@ def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', 
     task = TaskFactory()
     time_entry = TimeEntryFactory(task=task, day_shift_hours=4)
 
-    browser.login_as_user(admin_user_with_plain_password)
     browser.admin_user = admin_user_with_plain_password
     browser.login()
     browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')

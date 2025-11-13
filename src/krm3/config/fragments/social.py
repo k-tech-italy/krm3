@@ -4,7 +4,6 @@ Add SOCIAL_MIDDLEWARES to settings.MIDDLEWARES
 """
 
 import typing
-from datetime import timedelta
 
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -28,20 +27,9 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         'social_django.context_processors.login_redirect',
     ]
 
-    SIMPLE_JWT = {
-        'AUTH_HEADER_TYPES': ('JWT',),
-        'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
-        'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-        'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-        'UPDATE_LAST_LOGIN': True,
-    }
-
-    DJOSER = {
-        'LOGIN_FIELD': 'email',
-        'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-        'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': _env.list('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS'),
-        'SERIALIZERS': {},
-    }
+    # Session-based authentication configuration
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
 
     SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
@@ -79,6 +67,11 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
     SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = _env('SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS')
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'select_account'}
     SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ['state']
+
+    # Allow login with already associated accounts
+    SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+    SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'
+    SOCIAL_AUTH_RAISE_EXCEPTIONS = False
 
     def auth_allowed(
         backend: typing.Any, details: typing.Any, response: 'HttpResponse', request: 'HttpRequest', *args, **kwargs

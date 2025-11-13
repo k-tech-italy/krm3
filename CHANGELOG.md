@@ -1,3 +1,35 @@
+## 2.0.0 (2025-11-11)
+
+### Feat
+
+- **missions/views.py**: Form to upload images or get from camera (#161)
+- **TimesheetSubmission**: Fix #421 Implement persisted calculations
+
+### Fix
+
+- **README**: Just a fake commit to make Commitizen work!
+- **Availability-report**: Fix #446 Availability report - missing all employees
+
+## 1.13.1 (2025-11-03)
+
+### Fix
+
+- **TimesheetSubmission-with-the-same-resource-and-overlapping-period**: TimesheetSubmission with the same resource and overlapping period
+
+## 1.13.0 (2025-10-31)
+
+### Feat
+
+- **Build-system**: Fixing build
+
+## 1.12.1 (2025-10-31)
+
+### Fix
+
+- **Timesheet-report**: Aligned tests
+- **Timesheet-report**: Fix #412 empty sick row when sick protocol exists (#160)
+- **i18n**: Compiling messages in upgrade command
+
 ## 1.12.0 (2025-10-29)
 
 ### Feat

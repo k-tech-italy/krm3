@@ -13,7 +13,6 @@ from rest_framework.response import Response
 
 from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
-from krm3.timesheet import dto
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -21,6 +20,7 @@ from krm3.timesheet.api.serializers import (
     TimeEntryReadSerializer,
     TimesheetSerializer,
 )
+from krm3.timesheet.utils import get_resource_timesheet
 
 if TYPE_CHECKING:
     from krm3.core.models import User
@@ -80,16 +80,15 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
                 data={'error': 'Start date must be earlier than end date.'}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        timesheet = dto.TimesheetDTO(requested_by=cast('User', request.user)).fetch(resource, start_date, end_date)
-        serializer = TimesheetSerializer(timesheet)
-        return Response(serializer.data)
+        user = cast('User', request.user)
+
+        data = get_resource_timesheet(end_date, resource, start_date, user)
+
+        return Response(data)
 
 
 class TimeEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-
-    def list(self, request: Request, *args, **kwargs) -> Response:
-        return super().list(request, *args, **kwargs)
 
     @override
     def get_queryset(self) -> QuerySet[TimeEntry]:

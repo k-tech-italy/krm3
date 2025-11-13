@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
 
 from krm3.config import settings
-from krm3.core.models import Contract, Resource, TimeEntry
+from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
 
@@ -31,12 +31,14 @@ online_timeentry_key_mapping = {
 
 
 class TimesheetReport:
-    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs) -> None:
-        self._set_resources(user, **kwargs)
-        resource_ids = {r.id for r in self.resources}
+    need: set = set()  # allowed values: 'submissions', 'extra_holidays'
 
+    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs) -> None:
         self.from_date = from_date
         self.to_date = to_date
+
+        self._set_resources(user, **kwargs)
+        resource_ids = {r.id for r in self.resources}
 
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
 
@@ -44,7 +46,8 @@ class TimesheetReport:
 
         self.time_entries: list[TimeEntry] = list(self._get_time_entry_qs(resource_ids))
 
-        self._load_submissions(from_date, top_period, resource_ids)
+        if 'submissions' in self.need:
+            self._load_submissions(from_date, top_period, resource_ids)
 
         self.country_codes: set[str] = {settings.HOLIDAYS_CALENDAR}
         self.resource_contracts: dict[int, list[Contract]] = {}
@@ -56,7 +59,8 @@ class TimesheetReport:
             if contract.country_calendar_code and contract.country_calendar_code not in self.country_codes:
                 self.country_codes.add(contract.country_calendar_code)
 
-        self.extra_holidays = self._load_extra_holidays()
+        if 'extra_holidays' in self.need:
+            self.extra_holidays = self._load_extra_holidays()
         self._holiday_cache = {}
 
         self.calendars: dict[int, list[Krm3Day]] = self._get_calendars()
@@ -66,15 +70,6 @@ class TimesheetReport:
             self.resources = Resource.objects.filter(preferred_in_report=True)
         else:
             self.resources = [user.get_resource()]
-
-    def _load_extra_holidays(self) -> dict[KrmDay, list[str]]:
-        """Implement in children class if extra holidays need to be loaded."""
-        return {}
-
-    def _load_submissions(self, from_date: datetime.date, top_period: datetime.date, resource_ids: set[int]) -> (
-            dict[int, list[tuple[datetime.date, datetime.date]]] | None):
-        """Implement in children class if submissions need to be loaded."""
-        return None
 
     def _get_holiday(self, kd: 'KrmDay', country_calendar_code: str) -> bool:
         """Return True if the day is holiday."""
@@ -144,3 +139,26 @@ class TimesheetReport:
         return TimeEntry.objects.select_related('special_leave_reason').filter(
             date__gte=self.from_date, date__lte=self.to_date, resource_id__in=resource_ids
         )
+
+    def _load_submissions(self, from_date: datetime.date, top_period: datetime.date, resource_ids: set[int]) -> (
+            dict[int, list[tuple[datetime.date, datetime.date]]] | None):
+        self.submissions: dict[int, list[tuple[datetime.date, datetime.date]]] = {}
+        for ts in TimesheetSubmission.objects.filter(
+                resource_id__in=resource_ids, closed=True, period__overlap=(from_date, top_period)
+        ):
+            self.submissions.setdefault(ts.resource_id, []).append((ts.period.lower, ts.period.upper))
+
+    def _load_extra_holidays(self) -> dict[KrmDay, list[str]] | None:
+        """Retrieve the extra holidays for the given country codes."""
+        short_codes = {x.split('-')[0] for x in self.country_codes}
+        result = {}
+        extra_holidays = list(
+            ExtraHoliday.objects.filter(
+                country_codes__overlap=list(self.country_codes.union(short_codes)),
+                period__overlap=(self.from_date, self.to_date),
+            )
+        )
+        for eh in extra_holidays:
+            for kd in KrmDay(eh.period.lower).range_to(eh.period.upper - datetime.timedelta(days=1)):
+                result.setdefault(kd, []).extend(eh.country_codes)
+        return result

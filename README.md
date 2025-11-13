@@ -84,6 +84,7 @@
 terminal the watcher process for building the theme ...
 
   ```bash
+  ./manage.py tailwind isntall  # only the first time
   ./manage.py tailwind start
   ```
 

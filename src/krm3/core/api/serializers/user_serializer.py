@@ -12,9 +12,9 @@ from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 LABEL_TO_FLAG_URL_MAP = [
     {
-        'flag': 'TRANSFERT_ENABLED',
+        'flag': 'TRASFERTE_ENABLED',
         'url': 'trasferte',
-        'label': 'Trasferte',
+        'label': 'Missions',
     },
     {
         'flag': 'TIMESHEET_ENABLED',
@@ -27,6 +27,7 @@ LABEL_TO_FLAG_URL_MAP = [
         'label': 'Report',
     },
 ]
+
 
 
 # XXX: why is this not a BaseSerializer? The metaclass implicitly

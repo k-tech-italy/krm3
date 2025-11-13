@@ -30,7 +30,7 @@ if typing.TYPE_CHECKING:
 
 
 class MissionManager(ActiveManagerMixin, models.Manager):
-    def filter_acl(self, user):
+    def filter_acl(self, user: 'User') -> models.QuerySet[Mission]:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -74,28 +74,28 @@ class Mission(models.Model):
 
     objects = MissionManager()
 
-    @staticmethod
-    def calculate_number(instance_id: int | None, year: int) -> int:
-        qs = Mission.objects.filter(
-            number__isnull=False,
-            year=year,
-            status__in=[Mission.MissionStatus.SUBMITTED, Mission.MissionStatus.CANCELLED],
-        )
-        if instance_id:
-            qs = qs.exclude(pk=instance_id)
-        nums = [0] + sorted(list(qs.values_list('number', flat=True)))
-        ret = list(itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums)))[-1]
-        return ret[1] + 1
+    class Meta:
+        permissions = [
+            ('view_any_mission', "Can view(only) everybody's missions"),
+            ('manage_any_mission', "Can view, and manage everybody's missions"),
+        ]
+        constraints = [UniqueConstraint(fields=('number', 'year'), name='unique_mission_number_year')]
 
-    @property
-    def expense_count(self):
-        return self.expenses.count()
-
-    def __str__(self):
+    def __str__(self) -> str:
         title = self.title or self.city.name
         return f'{self.resource}, {title}, {self.number}'
 
-    def clean(self):
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: list[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        super().save(force_insert, force_update, using, update_fields)
+
+    def clean(self) -> None:
         if (self.number and self.status == Mission.MissionStatus.DRAFT) or (
             self.number is None and self.status != Mission.MissionStatus.DRAFT
         ):
@@ -108,16 +108,18 @@ class Mission(models.Model):
         if not self.title:
             self.title = Mission.calculate_title(self)
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        self.full_clean()
-        super().save(force_insert, force_update, using, update_fields)
-
-    def is_accessible(self, user) -> bool:
-        if user.is_superuser or user.get_all_permissions().intersection(
-            {'core.manage_any_mission', 'core.view_any_mission'}
-        ):
-            return True
-        return bool(self.resource and self.resource.user == user)
+    @staticmethod
+    def calculate_number(instance_id: int | None, year: int) -> int:
+        qs = Mission.objects.filter(
+            number__isnull=False,
+            year=year,
+            status__in=[Mission.MissionStatus.SUBMITTED, Mission.MissionStatus.CANCELLED],
+        )
+        if instance_id:
+            qs = qs.exclude(pk=instance_id)
+        nums = [0] + sorted(qs.values_list('number', flat=True))
+        ret = list(itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums)))[-1]
+        return ret[1] + 1
 
     @classmethod
     def calculate_title(cls, cleaned_data: Mission | dict) -> str:
@@ -141,12 +143,16 @@ class Mission(models.Model):
             )
         return ''
 
-    class Meta:
-        permissions = [
-            ('view_any_mission', "Can view(only) everybody's missions"),
-            ('manage_any_mission', "Can view, and manage everybody's missions"),
-        ]
-        constraints = [UniqueConstraint(fields=('number', 'year'), name='unique_mission_number_year')]
+    def is_accessible(self, user: 'User') -> bool:
+        if user.is_superuser or user.get_all_permissions().intersection(
+            {'core.manage_any_mission', 'core.view_any_mission'}
+        ):
+            return True
+        return bool(self.resource and self.resource.user == user)
+
+    @property
+    def expense_count(self) -> int:
+        return self.expenses.count()
 
 
 class DocumentType(models.Model):
@@ -154,11 +160,11 @@ class DocumentType(models.Model):
     active = models.BooleanField(default=True)
     default = models.BooleanField(default=False)
 
-    def __str__(self):
-        return self.title
-
     class Meta:
         ordering = ['title']
+
+    def __str__(self) -> str:
+        return self.title
 
 
 class ExpenseCategory(MPTTModel):
@@ -166,7 +172,7 @@ class ExpenseCategory(MPTTModel):
     active = models.BooleanField(default=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
-    def __str__(self):
+    def __str__(self) -> str:
         ancestors = self.get_ancestors(include_self=True)
         return ':'.join([x.title for x in ancestors])
 
@@ -184,7 +190,7 @@ class PaymentCategory(MPTTModel):
     personal_expense = models.BooleanField(default=False)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
-    def __str__(self):
+    def __str__(self) -> str:
         ancestors = self.get_ancestors(include_self=True)
         return ':'.join([x.title for x in ancestors])
 
@@ -197,7 +203,7 @@ class PaymentCategory(MPTTModel):
 
 
 class ReimbursementManager(models.Manager):
-    def filter_acl(self, user):
+    def filter_acl(self, user: 'User') -> models.QuerySet[Reimbursement]:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -229,42 +235,48 @@ class Reimbursement(models.Model):
 
     objects = ReimbursementManager()
 
+    class Meta:
+        constraints = [UniqueConstraint('year', 'number', name='unique_reimbursement_number')]
+
+    def __str__(self) -> str:
+        return f'{self.title} ({self.number}/{self.year})'
+
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: list[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        super().save(force_insert, force_update, using, update_fields)
+
+    def clean(self) -> None:
+        if self.number is None and self.year:
+            self.number = Reimbursement.calculate_number(self.id, self.year)
+
     @staticmethod
     def calculate_number(instance_id: int | None, year: int) -> int:
         qs = Reimbursement.objects.filter(year=year)
         if instance_id:
             qs = qs.exclude(pk=instance_id)
-        nums = [0] + sorted(list(qs.values_list('number', flat=True)))
+        nums = [0] + sorted(qs.values_list('number', flat=True))
         ret = list(itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums)))[-1]
         return ret[1] + 1
 
     @property
-    def expense_count(self):
+    def expense_count(self) -> int:
         return self.expenses.count()
-
-    def clean(self):
-        if self.number is None and self.year:
-            self.number = Reimbursement.calculate_number(self.id, self.year)
-
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        self.full_clean()
-        super().save(force_insert, force_update, using, update_fields)
-
-    def __str__(self):
-        return f'{self.title} ({self.number}/{self.year})'
-
-    class Meta:
-        constraints = [UniqueConstraint('year', 'number', name='unique_reimbursement_number')]
 
 
 class ExpenseManager(ActiveManagerMixin, models.Manager):
-    def by_otp(self, otp: str):
+    def by_otp(self, otp: str) -> 'Expense':
         """Retrieve the instance matching the provided otp."""
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
         expense_id, mission_id, ts = ref.split('|')
         return self.get(mission_id=mission_id, id=expense_id, modified_ts=ts)
 
-    def filter_acl(self, user: 'User'):
+    def filter_acl(self, user: 'User') -> models.QuerySet[Expense]:
         """Return the queryset for the owned records.
 
         Superuser gets them all.
@@ -331,9 +343,8 @@ class Expense(models.Model):
 
     def check_otp(self, otp: str) -> bool:
         """Check the OTP."""
-        return True
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}')
-        expense_id, mission_id, ts = ref.split('|')
+        expense_id, mission_id, ts = ref.decode('utf-8').split('|')
         return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
     def calculate_base(self, force_rates: bool = False, force_reset: bool = False, save: bool = True) -> Decimal:

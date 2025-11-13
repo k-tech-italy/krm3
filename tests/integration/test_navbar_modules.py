@@ -7,12 +7,12 @@ def test_navbar_report_module_regular_user(browser, regular_user, resource_facto
     _ = resource_factory(user=regular_user)
     browser.login_as_user(regular_user)
     browser.click('[href*="be/"]')
-    # Unfortunately we cannot log in using the admin login
-    # as it require the flag isStaff to be true even though the
-    # /be/ endpoints are accessible for all authenticated user
-    # the shortcut in thi situation us the google authentication
-    # in the admin login that is not testable here
-    browser.assert_url_contains('/admin/login/?next=/be/')
+    # With session-based auth, the React login session now works for Django views
+    # The /be/ endpoints are accessible for all authenticated users
+    browser.assert_url_contains('/be/')
+    browser.wait_for_element_visible('//a[contains(text(), "Report")]')
+    browser.wait_for_element_visible('//a[contains(text(), "Report by task")]')
+    browser.wait_for_element_visible('//a[contains(text(), "Availability report")]')
 
 
 @pytest.mark.selenium
@@ -21,11 +21,8 @@ def test_navbar_report_module_admin_user(browser, admin_user_with_plain_password
     _ = resource_factory(user=admin_user_with_plain_password)
     browser.login_as_user(admin_user_with_plain_password)
     browser.click('[href*="be/"]')
-    browser.assert_url_contains('/admin/login/?next=/be/')
-    browser.type('input[name=username]', f'{admin_user_with_plain_password.username}')
-    browser.type('input[name=password]', f'{admin_user_with_plain_password._password}')
-    browser.submit('input[value="Log in"]')
-    browser.wait_for_ready_state_complete()
+    # With session-based auth, no need for separate admin login
+    browser.assert_url_contains('/be/')
     browser.wait_for_element_visible('//a[contains(text(), "Report")]')
     browser.wait_for_element_visible('//a[contains(text(), "Report by task")]')
     browser.wait_for_element_visible('//a[contains(text(), "Availability report")]')

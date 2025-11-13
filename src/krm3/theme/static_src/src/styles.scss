@@ -1,5 +1,7 @@
 @import "./_footer.scss";
 
+@import "./_upload_image.scss";
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));

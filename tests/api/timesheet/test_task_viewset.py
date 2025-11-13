@@ -51,7 +51,8 @@ class TestTaskAPIListView:
         response = api_client().get(
             self.url(), data={'resource_id': resource.pk, 'start_date': '2024-01-01', 'end_date': '2024-01-07'}
         )
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        # SessionAuthentication returns 403 Forbidden (CSRF check) instead of 401
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_rejects_missing_query_params(self, admin_user, api_client):
         client = api_client(user=admin_user)

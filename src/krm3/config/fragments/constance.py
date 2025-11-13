@@ -3,7 +3,7 @@ import re
 
 
 # Constance
-def currency_list_validation(value):
+def currency_list_validation(value) -> None:  # noqa: ANN001
     from django.core.exceptions import ValidationError
 
     if not re.match(r'^[A-Z]{3}(,[A-Z]{3})*$', value):
@@ -64,3 +64,14 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         },
     ],
 }
+
+
+class ConstanceTyping:
+    COUNTRY_GROUPS: str
+    CURRENCIES: str
+    LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME: str
+    EXACT_SCHEDULE_COLOR_BRIGHT_THEME: str
+    MORE_THAN_SCHEDULE_COLOR_BRIGHT_THEME: str
+    LESS_THAN_SCHEDULE_COLOR_DARK_THEME: str
+    EXACT_SCHEDULE_COLOR_DARK_THEME: str
+    MORE_THAN_SCHEDULE_COLOR_DARK_THEME: str

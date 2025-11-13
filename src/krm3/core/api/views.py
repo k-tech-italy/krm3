@@ -1,18 +1,19 @@
 from typing import cast
-from django.contrib.auth import logout as djlogout
+
+from dateutil.relativedelta import relativedelta
+from django.contrib.auth import authenticate, login as djlogin, logout as djlogout
 from django.db.models import QuerySet
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import GenericAPIView
-from rest_framework.parsers import JSONParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema
-from rest_framework_simplejwt.exceptions import TokenError
 
+import logging
 from krm3.core.api.serializers import UserSerializer, ResourceSerializer
 from krm3.core.models import (
     City,
@@ -24,34 +25,165 @@ from krm3.core.models import (
     TimesheetSubmission,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
+from krm3.utils.dates import dt
 
 
-class InvalidateTokenSerializer(serializers.Serializer):
-    refresh = serializers.CharField(help_text='Refresh token to blacklist')
+class GoogleOAuthView(APIView):
+    """
+    Custom view to handle Google OAuth2 authentication for the frontend.
 
+    GET: Returns the authorization URL for the OAuth flow
+    POST: Completes the OAuth flow and logs the user in via session
+    """
 
-class BlacklistRefreshAPIViewSet(GenericViewSet, GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
 
-    @extend_schema(
-        request=InvalidateTokenSerializer,
-        responses={200: 400},
-        description='Blacklist a refresh token',
-    )
-    @action(
-        methods=['post'],
-        detail=False,
-        parser_classes=[JSONParser],
-        name='Blacklist a refresh token',
-    )
-    def invalidate(self, request: Request) -> Response:
-        """Blacklist a refresh token (if exists)."""
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request: Request, backend: str) -> Response:
+        """
+        Get the Google OAuth2 authorization URL.
+
+        Frontend calls this with: GET /api/v1/o/google-oauth2/?redirect_uri=http://localhost:8000/login
+        """
+        from social_django.utils import load_backend, load_strategy
+        import base64
+        import json
+
+        # Get the frontend redirect URI (where Google should redirect after auth)
+        redirect_uri = request.query_params.get('redirect_uri')
+        if not redirect_uri:
+            return Response({'error': 'redirect_uri is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Load the OAuth backend with the frontend redirect URI
+        # Google will redirect to this URL with state and code parameters
+        strategy = load_strategy(request)
+        oauth_backend = load_backend(strategy, backend, redirect_uri=redirect_uri)
+
+        # Store redirect_uri in the state parameter (base64 encoded)
+        # This way it survives across page reloads/new sessions
+        state_data = {
+            'redirect_uri': redirect_uri,
+            'state': oauth_backend.state_token()
+        }
+        encoded_state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+        request.session['google-oauth2_state'] = encoded_state
+        request.session.save()
+
+        # Get the authorization URL from the backend
+        auth_url = oauth_backend.auth_url()
+
+        return Response({'authorization_url': auth_url})
+
+    @method_decorator(ensure_csrf_cookie)
+    def post(self, request: Request, backend: str) -> Response:
+        """
+        Complete the OAuth2 flow and log the user in via session.
+
+        Frontend sends: POST /api/v1/o/google-oauth2/ with state and code in the body
+        """
+        from social_django.utils import load_backend, load_strategy
+        import base64
+        import json
+
+        # Get the state from the request (this is our base64-encoded state)
+        encoded_state = request.data.get('state') or request.POST.get('state')
+        if not encoded_state:
+            return Response(
+                {'error': 'State parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Decode the state to get the redirect_uri and original OAuth state
         try:
-            token = RefreshToken(request.data.get('refresh'))
-        except TokenError:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        token.blacklist()
-        return Response()
+            state_data = json.loads(base64.urlsafe_b64decode(encoded_state).decode())
+            redirect_uri = state_data.get('redirect_uri')
+            original_oauth_state = state_data.get('state')
+        except Exception as e:
+            logging.exception("Failed to decode OAuth state parameter.")
+            return Response(
+                {'error': 'Failed to decode state.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify against stored state in session
+        stored_state = request.session.get('google-oauth2_state')
+        if stored_state and stored_state != encoded_state:
+            return Response(
+                {'error': 'State mismatch. Possible CSRF attack.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Load the OAuth backend with the SAME redirect URI we used in GET
+        # This is critical - Google requires the redirect_uri to match exactly
+        strategy = load_strategy(request)
+        oauth_backend = load_backend(strategy, backend, redirect_uri=redirect_uri)
+
+        # Get the user from the OAuth flow
+        # Pass user=None to allow login with already-associated accounts
+        user = oauth_backend.complete(user=None)
+
+        if user and user.is_authenticated:
+            # Log the user in via Django session
+            djlogin(request, user, backend='social_core.backends.google.GoogleOAuth2')
+
+            # Clean up the state from session
+            if 'google-oauth2_state' in request.session:
+                del request.session['google-oauth2_state']
+                request.session.save()
+
+            return Response({
+                'detail': 'Login successful',
+                'user': UserSerializer(user, context={'request': request}).data
+            })
+
+        return Response({'error': 'Authentication failed'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class LoginSerializer(serializers.Serializer):
+    """Serializer for username/password login."""
+
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+
+class LoginView(APIView):
+    """
+    Session-based login with username and password.
+
+    POST: Authenticates user and creates a session
+    """
+
+    permission_classes = [AllowAny]
+
+    @method_decorator(ensure_csrf_cookie)
+    def post(self, request: Request) -> Response:
+        """
+        Authenticate user with username/password and log them in via session.
+
+        Frontend sends: POST /api/v1/auth/login/ with {username, password}
+        """
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+
+        # Authenticate the user
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            # Log the user in via Django session
+            djlogin(request, user)
+
+            return Response({
+                'detail': 'Login successful',
+                'user': UserSerializer(user, context={'request': request}).data
+            })
+
+        return Response(
+            {'detail': 'Invalid username or password'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
 class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
@@ -61,8 +193,6 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
 
     @action(detail=False, methods=['get'])
     def me(self, request: Request) -> Response:
-        if request.headers.get('Authorization') is None:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -150,3 +280,14 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
                 return ret.none()
             ret = ret.filter(resource_id=resource.id)
         return ret
+
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Create a new Timesheet submission or replace an existing opened one."""
+        period = request.data['period'][:]
+        period[1] = (dt(period[1]) + relativedelta(days=1)).strftime('%Y-%m-%d')
+        ts = TimesheetSubmission.objects.filter(
+            resource_id=request.data['resource'], period=period, closed=False
+        ).first()
+        if ts:
+            ts.delete()
+        return super().create(request, *args, **kwargs)
