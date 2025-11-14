@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 from krm3.utils.numbers import normal
 
-from .base import TimesheetReport, online_timeentry_key_mapping
+from .base import TimesheetReport, get_i18n_mapping
 from .online import ReportBlock, ReportCell, ReportRow
 
 if typing.TYPE_CHECKING:
@@ -26,7 +26,7 @@ class TimesheetReportOnline(TimesheetReport):
                 row.add_cell(kd)
 
             if any(rkd.has_data for rkd in resources_report_days):
-                for key, label in online_timeentry_key_mapping.items():
+                for key, label in get_i18n_mapping().items():
                     row = block.add_row(ReportRow())
                     row.add_cell(label)
                     row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
