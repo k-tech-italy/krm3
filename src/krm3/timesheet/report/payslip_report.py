@@ -99,7 +99,7 @@ class TimesheetReportExport(TimesheetReport):
                         sick_days_with_protocol.setdefault(rkd.data_protocol_number, []).append(rkd)
 
                 for key, label in mapping.items():
-                    dynamic_mapping[key] = label
+                    dynamic_mapping[key] = get_report_timeentry_key_mapping().get(label, label)
                     if key == 'leave' and special_leave_days:
                         for sl_title in special_leave_days:
                             dynamic_mapping[f'special_leave_{sl_title}'] = _('Special leave ({sl_title})').format(
@@ -117,7 +117,7 @@ class TimesheetReportExport(TimesheetReport):
                     if key == 'sick':
                         plain_sick_row = rownum
 
-                    cell = ws.cell(row=rownum, column=1, value=label)
+                    cell = ws.cell(row=rownum, column=1, value=get_report_timeentry_key_mapping().get(label, label))
                     if lnum % 2:
                         cell.fill = light_grey_fill
 

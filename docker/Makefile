@@ -48,6 +48,7 @@ requirements:  ## Builds the /dist/image-requirements.txt
 compile:
 	@cd ../krm3-fe && yarn install && yarn build
 	@cd .. && ./manage.py tailwind build
+	@cd .. && ./manage.py compilemessages -i .tox -i .venv
 
 build: compile requirements ## Builds the image
 	cd .. && docker build \
