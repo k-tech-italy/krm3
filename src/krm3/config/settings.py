@@ -180,6 +180,7 @@ LANGUAGE_CODE = 'en-uk'
 LANGUAGES = [
     ("en-uk", gettext_lazy("English")),
     ("it", gettext_lazy("Italian")),
+    ("fr", gettext_lazy("French")),
     ("pl", gettext_lazy("Polish")),
 ]
 
@@ -260,5 +261,3 @@ TAILWIND_APP_NAME = 'krm3.theme'
 
 
 HOLIDAYS_CALENDAR = env('HOLIDAYS_CALENDAR')
-
-PWA_APP_NAME = 'Krm3'

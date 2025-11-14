@@ -8,10 +8,9 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-11-07 15:45+0000\n"
-"PO-Revision-Date: 2025-10-30 08:28+0000\n"
-"Last-Translator: armadillo <noreply@singlewave.co.uk>\n"
-"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/"
-"backend/it/>\n"
+"PO-Revision-Date: 2025-11-13 16:26+0000\n"
+"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"Language-Team: Italian <https://wl.singlewave.co.uk/projects/ktcalendars/backend/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -54,9 +53,7 @@ msgstr "Cancellato"
 #: src/krm3/core/models/missions.py:103
 msgid ""
 "If a mission is in DRAFT then number must empty, otherwise it is mandatory"
-msgstr ""
-"Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è "
-"obbligatorio"
+msgstr "Se la missione è in DRAFT il numero deve essere vuoto, altrimenti è obbligatorio"
 
 #: src/krm3/core/models/missions.py:106
 msgid "to_date must be > from_date"
@@ -85,10 +82,7 @@ msgid ""
 "A task must not start before its related project - task \"{task_title}\" is "
 "supposed to start on {task_start_date}, but related project "
 "\"{project_name}\" starts on {project_start_date}"
-msgstr ""
-"Un task non può iniziare prima del progetto cui appartiene - il task "
-"\"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto "
-"\"{project_name}\" inizia il {project_start_date}"
+msgstr "Un task non può iniziare prima del progetto cui appartiene - il task \"{task_title}\" non può iniziare il {task_start_date} in quanto il progetto \"{project_name}\" inizia il {project_start_date}"
 
 #: src/krm3/core/models/timesheets.py:84
 msgid "\"from_date\" must not be later than \"to_date\""
@@ -113,91 +107,91 @@ msgstr "Non si possono inserire ora sul task se vi sono malattie o ferie"
 
 #: src/krm3/core/models/timesheets.py:434
 msgid "You cannot log non-task hours in a task entry"
-msgstr ""
+msgstr "Impossibile aggiungere ore non legate ad un task in una task entry"
 
 #: src/krm3/core/models/timesheets.py:443
 msgid "You cannot log more than one kind of non-task hours in a day"
-msgstr ""
+msgstr "Non è possibile registrare più di un tipo di ore non lavorative in un giorno"
 
 #: src/krm3/core/models/timesheets.py:450
 msgid "You cannot log task hours and non-task hours together"
-msgstr ""
+msgstr "Non è possibile registrare contemporaneamente le ore di attività e le ore non di attività"
 
 #: src/krm3/core/models/timesheets.py:455
 #, python-brace-format
 msgid "Total hours on this time entry ({total_hours}) is over 24 hours"
-msgstr ""
+msgstr "Il totale delle ore ({total_hours}) supera le 24 ore"
 
 #: src/krm3/core/models/timesheets.py:468
 #, python-brace-format
 msgid ""
 "Total hours on all time entries on {date} ({total_hours}) is over 24 hours"
-msgstr ""
+msgstr "Il totale complessivo di ore ({total_hours}) in data {date} supera le 24 ore"
 
 #: src/krm3/core/models/timesheets.py:476
 msgid "Only a special leave can have a reason"
-msgstr ""
+msgstr "Solo un congedo speciale può avere una ragione"
 
 #: src/krm3/core/models/timesheets.py:479
 msgid "Reason is required when logging a special leave"
-msgstr ""
+msgstr "È necessario specificare il motivo per registrare un congedo speciale"
 
 #: src/krm3/core/models/timesheets.py:487
 msgid "reason is required"
-msgstr ""
+msgstr "Il motivo è obbligatorio"
 
 #: src/krm3/core/models/timesheets.py:492
 #, python-brace-format
 msgid "Reason \"{title}\" is not valid on {date}"
-msgstr ""
+msgstr "Il motivo \"{title}\" non è valido per la data {date}"
 
 #: src/krm3/core/models/timesheets.py:520
 #, python-brace-format
 msgid ""
 "No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, "
 "got {actual_hours}"
-msgstr ""
+msgstr "Non sono ammessi straordinari quando si registra un {kind}. Il massimo consentito è {work_hours}, invede di {actual_hours}"
 
 #: src/krm3/core/models/timesheets.py:533
 msgid "Cannot both withdraw from and deposit to bank hours on the same day"
-msgstr ""
+msgstr "Non è possibile prelevare e depositare ore in banca nello stesso giorno"
 
 #: src/krm3/core/models/timesheets.py:546
 #, python-brace-format
 msgid ""
 "This transaction would exceed the maximum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to add: {change}"
-msgstr ""
+msgstr "Questa transazione supererebbe il saldo massimo in banca di {limit} ore. Saldo attuale: {current}, tentativo di aggiunta: {change}"
 
 #: src/krm3/core/models/timesheets.py:554
 #, python-brace-format
 msgid ""
 "This transaction would exceed the minimum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to change by: {change}"
-msgstr ""
+msgstr "Questa transazione supererebbe il saldo bancario minimo di {limit} ore. Saldo attuale: {current}, tentativo di modifica entro: {change}"
 
 #: src/krm3/core/models/timesheets.py:564
 msgid "Cannot use bank hours during holidays or sick days"
-msgstr ""
+msgstr "Non è possibile utilizzare l'orario di apertura della banca durante le festività o i giorni di malattia"
 
 #: src/krm3/core/models/timesheets.py:571
 #, python-brace-format
 msgid "Cannot deposit bank hours during a {day_type}"
-msgstr ""
+msgstr "Non è possibile depositare in banca durante un orario {day_type}"
 
 #: src/krm3/core/models/timesheets.py:591
 #, python-brace-format
 msgid ""
 "Cannot deposit {bank_hours} bank hours. Total hours would become "
 "{task_hours} which is below scheduled hours ({scheduled_hours})"
-msgstr ""
+msgstr "Impossibile depositare {bank_hours} ore. Il totale delle ore diventerebbe {task_hours}, ovvero inferiore alle ore programmate ({scheduled_hours})"
 
 #: src/krm3/core/models/timesheets.py:602
 #, python-brace-format
 msgid ""
 "Cannot withdraw bank hours when task hours ({task_hours}) are higher or "
 "equal scheduled hours ({scheduled_hours})"
-msgstr ""
+msgstr "Non è possibile prelevare ore bancarie quando le ore di attività ({task_hours}) sono superiori o uguali alle ore programmate ({scheduled_hours})"
 
 #: src/krm3/core/models/timesheets.py:619
 #, python-brace-format
@@ -205,7 +199,7 @@ msgid ""
 "Cannot delete this time entry. Removing it would cause negative work hours "
 "({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on "
 "{date}"
-msgstr ""
+msgstr "Impossibile eliminare questa voce di orario. Rimuoverla causerebbe ore di lavoro negative ({remaining_total_hours}) a causa dei depositi bancari ({total_bank_deposits}) in data {date}"
 
 #: src/krm3/core/models/timesheets.py:682
 msgid "holidays.code and optionally subdivision from holidays library"
@@ -214,14 +208,14 @@ msgstr "holidays.code e, opzionale, l'area geografica"
 #: src/krm3/fe/views.py:35
 #, python-format
 msgid "“%(path)s” does not exist"
-msgstr ""
+msgstr "“%(path)s” non esiste"
 
 #: src/krm3/missions/templates/admin/missions/expense/expense_qr.html:9
 #: src/krm3/missions/templates/admin/missions/reimbursement/preview.html:5
 #: src/krm3/missions/templates/admin/missions/reimbursement/results.html:5
 #: src/krm3/missions/templates/admin/missions/reimbursement/summary.html:20
 msgid "Django administration"
-msgstr ""
+msgstr "Console amministrazione"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:5
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:53

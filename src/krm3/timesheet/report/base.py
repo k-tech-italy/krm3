@@ -1,8 +1,10 @@
 import datetime
 import json
+import typing
 
 from constance import config
 from django.contrib.auth import get_user_model
+
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
 
@@ -13,21 +15,25 @@ from krm3.utils.dates import KrmDay, get_country_holidays
 
 User = get_user_model()
 
+if typing.TYPE_CHECKING:
+    from django.utils.functional import _StrPromise
 
-online_timeentry_key_mapping = {
-    'bank': _('Bank hours'),
-    'due_hours': _('Due hours'),
-    'regular_hours': _('Regular hours'),
-    'day_shift': _('Day shift hours'),
-    'night_shift': _('Night shift hours'),
-    'on_call': _('On call'),
-    'travel': _('Travel'),
-    'holiday': _('Holiday'),
-    'leave': _('Leave'),
-    'rest': _('Rest'),
-    'overtime': _('Overtime'),
-    'meal_voucher': _('Meal voucher'),
-}
+
+def get_i18n_mapping() -> dict[str, "_StrPromise"]:
+    return {
+        'bank': _('Bank hours'),
+        'due_hours': _('Due hours'),
+        'regular_hours': _('Regular hours'),
+        'day_shift': _('Day shift hours'),
+        'night_shift': _('Night shift hours'),
+        'on_call': _('On call'),
+        'travel': _('Travel'),
+        'holiday': _('Holiday'),
+        'leave': _('Leave'),
+        'rest': _('Rest'),
+        'overtime': _('Overtime'),
+        'meal_voucher': _('Meal voucher'),
+    }
 
 
 class TimesheetReport:
@@ -65,7 +71,7 @@ class TimesheetReport:
 
         self.calendars: dict[int, list[Krm3Day]] = self._get_calendars()
 
-    def _set_resources(self, user:User, **kwargs) -> None:
+    def _set_resources(self, user: User, **kwargs) -> None:
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             self.resources = Resource.objects.filter(preferred_in_report=True)
         else:
@@ -140,11 +146,12 @@ class TimesheetReport:
             date__gte=self.from_date, date__lte=self.to_date, resource_id__in=resource_ids
         )
 
-    def _load_submissions(self, from_date: datetime.date, top_period: datetime.date, resource_ids: set[int]) -> (
-            dict[int, list[tuple[datetime.date, datetime.date]]] | None):
+    def _load_submissions(
+        self, from_date: datetime.date, top_period: datetime.date, resource_ids: set[int]
+    ) -> dict[int, list[tuple[datetime.date, datetime.date]]] | None:
         self.submissions: dict[int, list[tuple[datetime.date, datetime.date]]] = {}
         for ts in TimesheetSubmission.objects.filter(
-                resource_id__in=resource_ids, closed=True, period__overlap=(from_date, top_period)
+            resource_id__in=resource_ids, closed=True, period__overlap=(from_date, top_period)
         ):
             self.submissions.setdefault(ts.resource_id, []).append((ts.period.lower, ts.period.upper))
 

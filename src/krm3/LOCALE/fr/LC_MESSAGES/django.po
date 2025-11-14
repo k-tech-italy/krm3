@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-07 15:45+0000\n"
-"PO-Revision-Date: 2025-10-30 08:28+0000\n"
+"POT-Creation-Date: 2025-11-14 08:37+0000\n"
+"PO-Revision-Date: 2025-11-13 16:26+0000\n"
 "Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: French <https://wl.singlewave.co.uk/projects/ktcalendars/"
 "backend/fr/>\n"
@@ -36,6 +36,10 @@ msgid "Italian"
 msgstr ""
 
 #: src/krm3/config/settings.py:183
+msgid "French"
+msgstr ""
+
+#: src/krm3/config/settings.py:184
 msgid "Polish"
 msgstr ""
 
@@ -85,116 +89,116 @@ msgid ""
 "\"{project_name}\" starts on {project_start_date}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:84
+#: src/krm3/core/models/timesheets.py:85
 msgid "\"from_date\" must not be later than \"to_date\""
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:198
-#: src/krm3/core/models/timesheets.py:679
+#: src/krm3/core/models/timesheets.py:199
+#: src/krm3/core/models/timesheets.py:702
 msgid "N.B.: End date is the day after the actual end date"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:423
+#: src/krm3/core/models/timesheets.py:446
 msgid "Protocol number can be used only for sick days"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:426
+#: src/krm3/core/models/timesheets.py:449
 msgid "Protocol number digits must be numeric"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:430
+#: src/krm3/core/models/timesheets.py:453
 msgid "You cannot log task hours in a day entry"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:434
+#: src/krm3/core/models/timesheets.py:457
 msgid "You cannot log non-task hours in a task entry"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:443
+#: src/krm3/core/models/timesheets.py:466
 msgid "You cannot log more than one kind of non-task hours in a day"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:450
+#: src/krm3/core/models/timesheets.py:473
 msgid "You cannot log task hours and non-task hours together"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:455
+#: src/krm3/core/models/timesheets.py:478
 #, python-brace-format
 msgid "Total hours on this time entry ({total_hours}) is over 24 hours"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:468
+#: src/krm3/core/models/timesheets.py:491
 #, python-brace-format
 msgid ""
 "Total hours on all time entries on {date} ({total_hours}) is over 24 hours"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:476
+#: src/krm3/core/models/timesheets.py:499
 msgid "Only a special leave can have a reason"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:479
+#: src/krm3/core/models/timesheets.py:502
 msgid "Reason is required when logging a special leave"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:487
+#: src/krm3/core/models/timesheets.py:510
 msgid "reason is required"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:492
+#: src/krm3/core/models/timesheets.py:515
 #, python-brace-format
 msgid "Reason \"{title}\" is not valid on {date}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:520
+#: src/krm3/core/models/timesheets.py:543
 #, python-brace-format
 msgid ""
 "No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, "
 "got {actual_hours}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:533
+#: src/krm3/core/models/timesheets.py:556
 msgid "Cannot both withdraw from and deposit to bank hours on the same day"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:546
+#: src/krm3/core/models/timesheets.py:569
 #, python-brace-format
 msgid ""
 "This transaction would exceed the maximum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to add: {change}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:554
+#: src/krm3/core/models/timesheets.py:577
 #, python-brace-format
 msgid ""
 "This transaction would exceed the minimum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to change by: {change}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:564
+#: src/krm3/core/models/timesheets.py:587
 msgid "Cannot use bank hours during holidays or sick days"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:571
+#: src/krm3/core/models/timesheets.py:594
 #, python-brace-format
 msgid "Cannot deposit bank hours during a {day_type}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:591
+#: src/krm3/core/models/timesheets.py:614
 #, python-brace-format
 msgid ""
 "Cannot deposit {bank_hours} bank hours. Total hours would become "
 "{task_hours} which is below scheduled hours ({scheduled_hours})"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:602
+#: src/krm3/core/models/timesheets.py:625
 #, python-brace-format
 msgid ""
 "Cannot withdraw bank hours when task hours ({task_hours}) are higher or "
 "equal scheduled hours ({scheduled_hours})"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:619
+#: src/krm3/core/models/timesheets.py:642
 #, python-brace-format
 msgid ""
 "Cannot delete this time entry. Removing it would cause negative work hours "
@@ -202,7 +206,7 @@ msgid ""
 "{date}"
 msgstr ""
 
-#: src/krm3/core/models/timesheets.py:682
+#: src/krm3/core/models/timesheets.py:705
 msgid "holidays.code and optionally subdivision from holidays library"
 msgstr ""
 
@@ -222,7 +226,7 @@ msgstr ""
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:53
 #, python-format
 msgid "Upload image for %(title)s"
-msgstr "Télécharger l'image pour %(title)"
+msgstr "Télécharger l'image pour %(title)s"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:18
 msgid "Login"
@@ -284,83 +288,83 @@ msgstr "Recapturer"
 msgid "Submit Image"
 msgstr "Soumettre l'image"
 
-#: src/krm3/timesheet/api/serializers.py:118
+#: src/krm3/timesheet/api/serializers.py:119
 #, python-brace-format
 msgid "Hours must not be negative, got {value}."
 msgstr ""
 
-#: src/krm3/timesheet/api/serializers.py:145
+#: src/krm3/timesheet/api/serializers.py:146
 #, python-brace-format
 msgid "Reason for special leave is not valid yet: \"{value}\""
 msgstr ""
 
-#: src/krm3/timesheet/api/serializers.py:150
+#: src/krm3/timesheet/api/serializers.py:151
 #, python-brace-format
 msgid "Reason for special leave is expired: \"{value}\""
 msgstr ""
 
-#: src/krm3/timesheet/api/views.py:256
+#: src/krm3/timesheet/api/views.py:255
 msgid "Timesheet already submitted."
 msgstr ""
 
-#: src/krm3/timesheet/report/availability.py:78
+#: src/krm3/timesheet/report/availability.py:77
 #: src/krm3/web/templates/report.html:51
 #: src/krm3/web/templates/task_report.html:28
 msgid "Days"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:18
+#: src/krm3/timesheet/report/base.py:24
 msgid "Bank hours"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:19
+#: src/krm3/timesheet/report/base.py:25
 msgid "Due hours"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:20
+#: src/krm3/timesheet/report/base.py:26
 #: src/krm3/timesheet/report/payslip_report.py:22
 msgid "Regular hours"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:21
+#: src/krm3/timesheet/report/base.py:27
 msgid "Day shift hours"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:22
+#: src/krm3/timesheet/report/base.py:28
 msgid "Night shift hours"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:23
+#: src/krm3/timesheet/report/base.py:29
 #: src/krm3/timesheet/report/payslip_report.py:24
 #: src/krm3/timesheet/report/task.py:18
 msgid "On call"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:24 src/krm3/timesheet/report/task.py:19
+#: src/krm3/timesheet/report/base.py:30 src/krm3/timesheet/report/task.py:19
 msgid "Travel"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:25
+#: src/krm3/timesheet/report/base.py:31
 #: src/krm3/timesheet/report/payslip_report.py:25
 msgid "Holiday"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:26
+#: src/krm3/timesheet/report/base.py:32
 #: src/krm3/timesheet/report/payslip_report.py:26
 msgid "Leave"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:27
+#: src/krm3/timesheet/report/base.py:33
 #: src/krm3/timesheet/report/payslip_report.py:28
 msgid "Rest"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:28
+#: src/krm3/timesheet/report/base.py:34
 #: src/krm3/timesheet/report/payslip_report.py:29
 msgid "Overtime"
 msgstr ""
 
-#: src/krm3/timesheet/report/base.py:29
+#: src/krm3/timesheet/report/base.py:35
 #: src/krm3/timesheet/report/payslip_report.py:30
 msgid "Meal voucher"
 msgstr ""
