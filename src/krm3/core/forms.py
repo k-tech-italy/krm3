@@ -2,11 +2,17 @@ import datetime
 import typing
 
 from django import forms
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
 from krm3.core.models import Contract
 from krm3.utils.dates import DATE_INFINITE
+
+if typing.TYPE_CHECKING:
+    from krm3.core.models.auth import Resource, User
+
+User = get_user_model()
 
 
 class ContractForm(ModelForm):
@@ -53,3 +59,24 @@ class ContractForm(ModelForm):
     class Meta:
         model = Contract
         fields = '__all__'  # noqa: DJ007
+
+
+class ResourceForm(forms.Form):
+    first_name = forms.CharField(max_length=50, required=True)
+    last_name = forms.CharField(max_length=50, required=True)
+
+    def __init__(self, resource: 'Resource', *args: typing.Any, **kwargs: typing.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.resource = resource
+
+        # Populate initial values from resource object
+        self.fields['first_name'].initial = resource.first_name
+        self.fields['last_name'].initial = resource.last_name
+
+    def save(self) -> 'Resource':
+        """Save the form data to Resource model."""
+        self.resource.first_name = self.cleaned_data['first_name']
+        self.resource.last_name = self.cleaned_data['last_name']
+        self.resource.save()
+
+        return self.resource

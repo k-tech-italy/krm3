@@ -2,6 +2,8 @@
 
 @import "./_upload_image.scss";
 
+@import "./_user_profile.scss";
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));

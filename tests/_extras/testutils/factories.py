@@ -2,9 +2,7 @@ from datetime import date, timedelta
 
 import factory
 from dateutil.relativedelta import relativedelta
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from factory import PostGenerationMethodCall
 from factory.base import FactoryMetaClass
 from factory.fuzzy import FuzzyDecimal
 
@@ -35,15 +33,18 @@ def get_factory_for_model(_model):
     return type(f'{_model._meta.model_name}AutoFactory', (AutoRegisterModelFactory,), {'Meta': Meta})
 
 
-class UserFactory(AutoRegisterModelFactory):
-    username = factory.Sequence(lambda d: 'username-%s' % d)
-    email = factory.Faker('email')
-    first_name = factory.Faker('name')
-    last_name = factory.Faker('last_name')
-    password = PostGenerationMethodCall('set_password', 'password')
+class UserFactory(factory.django.DjangoModelFactory):
+    username = factory.Sequence(lambda n: 'User %02d' % n)
+    email = factory.Sequence(lambda n: 'u%02d@example.com' % n)
+    password = factory.PostGenerationMethodCall('set_password', 'password')
+
+    @classmethod
+    def _after_postgeneration(cls, instance, create, results=None):
+        super()._after_postgeneration(instance, create, results)
+        instance._password = 'password'
 
     class Meta:
-        model = get_user_model()
+        model = User
         django_get_or_create = ('username',)
 
 
@@ -61,21 +62,6 @@ class GroupFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Group
         django_get_or_create = ('name',)
-
-
-class UserFactory(factory.django.DjangoModelFactory):
-    username = factory.Sequence(lambda n: 'User %02d' % n)
-    email = factory.Sequence(lambda n: 'u%02d@example.com' % n)
-    password = factory.PostGenerationMethodCall('set_password', 'password')
-
-    @classmethod
-    def _after_postgeneration(cls, instance, create, results=None):
-        super()._after_postgeneration(instance, create, results)
-        instance._password = 'password'
-
-    class Meta:
-        model = User
-        django_get_or_create = ('username',)
 
 
 class CountryFactory(factory.django.DjangoModelFactory):
