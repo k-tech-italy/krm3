@@ -97,7 +97,7 @@ def command(  # noqa: PLR0912, PLR0913, C901
         if i18n:
             if verbosity >= 1:
                 click.echo('Run compilemessages')
-            call_command('compilemessages')
+            call_command('compilemessages', ['-i', '.tox' , '-i', '.venv'])
 
         if admin_email:
             try:

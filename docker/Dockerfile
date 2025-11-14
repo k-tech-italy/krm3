@@ -70,6 +70,8 @@ COPY --from=builder --chown=krm3:ktech /code/ ./
 
 ADD tools/zapdata/demo tools/zapdata/demo
 
+RUN chgrp -R ktech /usr/local/lib/python3.12/site-packages/krm3/LOCALE && chmod -R g+w /usr/local/lib/python3.12/site-packages/krm3/LOCALE
+
 USER krm3
 SHELL ["/bin/bash", "-c"]
 
