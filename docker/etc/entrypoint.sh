@@ -11,6 +11,7 @@ mkdir -p "/krm3/logs" "${STATIC_ROOT}" "${MEDIA_ROOT}"
 setup() {
   django-admin upgrade -vv --no-input \
           --static \
+          --i18n \
           --admin-username ${KRM3_ADMIN_USERNAME:-admin} \
           --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
           --admin-password ${KRM3_ADMIN_PASSWORD:-admin}

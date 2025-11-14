@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-11-07 15:45+0000\n"
-"PO-Revision-Date: 2025-11-13 16:26+0000\n"
+"PO-Revision-Date: 2025-11-14 15:06+0000\n"
 "Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: Polish <https://wl.singlewave.co.uk/projects/ktcalendars/backend/pl/>\n"
 "Language: pl\n"
@@ -221,7 +221,7 @@ msgstr ""
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:53
 #, python-format
 msgid "Upload image for %(title)s"
-msgstr "Prześlij obraz dla %(title)"
+msgstr "Prześlij obraz dla %(title)s"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:18
 msgid "Login"

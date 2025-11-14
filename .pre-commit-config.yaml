@@ -76,7 +76,7 @@ repos:
     hooks:
     -   id: compilemessages
         name: Compile Django message files
-        entry: ./manage.py compilemessages
+        entry: ./manage.py compilemessages -i .tox -i .venv
         language: system
         files: '(\.po)$'
         pass_filenames: false
