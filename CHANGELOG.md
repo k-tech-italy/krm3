@@ -1,3 +1,9 @@
+## 2.0.1 (2025-11-14)
+
+### Fix
+
+- **Report-i18n**: Fix #450 Payroll report - Label in Italian
+
 ## 2.0.0 (2025-11-11)
 
 ### Feat
