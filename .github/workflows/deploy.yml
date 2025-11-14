@@ -201,6 +201,7 @@ jobs:
           uv export --no-dev --no-emit-project --group image --format requirements-txt > dist/image-requirements.txt
           uv run manage.py tailwind install
           uv run manage.py tailwind build
+          uv run manage.py compilemessages
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
