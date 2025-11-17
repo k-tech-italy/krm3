@@ -1,0 +1,105 @@
+{% extends "home.html" %}
+
+{% load tailwind_tags static qr_code %}
+{% load i18n %}
+
+{% block body %}
+
+<div class="profile-container">
+    <!-- Header -->
+    <div class="profile-header">
+        <div class="profile-images">
+            <div class="profile-picture-wrapper">
+                {% if profile_picture %}
+                    <img src="{{ profile_picture }}" alt="Profile Picture" class="profile-picture">
+                {% else %}
+                    <div class="profile-picture-placeholder">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+            </div>
+            {% if vcard_text %}
+                <div class="profile-qr-wrapper">
+                    <div class="profile-qr-image">
+                        {% qr_from_data vcard_text size="M" %}
+                    </div>
+                    <p class="profile-qr-label">{% trans "Contact VCARD" %}</p>
+                </div>
+            {% endif %}
+        </div>
+        <h1>{{ resource.first_name }} {{ resource.last_name }}</h1>
+        <p>{{ user.email }}</p>
+    </div>
+
+    <!-- Success/Error Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="profile-alert profile-alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+        <div class="profile-alert profile-alert-error">
+            <ul class="profile-error-list">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Profile Form or Read-Only View -->
+    {% if read_only %}
+        <!-- Read-Only: Only show Back button -->
+        <div class="profile-actions-centered">
+            <a href="/" class="profile-btn profile-btn-secondary text-center">
+                {% trans "Back" %}
+            </a>
+        </div>
+    {% else %}
+        <!-- Edit Mode: Show form -->
+        <div class="profile-card">
+            <form method="post" class="profile-form">
+                {% csrf_token %}
+
+                <!-- First Name and Last Name Row -->
+                <div class="profile-field-row">
+                    <div class="profile-field-group">
+                        <label for="id_first_name">{% trans "First Name" %} *</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            {% for error in form.first_name.errors %}
+                                <span class="profile-field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="profile-field-group">
+                        <label for="id_last_name">{% trans "Last Name" %} *</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            {% for error in form.last_name.errors %}
+                                <span class="profile-field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="profile-actions">
+                    <a href="/" class="profile-btn profile-btn-secondary text-center">
+                        {% trans "Cancel" %}
+                    </a>
+                    <button type="submit" class="profile-btn profile-btn-primary">
+                        {% trans "Save Changes" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock body %}

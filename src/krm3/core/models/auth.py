@@ -5,12 +5,14 @@ import json
 from decimal import Decimal
 import typing
 from django.contrib.auth.base_user import BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from natural_keys import NaturalKeyModel
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
+import vobject
 
 from krm3.config import settings
 from krm3.utils.dates import KrmCalendar, KrmDay
@@ -103,12 +105,46 @@ class Resource(models.Model):
     last_name = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
     preferred_in_report = models.BooleanField(default=True)
+    vcard_text = models.TextField(null=True, blank=True)
 
     class Meta:
         ordering = ['last_name', 'first_name']
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
+
+    def clean(self) -> None:
+        """Validate the model fields."""
+        super().clean()
+        self._validate_vcard_text()
+
+    def _validate_vcard_text(self) -> None:
+        """Validate that vcard_text contains a valid vCard format.
+
+        Empty values (None or empty string) are allowed and no validation is applied.
+        Non-empty values must be parseable as vCard using vobject library.
+        Supports vCard 2.1, 3.0, and 4.0 formats, including Apple-specific extensions.
+        """
+        # Allow None or empty string - no validation applied
+        if self.vcard_text:
+            self.vcard_text = '\n'.join([x.strip() for x in self.vcard_text.splitlines()])
+
+        if not self.vcard_text:
+            return
+
+        try:
+            # Try to parse the vCard text
+            vobject.readOne(self.vcard_text)
+        except vobject.base.ParseError as e:
+            # ParseError is raised for malformed vCards
+            raise ValidationError({
+                'vcard_text': f'Invalid vCard format: {str(e)}'
+            }) from e
+        except Exception as e:
+            # Catch any other unexpected errors
+            raise ValidationError({
+                'vcard_text': f'Error parsing vCard: {str(e)}'
+            }) from e
 
     def scheduled_working_hours_for_day(self, day: KrmDay) -> float:
         """Scheduled number of hours a resource should work each day.

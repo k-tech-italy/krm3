@@ -9,14 +9,18 @@ import openpyxl
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
 
+from krm3.core.forms import ResourceForm
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
@@ -61,6 +65,69 @@ class HomeView(LoginRequiredMixin, TemplateView):
             'Releases': reverse('releases'),
         }
         context['logout_url'] = reverse('logout')
+
+        return context
+class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
+    template_name = 'user_resource.html'
+
+    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        """Check permissions before processing the request."""
+        user_id = kwargs.get('pk')
+        user = get_object_or_404(User, pk=user_id)
+
+        # Check if user has an associated resource
+        resource = user.get_resource()
+        if not resource:
+            from django.http import Http404
+            raise Http404("No resource found for this user.")
+
+        self.user = user
+        self.resource = resource
+        # Determine if the view should be read-only (viewing someone else's profile)
+        self.read_only = request.user.pk != user_id
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        """Handle form submission."""
+        # Prevent editing if viewing in read-only mode
+        if self.read_only:
+            raise PermissionDenied("You don't have permission to edit this profile.")
+
+        form = ResourceForm(resource=self.resource, data=request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Profile updated successfully.'))
+            # Redirect to the same profile page after successful save
+            return self.get(request, *args, **kwargs)
+
+        # If form is invalid, re-render with errors
+        context = self.get_context_data(**kwargs)
+        context['form'] = form
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+
+        # Create form with existing data if not already in context (from POST)
+        if 'form' not in context:
+            context['form'] = ResourceForm(resource=self.resource)
+
+        # Get profile picture URL if it exists
+        profile_picture = None
+        if hasattr(self.user, 'profile') and self.user.profile.picture:
+            profile_picture = self.user.profile.picture
+
+        # Get vcard_text if it exists and is not empty
+        vcard_text = None
+        if self.resource.vcard_text:
+            vcard_text = self.resource.vcard_text
+
+        context['resource'] = self.resource
+        context['user'] = self.user
+        context['profile_picture'] = profile_picture
+        context['vcard_text'] = vcard_text
+        context['read_only'] = self.read_only
 
         return context
 

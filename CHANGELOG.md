@@ -1,3 +1,14 @@
+## 2.1.0 (2025-11-17)
+
+### Feat
+
+- **src/krm3/web/views.py**: User Resource Form with vCard QR code (#163)
+
+### Fix
+
+- **Profile**: Improved qr code layout
+- **i18n**: Moved compilation in stage of dockerfile
+
 ## 2.0.4 (2025-11-14)
 
 ### Fix

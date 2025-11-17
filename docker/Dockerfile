@@ -17,6 +17,7 @@ RUN apt-get update && \
     libsasl2-dev libssl-dev libcurl4-openssl-dev libxml2-dev libxmlsec1-dev \
     libxslt-dev libyaml-dev libzmq3-dev pkg-config python3-dev libpcre3-dev \
     gosu libpcre3 libxml2 \
+    gettext libgettextpo-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /code
@@ -29,6 +30,7 @@ ADD . /code
 RUN rm -rf src/krm3/fe/static node_modules package*.* && \
     mv krm3-fe/dist src/krm3/fe/static && \
     pip install --no-cache-dir . --no-deps && \
+    DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages && \
     rm -rf src dist docker build *.egg-info
 
 
@@ -49,7 +51,7 @@ ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
 RUN apt-get update && \
     apt-get install -y --no-install-suggests --no-install-recommends \
     gosu libpcre3 libxml2 \
-    gettext libgettextpo-dev \
+    libgettextpo-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1024 -r ktech && \
