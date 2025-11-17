@@ -126,7 +126,10 @@ class Resource(models.Model):
         Supports vCard 2.1, 3.0, and 4.0 formats, including Apple-specific extensions.
         """
         # Allow None or empty string - no validation applied
-        if not self.vcard_text or not self.vcard_text.strip():
+        if self.vcard_text:
+            self.vcard_text = '\n'.join([x.strip() for x in self.vcard_text.splitlines()])
+
+        if not self.vcard_text:
             return
 
         try:

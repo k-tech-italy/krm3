@@ -5,8 +5,8 @@
 .profile-header {
   @apply mb-6 sm:mb-8 text-center;
 
-  .profile-images-row {
-    @apply flex justify-center items-start gap-6 sm:gap-8 mb-4 sm:mb-6;
+  .profile-images {
+    @apply flex flex-col sm:flex-row justify-center items-center sm:items-start gap-6 sm:gap-8 mb-4 sm:mb-6;
   }
 
   .profile-picture-wrapper {
@@ -14,11 +14,11 @@
   }
 
   .profile-picture {
-    @apply w-48 h-48 sm:w-64 sm:h-64 rounded-full object-cover;
+    @apply w-64 h-64 sm:w-96 sm:h-96 rounded-full object-cover;
   }
 
   .profile-picture-placeholder {
-    @apply w-48 h-48 sm:w-64 sm:h-64 rounded-full flex items-center justify-center text-5xl sm:text-7xl font-bold;
+    @apply w-64 h-64 sm:w-96 sm:h-96 rounded-full flex items-center justify-center text-5xl sm:text-7xl font-bold;
     background-color: #fbbf24; /* yellow-400 */
     color: #78350f; /* yellow-900 for text contrast */
   }
@@ -28,7 +28,7 @@
   }
 
   .profile-qr-image {
-    @apply w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center;
+    @apply w-80 h-80 sm:w-96 sm:h-96 flex items-center justify-center;
 
     img {
       @apply w-full h-full object-contain;
