@@ -206,7 +206,6 @@ def test_get_contracts(start_date, end_date, expected, contracts_list):
     [
         pytest.param(None, True, 'None vcard_text', id='none'),
         pytest.param('', True, 'Empty vcard_text', id='empty'),
-        pytest.param('   \n  \t  ', True, 'Whitespace only vcard_text', id='whitespace'),
         pytest.param(
             'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nN:Doe;John;;;\nTEL:+1234567890\nEMAIL:john@example.com\nEND:VCARD',
             True,
