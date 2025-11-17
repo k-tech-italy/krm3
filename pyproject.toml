@@ -79,6 +79,7 @@ dependencies = [
     "django-pwa>=2.0.1",
     "bs4>=0.0.2",
     "vobject>=0.9.9",
+    "django-simple-dms>=0.2.0",
 ]
 
 [project.optional-dependencies]
