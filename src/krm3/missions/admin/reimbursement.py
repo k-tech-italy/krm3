@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
-from adminfilters.dates import DateRangeFilter
+from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
 from django.contrib import admin
@@ -141,7 +141,7 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     list_filter = [
         'year',
         RecentFilter.factory('issue_date'),
-        ('issue_date', DateRangeFilter),
+        ('issue_date', DateFilter),
         ('paid_date', admin.EmptyFieldListFilter),
     ]
 

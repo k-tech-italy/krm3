@@ -7,7 +7,7 @@ import sentry_sdk
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
-from adminfilters.dates import DateRangeFilter
+from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
 from django import forms
@@ -73,8 +73,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         RecentFilter,
         ('project', AutoCompleteFilter),
         ('city', AutoCompleteFilter),
-        ('from_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
-        ('to_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
+        ('from_date', DateFilter.factory(title='from YYYY-MM-DD')),
+        ('to_date', DateFilter.factory(title='to YYYY-MM-DD')),
         ('number', NumberFilter),
         'year',
     ]
