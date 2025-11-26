@@ -33,9 +33,9 @@ classifiers = [
 
 dependencies = [
     "cryptography>=44.0.2",
-    "django>=5.2.6",
+    "django>=5.2.8",
     "django-admin-rangefilter>=0.13.2",
-    "django-adminfilters>=2.6",
+    "django-adminfilters>=2.7",
     "django-click>=2.4.1",
     "django-constance>=4.3.2",
     "django-cors-headers>=4.7.0",

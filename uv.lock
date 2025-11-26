@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -1408,11 +1408,11 @@ image = [
 requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "cryptography", specifier = ">=44.0.2" },
-    { name = "django", specifier = ">=5.2.6" },
+    { name = "django", specifier = ">=5.2.8" },
     { name = "django-admin-extra-buttons", specifier = ">=2.1.1" },
     { name = "django-admin-rangefilter", specifier = ">=0.13.2" },
     { name = "django-adminactions", specifier = ">=2.4" },
-    { name = "django-adminfilters", specifier = ">=2.6" },
+    { name = "django-adminfilters", specifier = ">=2.7" },
     { name = "django-click", specifier = ">=2.4.1" },
     { name = "django-constance", specifier = ">=4.3.2" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },

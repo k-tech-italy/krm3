@@ -10,7 +10,7 @@ import cv2
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
-from adminfilters.dates import DateRangeFilter
+from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
 from django.conf import settings
@@ -93,7 +93,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         ('category', AutoCompleteFilter),
         ('document_type', AutoCompleteFilter),
         ('reimbursement', AutoCompleteFilter),
-        ('day', DateRangeFilter.factory(title='day YYYY-MM-DD')),
+        ('day', DateFilter.factory(title='day YYYY-MM-DD')),
     ]
     search_fields = ['amount_currency', 'mission__number']
     fieldsets = [
