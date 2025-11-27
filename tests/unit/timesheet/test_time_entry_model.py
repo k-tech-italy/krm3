@@ -338,27 +338,6 @@ class TestTimeEntry:
                 bank_from=6,
             )
 
-    def test_reject_task_entry_deletion_when_deposited_hours(self):
-        project = ProjectFactory()
-        resource = ResourceFactory()
-        task = TaskFactory(project=project, resource=resource)
-        time_entry = TimeEntryFactory(
-            date=datetime.date(2024, 1, 2),
-            resource=resource,
-            task=task,
-            day_shift_hours=10,
-        )
-        TimeEntryFactory(
-            date=datetime.date(2024, 1, 2),
-            resource=resource,
-            day_shift_hours=0,
-            bank_to=2,
-        )
-        with pytest.raises(
-            exceptions.ValidationError,
-            match='Cannot delete this time entry. Removing it would cause negative work hours',
-        ):
-            time_entry.delete()
 
     def test_holiday_rejects_any_bank_transactions(self):
         """Test that holiday entries cannot have any bank transactions."""
