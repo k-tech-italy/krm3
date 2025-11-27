@@ -46,6 +46,10 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
+    class Media:
+        css = {
+            'all': ('admin/required_field.css',),
+        }
     form = TaskForm
     list_display = ('project', 'title', 'resource', 'basket_title', 'start_date', 'end_date')
     search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket_title')
