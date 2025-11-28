@@ -1,3 +1,9 @@
+## 2.2.1 (2025-11-28)
+
+### Fix
+
+- **web/views.py**: Fix wrong CHANGELOG.md path (#170)
+
 ## 2.2.0 (2025-11-28)
 
 ### Feat
