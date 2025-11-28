@@ -1,3 +1,16 @@
+## 2.2.0 (2025-11-28)
+
+### Feat
+
+- **report**: enrich timesheet submission data (#166)
+
+### Fix
+
+- **Dockerfile**: fix problem with changelog (#169)
+- **Task**: fix clean method to allow project validation by form (#168)
+- **django-adminfilters**: Updated django to 5.2.8 - fixed django-adminfilters breaking change and CVE-2025-64756 (#167)
+- **django-simple-dms**: Updated django-simple-dms to 2.1.0
+
 ## 2.1.1 (2025-11-17)
 
 ### Fix
