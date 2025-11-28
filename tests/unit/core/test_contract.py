@@ -1,7 +1,9 @@
 import datetime
 from datetime import date
+import json
 
 import pytest
+from constance import test as constance_test
 from django.core.exceptions import ValidationError
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
@@ -15,11 +17,11 @@ from krm3.utils.dates import KrmDay
 def contracts_and_tasks():
     project = ProjectFactory(start_date=datetime.date(2019, 1, 1), end_date=None)
 
-    c1: 'Contract' = ContractFactory(period=(_dt('2020-01-01'), _dt('2020-07-01')))
-    c2: 'Contract' = ContractFactory(resource=c1.resource, period=(_dt('2020-07-01'), _dt('2021-01-01')))
-    c3: 'Contract' = ContractFactory(resource=c1.resource, period=(_dt('2021-01-01'), None))
-    c4: 'Contract' = ContractFactory(period=(_dt('2019-01-01'), _dt('2020-05-01')))
-    c5: 'Contract' = ContractFactory(resource=c4.resource, period=(_dt('2020-05-01'), _dt('2020-10-01')))
+    c1: Contract = ContractFactory(period=(_dt('2020-01-01'), _dt('2020-07-01')))
+    c2: Contract = ContractFactory(resource=c1.resource, period=(_dt('2020-07-01'), _dt('2021-01-01')))
+    c3: Contract = ContractFactory(resource=c1.resource, period=(_dt('2021-01-01'), None))
+    c4: Contract = ContractFactory(period=(_dt('2019-01-01'), _dt('2020-05-01')))
+    c5: Contract = ContractFactory(resource=c4.resource, period=(_dt('2020-05-01'), _dt('2020-10-01')))
 
     return {
         'contracts': [c1, c2, c3, c4, c5],
@@ -128,3 +130,31 @@ def test_amend_contract_with_tasks(cnum, new_lower, new_upper, valid, contracts_
 def test_get_tasks(cnum, expected, contracts_and_tasks):
     contract = contracts_and_tasks['contracts'][cnum]
     assert contract.get_tasks() == [contracts_and_tasks['tasks'][x] for x in expected]
+
+
+_default_workdays = ('mon', 'tue', 'wed', 'thu', 'fri')
+_default_schedule = dict.fromkeys(_default_workdays, 8) | dict.fromkeys(('sat', 'sun'), 0)
+
+
+@constance_test.override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps(_default_schedule))
+@pytest.mark.parametrize(
+    ('date', 'expected_fixed', 'expected_unbounded'),
+    (
+        pytest.param(datetime.date(2023, 1, 11), 8, 8, id='before_contract_start_working'),
+        pytest.param(datetime.date(2023, 1, 1), 0, 0, id='before_contract_start_non_working'),
+        pytest.param(datetime.date(2024, 1, 1), 4, 4, id='during_contract_working'),
+        pytest.param(datetime.date(2024, 1, 7), 0, 0, id='during_contract_non_working'),
+        pytest.param(datetime.date(2025, 1, 1), 8, 4, id='end_of_fixed_contract_working'),
+        pytest.param(datetime.date(2025, 1, 5), 0, 0, id='end_of_fixed_contract_non_working'),
+    ),
+)
+def test_get_due_hours(date, expected_fixed, expected_unbounded):
+    fixed_period = (datetime.date(2024, 1, 1), datetime.date(2025, 1, 1))
+    unbounded_period = (datetime.date(2024, 1, 1), None)
+    schedule = _default_schedule | dict.fromkeys(_default_workdays, 4)
+
+    fixed_time_contract = ContractFactory(period=fixed_period, working_schedule=schedule)
+    unbounded_contract = ContractFactory(period=unbounded_period, working_schedule=schedule)
+
+    assert fixed_time_contract.get_due_hours(date) == expected_fixed
+    assert unbounded_contract.get_due_hours(date) == expected_unbounded

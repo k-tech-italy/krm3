@@ -67,6 +67,8 @@ class HomeView(LoginRequiredMixin, TemplateView):
         context['logout_url'] = reverse('logout')
 
         return context
+
+
 class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'user_resource.html'
@@ -80,7 +82,8 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         resource = user.get_resource()
         if not resource:
             from django.http import Http404
-            raise Http404("No resource found for this user.")
+
+            raise Http404('No resource found for this user.')
 
         self.user = user
         self.resource = resource
@@ -136,7 +139,7 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'availability_report.html'
 
-    def get(self, request: HttpRequest, *args, month: str = None, **kwargs) -> HttpResponse:
+    def get(self, request: HttpRequest, *args, month: str | None = None, **kwargs) -> HttpResponse:
         self.month = month
         return super().get(request, *args, **kwargs)
 
@@ -168,8 +171,8 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
                 'October': _('October'),
                 'November': _('November'),
                 'December': _('December'),
-             }.get(start_of_month.strftime('%B'))
-             + f'{start_of_month.strftime(" %Y")}',
+            }.get(start_of_month.strftime('%B'), '')
+            + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -334,6 +337,7 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 
+
 class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'task_report.html'
@@ -370,8 +374,8 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
                 'October': _('October'),
                 'November': _('November'),
                 'December': _('December'),
-             }.get(start_of_month.strftime('%B'))
-             + f'{start_of_month.strftime(" %Y")}',
+            }.get(start_of_month.strftime('%B'))
+            + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:

@@ -1,6 +1,9 @@
 import datetime
+import json
 import typing
+from decimal import Decimal
 
+from constance import config as constance_config
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -70,9 +73,7 @@ class Contract(models.Model):
                 get_country_holidays(country_calendar_code=self.country_calendar_code)
             except NotImplementedError:
                 raise ValidationError(
-                    {
-                        'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'
-                    }
+                    {'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'}
                 )
 
     def falls_in(self, day: datetime.date | KrmDay) -> bool:
@@ -100,3 +101,15 @@ class Contract(models.Model):
             ):
                 ret.append(task)
         return ret
+
+    def get_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
+        day = KrmDay(day)
+        if not self.falls_in(day):
+            return self.get_default_schedule(day)
+        schedule = self.working_schedule.get(day.day_of_week_short.casefold(), self.get_default_schedule(day))
+        return Decimal(schedule)
+
+    @classmethod
+    def get_default_schedule(cls, day: datetime.date | KrmDay) -> Decimal:
+        day_of_week = KrmDay(day).day_of_week_short.casefold()
+        return json.loads(constance_config.DEFAULT_RESOURCE_SCHEDULE).get(day_of_week, 0)
