@@ -1,12 +1,17 @@
-import decimal
-import typing
+from __future__ import annotations
 
+from decimal import Decimal
+from typing import Any, Self, TYPE_CHECKING
+
+from krm3.core.models import Contract, TimeEntry, Resource
+from krm3.timesheet import utils
+from krm3.utils import i18n
 from krm3.utils.dates import KrmDay, _MaybeDate
 from krm3.utils.numbers import safe_dec
-from django.utils.translation import gettext_lazy as _
 
-if typing.TYPE_CHECKING:
-    from krm3.core.models import Contract, TimeEntry
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+    from krm3.core.models import TimesheetSubmission
 
 timeentry_counters = {
     'bank': 'Banca ore',
@@ -43,12 +48,14 @@ class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
-        self.resource = None
+        self.resource: Resource | None = None
         self.data_due_hours: float = 0
         self.contract: Contract | None = None
         self.holiday: bool = False
-        self.time_entries: list[TimeEntry] = []
+        self.time_entries: Iterable[TimeEntry] = []
         self.data_bank = None
+        self.data_bank_from = None
+        self.data_bank_to = None
         self.data_day_shift = None
         self.data_night_shift = None
         self.data_on_call = None
@@ -59,40 +66,101 @@ class Krm3Day(KrmDay):
         self.data_sick = None
         self.data_overtime = None
         self.data_meal_voucher = None
-        self.data_special_leave = {}
-        self.has_data = False
-        self.nwd = False  # Non-working day
-        self.submitted = False
+        self.data_special_leave_hours = None
         self.data_special_leave_reason = None
-        self.data_protocol_number = None
+        self.has_data: bool = False
 
-    @property
-    def day_of_week_short_i18n(self) -> str:
-        ret = self.date.strftime('%a')
-        return {
-            'Mon': _('Mon'),
-            'Tue': _('Tue'),
-            'Wed': _('Wed'),
-            'Thu': _('Thu'),
-            'Fri': _('Fri'),
-            'Sat': _('Sat'),
-            'Sun': _('Sun'),
-        }.get(ret, ret)
+        self.nwd: bool = False
+        """`True` if this is a non-working day, `False` otherwise."""
+
+        self.submitted = False
+        self.data_protocol_number: str | None = None
 
     def __repr__(self) -> str:
         return self.date.strftime('K+%Y-%m-%d')
 
-    def apply(self, time_entries: list['TimeEntry']) -> None:
-        """Elaborates the krm3day data from the time_entries list."""
+    @property
+    def day_of_week_short_i18n(self) -> str:
+        return i18n.short_day_of_week(self.date)
+
+    def apply(self, time_entries: Iterable[TimeEntry]) -> None:
+        """Compute the krm3day data from the time_entries list."""
         self.time_entries = time_entries
-        self.has_data = len(time_entries) > 0
+        self.has_data = bool(time_entries)
         meal_voucher_threshold = None
         if self.contract and (thresholds := self.contract.meal_voucher):
-            meal_voucher_threshold = thresholds.get(self.day_of_week_short.lower())
+            meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
         for k, v in TimesheetRule.calculate(
             not self.nwd, self.data_due_hours, meal_voucher_threshold, time_entries
         ).items():
             setattr(self, f'data_{k}', v)
+
+    @classmethod
+    def from_submission(cls, submission: TimesheetSubmission) -> Iterator[Self]:
+        """Convert the timesheet data from a `TimesheetSubmission`.
+
+        :param submission: the `TimesheetSubmission` to convert
+        :return: a list of `Krm3Day`s covering the submission's time period
+        """
+        timesheet_data = submission.timesheet
+
+        # NOTE: there is no point in computing totals from serialized
+        #       data if we have to populate the objects with model
+        #       instances anyway - just get the instances up front.
+        #       DRF serializers are also out of the question due to
+        #       only allowing to deserialize model instances via
+        #       `create()` or `update()`.
+        time_entries = TimeEntry.objects.filter(
+            id__in=(entry_data['id'] for entry_data in timesheet_data.get('time_entries', []))
+        )
+        contracts = Contract.objects.filter(
+            id__in=(contract_data['id'] for contract_data in timesheet_data.get('contracts', []))
+        )
+
+        def _extract(key: str, from_: Iterable[dict]) -> Iterator:
+            return (entry[key] for entry in from_)
+
+        for date, day_data in timesheet_data.get('days', {}).items():
+            day = Krm3Day(date=date)
+
+            this_day_time_entries = time_entries.filter(date=date)
+            this_day_time_entry_data = [
+                entry_data for entry_data in timesheet_data.get('time_entries', []) if entry_data['date'] == date
+            ]
+
+            try:
+                contract = contracts.filter(period__contains=date).get()
+            except Contract.DoesNotExist:
+                contract = None
+
+            day.resource = submission.resource
+            day.contract = contract
+            day.holiday = day_data.get('hol')
+            day.nwd = day_data.get('nwd')
+            day.time_entries = this_day_time_entries
+            day.data_bank = Decimal(timesheet_data.get('bank_hours', 0))
+            day.data_day_shift = sum(map(Decimal, _extract('day_shift_hours', this_day_time_entry_data)))
+            day.data_night_shift = sum(map(Decimal, _extract('night_shift_hours', this_day_time_entry_data)))
+            day.data_on_call = sum(map(Decimal, _extract('on_call_hours', this_day_time_entry_data)))
+            day.data_travel = sum(map(Decimal, _extract('travel_hours', this_day_time_entry_data)))
+            day.data_holiday = sum(map(Decimal, _extract('holiday_hours', this_day_time_entry_data)))
+            day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
+            day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
+            day.data_special_leave_reason = (
+                ', '.join(entry_data['special_leave_reason'] for entry_data in this_day_time_entry_data) or None
+            )
+            day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
+            day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
+            day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
+            day.data_bank_to = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
+            day.data_due_hours = (
+                contract.get_due_hours(day.date) if contract else Contract.get_default_schedule(day.date)
+            )
+            day.data_meal_voucher = day_data.get('meal_voucher')
+            # XXX: a property would be nicer, as this piece of information depends on other attributes
+            day.has_data = this_day_time_entries.exists()
+
+            yield day
 
 
 class TimesheetRule:
@@ -104,9 +172,8 @@ class TimesheetRule:
 
         NB: time entries must be of same day.
         """
-        if len({te.date for te in time_entries}) > 1:
-            raise RuntimeError('Time entries must be of same day.')
-        base = {
+        utils.verify_time_entries_from_same_day(time_entries)
+        base: dict[str, Any] = {
             'bank_to': None,
             'bank_from': None,
             'day_shift': None,
@@ -122,16 +189,15 @@ class TimesheetRule:
             'special_leave_reason': None,
             'special_leave_title': None,
             'special_leave_hours': None,
-            'protocol_number': None
+            'protocol_number': None,
         }
         for te in time_entries:
             for fname, key in te_calc_map.items():
-                val = getattr(te, fname)
-                if fname in ['protocol_number', 'special_leave_reason']:
-                    if val:
+                if val := getattr(te, fname):
+                    if fname in ['protocol_number', 'special_leave_reason']:
                         base[key] = val
-                elif val:
-                    base[key] = safe_dec(base[key]) + safe_dec(val)
+                    else:
+                        base[key] = safe_dec(base[key]) + safe_dec(val)
             if val := base['special_leave_reason']:
                 base['special_leave_title'] = val.title
         bank_to = base.pop('bank_to')
@@ -141,22 +207,19 @@ class TimesheetRule:
         else:
             base['bank'] = None
 
-        worked_hours = sum(safe_dec(base[k]) for k in ['day_shift', 'night_shift', 'travel']) + safe_dec(bank_from)
+        # here it doesn't matter whether overtime applies or not
+        # if there's no overtime, don't show anything regardless
+        overtime = utils.overtime(time_entries, safe_dec(due_hours))
+        base['overtime'] = overtime if overtime != 0 else None
 
-        special_activities = ['sick', 'holiday', 'leave']
-        special_hours = sum(safe_dec(base[activity]) for activity in special_activities) + safe_dec(
-            base['special_leave_hours']
-        )
-
-        if special_hours == 0 and (overtime := worked_hours - safe_dec(due_hours) - safe_dec(bank_to)) > 0:
-            base['overtime'] = overtime
+        worked_hours = safe_dec(utils.worked_hours(time_entries))
+        special_hours = safe_dec(utils.special_hours(time_entries))
         if meal_voucher_threshold and meal_voucher_threshold <= worked_hours:
             base['meal_voucher'] = 1
 
-        base['fulfilled'] = worked_hours + special_hours + safe_dec(base['leave']) + safe_dec(base['rest']) >= safe_dec(
-            due_hours
-        )
+        regular_hours = safe_dec(utils.regular_hours(time_entries, safe_dec(due_hours)))
+        fulfilled_hours = worked_hours + special_hours + safe_dec(base['rest'])
+        base['fulfilled'] = fulfilled_hours >= safe_dec(due_hours)
 
-        regular_hours = min(worked_hours, safe_dec(due_hours)) if worked_hours else None
-        base['regular_hours'] = regular_hours if regular_hours != decimal.Decimal(0) else None
+        base['regular_hours'] = regular_hours if regular_hours != Decimal(0) else None
         return base

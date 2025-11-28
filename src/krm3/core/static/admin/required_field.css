@@ -1,0 +1,6 @@
+.required::after{
+    margin-left: 2px;
+    margin-bottom: 5px;
+    content: " *" !important;
+    color: #ff3737 !important;
+}

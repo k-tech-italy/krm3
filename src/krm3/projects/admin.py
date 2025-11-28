@@ -4,7 +4,7 @@ from typing import cast
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
-from adminfilters.dates import DateRangeFilter
+from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
@@ -33,8 +33,8 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     list_display = ('client', 'name', 'start_date', 'end_date')
     list_filter = (
         ('client', AutoCompleteFilter),
-        ('start_date', DateRangeFilter.factory(title='from YYYY-MM-DD')),
-        ('end_date', DateRangeFilter.factory(title='to YYYY-MM-DD')),
+        ('start_date', DateFilter.factory(title='from YYYY-MM-DD')),
+        ('end_date', DateFilter.factory(title='to YYYY-MM-DD')),
     )
     autocomplete_fields = ['client']
     inlines = [TaskInline]
@@ -46,6 +46,10 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
+    class Media:
+        css = {
+            'all': ('admin/required_field.css',),
+        }
     form = TaskForm
     list_display = ('project', 'title', 'resource', 'basket_title', 'start_date', 'end_date')
     search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket_title')

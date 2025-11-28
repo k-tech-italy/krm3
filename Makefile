@@ -189,5 +189,5 @@ refresh-fe:  ## rebuilds FE and tailwind
 	@cd krm3-fe && git pull && yarn install && yarn build
 	@git pull && uv sync && ./manage.py tailwind build
 
-compilemessages:
+compilemessages:  # Compiles i18n skipping .tox and .venv
 	@./manage.py compilemessages -i .tox -i .venv

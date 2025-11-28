@@ -1,5 +1,7 @@
+from collections.abc import Iterable
 import datetime
-from decimal import Decimal as D  # noqa: N817
+from decimal import Decimal
+from typing import override  # noqa: N817
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
@@ -21,10 +23,13 @@ class AvailabilityReport(TimesheetReport):
         super().__init__(from_date, to_date, user)
         self._enrich_calendars_with_availability_data()
 
-    def _set_resources(self, user: User, **kwargs) -> None:
-        """Set the resource list.
+    @override
+    def _get_resources(self, user: User, **kwargs) -> Iterable[Resource]:
+        """Fetch the resources for this report.
 
-        Will filter for resources with contracts overlapping current period and eventually by project.
+        The resulting `Resource`s will have contracts whose validity
+        overlap the `self.from_date` - `self.to_date` period, and
+        encompass tasks related to this report's `project`.
         """
         qs = Resource.objects.prefetch_related('contract_set').filter(
             contract__period__overlap=(self.from_date, self.to_date + relativedelta(days=1))
@@ -32,7 +37,7 @@ class AvailabilityReport(TimesheetReport):
         if self.project is not None:
             qs = qs.prefetch_related('task_set').filter(task__project=self.project)
 
-        self.resources = list(qs.distinct())
+        return qs.distinct()
 
     def _enrich_calendars_with_availability_data(self) -> None:
         """Add availability/absence data to existing calendar days."""
@@ -42,21 +47,21 @@ class AvailabilityReport(TimesheetReport):
 
     def _calculate_availability_for_day(self, kd: Krm3Day, resource_id: int) -> None:
         """Calculate availability status for a specific day."""
-        day_entries = [te for te in self.time_entries if te.resource_id == resource_id and te.date == kd.date]
+        day_entries = [te for te in self.time_entries if te.resource.pk == resource_id and te.date == kd.date]
 
         for te in day_entries:
             if te.holiday_hours and te.holiday_hours > 0:
                 kd.absence_type = 'H'
-                kd.absence_hours = D(te.holiday_hours)
+                kd.absence_hours = Decimal(te.holiday_hours)
                 break
             if (te.leave_hours and te.leave_hours > 0) or (te.special_leave_hours and te.special_leave_hours > 0):
                 kd.absence_type = 'L'
                 total_leave = (te.leave_hours or 0) + (te.special_leave_hours or 0)
-                kd.absence_hours = D(total_leave)
+                kd.absence_hours = Decimal(total_leave)
                 break
         else:
             kd.absence_type = None
-            kd.absence_hours = D(0)
+            kd.absence_hours = Decimal(0)
 
 
 class AvailabilityReportOnline(AvailabilityReport):

@@ -95,6 +95,73 @@ class SpecialLeaveReason(models.Model):
         return not self.is_not_valid_yet(date) and not self.is_expired(date)
 
 
+class TimesheetSubmissionManager(models.Manager):
+    """Custom Manager for TimesheetSubmission with utility methods."""
+
+    def get_closed_in_period(
+        self, from_date: datetime.date, to_date: datetime.date, resources: Resource | Iterable[Resource]
+    ) -> QuerySet[TimesheetSubmission]:
+        """
+        Return all `TimesheetSubmission`s closed within the given date range for the given `resources`.
+
+        `resources` may also be a singular `Resource`.
+        """
+        if isinstance(resources, Resource):
+            resources = [resources]
+        return self.filter(
+            period__overlap=(from_date, to_date + datetime.timedelta(days=1)), closed=True, resource__in=resources
+        )
+
+
+class TimesheetSubmission(models.Model):
+    """A submitted timesheet."""
+
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
+    closed = models.BooleanField(default=True)
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
+    timesheet = models.JSONField(null=True, blank=True, default=dict)
+
+    objects: TimesheetSubmissionManager = TimesheetSubmissionManager()
+
+    class Meta:
+        constraints = [
+            ExclusionConstraint(
+                name='exclude_overlapping_timesheets',
+                expressions=[
+                    ('period', RangeOperators.OVERLAPS),
+                    ('resource', RangeOperators.EQUAL),
+                ],
+            )
+        ]
+
+    def __str__(self) -> str:
+        if self.period.lower.day == self.period.upper.day == 1:
+            return self.period.lower.strftime('%Y %b')
+        end_dt = self.period.upper - datetime.timedelta(days=1)
+        return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
+
+    @override
+    def save(self, *, force_insert: bool = False, force_update: bool = False, using=None, update_fields=None) -> None:  # noqa: D102, ANN001
+        # We do not check for constraints as we want to surface the detailed errors from the DB when saving
+        self.full_clean(validate_unique=False, validate_constraints=False)
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+
+    @override
+    def clean(self) -> None:
+        super().clean()
+        self.timesheet = self.calculate_timesheet() if self.closed else None
+
+    def calculate_timesheet(self) -> dict:
+        """Retrieve the resource timesheet data (DTO dict) for a specific date interval."""
+        from krm3.timesheet.api.serializers import TimesheetSerializer  # noqa: PLC0415
+        from krm3.timesheet.dto import TimesheetDTO  # noqa: PLC0415
+
+        lower = KrmDay(self.period.lower).date
+        upper = KrmDay(self.period.upper).date
+        timesheet = TimesheetDTO().fetch(self.resource, lower, upper + relativedelta(days=1))
+        return TimesheetSerializer(timesheet).data
+
+
 class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
     _TASK_ENTRY_FILTER = (
         models.Q(day_shift_hours__gt=0)
@@ -151,6 +218,13 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         """
         return self.day_entries().filter(self._REGULAR_LEAVE_ENTRY_FILTER)
 
+    def special_leaves(self) -> Self:
+        """Select all special leave entries in this queryset.
+
+        :return: the filtered queryset.
+        """
+        return self.day_entries().filter(self._SPECIAL_LEAVE_ENTRY_FILTER)
+
     def task_entries(self) -> Self:
         """Select all task entries in this queryset.
 
@@ -177,70 +251,6 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         ):
             return self.all()
         return self.filter(resource__user=user)
-
-
-class TimesheetSubmissionManager(models.Manager):
-    """Custom Manager for TimesheetSubmission with utility methods."""
-
-    def get_closed_in_period(self, from_date: datetime.date, to_date: datetime.date, resource: 'Resource') -> QuerySet:
-        """
-        Get all timesheet submissions that are closed within the given date range.
-
-        Returns QuerySet of TimesheetSubmission objects.
-        """
-        return self.filter(
-            period__overlap=(from_date, to_date + datetime.timedelta(days=1)), closed=True, resource=resource
-        )
-
-
-class TimesheetSubmission(models.Model):
-    """A submitted timesheet."""
-
-    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
-    closed = models.BooleanField(default=True)
-    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
-    timesheet = models.JSONField(null=True, blank=True, default=dict)
-
-    objects = TimesheetSubmissionManager()
-
-    class Meta:
-        constraints = [
-            ExclusionConstraint(
-                name='exclude_overlapping_timesheets',
-                expressions=[
-                    ('period', RangeOperators.OVERLAPS),
-                    ('resource', RangeOperators.EQUAL),
-                ],
-            )
-        ]
-
-    def __str__(self) -> str:
-        if self.period.lower.day == self.period.upper.day == 1:
-            return self.period.lower.strftime('%Y %b')
-        end_dt = self.period.upper - datetime.timedelta(days=1)
-        return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
-
-    @override
-    def save(self, *, force_insert: bool = False, force_update: bool = False, using=None, update_fields=None) -> None:  # noqa: D102, ANN001
-        # We do not check for constraints as we want to surface the detailed errors from the DB when saving
-        self.full_clean(validate_unique=False, validate_constraints=False)
-        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
-
-    @override
-    def clean(self) -> None:
-        super().clean()
-        self.timesheet = self.calculate_timesheet() if self.closed else None
-
-    def calculate_timesheet(self) -> dict:
-        """Retrieve the resource timesheet data (DTO dict) for a specific date interval."""
-        from krm3.timesheet.api.serializers import TimesheetSerializer  # noqa: PLC0415
-        from krm3.timesheet.dto import TimesheetDTO  # noqa: PLC0415
-
-        lower, upper = self.period.lower, self.period.upper
-        if isinstance(upper, str):
-            upper = KrmDay(upper).date
-        timesheet = TimesheetDTO().fetch(self.resource, lower, upper + relativedelta(days=1))
-        return TimesheetSerializer(timesheet).data
 
 
 class TimeEntry(models.Model):
@@ -398,6 +408,17 @@ class TimeEntry(models.Model):
         """Calculate net bank hour change for this entry."""
         return Decimal(self.bank_from) - Decimal(self.bank_to)
 
+    @property
+    def special_hours(self) -> Decimal:
+        """Return the total hours spent on "special activities".
+
+        Special activities include:
+        - special leave
+        - sick day
+        - holiday
+        """
+        return Decimal(self.special_leave_hours) + Decimal(self.sick_hours) + Decimal(self.holiday_hours)
+
     @override
     def clean(self) -> None:
         """Validate logged hours.
@@ -536,14 +557,15 @@ class TimeEntry(models.Model):
             return
 
         total_hours_on_same_day = sum(entry.total_hours for entry in other_entries_on_same_day) + self.total_hours
+        scheduled_hours = self.resource.scheduled_working_hours_for_day(KrmDay(self.date))
 
-        if total_hours_on_same_day > self.resource.scheduled_working_hours_for_day(KrmDay(self.date)):
+        if total_hours_on_same_day > scheduled_hours:
             raise ValidationError(
                 _(
                     'No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, got {actual_hours}'
                 ).format(
                     kind='rest' if self.is_rest else 'leave',
-                    work_hours=self.resource.scheduled_working_hours_for_day(KrmDay(self.date)),
+                    work_hours=scheduled_hours,
                     actual_hours=total_hours_on_same_day,
                 ),
                 code='overtime_while_resting_or_on_leave',

@@ -138,11 +138,11 @@ class TestTimesheetSubmissionModelAPIListView:
         resource: Resource = ResourceFactory(user=regular_user)
         own_ts = TimesheetSubmissionFactory(resource=resource)
         other_ts = TimesheetSubmissionFactory()
-        expected = [own_ts.id] if result == 'own' else [own_ts.id, other_ts.id]
+        expected = {own_ts.id} if result == 'own' else {own_ts.id, other_ts.id}
 
         response = api_client(user=user).get(self.url())
         assert response.status_code == status.HTTP_200_OK
-        assert [r['id'] for r in response.data['results']] == expected
+        assert {r['id'] for r in response.data['results']} == expected
 
     def test_integrity_error_on_timesheet_creation(self, api_client, regular_user):
         resource: Resource = ResourceFactory(user=regular_user)

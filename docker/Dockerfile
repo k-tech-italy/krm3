@@ -66,6 +66,7 @@ COPY docker/etc/mime.types /etc/mime.types
 WORKDIR /code
 
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY CHANGELOG.md /usr/local/lib/python3.12/site-packages/krm3
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY --from=builder --chown=krm3:ktech /code/ ./

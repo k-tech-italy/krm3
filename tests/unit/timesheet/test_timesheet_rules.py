@@ -1,4 +1,6 @@
-from collections import namedtuple
+from collections.abc import Iterator
+from dataclasses import dataclass
+import datetime
 from decimal import Decimal as D  # noqa: N817
 
 import pytest
@@ -31,25 +33,37 @@ out_fields = {
 }
 
 
-TimeEntryMock = namedtuple(
-    'TimeEntryMock',
-    [
-        'date',
-        'protocol_number',
-        'bank_to',
-        'bank_from',
-        'day_shift_hours',
-        'night_shift_hours',
-        'on_call_hours',
-        'travel_hours',
-        'holiday_hours',
-        'leave_hours',
-        'rest_hours',
-        'sick_hours',
-        'special_leave_reason',
-        'special_leave_hours',
-    ],
-)
+# FIXME: use factories
+@dataclass(frozen=True)
+class TimeEntryMock:
+    date: datetime.date | str
+    protocol_number: str | None
+    bank_to: D | None
+    bank_from: D | None
+    day_shift_hours: D | None
+    night_shift_hours: D | None
+    on_call_hours: D | None
+    travel_hours: D | None
+    holiday_hours: D | None
+    leave_hours: D | None
+    rest_hours: D | None
+    sick_hours: D | None
+    special_leave_reason: str | None
+    special_leave_hours: D | None
+
+    # XXX: this is why we should use factories
+    @property
+    def special_hours(self):
+        return (
+            D(self.leave_hours or 0)
+            + D(self.special_leave_hours or 0)
+            + D(self.sick_hours or 0)
+            + D(self.holiday_hours or 0)
+        )
+
+    @property
+    def total_task_hours(self):
+        return D(self.day_shift_hours or 0) + D(self.night_shift_hours or 0) + D(self.travel_hours or 0)
 
 
 def column_index_to_name(n):
@@ -79,7 +93,7 @@ def _get_raw_scenarios(file_path: str) -> dict:
     return raw_scenarios
 
 
-def iterate_scenarios(raw_scenarios) -> tuple[str, float | None, float | None, dict, dict]:
+def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
     for name, scenario in raw_scenarios.items():
         if scenario['special_leave_reason']:
             special_leave_reason = SpecialLeaveReasonFactory.build(title=scenario['special_leave_reason'])
