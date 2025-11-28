@@ -24,11 +24,11 @@
     {{ block.super }}
     <div class="w-9/10 mx-auto pt-20">
         <div class="flex flex-row justify-between mt-2">
-            <a href="{% url "availability-report-month" prev_month %}" class="button">{% translate "Prev month" %}</a>
+            <a href="{% url "availability-report-month" prev_month %}{% if selected_project %}?project={{ selected_project }}{% endif %}" class="button">{% translate "Prev month" %}</a>
             <div class="flex flex-col">
                 <h1 class="title">{% blocktranslate %}Availability Report {{ title }}{% endblocktranslate %}</h1>
             </div>
-            <a href="{% url "availability-report-month" next_month %}" class="button">{% translate "Next month" %}</a>
+            <a href="{% url "availability-report-month" next_month %}{% if selected_project %}?project={{ selected_project }}{% endif %}" class="button">{% translate "Next month" %}</a>
         </div>
 
         <div class="mb-10">
