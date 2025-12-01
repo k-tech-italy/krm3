@@ -106,6 +106,7 @@ class Resource(models.Model):
     active = models.BooleanField(default=True)
     preferred_in_report = models.BooleanField(default=True)
     vcard_text = models.TextField(null=True, blank=True)
+    fiscal_code = models.CharField(max_length=25, null=True, blank=True)
 
     class Meta:
         ordering = ['last_name', 'first_name']
