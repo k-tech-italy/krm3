@@ -259,5 +259,8 @@ CV2_SHOW_IMAGES = env('CV2_SHOW_IMAGES')
 
 TAILWIND_APP_NAME = 'krm3.theme'
 
-
+if (_changelog := Path(krm3.__file__).parent / 'CHANGELOG.md').exists():
+    CHANGELOG_PATH = _changelog
+else:
+    CHANGELOG_PATH = Path(krm3.__file__).parents[2] / 'CHANGELOG.md'
 HOLIDAYS_CALENDAR = env('HOLIDAYS_CALENDAR')
