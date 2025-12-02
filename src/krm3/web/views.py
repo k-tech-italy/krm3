@@ -8,6 +8,7 @@ import markdown
 import openpyxl
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -393,8 +394,7 @@ class ReleasesView(HomeView):
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        project_root = Path(__file__).parent.parent.parent.parent
-        changelog_file_path = project_root / 'CHANGELOG.md'
+        changelog_file_path = Path(settings.CHANGELOG_PATH)
         changelog_html = ''
 
         try:

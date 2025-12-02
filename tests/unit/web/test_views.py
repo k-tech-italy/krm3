@@ -470,6 +470,34 @@ def test_releases_view_with_file_read_error(mock_open_func, client):
     assert 'Error parsing CHANGELOG.md' in content
 
 
+def test_releases_view_uses_settings_changelog_path(client, settings, tmp_path):
+    """Test that ReleasesView uses settings.CHANGELOG_PATH for locating the changelog file."""
+    UserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+
+    # Create a custom changelog file
+    custom_changelog = tmp_path / 'custom_changelog.md'
+    custom_changelog.write_text("""## 2.0.0 (2025-11-28)
+
+### Feat
+- Custom changelog content for testing
+
+### Fix
+- Verify settings.CHANGELOG_PATH is used
+""")
+
+    # Override the CHANGELOG_PATH setting
+    settings.CHANGELOG_PATH = custom_changelog
+
+    response = client.get(reverse('releases'))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert '2.0.0' in content
+    assert 'Custom changelog content for testing' in content
+    assert 'Verify settings.CHANGELOG_PATH is used' in content
+
+
 def test_payslip_report_with_timesheet_submissions(client):
     """Test payslip report includes timesheet submissions in coverage."""
     SuperUserFactory(username='user00', password='pass123')

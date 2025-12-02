@@ -234,35 +234,9 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
           labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    needs: [ build-and-push ]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Call Rancher API redeploy
-        env:
-          RANCHER_URL: ${{ vars.RANCHER_URL }}
-          RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
-        run: |
-          response=$(curl -s -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer $RANCHER_TOKEN" \
-            "$RANCHER_URL")
-          http_code="${response: -3}"
-          if [ "$http_code" -ne 200 ]; then
-            echo "Deployment failed with HTTP $http_code"
-            exit 1
-          fi
-          echo "Deployment successful"
 # release part
   release:
-    needs: [deploy]
-    if: needs.deploy.result == 'success'
+    needs: [ build-and-push ]
     runs-on: ubuntu-latest
     environment:
       name: development   # manual approve
@@ -279,7 +253,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
-      - name: Call Rancher API redeploy after release
+      - name: Call Rancher API deploy
         env:
           RANCHER_URL: ${{ vars.RANCHER_URL }}
           RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
@@ -292,4 +266,4 @@ jobs:
             echo "Redeploy failed with HTTP $http_code"
             exit 1
           fi
-          echo "Redeploy successful after release"
+          echo "Redeploy successful"
