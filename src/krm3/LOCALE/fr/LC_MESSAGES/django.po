@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-02 14:27+0000\n"
+"POT-Creation-Date: 2025-12-02 14:52+0000\n"
 "PO-Revision-Date: 2025-11-14 15:06+0000\n"
 "Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: French <https://wl.singlewave.co.uk/projects/ktcalendars/"
@@ -302,6 +302,26 @@ msgstr ""
 
 #: src/krm3/timesheet/api/views.py:255
 msgid "Timesheet already submitted."
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:20
+msgid "H"
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:21
+msgid "S"
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:22
+msgid "L"
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:23
+msgid "SL"
+msgstr ""
+
+#: src/krm3/timesheet/report/availability.py:24
+msgid "R"
 msgstr ""
 
 #: src/krm3/timesheet/report/availability.py:107

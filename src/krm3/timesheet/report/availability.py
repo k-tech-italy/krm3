@@ -17,11 +17,11 @@ User = get_user_model()
 
 
 class AbsenceType(Enum):
-    HOLIDAY = 'H'
-    SICK = 'S'
-    LEAVE = 'L'
-    SPECIAL_LEAVE = 'SL'
-    REST = 'R'
+    HOLIDAY = _('H')
+    SICK = _('S')
+    LEAVE = _('L')
+    SPECIAL_LEAVE = _('SL')
+    REST = _('R')
 
 ABSENCE_SHOW_HOURS = {
     AbsenceType.LEAVE,
@@ -128,7 +128,7 @@ class AvailabilityReportOnline(AvailabilityReport):
                             else:
                                 parts.append(absence_type.value)
 
-                    cell_value = ', '.join(parts)
+                    cell_value = ', '.join(map(str,parts))
 
                 cell = resource_row.add_cell(cell_value)
                 cell.nwd = kd.nwd
