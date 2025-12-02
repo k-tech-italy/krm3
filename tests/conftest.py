@@ -260,3 +260,32 @@ def resources(admin_user):
         'regular': r_regular,
         'other': r_other,
     }
+
+
+@pytest.fixture
+def timesheet_api_user():
+    from testutils.permissions import add_permissions
+    from testutils.factories import UserFactory
+
+    user = UserFactory()
+
+    add_permissions(user, 'core.view_any_timesheet')
+    add_permissions(user, 'core.manage_any_timesheet')
+
+    return user
+
+
+@pytest.fixture
+def timesheet_api_staff_user():
+    from testutils.permissions import add_permissions
+    from testutils.factories import UserFactory
+
+    user = UserFactory()
+
+    add_permissions(user, 'core.view_any_timesheet')
+    add_permissions(user, 'core.manage_any_timesheet')
+
+    user.is_staff = True
+    user.save()
+
+    return user

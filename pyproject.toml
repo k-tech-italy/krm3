@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "2.2.1"
+version = "2.2.2"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -80,6 +80,7 @@ dependencies = [
     "bs4>=0.0.2",
     "vobject>=0.9.9",
     "django-simple-dms>=2.0.0",
+    "python-magic>=0.4.27",
 ]
 
 [project.optional-dependencies]

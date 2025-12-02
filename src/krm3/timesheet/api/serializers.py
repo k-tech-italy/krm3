@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any, override
 
 from django.db import IntegrityError
+from django.urls.base import reverse
 from django.utils.translation import gettext_lazy as _
 from krm3.timesheet.rules import Krm3Day
 from psycopg.types.range import DateRange
@@ -136,7 +137,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
         return entry
 
     def _verify_reason_is_valid(
-        self, reason: SpecialLeaveReason | None, date: datetime.date
+            self, reason: SpecialLeaveReason | None, date: datetime.date
     ) -> SpecialLeaveReason | None:
         if not reason:
             return None
@@ -163,15 +164,25 @@ class TaskSerializer(serializers.ModelSerializer):
 class TimesheetTaskSerializer(TaskSerializer):
     project_name = serializers.SerializerMethodField()
     client_name = serializers.SerializerMethodField()
+    admin_url = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
-        fields = ('id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name')
+        fields = (
+        'id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name', 'admin_url'
+        )
 
     def get_client_name(self, obj: Task) -> str:
         return obj.project.client.name
 
     def get_project_name(self, obj: Task) -> str:
         return obj.project.name
+
+    def get_admin_url(self, obj: Task) -> str:
+        """Only allow staff users to get the admin URL."""
+        request = self.context.get('request')
+        if request and request.user.is_staff:
+            return reverse('admin:core_task_change', args=[obj.pk])
+        return ''
 
 
 class TimesheetSerializer(serializers.Serializer):
@@ -181,6 +192,11 @@ class TimesheetSerializer(serializers.Serializer):
     schedule = serializers.DictField(child=serializers.IntegerField())
     bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
     timesheet_colors = serializers.DictField(child=serializers.CharField())
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        if 'context' in kwargs:
+            self.fields['tasks'].context.update(kwargs['context'])
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_result = {}
@@ -273,7 +289,7 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         resource = user.get_resource()
         if user.has_perm('core.manage_any_timesheet') or (
-            resource and user.resource.id == self.initial_data['resource']
+                resource and user.resource.id == self.initial_data['resource']
         ):
             return super().is_valid(raise_exception=raise_exception)
         if raise_exception:

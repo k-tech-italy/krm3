@@ -6,6 +6,8 @@ include README.md
 include MANIFEST.in
 include AUTHORS
 include CHANGES.md
+include CHANGELOG.md
+include RELEASE.md
 include LICENSE.md
 include pyproject.toml
 include *.py

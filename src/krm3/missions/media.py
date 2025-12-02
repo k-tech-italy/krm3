@@ -9,7 +9,7 @@ CONTRACT_DOCUMENT_PREFIX = 'contracts/documents'
 
 def mission_directory_path(instance: 'Mission', filename: str) -> str:
     # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return '{EXPENSES_IMAGE_PREFIX}/R{instance.mission.resource.id}/M{instance.mission.id}/{filename}'
+    return f'{EXPENSES_IMAGE_PREFIX}/R{instance.mission.resource.id}/M{instance.mission.id}/{filename}'
 
 
 def contract_directory_path(instance: 'Contract', filename: str) -> str:

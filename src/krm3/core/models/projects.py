@@ -237,11 +237,17 @@ class Task(models.Model):
 
     @override
     def clean(self) -> None:
+        # Explicitly check for required project
+        if not self.project_id:
+            raise ValidationError(
+                _('A Project must be assigned to this task'),
+                code='project_required'
+            )
+
         if self.end_date and self.start_date > self.end_date:
             raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
 
-        # If project is none there will be error caught by the form's own validation for the 'project' field.
-        if self.project and self.project.start_date and self.start_date < self.project.start_date:
+        if self.project.start_date and self.start_date < self.project.start_date:
             raise ValidationError(
                 _(
                     'A task must not start before its related project - '

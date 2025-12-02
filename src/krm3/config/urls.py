@@ -16,13 +16,19 @@ Including another URLconf
 
 """
 
+from __future__ import annotations
+
+import typing
+
 from adminactions import actions
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.admin import site
 from django.contrib.auth import views as auth_views
-from django.urls import include, path
+from django.contrib.auth.decorators import login_required
+from django.urls import include, path, re_path
+from django.views.static import serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 from krm3.config.environ import env
@@ -30,12 +36,21 @@ from krm3.config.environ import env
 admin.autodiscover()
 actions.add_to_site(site)
 
+if typing.TYPE_CHECKING:
+    from django.http import FileResponse, HttpRequest
+
 
 def trigger_error(*args) -> None:
     division_by_zero = 1 / 0  # noqa: F841
 
 
-# see https://djoser.readthedocs.io/en/latest/getting_started.html
+@login_required
+def protected_serve(
+    request: HttpRequest, path: str, document_root: str | None = None, show_indexes: bool = False
+) -> FileResponse:
+    return serve(request, path, document_root, show_indexes)
+
+
 urlpatterns = [
     path('', include('pwa.urls')),
     path('admin/doc/', include('django.contrib.admindocs.urls')),
@@ -48,6 +63,7 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('sentry-debug/', trigger_error),
+    re_path(rf'^{settings.MEDIA_URL[1:]}(?P<path>.*)$', protected_serve, {'document_root': settings.MEDIA_ROOT}),
     path('', include('krm3.fe.urls')),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]
@@ -55,12 +71,10 @@ urlpatterns = [
 if token := env('TICKETING_TOKEN'):
     urlpatterns.insert(0, path('be/ticketing/', include('issues.urls', namespace='issues')))
 
+# Serve static files from reverse proxy in production
 if settings.DEBUG:
-    urlpatterns = (
-        urlpatterns
-        + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-        + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    )
+    urlpatterns = urlpatterns + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
 
 if not settings.TESTING:
     from debug_toolbar.toolbar import debug_toolbar_urls
