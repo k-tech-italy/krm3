@@ -470,6 +470,16 @@ class TestTimeEntry:
 
     _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'rest_hours', 'special_leave_hours')
 
+    def test_is_deposit_cleared_after_task_entry_hours_deleted(self):
+        """No negative hours when clearing working hours"""
+        date = datetime.date(2025, 1, 14)
+        task = TaskFactory()
+        entry = TimeEntryFactory(date=date, day_shift_hours=10, task=task, resource=task.resource)
+        deposit = TimeEntryFactory(date=date, day_shift_hours=0, bank_to=2, task=None, resource=task.resource)
+        entry.delete()
+        deposit.refresh_from_db()
+        assert deposit.bank_to == 0
+
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
     def test_day_entry_overwrites_other_existing_day_entry_on_the_same_day(self, existing_hours_field, new_hours_field):
