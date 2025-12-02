@@ -1,3 +1,9 @@
+## 2.2.4 (2025-12-02)
+
+### Fix
+
+- **docker/Dockerfile**: libmagic1 dep in the final stage (#180)
+
 ## 2.2.3 (2025-12-02)
 
 ### Fix
