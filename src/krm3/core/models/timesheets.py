@@ -650,32 +650,6 @@ class TimeEntry(models.Model):
                 code='bank_withdraw_above_scheduled_hours',
             )
 
-    def verify_task_hours_deletion_wont_cause_negative_hours(self) -> None:
-        if not self.is_task_entry:
-            return
-
-        all_entries = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(pk=self.pk)
-        remaining_total_hours = sum(entry.total_hours for entry in all_entries)
-        total_bank_deposits = sum(entry.bank_to for entry in all_entries if entry.bank_to > 0)
-
-        if remaining_total_hours < 0:
-            raise ValidationError(
-                _(
-                    'Cannot delete this time entry. Removing it would cause negative work hours '
-                    '({remaining_total_hours}) due to bank deposits ({total_bank_deposits}) on {date}'
-                ).format(
-                    remaining_total_hours=remaining_total_hours, total_bank_deposits=total_bank_deposits, date=self.date
-                ),
-                code='deletion_would_cause_negative_hours',
-            )
-
-
-@receiver(models.signals.pre_delete, sender=TimeEntry)
-def validate_timeentry_deletion(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
-    """Signal handler to validate TimeEntry deletion."""
-    instance.verify_task_hours_deletion_wont_cause_negative_hours()
-
-
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
@@ -689,6 +663,17 @@ def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: Tim
         overwritten = TimeEntry.objects.none()
     overwritten.delete()
 
+@receiver(models.signals.post_delete, sender=TimeEntry)
+def clear_bank_hours_when_no_work(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
+    """Auto-clear bank deposits if there are no work hours."""
+    entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
+    bank_to_entry = entries.filter(bank_to__gt=0).first()
+    total_task_hours = sum(entry.total_task_hours for entry in entries)
+    schedule = instance.resource.get_schedule(instance.date, instance.date + datetime.timedelta(days=1))
+    scheduled_hours = schedule[instance.date]
+    if instance.is_task_entry and total_task_hours < scheduled_hours and bank_to_entry:
+        bank_to_entry.bank_to = 0
+        bank_to_entry.save()
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:

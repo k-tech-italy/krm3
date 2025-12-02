@@ -338,27 +338,6 @@ class TestTimeEntry:
                 bank_from=6,
             )
 
-    def test_reject_task_entry_deletion_when_deposited_hours(self):
-        project = ProjectFactory()
-        resource = ResourceFactory()
-        task = TaskFactory(project=project, resource=resource)
-        time_entry = TimeEntryFactory(
-            date=datetime.date(2024, 1, 2),
-            resource=resource,
-            task=task,
-            day_shift_hours=10,
-        )
-        TimeEntryFactory(
-            date=datetime.date(2024, 1, 2),
-            resource=resource,
-            day_shift_hours=0,
-            bank_to=2,
-        )
-        with pytest.raises(
-            exceptions.ValidationError,
-            match='Cannot delete this time entry. Removing it would cause negative work hours',
-        ):
-            time_entry.delete()
 
     def test_holiday_rejects_any_bank_transactions(self):
         """Test that holiday entries cannot have any bank transactions."""
@@ -490,6 +469,16 @@ class TestTimeEntry:
         assert entry.on_call_hours == 2
 
     _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'rest_hours', 'special_leave_hours')
+
+    def test_is_deposit_cleared_after_task_entry_hours_deleted(self):
+        """No negative hours when clearing working hours"""
+        date = datetime.date(2025, 1, 14)
+        task = TaskFactory()
+        entry = TimeEntryFactory(date=date, day_shift_hours=10, task=task, resource=task.resource)
+        deposit = TimeEntryFactory(date=date, day_shift_hours=0, bank_to=2, task=None, resource=task.resource)
+        entry.delete()
+        deposit.refresh_from_db()
+        assert deposit.bank_to == 0
 
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
