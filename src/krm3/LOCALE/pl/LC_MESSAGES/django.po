@@ -535,8 +535,6 @@ msgid "Last Name"
 msgstr ""
 
 #: src/krm3/web/templates/user_resource.html:94
-#, fuzzy
-#| msgid "Cancelled"
 msgid "Cancel"
 msgstr "Anulowany"
 

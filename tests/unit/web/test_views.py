@@ -138,6 +138,15 @@ def test_availability_view_current_month(client):
         day_shift_hours=0,
         sick_hours=8,
     )
+    TimeEntryFactory(
+        resource=resource,
+        date=datetime.date.today() + datetime.timedelta(days=4),
+        day_shift_hours=0,
+        leave_hours=3,
+        special_leave_hours=3,
+        rest_hours=2,
+        special_leave_reason=SpecialLeaveReasonFactory(),
+    )
     client.login(username='user00', password='pass123')
     url = reverse('availability')
     response = client.get(url)
@@ -149,6 +158,7 @@ def test_availability_view_current_month(client):
     assert 'L 3.00, SL 3.00' in content
     assert 'L 4.00, R 4.00' in content
     assert 'S' in content
+    assert 'L 3.00, SL 3.00, R 2.00' in content
     assert '<h1 class="title">Availability Report August 2025</h1>' in content
 
 

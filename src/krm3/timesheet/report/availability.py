@@ -69,21 +69,19 @@ class AvailabilityReport(TimesheetReport):
         for te in day_entries:
             if te.holiday_hours and te.holiday_hours > 0:
                 absences[AbsenceType.HOLIDAY] = Decimal(te.holiday_hours)
-                break
 
-            if te.sick_hours and te.sick_hours > 0:
+            elif te.sick_hours and te.sick_hours > 0:
                 absences[AbsenceType.SICK] = Decimal(te.sick_hours)
-                break
+            else:
+                if te.leave_hours and te.leave_hours > 0:
+                    absences[AbsenceType.LEAVE] = absences.get(AbsenceType.LEAVE, Decimal(0)) + Decimal(te.leave_hours)
 
-            if te.leave_hours and te.leave_hours > 0:
-                absences[AbsenceType.LEAVE] = absences.get(AbsenceType.LEAVE, Decimal(0)) + Decimal(te.leave_hours)
+                if te.special_leave_hours and te.special_leave_hours > 0:
+                    absences[AbsenceType.SPECIAL_LEAVE] = absences.get(AbsenceType.SPECIAL_LEAVE, Decimal(0)) + Decimal(
+                        te.special_leave_hours)
 
-            if te.special_leave_hours and te.special_leave_hours > 0:
-                absences[AbsenceType.SPECIAL_LEAVE] = absences.get(AbsenceType.SPECIAL_LEAVE, Decimal(0)) + Decimal(
-                    te.special_leave_hours)
-
-            if te.rest_hours and te.rest_hours > 0:
-                absences[AbsenceType.REST] = absences.get(AbsenceType.REST, Decimal(0)) + Decimal(te.rest_hours)
+                if te.rest_hours and te.rest_hours > 0:
+                    absences[AbsenceType.REST] = absences.get(AbsenceType.REST, Decimal(0)) + Decimal(te.rest_hours)
 
         kd.absences = absences
         kd.absence_hours = sum(absences.values()) if absences else Decimal(0)
@@ -117,7 +115,7 @@ class AvailabilityReportOnline(AvailabilityReport):
             resource_days = self.calendars[resource.id]
             for kd in resource_days:
                 cell_value = ''
-
+                #Adding absence characters to report
                 if kd.absences:
                     parts = []
                     for absence_type in AbsenceType:
