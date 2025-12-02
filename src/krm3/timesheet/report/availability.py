@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import override  # noqa: N817
 
 from dateutil.relativedelta import relativedelta
@@ -13,6 +14,20 @@ from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
 
 User = get_user_model()
+
+
+class AbsenceType(Enum):
+    HOLIDAY = 'H'
+    SICK = 'S'
+    LEAVE = 'L'
+    SPECIAL_LEAVE = 'SL'
+    REST = 'R'
+
+ABSENCE_SHOW_HOURS = {
+    AbsenceType.LEAVE,
+    AbsenceType.SPECIAL_LEAVE,
+    AbsenceType.REST
+}
 
 
 class AvailabilityReport(TimesheetReport):
@@ -49,19 +64,29 @@ class AvailabilityReport(TimesheetReport):
         """Calculate availability status for a specific day."""
         day_entries = [te for te in self.time_entries if te.resource.pk == resource_id and te.date == kd.date]
 
+        absences = {}
+
         for te in day_entries:
             if te.holiday_hours and te.holiday_hours > 0:
-                kd.absence_type = 'H'
-                kd.absence_hours = Decimal(te.holiday_hours)
+                absences[AbsenceType.HOLIDAY] = Decimal(te.holiday_hours)
                 break
-            if (te.leave_hours and te.leave_hours > 0) or (te.special_leave_hours and te.special_leave_hours > 0):
-                kd.absence_type = 'L'
-                total_leave = (te.leave_hours or 0) + (te.special_leave_hours or 0)
-                kd.absence_hours = Decimal(total_leave)
+
+            if te.sick_hours and te.sick_hours > 0:
+                absences[AbsenceType.SICK] = Decimal(te.sick_hours)
                 break
-        else:
-            kd.absence_type = None
-            kd.absence_hours = Decimal(0)
+
+            if te.leave_hours and te.leave_hours > 0:
+                absences[AbsenceType.LEAVE] = absences.get(AbsenceType.LEAVE, Decimal(0)) + Decimal(te.leave_hours)
+
+            if te.special_leave_hours and te.special_leave_hours > 0:
+                absences[AbsenceType.SPECIAL_LEAVE] = absences.get(AbsenceType.SPECIAL_LEAVE, Decimal(0)) + Decimal(
+                    te.special_leave_hours)
+
+            if te.rest_hours and te.rest_hours > 0:
+                absences[AbsenceType.REST] = absences.get(AbsenceType.REST, Decimal(0)) + Decimal(te.rest_hours)
+
+        kd.absences = absences
+        kd.absence_hours = sum(absences.values()) if absences else Decimal(0)
 
 
 class AvailabilityReportOnline(AvailabilityReport):
@@ -91,16 +116,19 @@ class AvailabilityReportOnline(AvailabilityReport):
 
             resource_days = self.calendars[resource.id]
             for kd in resource_days:
-                if hasattr(kd, 'absence_type') and kd.absence_type:
-                    if kd.absence_type == 'H':
-                        cell_value = 'H'
-                    elif kd.absence_type == 'L':
-                        if hasattr(kd, 'absence_hours') and kd.absence_hours > 0:
-                            cell_value = f'L {kd.absence_hours}'
-                        else:
-                            cell_value = 'L'
-                else:
-                    cell_value = ''
+                cell_value = ''
+
+                if kd.absences:
+                    parts = []
+                    for absence_type in AbsenceType:
+                        if absence_type in kd.absences:
+                            hours = kd.absences[absence_type]
+                            if absence_type in ABSENCE_SHOW_HOURS:
+                                parts.append(f'{absence_type.value} {hours}')
+                            else:
+                                parts.append(absence_type.value)
+
+                    cell_value = ', '.join(parts)
 
                 cell = resource_row.add_cell(cell_value)
                 cell.nwd = kd.nwd

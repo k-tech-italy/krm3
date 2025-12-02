@@ -125,6 +125,19 @@ def test_availability_view_current_month(client):
         special_leave_hours=3,
         special_leave_reason=SpecialLeaveReasonFactory(),
     )
+    TimeEntryFactory(
+        resource=resource,
+        date=datetime.date.today() + datetime.timedelta(days=2),
+        day_shift_hours=0,
+        rest_hours=4,
+        leave_hours=4,
+    )
+    TimeEntryFactory(
+        resource=resource,
+        date=datetime.date.today() + datetime.timedelta(days=3),
+        day_shift_hours=0,
+        sick_hours=8,
+    )
     client.login(username='user00', password='pass123')
     url = reverse('availability')
     response = client.get(url)
@@ -133,7 +146,9 @@ def test_availability_view_current_month(client):
     content = response.content.decode()
     assert f'{resource.first_name} {resource.last_name}' in content
     assert 'H' in content
-    assert 'L 6.00' in content
+    assert 'L 3.00, SL 3.00' in content
+    assert 'L 4.00, R 4.00' in content
+    assert 'S' in content
     assert '<h1 class="title">Availability Report August 2025</h1>' in content
 
 
