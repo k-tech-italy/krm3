@@ -180,3 +180,14 @@ def test_orphan_te_check_nok(orphan_scenario):
     form = TaskForm(instance=task, data=model_to_dict(task) | {'color': '#FFFFFF', 'end_date': task.start_date})
     assert form.is_valid() is False, form.errors
     assert form.errors == {'__all__': ['Would leave 1 orphan time_entries']}
+
+
+def test_task_model_validation_without_project():
+    from django.core.exceptions import ValidationError
+
+    task: 'Task' = TaskFactory.build(project=None, start_date=datetime.date(2020, 1, 1), end_date=None)
+
+    with pytest.raises(ValidationError) as exc_info:
+        task.clean()
+
+    assert exc_info.value.code == 'project_required'
