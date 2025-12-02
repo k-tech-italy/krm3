@@ -16,7 +16,7 @@ RUN apt-get update && \
     cpp gcc git libc6-dev libffi-dev libjpeg-dev libmaxminddb-dev libpq-dev \
     libsasl2-dev libssl-dev libcurl4-openssl-dev libxml2-dev libxmlsec1-dev \
     libxslt-dev libyaml-dev libzmq3-dev pkg-config python3-dev libpcre3-dev \
-    gosu libpcre3 libxml2 \
+    gosu libpcre3 libxml2 libmagic1 \
     gettext libgettextpo-dev \
     && rm -rf /var/lib/apt/lists/*
 
