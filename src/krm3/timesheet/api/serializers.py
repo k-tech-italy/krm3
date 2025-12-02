@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any, override
 
 from django.db import IntegrityError
+from django.urls.base import reverse
 from django.utils.translation import gettext_lazy as _
 from krm3.timesheet.rules import Krm3Day
 from psycopg.types.range import DateRange
@@ -136,7 +137,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
         return entry
 
     def _verify_reason_is_valid(
-        self, reason: SpecialLeaveReason | None, date: datetime.date
+            self, reason: SpecialLeaveReason | None, date: datetime.date
     ) -> SpecialLeaveReason | None:
         if not reason:
             return None
@@ -163,9 +164,12 @@ class TaskSerializer(serializers.ModelSerializer):
 class TimesheetTaskSerializer(TaskSerializer):
     project_name = serializers.SerializerMethodField()
     client_name = serializers.SerializerMethodField()
+    admin_url = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
-        fields = ('id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name')
+        fields = (
+        'id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name', 'admin_url'
+        )
 
     def get_client_name(self, obj: Task) -> str:
         return obj.project.client.name
@@ -173,9 +177,16 @@ class TimesheetTaskSerializer(TaskSerializer):
     def get_project_name(self, obj: Task) -> str:
         return obj.project.name
 
+    def get_admin_url(self, obj: Task) -> str:
+        """Only allow staff users to get the admin URL."""
+        request = self.context.get('request')
+        if request and request.user.is_staff:
+            return reverse('admin:core_task_change', args=[obj.pk])
+        return ''
+
 
 class TimesheetSerializer(serializers.Serializer):
-    tasks = TimesheetTaskSerializer(many=True)
+    tasks = serializers.SerializerMethodField()
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
     schedule = serializers.DictField(child=serializers.IntegerField())
@@ -245,6 +256,13 @@ class TimesheetSerializer(serializers.Serializer):
             return contract.get_due_hours(day.date)
         return Contract.get_default_schedule(day)
 
+    def get_tasks(self, obj: dto.TimesheetDTO) -> list[dict[str, Any]]:  # noqa
+        return TimesheetTaskSerializer(
+            obj.tasks.all(),
+            many=True,
+            context=self.context
+        ).data
+
 
 class StartEndDateRangeField(serializers.Field):
     def to_representation(self, value: Any) -> tuple[datetime.date, datetime.date] | None:
@@ -273,7 +291,7 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         resource = user.get_resource()
         if user.has_perm('core.manage_any_timesheet') or (
-            resource and user.resource.id == self.initial_data['resource']
+                resource and user.resource.id == self.initial_data['resource']
         ):
             return super().is_valid(raise_exception=raise_exception)
         if raise_exception:

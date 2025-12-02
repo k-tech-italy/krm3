@@ -134,7 +134,9 @@ class TestTaskAPIListView:
         'task_end_date',
         (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
     )
-    def test_returns_valid_time_entry_data(self, task_end_date, admin_user, api_client):
+    def test_returns_valid_time_entry_data(
+            self, task_end_date, timesheet_api_user, api_client, timesheet_api_staff_user,
+    ):
         project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
 
         task_start_date = datetime.date(2023, 1, 1)
@@ -166,20 +168,22 @@ class TestTaskAPIListView:
             resource=resource, closed=False, period=((datetime.date(2024, 1, 5), datetime.date(2024, 1, 7)))
         )
 
-        response = api_client(user=admin_user).get(
-            self.url(),
-            data={
+        api_data = {
                 'resource_id': resource.pk,
                 'start_date': time_entry_start_date.isoformat(),
                 'end_date': time_entry_end_date.isoformat(),
-            },
+            }
+        response = api_client(user=timesheet_api_user).get(
+            self.url(),
+            data=api_data,
         )
+
         assert response.status_code == status.HTTP_200_OK
 
         def _as_quantized_decimal(n: int | float | Decimal) -> str:
             return str(Decimal(n).quantize(Decimal('1.00')))
 
-        assert response.json() == {
+        expected_response =  {
             'tasks': [
                 {
                     'id': task.pk,
@@ -190,6 +194,7 @@ class TestTaskAPIListView:
                     'endDate': task_end_date.isoformat() if task_end_date else None,
                     'projectName': task.project.name,
                     'clientName': task.project.client.name,
+                    'adminUrl': '',
                 }
             ],
             'timeEntries': [
@@ -390,6 +395,16 @@ class TestTaskAPIListView:
                 'moreThanScheduleColorDarkTheme': '666666',
             },
         }
+
+        assert response.json() == expected_response
+
+        assert api_client(user=timesheet_api_staff_user).get(
+            self.url(),
+            data=api_data,
+        ).json()['tasks'][0] == expected_response['tasks'][0] | {
+            'adminUrl': reverse('admin:core_task_change', args=[task.pk])
+        }, "check that for the task, a staff user receives a URL"
+
 
     def test_schedule_with_contract(self, admin_user, api_client):
         start_date = datetime.date(2020, 5, 1)
