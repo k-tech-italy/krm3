@@ -1,3 +1,11 @@
+## 2.2.2 (2025-12-02)
+
+### Fix
+
+- **settings.py**: changelog file path as settings, added RELEASE.md (#171)
+- **AvailabilityReport**: add special_leave, rest and sick hours to be… (#176)
+- **TimeEntry-model**: update signal to clear bank deposit after delet… (#173)
+
 ## 2.2.1 (2025-11-28)
 
 ### Fix
