@@ -186,12 +186,17 @@ class TimesheetTaskSerializer(TaskSerializer):
 
 
 class TimesheetSerializer(serializers.Serializer):
-    tasks = serializers.SerializerMethodField()
+    tasks = TimesheetTaskSerializer(many=True)
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
     schedule = serializers.DictField(child=serializers.IntegerField())
     bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
     timesheet_colors = serializers.DictField(child=serializers.CharField())
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        if 'context' in kwargs:
+            self.fields['tasks'].context.update(kwargs['context'])
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_result = {}
@@ -255,13 +260,6 @@ class TimesheetSerializer(serializers.Serializer):
         if contract:
             return contract.get_due_hours(day.date)
         return Contract.get_default_schedule(day)
-
-    def get_tasks(self, obj: dto.TimesheetDTO) -> list[dict[str, Any]]:  # noqa
-        return TimesheetTaskSerializer(
-            obj.tasks.all(),
-            many=True,
-            context=self.context
-        ).data
 
 
 class StartEndDateRangeField(serializers.Field):
