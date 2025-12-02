@@ -1,3 +1,9 @@
+## 2.2.3 (2025-12-02)
+
+### Fix
+
+- **docker/Dockerfile**: Fix missing libmagic1 dep (#179)
+
 ## 2.2.2 (2025-12-02)
 
 ### Fix
