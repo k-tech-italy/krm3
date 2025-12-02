@@ -82,9 +82,10 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
 
         user = cast('User', request.user)
 
-        data = get_resource_timesheet(end_date, resource, start_date, user)
+        timesheet = get_resource_timesheet(end_date, resource, start_date, user)
+        serializer = self.get_serializer(timesheet)
 
-        return Response(data)
+        return Response(serializer.data)
 
 
 class TimeEntryAPIViewSet(viewsets.ModelViewSet):
