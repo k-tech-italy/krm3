@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
+from krm3.timesheet.dto import TimesheetDTO
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -20,7 +21,6 @@ from krm3.timesheet.api.serializers import (
     TimeEntryReadSerializer,
     TimesheetSerializer,
 )
-from krm3.timesheet.utils import get_resource_timesheet
 
 if TYPE_CHECKING:
     from krm3.core.models import User
@@ -81,11 +81,8 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
             )
 
         user = cast('User', request.user)
-
-        timesheet = get_resource_timesheet(end_date, resource, start_date, user)
-        serializer = self.get_serializer(timesheet)
-
-        return Response(serializer.data)
+        timesheet_data = TimesheetDTO(requested_by=user).fetch(resource, start_date, end_date)
+        return Response(data=self.get_serializer(timesheet_data).data)
 
 
 class TimeEntryAPIViewSet(viewsets.ModelViewSet):

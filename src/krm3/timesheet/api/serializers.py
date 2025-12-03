@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Mapping
 import datetime
 from decimal import Decimal
 from typing import Any, override
@@ -137,7 +138,7 @@ class TimeEntryCreateSerializer(BaseTimeEntrySerializer):
         return entry
 
     def _verify_reason_is_valid(
-            self, reason: SpecialLeaveReason | None, date: datetime.date
+        self, reason: SpecialLeaveReason | None, date: datetime.date
     ) -> SpecialLeaveReason | None:
         if not reason:
             return None
@@ -168,7 +169,15 @@ class TimesheetTaskSerializer(TaskSerializer):
 
     class Meta(TaskSerializer.Meta):
         fields = (
-        'id', 'title', 'basket_title', 'color', 'start_date', 'end_date', 'project_name', 'client_name', 'admin_url'
+            'id',
+            'title',
+            'basket_title',
+            'color',
+            'start_date',
+            'end_date',
+            'project_name',
+            'client_name',
+            'admin_url',
         )
 
     def get_client_name(self, obj: Task) -> str:
@@ -179,24 +188,22 @@ class TimesheetTaskSerializer(TaskSerializer):
 
     def get_admin_url(self, obj: Task) -> str:
         """Only allow staff users to get the admin URL."""
-        request = self.context.get('request')
-        if request and request.user.is_staff:
+        requestor = self.context.get('requestor')
+        if requestor and requestor.is_staff:
             return reverse('admin:core_task_change', args=[obj.pk])
         return ''
 
 
 class TimesheetSerializer(serializers.Serializer):
-    tasks = TimesheetTaskSerializer(many=True)
+    tasks = serializers.SerializerMethodField()
     time_entries = TimeEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
     schedule = serializers.DictField(child=serializers.IntegerField())
     bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
     timesheet_colors = serializers.DictField(child=serializers.CharField())
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        if 'context' in kwargs:
-            self.fields['tasks'].context.update(kwargs['context'])
+    def get_tasks(self, timesheet: dto.TimesheetDTO) -> Mapping:
+        return TimesheetTaskSerializer(timesheet.tasks, context={'requestor': timesheet.requested_by}, many=True).data
 
     def get_days(self, timesheet: dto.TimesheetDTO) -> dict[str, dict[str, bool]]:
         days_result = {}
@@ -289,7 +296,7 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         resource = user.get_resource()
         if user.has_perm('core.manage_any_timesheet') or (
-                resource and user.resource.id == self.initial_data['resource']
+            resource and user.resource.id == self.initial_data['resource']
         ):
             return super().is_valid(raise_exception=raise_exception)
         if raise_exception:

@@ -3,28 +3,10 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from dateutil.relativedelta import relativedelta
-
-from krm3.core.models import Resource, TimeEntry, User, TimesheetSubmission
-from krm3.timesheet.dto import TimesheetDTO
 
 if TYPE_CHECKING:
-    import datetime
+    from krm3.core.models import TimeEntry
     from collections.abc import Iterable
-
-
-def get_resource_timesheet(
-    end_date: datetime.date, resource: Resource, start_date: datetime.date, requestor: User
-) -> TimesheetDTO:
-    """Retrieve the resource timesheet for a specific date interval."""
-    tms = TimesheetSubmission.objects.filter(
-        resource=resource, period=[start_date, end_date + relativedelta(days=1)]
-    ).first()
-
-    if tms and tms.closed and tms.timesheet:
-        return tms.timesheet
-
-    return TimesheetDTO(requested_by=requestor).fetch(resource, start_date, end_date)
 
 
 def verify_time_entries_from_same_day(time_entries: Iterable[TimeEntry]) -> None:

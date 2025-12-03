@@ -21,7 +21,7 @@ class TimesheetDTO:
     def __init__(self, requested_by: User | None = None) -> None:
         self.tasks = TaskQuerySet().none()
         self.time_entries = TimeEntryQuerySet().none()
-        self._requested_by = requested_by
+        self.requested_by = requested_by
         self.resource = None
         self.schedule = {}
         self.timesheet_colors = {}
@@ -30,9 +30,9 @@ class TimesheetDTO:
 
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         """Fetch the resource timesheet for a specific date interval."""
-        task_qs = Task.objects.filter_acl(self._requested_by) if self._requested_by else Task.objects.all()
+        task_qs = Task.objects.filter_acl(self.requested_by) if self.requested_by else Task.objects.all()
         self.tasks = task_qs.active_between(start_date, end_date).assigned_to(resource=resource)
-        te_qs = TimeEntry.objects.filter_acl(self._requested_by) if self._requested_by else TimeEntry.objects.all()
+        te_qs = TimeEntry.objects.filter_acl(self.requested_by) if self.requested_by else TimeEntry.objects.all()
         self.time_entries = te_qs.filter(resource=resource, date__range=(start_date, end_date))
 
         self.contracts = Contract.objects.filter(
