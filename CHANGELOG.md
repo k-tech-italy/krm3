@@ -1,3 +1,9 @@
+## 2.2.5 (2025-12-03)
+
+### Fix
+
+- **timesheet**: address API errors in the background at submission time (#181)
+
 ## 2.2.4 (2025-12-02)
 
 ### Fix
