@@ -1,0 +1,433 @@
+/* Document List Page Styles */
+
+.doc-list-container {
+  @apply w-9/10 mx-auto pt-20;
+}
+
+/* Messages Styles */
+.doc-messages {
+  @apply mb-4;
+}
+
+.doc-message {
+  @apply px-4 py-3 rounded-md mb-2 border;
+
+  &.doc-message-error {
+    @apply bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800;
+  }
+
+  &.doc-message-success {
+    @apply bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800;
+  }
+
+  &.doc-message-warning {
+    @apply bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800;
+  }
+
+  &.doc-message-info {
+    @apply bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800;
+  }
+}
+
+.doc-list-header {
+  @apply mb-6 text-center relative;
+
+  h1 {
+    @apply text-3xl font-bold text-gray-800 mb-2;
+
+    @media (prefers-color-scheme: dark) {
+      color: white !important;
+    }
+  }
+}
+
+.doc-back-btn {
+  @apply px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700
+         focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+         transition-colors duration-200 text-sm font-medium;
+
+  @media (min-width: 768px) {
+    @apply absolute left-0 top-0;
+  }
+
+  @media (max-width: 767px) {
+    @apply block mx-auto mb-4;
+  }
+}
+
+/* Filter Builder Styles */
+.doc-filter-builder {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700;
+}
+
+/* Accordion Toggle Button */
+.doc-filter-accordion-toggle {
+  @apply w-full flex items-center gap-3 px-4 py-4 bg-transparent border-0 cursor-pointer text-left transition-colors;
+
+  &:hover {
+    @apply bg-gray-100 dark:bg-gray-700;
+  }
+
+  h2 {
+    @apply m-0 text-xl font-semibold text-gray-800 dark:text-gray-100;
+  }
+}
+
+.doc-filter-accordion-icon {
+  @apply text-base text-gray-600 dark:text-gray-400 transition-transform;
+}
+
+.doc-filter-indicator {
+  @apply text-blue-600 dark:text-blue-400 font-medium text-sm;
+}
+
+.doc-filter-header {
+  @apply flex justify-between items-center mb-4 pb-3 border-b border-gray-200 dark:border-gray-700;
+
+  h2 {
+    @apply text-xl font-semibold text-gray-800 dark:text-gray-100;
+  }
+}
+
+.doc-filter-actions {
+  @apply flex gap-2;
+}
+
+.doc-filter-group {
+  @apply bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-600;
+}
+
+.doc-filter-group-header {
+  @apply flex justify-between items-center mb-3;
+
+  .doc-filter-group-title {
+    @apply text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide;
+  }
+
+  .doc-filter-group-operator {
+    @apply flex items-center gap-2;
+
+    label {
+      @apply text-xs font-medium text-gray-600 dark:text-gray-400;
+    }
+
+    select {
+      @apply px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600
+             bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+             transition-colors duration-200;
+    }
+  }
+}
+
+.doc-filter-condition {
+  @apply bg-white dark:bg-gray-800 rounded-md p-3 mb-2 border border-gray-300 dark:border-gray-600;
+  @apply flex flex-wrap gap-3 items-start;
+}
+
+.doc-filter-field {
+  @apply flex flex-col flex-1 min-w-[150px];
+
+  label {
+    @apply text-xs font-medium text-gray-600 dark:text-gray-400 mb-1;
+  }
+
+  select,
+  input[type="text"],
+  input[type="date"] {
+    @apply w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600
+           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           transition-colors duration-200;
+  }
+
+  select.doc-tags-select {
+    @apply w-full;
+  }
+
+  /* Select2 selected tag styling */
+  .select2-selection__choice {
+    background-color: rgb(30 58 138) !important; /* bg-blue-900 */
+    color: rgb(191 219 254) !important; /* text-blue-200 */
+  }
+
+  .select2-selection__choice__remove {
+    color: rgb(147 197 253) !important; /* text-blue-300 */
+
+    &:hover {
+      color: rgb(56, 131, 228) !important;
+    }
+  }
+}
+
+.doc-filter-operator-field {
+  @apply flex flex-col flex-1 min-w-[120px];
+
+  label {
+    @apply text-xs font-medium text-gray-600 dark:text-gray-400 mb-1;
+  }
+
+  select {
+    @apply w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600
+           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           transition-colors duration-200;
+  }
+}
+
+.doc-filter-value-field {
+  @apply flex flex-col flex-1 min-w-[200px];
+}
+
+.doc-filter-date-range {
+  @apply flex gap-2 items-center;
+
+  .doc-filter-date-input {
+    @apply flex-1;
+  }
+
+  .doc-filter-date-separator {
+    @apply text-gray-500 dark:text-gray-400 text-sm;
+  }
+}
+
+.doc-filter-remove-btn {
+  @apply px-2 py-1 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300
+         bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md
+         transition-colors duration-200 self-end;
+}
+
+.doc-filter-group-separator {
+  @apply flex items-center justify-center my-4;
+
+  .doc-filter-logic-operator {
+    @apply px-4 py-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200
+           rounded-full text-sm font-semibold border border-blue-300 dark:border-blue-700;
+  }
+
+  select {
+    @apply px-4 py-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200
+           rounded-full text-sm font-semibold border border-blue-300 dark:border-blue-700
+           focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+}
+
+.doc-filter-add-condition-row {
+  @apply mt-3;
+}
+
+.doc-filter-add-group-row {
+  @apply mt-4;
+}
+
+.doc-filter-add-group-btn {
+  @apply px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700
+         focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+         transition-colors duration-200 text-sm font-medium;
+}
+
+.doc-filter-actions-row {
+  @apply mt-6 flex justify-center;
+
+  @media (min-width: 768px) {
+    @apply justify-end;
+  }
+}
+
+.doc-filter-apply-btn {
+  @apply px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+         transition-colors duration-200 font-semibold;
+
+  &:disabled {
+    @apply bg-gray-400 dark:bg-gray-600 cursor-not-allowed hover:bg-gray-400 dark:hover:bg-gray-600;
+  }
+}
+
+.doc-filter-clear-btn {
+  @apply px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200
+         rounded-md hover:bg-gray-300 dark:hover:bg-gray-600
+         focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
+         transition-colors duration-200 text-sm font-medium;
+
+  &:disabled {
+    @apply bg-gray-400 dark:bg-gray-600 text-gray-300 dark:text-gray-400 cursor-not-allowed;
+  }
+}
+
+.doc-filter-clear-btn-active {
+  @apply bg-blue-600 dark:bg-blue-700 text-white cursor-pointer;
+
+  &:hover {
+    @apply bg-blue-700 dark:bg-blue-800;
+  }
+}
+
+/* Active Filter Display */
+.doc-active-filter {
+  @apply bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800
+         rounded-lg p-4 mb-4;
+
+  .doc-active-filter-label {
+    @apply text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2;
+  }
+
+  .doc-active-filter-json {
+    @apply bg-white dark:bg-gray-800 rounded-md p-3 overflow-x-auto
+           font-mono text-xs text-gray-700 dark:text-gray-300
+           border border-blue-200 dark:border-blue-700;
+
+    pre {
+      @apply whitespace-pre-wrap break-words m-0;
+    }
+  }
+}
+
+/* Document Table Styles */
+.doc-table-container {
+  @apply overflow-x-auto rounded-lg shadow;
+}
+
+/* Sortable Table Header */
+.doc-table-sort-btn {
+  @apply w-full flex items-center justify-between gap-2 text-left bg-transparent border-0
+         cursor-pointer text-gray-300 hover:text-white transition-colors;
+
+  .doc-table-sort-icon {
+    @apply text-xs opacity-50;
+  }
+
+  &:hover .doc-table-sort-icon {
+    @apply opacity-100;
+  }
+
+  &.doc-table-sort-active {
+    @apply text-blue-400;
+
+    .doc-table-sort-icon {
+      @apply opacity-100 text-blue-400;
+    }
+  }
+}
+
+.doc-table {
+  @apply min-w-full bg-gray-800 border border-gray-700 rounded-lg;
+
+  thead {
+    tr {
+      @apply bg-gray-900 border-b border-gray-700;
+    }
+
+    th {
+      @apply px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider;
+    }
+  }
+
+  tbody {
+    @apply divide-y divide-gray-700;
+
+    tr {
+      @apply hover:bg-gray-700 transition-colors;
+    }
+
+    td {
+      @apply px-6 py-4 text-sm;
+    }
+
+    .doc-table-filename {
+      @apply whitespace-nowrap text-gray-200;
+    }
+
+    .doc-download-link {
+      @apply text-blue-400 hover:text-blue-300 underline transition-colors duration-200;
+    }
+
+    .doc-table-date {
+      @apply whitespace-nowrap text-gray-300;
+    }
+
+    .doc-table-period {
+      @apply whitespace-nowrap text-gray-300;
+    }
+
+    .doc-table-tags {
+      @apply flex flex-wrap gap-1;
+    }
+
+    .doc-table-empty {
+      @apply px-6 py-8 text-center text-gray-400;
+    }
+  }
+}
+
+.doc-tag-badge {
+  @apply px-2 py-1 text-xs rounded-full bg-blue-900 text-blue-200 border border-blue-700;
+
+  &.doc-tag-empty {
+    @apply bg-gray-700 text-gray-400 border-gray-600;
+  }
+}
+
+.doc-results-info {
+  @apply mt-4 text-sm text-gray-400;
+
+  .doc-results-count {
+    @apply text-white font-semibold;
+  }
+}
+
+/* Loading State */
+.doc-loading {
+  @apply flex items-center justify-center py-8;
+
+  .doc-loading-spinner {
+    @apply animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full;
+  }
+}
+
+/* Pagination Styles */
+.doc-pagination {
+  @apply mt-6 flex items-center justify-center gap-4;
+}
+
+.doc-pagination-btn {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+         transition-colors duration-200 text-sm font-medium;
+
+  &:disabled {
+    @apply bg-gray-400 dark:bg-gray-600 cursor-not-allowed hover:bg-gray-400 dark:hover:bg-gray-600;
+  }
+}
+
+.doc-pagination-info {
+  @apply text-sm text-gray-400 dark:text-gray-300 font-medium;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .doc-list-container {
+    @apply w-full px-3;
+  }
+
+  .doc-filter-builder {
+    @apply p-4;
+  }
+
+  .doc-filter-condition {
+    @apply flex-col;
+  }
+
+  .doc-filter-field,
+  .doc-filter-operator-field,
+  .doc-filter-value-field {
+    @apply w-full min-w-0;
+  }
+
+  .doc-table {
+    th,
+    td {
+      @apply px-3 py-2 text-xs;
+    }
+  }
+}

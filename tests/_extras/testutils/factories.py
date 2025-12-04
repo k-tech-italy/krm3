@@ -288,3 +288,28 @@ class SpecialLeaveReasonFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'core.SpecialLeaveReason'
         django_get_or_create = ('title',)
+
+
+# Django Simple DMS Factories
+class DocumentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'django_simple_dms.Document'
+
+    document = factory.django.FileField(filename='test_document.txt', data=b'test content')
+    admin = factory.SubFactory(UserFactory)
+
+
+class DocumentTagFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'django_simple_dms.DocumentTag'
+
+    title = factory.Sequence(lambda n: f'tag{n}')
+
+
+class DocumentGrantFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = 'django_simple_dms.DocumentGrant'
+
+    user = factory.SubFactory(UserFactory)
+    document = factory.SubFactory(DocumentFactory)
+    granted_permissions = ['R']
