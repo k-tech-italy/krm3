@@ -808,4 +808,36 @@ def test_timesheet_scheduled_hours_more_colors(
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
     )
     browser.wait_for_element_visible(element_path)
-    assert True
+
+@freeze_time('2025-06-28')
+@pytest.mark.selenium
+@pytest.mark.django_db
+def test_timesheet_non_working_day_more_colors(
+    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+):
+    """Test adding hours in non-working-day is changing color to MORE_THAN_SCHEDULE_COLOR_DARK_THEME."""
+    resource = resource_factory(user=regular_user)
+    freeze_frontend_time('2025-06-28T00:00:00Z')
+    TaskFactory(
+        resource=resource,
+        start_date=datetime.date(2025, 6, 1),
+        end_date=datetime.date(2025, 6, 30),
+    )
+
+    browser.login_as_user(regular_user)
+    browser.click('[href*="timesheet"]')
+
+    element = browser.wait_for_element_visible(
+        By.XPATH, '//div[@role="button" and starts-with(@id, "Sun Jun 29 2025")]'
+    )
+
+    browser.click_and_release(element)
+
+    browser.click('//*[contains(text(), "More")]')
+    browser.fill('//input[@id="daytime-input"]', '2')
+    browser.click('//*[contains(text(), "Save")]')
+    element_path = (
+        '//div[contains(@data-testid, "header-2025-06-29") and contains(@style,'
+        f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
+    )
+    browser.wait_for_element_visible(element_path)
