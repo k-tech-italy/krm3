@@ -1,0 +1,456 @@
+{% extends "home.html" %}
+
+{% load i18n %}
+
+{% block head %}
+    <!-- HTMX -->
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+    <!-- Alpine.js and Collapse Plugin -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <!-- Select2 CSS (already loaded in base2.html via jQuery and Select2) -->
+{% endblock %}
+
+{% block body %}
+
+    {{ block.super }}
+
+    <div class="doc-list-container" x-data="filterBuilder()">
+        <!-- Header -->
+        <div class="doc-list-header">
+            <a href="/" class="doc-back-btn">{% translate "Back" %}</a>
+            <h1>{% translate "Document Management" %}</h1>
+        </div>
+
+        <!-- Filter Builder -->
+        <div class="doc-filter-builder">
+            <!-- Accordion Toggle Button -->
+            <button
+                type="button"
+                @click="toggleAccordion()"
+                class="doc-filter-accordion-toggle"
+                :class="{ 'has-filters': !filterAccordionOpen && hasValidFilters() }">
+                <span class="doc-filter-accordion-icon" x-text="filterAccordionOpen ? '▼' : '▶'"></span>
+                <h2>{% translate "Filter Builder" %}</h2>
+                <span
+                    x-show="!filterAccordionOpen && hasValidFilters()"
+                    class="doc-filter-indicator">
+                    ({% translate "Filters applied" %})
+                </span>
+            </button>
+
+            <!-- Collapsible Filter Content -->
+            <div x-show="filterAccordionOpen" x-collapse>
+                <div class="doc-filter-header">
+                    <div class="doc-filter-actions">
+                        <button
+                            type="button"
+                            @click="clearFilters()"
+                            class="doc-filter-clear-btn"
+                            :class="{ 'doc-filter-clear-btn-active': hasValidFilters() }"
+                            :disabled="!hasValidFilters()">
+                            {% translate "Clear All" %}
+                        </button>
+                    </div>
+                </div>
+
+            <!-- Filter Groups -->
+            <template x-for="(group, groupIndex) in filterGroups" :key="'group-' + groupIndex">
+                <div>
+                    <!-- Group Separator (AND/OR between groups) -->
+                    <template x-if="groupIndex > 0">
+                        <div class="doc-filter-group-separator">
+                            <select x-model="groupLogicOperator" class="doc-filter-logic-operator">
+                                <option value="AND">AND</option>
+                                <option value="OR">OR</option>
+                            </select>
+                        </div>
+                    </template>
+
+                    <!-- Filter Group -->
+                    <div class="doc-filter-group">
+                        <div class="doc-filter-group-header">
+                            <span class="doc-filter-group-title" x-text="'Group ' + (groupIndex + 1)"></span>
+                            <div class="doc-filter-group-operator">
+                                <label>{% translate "Combine with:" %}</label>
+                                <select x-model="group.operator">
+                                    <option value="AND">AND</option>
+                                    <option value="OR">OR</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Conditions in this group -->
+                        <template x-for="(condition, condIndex) in group.conditions" :key="'cond-' + groupIndex + '-' + condIndex">
+                            <div class="doc-filter-condition">
+                                <!-- Field Selection -->
+                                <div class="doc-filter-field">
+                                    <label>{% translate "Field" %}</label>
+                                    <select x-model="condition.field" @change="onFieldChange(groupIndex, condIndex)">
+                                        <option value="">{% translate "Select field..." %}</option>
+                                        <template x-for="field in fields" :key="field.value">
+                                            <option :value="field.value" x-text="field.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <!-- Operator Selection -->
+                                <div class="doc-filter-operator-field" x-show="condition.field">
+                                    <label>{% translate "Operator" %}</label>
+                                    <select x-model="condition.operator" @change="onOperatorChange(groupIndex, condIndex)">
+                                        <template x-for="op in getOperatorsForField(condition.field)" :key="op.value">
+                                            <option :value="op.value" x-text="op.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <!-- Value Input -->
+                                <div class="doc-filter-value-field" x-show="condition.field">
+                                    <!-- Text input for filename -->
+                                    <template x-if="condition.field === 'filename'">
+                                        <div class="doc-filter-field">
+                                            <label>{% translate "Value" %}</label>
+                                            <input type="text" x-model="condition.value" placeholder="{% translate 'Enter filename...' %}">
+                                        </div>
+                                    </template>
+
+                                    <!-- Date input for upload_date -->
+                                    <template x-if="condition.field === 'upload_date' && condition.operator !== 'between'">
+                                        <div class="doc-filter-field">
+                                            <label>{% translate "Date" %}</label>
+                                            <input type="date" x-model="condition.value">
+                                        </div>
+                                    </template>
+
+                                    <!-- Date range for upload_date with 'between' -->
+                                    <template x-if="condition.field === 'upload_date' && condition.operator === 'between'">
+                                        <div class="doc-filter-field">
+                                            <label>{% translate "Date Range" %}</label>
+                                            <div class="doc-filter-date-range">
+                                                <div class="doc-filter-date-input">
+                                                    <input type="date" x-model="condition.value[0]" placeholder="{% translate 'From' %}">
+                                                </div>
+                                                <span class="doc-filter-date-separator">{% translate "to" %}</span>
+                                                <div class="doc-filter-date-input">
+                                                    <input type="date" x-model="condition.value[1]" placeholder="{% translate 'To' %}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Date range for reference_period -->
+                                    <template x-if="condition.field === 'reference_period'">
+                                        <div class="doc-filter-field">
+                                            <label>{% translate "Date Range" %}</label>
+                                            <div class="doc-filter-date-range">
+                                                <div class="doc-filter-date-input">
+                                                    <input type="date" x-model="condition.value[0]" placeholder="{% translate 'From' %}">
+                                                </div>
+                                                <span class="doc-filter-date-separator">{% translate "to" %}</span>
+                                                <div class="doc-filter-date-input">
+                                                    <input type="date" x-model="condition.value[1]" placeholder="{% translate 'To' %}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Multi-select for tags -->
+                                    <template x-if="condition.field === 'tags'">
+                                        <div class="doc-filter-field">
+                                            <label>{% translate "Tags" %}</label>
+                                            <select
+                                                multiple
+                                                x-model="condition.value"
+                                                class="doc-tags-select"
+                                                :id="'tags-select-' + groupIndex + '-' + condIndex"
+                                                x-init="initSelect2($el)">
+                                                {% for tag in available_tags %}
+                                                    <option value="{{ tag }}">{{ tag }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Remove button -->
+                                <button
+                                    type="button"
+                                    @click="removeCondition(groupIndex, condIndex)"
+                                    class="doc-filter-remove-btn"
+                                    x-show="group.conditions.length > 1">
+                                    {% translate "Remove" %}
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Add condition button -->
+                        <div class="doc-filter-add-condition-row">
+                            <button
+                                type="button"
+                                @click="addCondition(groupIndex)"
+                                class="doc-filter-clear-btn">
+                                + {% translate "Add Condition" %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Add Group Button -->
+            <div class="doc-filter-add-group-row">
+                <button type="button" @click="addGroup()" class="doc-filter-add-group-btn">
+                    + {% translate "Add Group" %}
+                </button>
+            </div>
+
+            <!-- Apply Filters Button -->
+            <div class="doc-filter-actions-row">
+                <button
+                    type="button"
+                    class="doc-filter-apply-btn"
+                    hx-get="{% url 'document_list' %}"
+                    hx-target="#document-results"
+                    hx-include="[name='filter']"
+                    :disabled="!hasValidFilters()">
+                    {% translate "Apply Filters" %}
+                </button>
+            </div>
+            </div>
+        </div>
+
+        <!-- Hidden input to hold filter parameter for HTMX -->
+        <input type="hidden" name="filter" :value="getFilterParam()" />
+
+        <!-- Document Table (HTMX will replace this) -->
+        <div id="document-results">
+            {% include "partials/document_table.html" with documents=documents %}
+        </div>
+    </div>
+
+    <script>
+        function filterBuilder() {
+            return {
+                filterGroups: [
+                    {
+                        operator: 'AND',
+                        conditions: [
+                            { field: '', operator: '', value: '' }
+                        ]
+                    }
+                ],
+                groupLogicOperator: 'OR',
+                filterAccordionOpen: false,  // Default to closed
+
+                fields: [
+                    { value: 'filename', label: '{% translate "Filename" %}' },
+                    { value: 'upload_date', label: '{% translate "Upload Date" %}' },
+                    { value: 'reference_period', label: '{% translate "Reference Period" %}' },
+                    { value: 'tags', label: '{% translate "Tags" %}' }
+                ],
+
+                operators: {
+                    filename: [
+                        { value: 'icontains', label: '{% translate "Contains" %}' },
+                        { value: 'exact', label: '{% translate "Exact match" %}' },
+                        { value: 'istartswith', label: '{% translate "Starts with" %}' },
+                        { value: 'iendswith', label: '{% translate "Ends with" %}' }
+                    ],
+                    upload_date: [
+                        { value: 'exact', label: '{% translate "Equals" %}' },
+                        { value: 'gte', label: '{% translate "After or on" %}' },
+                        { value: 'lte', label: '{% translate "Before or on" %}' },
+                        { value: 'between', label: '{% translate "Between" %}' }
+                    ],
+                    reference_period: [
+                        { value: 'overlaps', label: '{% translate "Overlaps with" %}' },
+                        { value: 'contains', label: '{% translate "Contains" %}' },
+                        { value: 'contained_by', label: '{% translate "Contained by" %}' }
+                    ],
+                    tags: [
+                        { value: 'contains_all', label: '{% translate "Contains all" %}' },
+                        { value: 'contains_any', label: '{% translate "Contains any" %}' },
+                        { value: 'exact', label: '{% translate "Exact set" %}' }
+                    ]
+                },
+
+                initSelect2(el) {
+                    // Initialize Select2 for tags dropdown
+                    $(el).select2({
+                        placeholder: '{% translate "Select tags..." %}',
+                        allowClear: true,
+                        width: '100%'
+                    });
+
+                    // Add dark text color to dropdown options when opened
+                    $(el).on('select2:open', function() {
+                        const resultsId = 'select2-' + el.id + '-results';
+                        $('#' + resultsId).addClass('text-black');
+                    });
+
+                    // Update Alpine model when Select2 changes
+                    $(el).on('change', (e) => {
+                        const value = $(el).val();
+                        this.$nextTick(() => {
+                            // Find the condition and update its value
+                            const parts = el.id.split('-');
+                            const groupIndex = parseInt(parts[2]);
+                            const condIndex = parseInt(parts[3]);
+                            this.filterGroups[groupIndex].conditions[condIndex].value = value || [];
+                        });
+                    });
+                },
+
+                getOperatorsForField(field) {
+                    return this.operators[field] || [];
+                },
+
+                onFieldChange(groupIndex, condIndex) {
+                    const condition = this.filterGroups[groupIndex].conditions[condIndex];
+                    const operators = this.getOperatorsForField(condition.field);
+
+                    // Set default operator
+                    if (operators.length > 0) {
+                        condition.operator = operators[0].value;
+                    }
+
+                    // Initialize value based on field type
+                    if (condition.field === 'tags') {
+                        condition.value = [];
+                    } else if (condition.field === 'reference_period' ||
+                               (condition.field === 'upload_date' && condition.operator === 'between')) {
+                        condition.value = ['', ''];
+                    } else {
+                        condition.value = '';
+                    }
+                },
+
+                onOperatorChange(groupIndex, condIndex) {
+                    const condition = this.filterGroups[groupIndex].conditions[condIndex];
+
+                    // Convert value format when switching to/from 'between' operator for upload_date
+                    if (condition.field === 'upload_date') {
+                        if (condition.operator === 'between' && !Array.isArray(condition.value)) {
+                            // Switching TO 'between': convert string to array
+                            condition.value = ['', ''];
+                        } else if (condition.operator !== 'between' && Array.isArray(condition.value)) {
+                            // Switching FROM 'between': convert array to string
+                            condition.value = '';
+                        }
+                    }
+                },
+
+                addCondition(groupIndex) {
+                    this.filterGroups[groupIndex].conditions.push({
+                        field: '',
+                        operator: '',
+                        value: ''
+                    });
+                },
+
+                removeCondition(groupIndex, condIndex) {
+                    if (this.filterGroups[groupIndex].conditions.length > 1) {
+                        this.filterGroups[groupIndex].conditions.splice(condIndex, 1);
+                    }
+                },
+
+                addGroup() {
+                    this.filterGroups.push({
+                        operator: 'AND',
+                        conditions: [
+                            { field: '', operator: '', value: '' }
+                        ]
+                    });
+                },
+
+                hasValidFilters() {
+                    return this.filterGroups.some(group =>
+                        group.conditions.some(cond =>
+                            cond.field && cond.operator && cond.value
+                        )
+                    );
+                },
+
+                hasAnyFieldSelected() {
+                    // Check if any field has been selected (even without complete filter)
+                    return this.filterGroups.some(group =>
+                        group.conditions.some(cond => cond.field !== '')
+                    );
+                },
+
+                clearFilters() {
+                    this.filterGroups = [{
+                        operator: 'AND',
+                        conditions: [{ field: '', operator: '', value: '' }]
+                    }];
+                    this.groupLogicOperator = 'OR';
+
+                    // Trigger HTMX to reload without filters
+                    htmx.ajax('GET', '{% url "document_list" %}', {target: '#document-results'});
+                },
+
+                buildFilterObject() {
+                    // Build filter groups (only include valid conditions)
+                    const groups = this.filterGroups
+                        .map(group => {
+                            const validConditions = group.conditions.filter(c =>
+                                c.field && c.operator && c.value
+                            );
+
+                            if (validConditions.length === 0) return null;
+
+                            if (validConditions.length === 1) {
+                                // Single condition, return it directly
+                                return validConditions[0];
+                            } else {
+                                // Multiple conditions, wrap in group operator
+                                return {
+                                    op: group.operator,
+                                    conditions: validConditions
+                                };
+                            }
+                        })
+                        .filter(g => g !== null);
+
+                    if (groups.length === 0) return null;
+                    if (groups.length === 1) return groups[0];
+
+                    return {
+                        op: this.groupLogicOperator,
+                        conditions: groups
+                    };
+                },
+
+                getFilterParam() {
+                    // Get base64 encoded filter for HTMX request
+                    const filterObj = this.buildFilterObject();
+                    if (!filterObj) return '';
+
+                    const filterJson = JSON.stringify(filterObj);
+                    return btoa(filterJson);
+                },
+
+                toggleAccordion() {
+                    this.filterAccordionOpen = !this.filterAccordionOpen;
+                }
+            };
+        }
+    </script>
+{% endblock %}
+
+{% block js-frameworks %}
+    <script>
+        // Override base template's hamburger menu script with null checks
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburgerIcon = document.getElementById('hamburger-icon');
+            if (hamburgerIcon) {
+                const navLinks = document.getElementById('nav-links');
+                const logoutButton = document.getElementById('logout-button');
+
+                hamburgerIcon.addEventListener('click', () => {
+                    if (navLinks) navLinks.classList.toggle('hidden');
+                    if (logoutButton) logoutButton.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+{% endblock %}
