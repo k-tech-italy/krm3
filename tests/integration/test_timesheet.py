@@ -65,7 +65,7 @@ def test_timesheet_data_for_current_week(
     browser.click('[href*="timesheet"]')
     browser.click('//input[@id="switch-month-on"]')
 
-    browser.assert_element('//div[contains(., "Jun 2") and contains(., "Jun 8") and text()="-"]')
+    browser.assert_element('//div[contains(., "Jun 16") and contains(., "Jun 22") and text()="-"]')
 
 
 @freeze_time('2025-06-06')
