@@ -1,6 +1,7 @@
 import decimal
 import json
 import typing
+from datetime import datetime
 from decimal import Decimal
 
 import sentry_sdk
@@ -17,7 +18,7 @@ from django.contrib.admin import ModelAdmin
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Count
-from django.http import FileResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
@@ -25,13 +26,13 @@ from django.utils.html import format_html
 from django.utils.text import slugify
 from django_tables2.export import TableExport
 
+from krm3.core.models import Expense, Mission, Reimbursement
 from krm3.currencies.models import Currency
 from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.exceptions import RateConversionError
 from krm3.missions.forms import MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
-from krm3.core.models import Expense, Mission, Reimbursement
 from krm3.missions.tables import MissionExpenseExportTable, MissionExpenseTable
 from krm3.missions.utilities import ReimbursementSummaryEnum
 from krm3.styles.buttons import NORMAL
@@ -40,9 +41,10 @@ from krm3.utils.queryset import ACLMixin
 from krm3.utils.rates import update_rates
 
 if typing.TYPE_CHECKING:
-    from krm3.missions.tables import MissionExpenseBaseTable
-    from django.http import HttpRequest, HttpResponse
     from django.db.models import QuerySet
+    from django.http import HttpRequest
+
+    from krm3.missions.tables import MissionExpenseBaseTable
 
 
 @admin.register(Mission)
@@ -99,10 +101,17 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return ret
 
     @admin.action(description='Export selected missions')
-    def export(self, request: 'HttpRequest', queryset: 'QuerySet[Mission]') -> FileResponse:
-        pathname = MissionExporter(queryset).export()
-        with open(pathname, 'rb') as f:
-            return FileResponse(f)
+    def export(self, request: 'HttpRequest', queryset: 'QuerySet[Mission]') -> HttpResponse:
+        try:
+            buffer = MissionExporter(queryset).export()
+            response = HttpResponse(buffer.read(), content_type='application/zip')
+            now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            response['Content-Disposition'] = f'attachment; filename="mission-export-{now}.zip"'
+            response['Content-Length'] = buffer.tell()
+
+            return response
+        except Exception as e:  # noqa: BLE001
+            messages.error(request, f'Failed to export missions: {e}')
 
     def get_queryset(self, request: 'HttpRequest') -> 'QuerySet[Mission]':
         return (
@@ -232,7 +241,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                     summary[ReimbursementSummaryEnum.SPESE_TRASFERTA] += (
                         expense.amount_base
                         if not expense.payment_type.personal_expense
-                        else expense.amount_reimbursement or Decimal('0')
+                        else expense.amount_reimbursement or Decimal(0)
                     ) or decimal.Decimal(0.0)
 
                 da_rimborsare = (
@@ -268,9 +277,9 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     def export_table(
         self, mission: Mission, table_data: dict, export_format: str, request: 'HttpRequest'
-    ) -> 'HttpResponse | None':
+    ) -> HttpResponse | None:
         """Export django table data."""
-        from django_tables2.config import RequestConfig
+        from django_tables2.config import RequestConfig  # noqa: PLC0415
 
         RequestConfig(request).configure(table_data)
 
