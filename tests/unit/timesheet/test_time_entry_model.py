@@ -819,3 +819,43 @@ class TestTimeEntry:
             period=DateRange(datetime.date(2020, 5, 1), datetime.date(2020, 5, 31), '[]')
         )
         assert str(timesheet) == '2020-05-01 - 2020-05-30'
+
+    def test_rejects_time_entry_on_submitted_timesheet(self):
+        """Test that time entries cannot be created or modified on submitted timesheets."""
+        resource = ResourceFactory()
+        task = TaskFactory(resource=resource)
+        date = datetime.date(2020, 5, 15)
+
+        # Should be able to create time entries when timesheet is not submitted
+        with does_not_raise():
+            TimeEntryFactory(
+                date=date,
+                resource=resource,
+                task=task,
+                day_shift_hours=8
+            )
+
+        # Create a submitted timesheet for this period
+        TimesheetSubmissionFactory(
+            resource=resource,
+            closed=True,
+            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+        )
+
+        # Should not be able to create a new time entry in the submitted period
+        with pytest.raises(exceptions.ValidationError, match='Cannot modify time entries for submitted timesheets'):
+            TimeEntryFactory(
+                date=date,
+                resource=resource,
+                task=task,
+                day_shift_hours=8
+            )
+
+        # Should be able to create time entries outside the submitted period
+        with does_not_raise():
+            TimeEntryFactory(
+                date=datetime.date(2020, 6, 15),
+                resource=resource,
+                task=task,
+                day_shift_hours=8
+            )
