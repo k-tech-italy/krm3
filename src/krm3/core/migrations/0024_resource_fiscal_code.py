@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='resource',
             name='fiscal_code',
-            field=models.CharField(blank=True, max_length=25, null=True),
+            field=models.CharField(blank=True, max_length=25, null=True, unique=True),
         ),
     ]

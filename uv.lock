@@ -1341,7 +1341,7 @@ dependencies = [
     { name = "pillow" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pyoxr" },
-    { name = "pypdf2" },
+    { name = "pypdf" },
     { name = "python-magic" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -1450,7 +1450,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=10.4" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.6" },
     { name = "pyoxr", specifier = ">=1.6" },
-    { name = "pypdf2", specifier = ">=3.0.1" },
+    { name = "pypdf", specifier = ">=6.4.0" },
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -2677,12 +2677,12 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bf/69/4a5393280bdc7a041ab0fc417208dc717dbd27cd0ac67e04c267b32b740f/pyoxr-1.6.tar.gz", hash = "sha256:bb1ae5325d02cf12443a5e270c9b51f439b84edf2433cf62eeb2ea0d869c7662", size = 2442, upload-time = "2017-07-10T21:56:23.351Z" }
 
 [[package]]
-name = "pypdf2"
-version = "3.0.1"
+name = "pypdf"
+version = "6.4.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9f/bb/18dc3062d37db6c491392007dfd1a7f524bb95886eb956569ac38a23a784/PyPDF2-3.0.1.tar.gz", hash = "sha256:a74408f69ba6271f71b9352ef4ed03dc53a31aa404d29b5d31f53bfecfee1440", size = 227419, upload-time = "2022-12-31T10:36:13.13Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/01/f7510cc6124f494cfbec2e8d3c2e1a20d4f6c18622b0c03a3a70e968bacb/pypdf-6.4.0.tar.gz", hash = "sha256:4769d471f8ddc3341193ecc5d6560fa44cf8cd0abfabf21af4e195cc0c224072", size = 5276661, upload-time = "2025-11-23T14:04:43.185Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/5e/c86a5643653825d3c913719e788e41386bee415c2b87b4f955432f2de6b2/pypdf2-3.0.1-py3-none-any.whl", hash = "sha256:d16e4205cfee272fbdc0568b68d82be796540b1537508cef59388f839c191928", size = 232572, upload-time = "2022-12-31T10:36:10.327Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/f2/9c9429411c91ac1dd5cd66780f22b6df20c64c3646cdd1e6d67cf38579c4/pypdf-6.4.0-py3-none-any.whl", hash = "sha256:55ab9837ed97fd7fcc5c131d52fcc2223bc5c6b8a1488bbf7c0e27f1f0023a79", size = 329497, upload-time = "2025-11-23T14:04:41.448Z" },
 ]
 
 [[package]]

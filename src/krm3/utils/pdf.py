@@ -3,7 +3,8 @@ from __future__ import annotations
 import io
 import typing
 
-from PyPDF2 import PdfReader, PdfWriter
+
+from pypdf import PdfReader, PdfWriter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfdocument import PDFDocument
@@ -13,13 +14,11 @@ from pdfminer.pdfparser import PDFParser
 
 if typing.TYPE_CHECKING:
     from PyPDF2 import PageObject
+    from collections.abc import Iterator
 
-
-def pdf_page_iterator(pdf_file: str) -> typing.Generator[PageObject, None, None]:
+def pdf_page_iterator(pdf_file: str) -> Iterator:
     """Iterate over pdf pages returning byte arrays containing each page."""
-    reader = PdfReader(pdf_file, strict=False)
-    for page_num in range(len(reader.pages)):
-        yield reader.pages[page_num]
+    yield from PdfReader(pdf_file, strict=False).pages
 
 
 def extract_text(page: PageObject) -> str:
