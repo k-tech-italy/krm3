@@ -1,10 +1,13 @@
 import datetime
 
 import pytest
+from django.urls import reverse
+from freezegun import freeze_time
 
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from tests._extras.testutils.factories import SuperUserFactory, TaskFactory, TimeEntryFactory, \
     ContractFactory
+from tests.unit.web.test_views import _assert_homepage_content
 
 
 class TestTimesheetTaskReport:
@@ -202,3 +205,37 @@ class TestTimesheetTaskReport:
         assert absence_row.cells[20].render() == 'F'
         assert absence_row.cells[21].render() == 'M'
         assert absence_row.cells[22].render() == 'L'
+
+
+# View tests for task report
+
+
+@freeze_time('2025-08-22')
+def test_task_report_view_current_month(client):
+    SuperUserFactory(username='user00', password='pass123')
+    task = TaskFactory()
+    TimeEntryFactory(resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task)
+    client.login(username='user00', password='pass123')
+    url = reverse('task_report')
+    response = client.get(url)
+    _assert_homepage_content(response)
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert '<h1 class="title">Task Report August 2025</h1>' in content
+
+
+@freeze_time('2025-08-22')
+@pytest.mark.parametrize(
+    'month, expected_result',
+    [
+        pytest.param('202509', 'Task Report September 2025', id='next_month'),
+        pytest.param('202507', 'Task Report July 2025', id='previous_month'),
+    ],
+)
+def test_task_report_view_next_previous_month(client, month, expected_result):
+    SuperUserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+    response = client.get(reverse('task-report-month', args=[month]))
+    _assert_homepage_content(response)
+    assert response.status_code == 200
+    assert expected_result in response.content.decode()

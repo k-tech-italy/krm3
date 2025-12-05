@@ -65,9 +65,11 @@ INSTALLED_APPS = (
     + DDT_APPS  # noqa: F405 we import it from smartadmin fragment
     + [
         # Project apps.
+        'django_simple_dms',
         'krm3.config.admin_extras.apps.AdminConfig',
         'krm3.core',
         'krm3',
+        'krm3.documents',
         'krm3.currencies',
         'krm3.missions',
         'krm3.api',

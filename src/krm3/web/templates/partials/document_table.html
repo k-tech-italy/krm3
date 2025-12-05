@@ -1,0 +1,151 @@
+{% load i18n %}
+{% load web_filters %}
+
+<!-- Display Django Messages -->
+{% if messages %}
+    <div class="doc-messages">
+        {% for message in messages %}
+            <div class="doc-message doc-message-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="doc-table-container">
+    <table class="doc-table">
+        <thead>
+            <tr>
+                <th>
+                    <button
+                        type="button"
+                        class="doc-table-sort-btn{% if current_sort == 'document' or current_sort == '-document' %} doc-table-sort-active{% endif %}"
+                        hx-get="{% url 'document_list' %}?sort={% if current_sort == 'document' %}-document{% else %}document{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                        hx-target="#document-results">
+                        <span>{% translate "Filename" %}</span>
+                        <span class="doc-table-sort-icon">
+                            {% if current_sort == 'document' %}▲{% elif current_sort == '-document' %}▼{% else %}⇅{% endif %}
+                        </span>
+                    </button>
+                </th>
+                <th>
+                    <button
+                        type="button"
+                        class="doc-table-sort-btn{% if current_sort == 'upload_date' or current_sort == '-upload_date' %} doc-table-sort-active{% endif %}"
+                        hx-get="{% url 'document_list' %}?sort={% if current_sort == 'upload_date' %}-upload_date{% else %}upload_date{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                        hx-target="#document-results">
+                        <span>{% translate "Upload Date" %}</span>
+                        <span class="doc-table-sort-icon">
+                            {% if current_sort == 'upload_date' %}▲{% elif current_sort == '-upload_date' %}▼{% else %}⇅{% endif %}
+                        </span>
+                    </button>
+                </th>
+                <th>
+                    <button
+                        type="button"
+                        class="doc-table-sort-btn{% if current_sort == 'reference_period' or current_sort == '-reference_period' %} doc-table-sort-active{% endif %}"
+                        hx-get="{% url 'document_list' %}?sort={% if current_sort == 'reference_period' %}-reference_period{% else %}reference_period{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                        hx-target="#document-results">
+                        <span>{% translate "Reference Period" %}</span>
+                        <span class="doc-table-sort-icon">
+                            {% if current_sort == 'reference_period' %}▲{% elif current_sort == '-reference_period' %}▼{% else %}⇅{% endif %}
+                        </span>
+                    </button>
+                </th>
+                <th>
+                    <button
+                        type="button"
+                        class="doc-table-sort-btn{% if current_sort == 'tags' or current_sort == '-tags' %} doc-table-sort-active{% endif %}"
+                        hx-get="{% url 'document_list' %}?sort={% if current_sort == 'tags' %}-tags{% else %}tags{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                        hx-target="#document-results">
+                        <span>{% translate "Tags" %}</span>
+                        <span class="doc-table-sort-icon">
+                            {% if current_sort == 'tags' %}▲{% elif current_sort == '-tags' %}▼{% else %}⇅{% endif %}
+                        </span>
+                    </button>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if documents %}
+                {% for doc in documents %}
+                    <tr>
+                        <td class="doc-table-filename">
+                            <a href="{{ doc.document.url }}" download class="doc-download-link">
+                                {{ doc.document.name|basename }}
+                            </a>
+                        </td>
+                        <td class="doc-table-date">
+                            {{ doc.upload_date|date:"Y-m-d H:i" }}
+                        </td>
+                        <td class="doc-table-period">
+                            {% if doc.reference_period %}
+                                {{ doc.reference_period.lower|date:"Y-m-d" }} - {{ doc.reference_period.upper|date:"Y-m-d" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="doc-table-tags">
+                                {% if doc.tags.all %}
+                                    {% for tag in doc.tags.all %}
+                                        <span class="doc-tag-badge">{{ tag.title }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="doc-tag-badge doc-tag-empty">{% translate "No tags" %}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" class="doc-table-empty">
+                        {% translate "No documents found matching the current filters." %}
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination and Results Info -->
+<div class="doc-results-info">
+    {% if documents %}
+        {% translate "Showing" %}
+        <span class="doc-results-count">{{ documents.start_index }}</span> -
+        <span class="doc-results-count">{{ documents.end_index }}</span>
+        {% translate "of" %}
+        <span class="doc-results-count">{{ documents.paginator.count }}</span>
+        {% translate "document(s)" %}
+    {% else %}
+        {% translate "No documents found" %}
+    {% endif %}
+</div>
+
+<!-- Pagination Controls -->
+{% if documents.has_other_pages %}
+    <div class="doc-pagination">
+        {% if documents.has_previous %}
+            <button
+                class="doc-pagination-btn"
+                hx-get="{% url 'document_list' %}?page={{ documents.previous_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                hx-target="#document-results">
+                {% translate "Previous" %}
+            </button>
+        {% endif %}
+
+        <span class="doc-pagination-info">
+            {% translate "Page" %} {{ documents.number }} {% translate "of" %} {{ documents.paginator.num_pages }}
+        </span>
+
+        {% if documents.has_next %}
+            <button
+                class="doc-pagination-btn"
+                hx-get="{% url 'document_list' %}?page={{ documents.next_page_number }}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}"
+                hx-target="#document-results">
+                {% translate "Next" %}
+            </button>
+        {% endif %}
+    </div>
+{% endif %}

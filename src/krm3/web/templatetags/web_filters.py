@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Any
 
@@ -20,3 +21,9 @@ def get(dict_obj: Any, key: Any) -> Any:
 @register.filter
 def is_list(obj: Any) -> bool:
     return isinstance(obj, list)
+
+
+@register.filter
+def basename(filepath: str) -> str:
+    """Extract the filename from a file path."""
+    return os.path.basename(filepath)

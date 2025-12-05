@@ -1,4 +1,6 @@
+import base64
 import datetime
+import json
 import logging
 import typing
 from pathlib import Path
@@ -13,6 +15,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Min
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -20,12 +24,14 @@ from django.utils.text import slugify
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
 
+from django_simple_dms.models import Document, DocumentTag
 from krm3.core.forms import ResourceForm
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
+from krm3.web.document_filter import DocumentFilter
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
 
 if typing.TYPE_CHECKING:
@@ -438,4 +444,132 @@ class ReleasesView(HomeView):
             changelog_html = f"<p class='text-red-400'>Error parsing CHANGELOG.md: {e}</p>"
 
         context['changelog_html'] = changelog_html
+        return context
+
+
+class DocumentListView(LoginRequiredMixin, ReportMixin, TemplateView):
+    login_url = '/admin/login/'
+    template_name = 'document_list.html'
+
+    def get_template_names(self) -> list[str]:
+        """Return partial template for HTMX requests."""
+        if self.request.headers.get('HX-Request'):
+            return ['partials/document_table.html']
+        # self.template_name is Optional[str] on the base class; cast to str to satisfy the return type
+        return [str(self.template_name)] if self.template_name else []
+
+    def _get_base_queryset(self) -> Any:
+        """Get base queryset of documents accessible by the current user."""
+        try:
+            return (
+                Document.objects.accessible_by(self.request.user)  # type: ignore
+                .prefetch_related('tags')
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f'Error getting accessible documents: {e}')
+            messages.error(self.request, _('Error loading documents. Please try again.'))
+            return Document.objects.none()
+
+    def _parse_and_apply_filter(self, queryset: Any) -> tuple[Any, dict[str, Any] | None]:
+        """Parse and apply filter from query string if present."""
+        import binascii
+
+        filter_b64 = self.request.GET.get('filter')
+        if not filter_b64:
+            return queryset, None
+
+        current_filter = None
+        try:
+            filter_json = base64.b64decode(filter_b64).decode('utf-8')
+            current_filter = json.loads(filter_json)
+            logger.info(f'Parsed filter: {current_filter}')
+
+            document_filter = DocumentFilter(queryset, current_filter)
+            queryset = document_filter.apply()
+
+            filter_errors = document_filter.get_errors()
+            if filter_errors:
+                for error in filter_errors:
+                    messages.error(self.request, error)
+
+        except json.JSONDecodeError as e:
+            logger.warning(f'Invalid JSON in filter: {e}')
+            messages.error(self.request, _('Invalid filter format. Please try again.'))
+            current_filter = None
+        except (UnicodeDecodeError, binascii.Error) as e:
+            # Must come before ValueError since these are subclasses of ValueError
+            logger.warning(f'Invalid base64 encoding in filter: {e}')
+            messages.error(self.request, _('Invalid filter encoding. Please try again.'))
+            current_filter = None
+        except ValueError as e:
+            # Catch ValueError from DocumentFilter (unsupported operators/fields)
+            logger.warning(f'Invalid filter configuration: {e}')
+            messages.error(self.request, str(e))
+            current_filter = None
+        except Exception as e:  # noqa: BLE001
+            logger.error(f'Unexpected error applying filter: {e}')
+            messages.error(self.request, _('Error applying filter. Please check your filter criteria.'))
+            current_filter = None
+
+        return queryset, current_filter
+
+    def _apply_sorting(self, queryset: Any) -> tuple[Any, str]:
+        """Apply sorting to queryset based on sort parameter."""
+        sort_param = self.request.GET.get('sort', '-upload_date')
+        valid_sort_fields = {
+            'document': 'document',
+            '-document': '-document',
+            'upload_date': 'upload_date',
+            '-upload_date': '-upload_date',
+            'reference_period': 'reference_period',
+            '-reference_period': '-reference_period',
+            'tags': 'first_tag',
+            '-tags': '-first_tag',
+        }
+
+        if sort_param in valid_sort_fields:
+            order_field = valid_sort_fields[sort_param]
+            if 'first_tag' in order_field:
+                queryset = queryset.annotate(first_tag=Min('tags__title'))
+            queryset = queryset.order_by(order_field)
+        else:
+            queryset = queryset.order_by('-upload_date')
+
+        return queryset, sort_param
+
+    def _paginate_queryset(self, queryset: Any) -> Any:
+        """Paginate the queryset."""
+        page_number = self.request.GET.get('page', 1)
+        paginator = Paginator(queryset, 10)
+
+        try:
+            return paginator.page(page_number)
+        except PageNotAnInteger:
+            return paginator.page(1)
+        except EmptyPage:
+            return paginator.page(paginator.num_pages)
+
+    def _get_available_tags(self) -> list[str]:
+        """Get list of available tags for filter dropdown."""
+        try:
+            return list(DocumentTag.objects.values_list('title', flat=True).order_by('title'))
+        except Exception as e:  # noqa: BLE001
+            logger.error(f'Error loading tags: {e}')
+            return []
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        """Build context data for document list view."""
+        context = super().get_context_data(**kwargs)
+
+        # Build queryset through pipeline of operations
+        queryset = self._get_base_queryset()
+        queryset, current_filter = self._parse_and_apply_filter(queryset)
+        queryset, current_sort = self._apply_sorting(queryset)
+
+        # Paginate and add to context
+        context['documents'] = self._paginate_queryset(queryset)
+        context['current_filter'] = current_filter
+        context['current_sort'] = current_sort
+        context['available_tags'] = self._get_available_tags()
+
         return context

@@ -40,9 +40,6 @@ if typing.TYPE_CHECKING:
     from django.http import FileResponse, HttpRequest
 
 
-def trigger_error(*args) -> None:
-    division_by_zero = 1 / 0  # noqa: F841
-
 
 @login_required
 def protected_serve(
@@ -62,9 +59,7 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path('sentry-debug/', trigger_error),
     re_path(rf'^{settings.MEDIA_URL[1:]}(?P<path>.*)$', protected_serve, {'document_root': settings.MEDIA_ROOT}),
-    path('', include('krm3.fe.urls')),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]
 
@@ -73,8 +68,15 @@ if token := env('TICKETING_TOKEN'):
 
 # Serve static files from reverse proxy in production
 if settings.DEBUG:
-    urlpatterns = urlpatterns + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Add static and media URLs before the catch-all fe pattern
+    urlpatterns = (
+        urlpatterns
+        + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+        + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    )
 
+# Add fe catch-all pattern last so it doesn't interfere with other routes
+urlpatterns.append(path('', include('krm3.fe.urls')))
 
 if not settings.TESTING:
     from debug_toolbar.toolbar import debug_toolbar_urls

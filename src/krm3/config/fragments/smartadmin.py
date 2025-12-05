@@ -17,6 +17,9 @@ SMART_ADMIN_SECTIONS = {
         'core.Country',
         'core.Resource',
     ],
+    'Documents': [
+        'django_simple_dms',
+    ],
     'Missions': [
         'core.Mission',
         'core.ExpenseCategory',
