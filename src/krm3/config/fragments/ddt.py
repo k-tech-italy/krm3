@@ -25,13 +25,11 @@ if (ddt_key := _env('DDT_KEY')) and not TESTING:
 
         def show_ddt(request):
             """Runtime check for showing debug toolbar."""
-            if not _env('DEBUG') or request.path.startswith('/api/'):
+            if not _env('DEBUG') or request.path in ignored:
                 return False
             # use https://bewisse.com/modheader/ to set custom header
             # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)`
             if flag_enabled('DDT_ENABLED', request=request):
-                if request.path in ignored:
-                    return False
                 return request.META.get('HTTP_DDT_KEY') == ddt_key
             return False
 
