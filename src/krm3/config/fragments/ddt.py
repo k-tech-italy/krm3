@@ -9,6 +9,7 @@ import os
 import sys
 
 from django_regex.utils import RegexList as _RegexList
+from flags.state import flag_enabled
 
 from ..environ import env as _env
 
@@ -27,11 +28,12 @@ if (ddt_key := _env('DDT_KEY')) and not TESTING:
             if not _env('DEBUG') or request.path.startswith('/api/'):
                 return False
             # use https://bewisse.com/modheader/ to set custom header
-            # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)
-            if request.user.is_authenticated:
+            # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)`
+            if flag_enabled('DDT_ENABLED', request=request):
                 if request.path in ignored:
                     return False
-            return request.META.get('HTTP_DDT_KEY') == ddt_key
+                return request.META.get('HTTP_DDT_KEY') == ddt_key
+            return False
 
         DEBUG_TOOLBAR_CONFIG = {
             'SHOW_TOOLBAR_CALLBACK': show_ddt,
