@@ -77,13 +77,12 @@ class MissionExporter:
                     payment_type['tree'] = str(expense.payment_type)
 
                     # copy image
-                    if expense_data['image']:
-                        realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL) - 1 :]
-                        if not Path(realpath).exists():
+                    if expense.image:
+                        if not Path(pathname := expense.image.file.name).exists():
                             raise RuntimeWarning(
-                                f'Critical error: file for expense {expense_data["id"]} not found at {realpath}'
+                                f'Critical error: file for expense {expense_data["id"]} not found at {pathname}'
                             )
-                        shutil.copy(realpath, f'{tempdir}/images')
+                        shutil.copy(pathname, f'{tempdir}/images')
                         expense_data['image'] = expense_data['image'][images_prefix_offset:]
 
             with open(f'{tempdir}/data.json', 'w') as fo:
