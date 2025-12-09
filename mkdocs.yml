@@ -177,5 +177,6 @@ nav:
           - Hot to deploy in develop environment: guides/developers/pipeline.md
   - Wiki:
       - Release workflow: wiki/ReleaseWorkflow.md
+      - New Release Workflow (proposal): wiki/NewReleaseWorkflowProposal.md
   - License: license.md
   - Tags: tags.md
