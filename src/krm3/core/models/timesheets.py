@@ -463,18 +463,17 @@ class TimeEntry(models.Model):
             raise ValidationError(errors)
 
     def _verify_timesheet_not_submitted(self) -> None:
-        if self.resource_id and self.date:
-            submitted = TimesheetSubmission.objects.filter(
-                resource=self.resource,
-                closed=True,
-                period__contains=self.date
-            ).exists()
+        submitted = TimesheetSubmission.objects.filter(
+            resource=self.resource,
+            closed=True,
+            period__contains=self.date
+        ).exists()
 
-            if submitted:
-                raise ValidationError(
-                    _('Cannot modify time entries for submitted timesheets'),
-                    code='timesheet_submitted'
-                )
+        if submitted:
+            raise ValidationError(
+                _('Cannot modify time entries for submitted timesheets'),
+                code='timesheet_submitted'
+            )
 
     def _verify_protocol_number(self) -> None:
         if self.protocol_number and not self.is_sick_day:
