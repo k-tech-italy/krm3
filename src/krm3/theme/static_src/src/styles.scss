@@ -4,6 +4,8 @@
 
 @import "./_user_profile.scss";
 
+@import "./_document_list.scss";
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
