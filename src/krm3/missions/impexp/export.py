@@ -1,33 +1,41 @@
+from __future__ import  annotations
+import io
 import json
 import os
 import shutil
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+import typing
+import zipfile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.conf import settings
 
-from krm3.core.models import City, Client, Country, Project, Resource
+from krm3.core.models import City, Client, Country, ExpenseCategory, Mission, PaymentCategory, Project, Resource
 from krm3.currencies.models import Currency
 from krm3.missions.api.serializers.expense import ExpenseExportSerializer
 from krm3.missions.api.serializers.mission import MissionSerializer
 from krm3.missions.media import EXPENSES_IMAGE_PREFIX
-from krm3.core.models import ExpenseCategory, Mission, PaymentCategory
+
+if typing.TYPE_CHECKING:
+    from django.db.models import QuerySet, Model
 
 
-def _add_data(data, param, id, data1):
-    if id not in data[param]:
+def _add_data(data: dict, param: str, pk: int, data1: Model) -> int:
+    """Add object data to dict."""
+    if pk not in data[param]:
         if hasattr(data1, 'objects'):  # we assume a django model
-            data1 = data1.objects.get(pk=id)
+            data1 = data1.objects.get(pk=pk)
             data1 = data1.default_serializer(data1, depth=0).data
-        data[param][id] = data1
+        data[param][pk] = data1
         return data1
-    return data[param][id]
+    return data[param][pk]
 
 
 class MissionExporter:
-    def __init__(self, queryset) -> None:
+    def __init__(self, queryset: QuerySet[Mission]) -> None:
         self.queryset = queryset
 
-    def export(self):
+    def export(self) -> io.BytesIO:
         images_prefix_offset = len(f'{settings.MEDIA_URL}{EXPENSES_IMAGE_PREFIX}/')
 
         data = {
@@ -69,65 +77,29 @@ class MissionExporter:
                     payment_type['tree'] = str(expense.payment_type)
 
                     # copy image
-                    if expense_data['image']:
-                        realpath = settings.MEDIA_ROOT + expense_data['image'][len(settings.MEDIA_URL) - 1 :]
-                        shutil.copy(realpath, f'{tempdir}/images')
+                    if expense.image:
+                        if not Path(pathname := expense.image.file.name).exists():
+                            raise RuntimeWarning(
+                                f'Critical error: file for expense {expense_data["id"]} not found at {pathname}'
+                            )
+                        shutil.copy(pathname, f'{tempdir}/images')
                         expense_data['image'] = expense_data['image'][images_prefix_offset:]
-
-            # for k, mission in data['missions'].items():
-            #     # reference project
-            #     if (id := mission['project']['id']) not in data['projects']:
-            #         if (client_id := mission['project']['client']['id']) not in data['clients']:
-            #             data['clients'][client_id] = mission['project']['client']
-            #             mission['project']['client'] = client_id
-            #         data['projects'][id] = mission['project']
-            #         mission['project'] = id
-            #
-            #     # reference city
-            #     if (id := mission['city']['id']) not in data['cities']:
-            #         if (country_id := mission['city']['country']['id']) not in data['countries']:
-            #             data['countries'][country_id] = mission['city']['country']
-            #             mission['city']['country'] = country_id
-            #         data['cities'][id] = mission['city']
-            #         mission['city'] = id
-            #
-            #     # reference resource
-            #     if (id := mission['resource']['id']) not in data['resources']:
-            #         if mission['resource']['profile'] and mission['resource']['profile']['user']:
-            #             del mission['resource']['profile']['user']
-            #         data['resources'][id] = mission['resource']
-            #         mission['resource'] = id
-            #
-            #     # reference currency
-            #     if (iso3 := mission['default_currency']['iso3']) not in data['currencies']:
-            #         data['currencies'][iso3] = mission['default_currency']
-            #         mission['default_currency'] = iso3
-            #
-            # for k, expense in data['expenses'].items():
-            #     # reference currency
-            #     if (iso3 := expense['currency']['iso3']) not in data['currencies']:
-            #         data['currencies'][iso3] = expense['currency']
-            #     expense['currency'] = iso3
-            #
-            #     # reference category
-            #     if (id := expense['category']['id']) not in data['categories']:
-            #         data['categories'][id] = expense['category']
-            #         tree = str(ExpenseCategory.objects.get(id=id))
-            #         del data['categories'][id]['parent']
-            #         data['categories'][id]['tree'] = tree
-            #     expense['category'] = id
-            #
-            #     # reference payment_type
-            #     if (id := expense['payment_type']['id']) not in data['payment_types']:
-            #         data['payment_types'][id] = expense['payment_type']
-            #         tree = str(PaymentCategory.objects.get(id=id))
-            #         del data['payment_types'][id]['parent']
-            #         data['payment_types'][id]['tree'] = tree
-            #     expense['payment_type'] = id
-            #
 
             with open(f'{tempdir}/data.json', 'w') as fo:
                 fo.write(json.dumps(data))
-            zipfile = NamedTemporaryFile().name
-            shutil.make_archive(zipfile, 'zip', tempdir)
-        return f'{zipfile}.zip'
+
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+                for root, _, files in os.walk(tempdir):
+                    for file in files:
+                        # Get the full path of the file on the filesystem
+                        file_path = os.path.join(root, file)
+
+                        # 'arcname' is the name the file will have INSIDE the zip.
+                        # os.path.relpath removes the absolute temp path, keeping only
+                        # the relative structure inside the zip.
+                        arcname = os.path.relpath(file_path, tempdir)
+
+                        archive.write(file_path, arcname=arcname)
+            buffer.seek(0)
+        return buffer

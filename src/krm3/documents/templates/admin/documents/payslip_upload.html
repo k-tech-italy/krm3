@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block container %}
+    {% block content %}
+        <form id="payslip-upload-form" action="#" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form }}
+            <input type=submit value="{% trans 'Submit' %}">
+        </form>
+<br>
+        <a href="{% url 'admin:django_simple_dms_document_changelist'%}">Back to documents</a>
+    {% endblock %}
+{% endblock %}

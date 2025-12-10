@@ -1,3 +1,10 @@
+## 2.2.6 (2025-12-10)
+
+### Fix
+
+- **sysinfo**: provide fallback for missing git_info module (#185)
+- **Mission-export**: Fixed bug for image not found file
+
 ## 2.2.5 (2025-12-03)
 
 ### Fix

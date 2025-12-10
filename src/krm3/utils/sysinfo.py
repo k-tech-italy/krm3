@@ -19,6 +19,11 @@ def get_commit_info(*args: typing.ParamSpecArgs, **kwargs: typing.ParamSpecKwarg
         from krm3 import git_info  # noqa: PLC0415
 
         return ', '.join([f'{x}={getattr(git_info, x)}' for x in dir(git_info) if not x.startswith('__')])
+
+    except ImportError:
+        logger.info("git_info module missing. Returning dummy information.")
+        return 'commit=N/A, branch=N/A, author=N/A'
+
     except Exception as e:
         capture_exception(e)
         logger.exception(e)
