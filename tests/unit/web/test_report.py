@@ -21,6 +21,7 @@ from tests.unit.web.test_views import _assert_homepage_content
 def test_report_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     resource = ResourceFactory()
+    ContractFactory(resource=resource)
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,

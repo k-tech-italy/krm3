@@ -4,15 +4,14 @@ import json
 import logging
 import typing
 from pathlib import Path
-from typing import Any
+from typing import Any, cast, override
 
+from krm3.core.models import User
 import markdown
-import openpyxl
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -33,6 +32,7 @@ from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from krm3.web.document_filter import DocumentFilter
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
+import openpyxl
 
 if typing.TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
@@ -40,8 +40,6 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
 
 logger = logging.getLogger(__name__)
-
-User = get_user_model()
 
 
 class ReportMixin:
@@ -79,6 +77,7 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'user_resource.html'
 
+    @override
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Check permissions before processing the request."""
         user_id = kwargs.get('pk')
@@ -289,7 +288,9 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'report.html'
 
-    def get(self, request: HttpRequest, *args, month: str = None, export: bool = False, **kwargs) -> HttpResponse:
+    def get(
+        self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
+    ) -> HttpResponse:
         self.month = month
         if export:
             ctx = self._get_base_context()
@@ -297,7 +298,7 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             filename = f'report_{slugify(title)}.xlsx'
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            report = TimesheetReportExport(ctx['start'], ctx['end'], self.request.user)
+            report = TimesheetReportExport(ctx['start'], ctx['end'], cast('User', self.request.user))
 
             report.write_excel(response, _('Resource report {title}').format(title=title))
             return response
@@ -331,15 +332,14 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
                 'October': _('October'),
                 'November': _('November'),
                 'December': _('December'),
-            }.get(start_of_month.strftime('%B'))
+            }.get(start_of_month.strftime('%B'), '')
             + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
-        ctx = super().get_context_data(**kwargs)
-        ctx.update(self._get_base_context())
+        ctx = super().get_context_data(**kwargs) | self._get_base_context()
 
-        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], self.request.user)
+        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 
@@ -348,7 +348,9 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'task_report.html'
 
-    def get(self, request: HttpRequest, *args, month: str = None, export: bool = False, **kwargs) -> HttpResponse:
+    def get(
+        self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
+    ) -> HttpResponse:
         self.month = month
         return super().get(request, *args, **kwargs)
 
@@ -380,7 +382,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
                 'October': _('October'),
                 'November': _('November'),
                 'December': _('December'),
-            }.get(start_of_month.strftime('%B'))
+            }.get(start_of_month.strftime('%B'), '')
             + f'{start_of_month.strftime(" %Y")}',
         }
 
@@ -389,7 +391,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx = self._get_base_context()
         context.update(ctx)
 
-        report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], self.request.user)
+        report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
         context['report_blocks'] = report_blocks.report_html()
 
         return context
@@ -461,10 +463,7 @@ class DocumentListView(LoginRequiredMixin, ReportMixin, TemplateView):
     def _get_base_queryset(self) -> Any:
         """Get base queryset of documents accessible by the current user."""
         try:
-            return (
-                Document.objects.accessible_by(self.request.user)  # type: ignore
-                .prefetch_related('tags')
-            )
+            return Document.objects.accessible_by(self.request.user).prefetch_related('tags')  # type: ignore
         except Exception as e:  # noqa: BLE001
             logger.error(f'Error getting accessible documents: {e}')
             messages.error(self.request, _('Error loading documents. Please try again.'))
