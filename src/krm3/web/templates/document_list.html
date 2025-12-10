@@ -60,7 +60,7 @@
                     <!-- Group Separator (AND/OR between groups) -->
                     <template x-if="groupIndex > 0">
                         <div class="doc-filter-group-separator">
-                            <select x-model="groupLogicOperator" class="doc-filter-logic-operator">
+                            <select x-model="group.groupLogicOperator" class="doc-filter-logic-operator">
                                 <option value="AND">AND</option>
                                 <option value="OR">OR</option>
                             </select>
@@ -233,12 +233,12 @@
                 filterGroups: [
                     {
                         operator: 'AND',
+                        groupLogicOperator: 'OR',  // Logic operator to combine this group with previous groups
                         conditions: [
                             { field: '', operator: '', value: '' }
                         ]
                     }
                 ],
-                groupLogicOperator: 'OR',
                 filterAccordionOpen: false,  // Default to closed
 
                 fields: [
@@ -356,6 +356,7 @@
                 addGroup() {
                     this.filterGroups.push({
                         operator: 'AND',
+                        groupLogicOperator: 'OR',  // Default to OR when adding new group
                         conditions: [
                             { field: '', operator: '', value: '' }
                         ]
@@ -380,9 +381,9 @@
                 clearFilters() {
                     this.filterGroups = [{
                         operator: 'AND',
+                        groupLogicOperator: 'OR',
                         conditions: [{ field: '', operator: '', value: '' }]
                     }];
-                    this.groupLogicOperator = 'OR';
 
                     // Trigger HTMX to reload without filters
                     htmx.ajax('GET', '{% url "document_list" %}', {target: '#document-results'});
@@ -390,34 +391,59 @@
 
                 buildFilterObject() {
                     // Build filter groups (only include valid conditions)
-                    const groups = this.filterGroups
-                        .map(group => {
+                    const processedGroups = this.filterGroups
+                        .map((group, index) => {
                             const validConditions = group.conditions.filter(c =>
                                 c.field && c.operator && c.value
                             );
 
                             if (validConditions.length === 0) return null;
 
+                            let groupFilter;
                             if (validConditions.length === 1) {
-                                // Single condition, return it directly
-                                return validConditions[0];
+                                // Single condition, use it directly
+                                groupFilter = validConditions[0];
                             } else {
                                 // Multiple conditions, wrap in group operator
-                                return {
+                                groupFilter = {
                                     op: group.operator,
                                     conditions: validConditions
                                 };
                             }
+
+                            // Attach the group logic operator (for combining with previous groups)
+                            return {
+                                filter: groupFilter,
+                                logicOp: group.groupLogicOperator || 'OR',
+                                index: index
+                            };
                         })
                         .filter(g => g !== null);
 
-                    if (groups.length === 0) return null;
-                    if (groups.length === 1) return groups[0];
+                    if (processedGroups.length === 0) return null;
+                    if (processedGroups.length === 1) return processedGroups[0].filter;
 
-                    return {
-                        op: this.groupLogicOperator,
-                        conditions: groups
-                    };
+                    // Build a nested structure based on individual group logic operators
+                    // We process groups sequentially, building up the filter tree
+                    let result = processedGroups[0].filter;
+
+                    for (let i = 1; i < processedGroups.length; i++) {
+                        const currentGroup = processedGroups[i];
+
+                        // Check if we can merge with the previous operation
+                        if (typeof result === 'object' && result.op === currentGroup.logicOp) {
+                            // We can extend the existing conditions array
+                            result.conditions.push(currentGroup.filter);
+                        } else {
+                            // We need to create a new operation node
+                            result = {
+                                op: currentGroup.logicOp,
+                                conditions: [result, currentGroup.filter]
+                            };
+                        }
+                    }
+
+                    return result;
                 },
 
                 getFilterParam() {
