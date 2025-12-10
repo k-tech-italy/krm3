@@ -11,12 +11,10 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 import logging
-import os
 from pathlib import Path
 
 import krm3
 
-from .environ import env
 from .fragments.constance import *  # noqa: F401,F403
 from .fragments.ddt import *  # noqa: F401,F403
 from .fragments.flags import *  # noqa: F401,F403
