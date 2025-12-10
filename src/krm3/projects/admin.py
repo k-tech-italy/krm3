@@ -20,12 +20,6 @@ if typing.TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
     from krm3.core.models.auth import User
 
-
-class TaskInline(admin.TabularInline):  # noqa: D101
-    model = Task
-    exclude = ['color', 'on_call_price', 'overtime_price', 'travel_price']
-    autocomplete_fields = ['resource']
-
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ProjectForm
@@ -37,7 +31,6 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         ('end_date', DateFilter.factory(title='to YYYY-MM-DD')),
     )
     autocomplete_fields = ['client']
-    inlines = [TaskInline]
 
     @button(html_attrs=NORMAL)
     def view_tasks(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
