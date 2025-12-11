@@ -1,3 +1,10 @@
+## 2.2.7 (2025-12-11)
+
+### Fix
+
+- **templates/document_list.html**: Allow diverse chaining of filter groups in document page (#188)
+- **admin.py**: delete inline task creation (#189)
+
 ## 2.2.6 (2025-12-10)
 
 ### Fix
