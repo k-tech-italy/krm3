@@ -47,6 +47,7 @@ exclude_lines =
     #except Exception
     if settings.DEBUG:
     if typing.TYPE_CHECKING:
+    if TYPE_CHECKING:
 
 
 ignore_errors = True
