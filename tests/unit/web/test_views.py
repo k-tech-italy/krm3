@@ -63,7 +63,7 @@ def test_user_with_permissions_should_see_reports_of_all_resources_with_valid_co
     contracted_resource = ResourceFactory(user=contracted_user, profile=contracted_user.profile)
     preferred_resource = ResourceFactory(user=preferred_user, profile=preferred_user.profile, preferred_in_report=True)
     expired_resource = ResourceFactory(user=expired_user, profile=expired_user.profile, preferred_in_report=True)
-    _resource_without_contract = ResourceFactory(
+    resource_without_contract = ResourceFactory(
         user=user_without_contract, profile=user_without_contract.profile, preferred_in_report=True
     )
 
@@ -86,10 +86,10 @@ def test_user_with_permissions_should_see_reports_of_all_resources_with_valid_co
         response = client.get(url)
         assert response.status_code == 200
         content = response.content.decode()
-        contracted_expected_name = expected_rendered_name(contracted_resource)
-        preferred_expected_name = expected_rendered_name(preferred_resource)
-        assert contracted_expected_name in content
-        assert preferred_expected_name in content
+        assert expected_rendered_name(contracted_resource) in content
+        assert expected_rendered_name(preferred_resource) in content
+        assert expected_rendered_name(expired_resource) not in content
+        assert expected_rendered_name(resource_without_contract) not in content
 
 
 @pytest.mark.parametrize(
