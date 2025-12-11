@@ -3,14 +3,18 @@ from __future__ import annotations
 from collections import defaultdict
 import datetime
 import json
+from typing import TYPE_CHECKING
 
 from constance import config
 from django.utils.translation import gettext_lazy as _
 
 from krm3.config import settings
-from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday, User
+from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
+
+if TYPE_CHECKING:
+    from krm3.core.models import User as UserType
 
 
 type _SubmissionPeriodData = dict[int, list[tuple[datetime.date, datetime.date]]]
@@ -37,11 +41,11 @@ class TimesheetReport:
     # TODO: consider changing this into an `enum.Flag`, or use marker mixins/traits
     need: set = set()  # allowed values: 'submissions', 'extra_holidays'
 
-    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs) -> None:
+    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: UserType, **kwargs) -> None:
         self.from_date = from_date
         self.to_date = to_date
 
-        self.valid_contracts = Contract.objects.active_between(from_date, to_date)
+        self.valid_contracts = Contract.objects.active_between(from_date, to_date)  # pyright: ignore
         self.resources = self._get_resources(user, **kwargs)
 
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
@@ -70,7 +74,7 @@ class TimesheetReport:
 
         self.calendars = self._get_calendars()
 
-    def _get_resources(self, user: User) -> list[Resource]:
+    def _get_resources(self, user: UserType) -> list[Resource]:
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             active_resource_ids = self.valid_contracts.values_list('resource', flat=True)
             return [*Resource.objects.filter(pk__in=active_resource_ids)]

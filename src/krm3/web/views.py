@@ -6,24 +6,26 @@ import typing
 from pathlib import Path
 from typing import Any, cast, override
 
-from krm3.core.models import User
+import binascii
+import openpyxl
 import markdown
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Min
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, Http404, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
-
 from django_simple_dms.models import Document, DocumentTag
+
 from krm3.core.forms import ResourceForm
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
@@ -32,14 +34,16 @@ from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from krm3.web.document_filter import DocumentFilter
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
-import openpyxl
 
 if typing.TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
 
-    from krm3.core.models import Contract
+    from krm3.core.models import Contract, User as UserType
 
 logger = logging.getLogger(__name__)
+
+
+User = get_user_model()
 
 
 class ReportMixin:
@@ -78,16 +82,14 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
     template_name = 'user_resource.html'
 
     @override
-    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponseBase:
         """Check permissions before processing the request."""
         user_id = kwargs.get('pk')
-        user = get_object_or_404(User, pk=user_id)
+        user = cast('UserType', get_object_or_404(User, pk=user_id))
 
         # Check if user has an associated resource
         resource = user.get_resource()
         if not resource:
-            from django.http import Http404
-
             raise Http404('No resource found for this user.')
 
         self.user = user
@@ -191,7 +193,9 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         projects = {'': _('All projects')} | dict(Project.objects.values_list('id', 'name'))
         context['projects'] = projects
         context['selected_project'] = selected_project
-        report_blocks = AvailabilityReportOnline(ctx['start'], ctx['end'], self.request.user, project_param)
+        report_blocks = AvailabilityReportOnline(
+            ctx['start'], ctx['end'], cast('UserType', self.request.user), project_param
+        )
         context['report_blocks'] = report_blocks.report_html()
 
         return context
@@ -298,8 +302,9 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             filename = f'report_{slugify(title)}.xlsx'
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            report = TimesheetReportExport(ctx['start'], ctx['end'], cast('User', self.request.user))
+            report = TimesheetReportExport(ctx['start'], ctx['end'], cast('UserType', self.request.user))
 
+            # FIXME: `response` is incompatible with `payslip_report.StreamWriter`
             report.write_excel(response, _('Resource report {title}').format(title=title))
             return response
         return super().get(request, *args, **kwargs)
@@ -339,7 +344,7 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs) | self._get_base_context()
 
-        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
+        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], cast('UserType', self.request.user))
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 
@@ -411,6 +416,7 @@ class ReleasesView(HomeView):
 
             soup = BeautifulSoup(changelog_html, 'html.parser')
             for h2 in soup.find_all('h2'):
+                # FIXME: `element.get()` does not necessarily return a list
                 h2['class'] = h2.get('class', []) + [
                     'text-2xl',
                     'text-blue-300',
@@ -471,8 +477,6 @@ class DocumentListView(LoginRequiredMixin, ReportMixin, TemplateView):
 
     def _parse_and_apply_filter(self, queryset: Any) -> tuple[Any, dict[str, Any] | None]:
         """Parse and apply filter from query string if present."""
-        import binascii
-
         filter_b64 = self.request.GET.get('filter')
         if not filter_b64:
             return queryset, None
