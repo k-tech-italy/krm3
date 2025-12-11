@@ -272,6 +272,7 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
 @freeze_time('2025-07-14')
 def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
     resource = ResourceFactory(user=admin_user_with_plain_password)
+    _contract = ContractFactory(resource=resource)
 
     TimeEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
     special_leave_reason_1 = SpecialLeaveReasonFactory()
