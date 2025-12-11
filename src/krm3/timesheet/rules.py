@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Self, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from krm3.core.models import Contract, TimeEntry, Resource
 from krm3.timesheet import utils
@@ -49,7 +49,7 @@ class Krm3Day(KrmDay):
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
         self.resource: Resource | None = None
-        self.data_due_hours: float = 0
+        self.data_due_hours = Decimal.from_float(0)
         self.contract: Contract | None = None
         self.holiday: bool = False
         self.time_entries: Iterable[TimeEntry] = []
@@ -83,7 +83,7 @@ class Krm3Day(KrmDay):
     def day_of_week_short_i18n(self) -> str:
         return i18n.short_day_of_week(self.date)
 
-    def apply(self, time_entries: Iterable[TimeEntry]) -> None:
+    def apply(self, time_entries: list[TimeEntry]) -> None:
         """Compute the krm3day data from the time_entries list."""
         self.time_entries = time_entries
         self.has_data = bool(time_entries)
@@ -91,18 +91,18 @@ class Krm3Day(KrmDay):
         if self.contract and (thresholds := self.contract.meal_voucher):
             meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
         for k, v in TimesheetRule.calculate(
-            not self.nwd, self.data_due_hours, meal_voucher_threshold, time_entries
+            not self.nwd, float(self.data_due_hours), meal_voucher_threshold, time_entries
         ).items():
             setattr(self, f'data_{k}', v)
 
     @classmethod
-    def from_submission(cls, submission: TimesheetSubmission) -> Iterator[Self]:
+    def from_submission(cls, submission: TimesheetSubmission) -> Iterator:
         """Convert the timesheet data from a `TimesheetSubmission`.
 
         :param submission: the `TimesheetSubmission` to convert
-        :return: a list of `Krm3Day`s covering the submission's time period
+        :return: a lazy sequence of `Krm3Day`s covering the submission's time period
         """
-        timesheet_data = submission.timesheet
+        timesheet_data = submission.timesheet or {}
 
         # NOTE: there is no point in computing totals from serialized
         #       data if we have to populate the objects with model
@@ -121,7 +121,7 @@ class Krm3Day(KrmDay):
             return (entry[key] for entry in from_)
 
         for date, day_data in timesheet_data.get('days', {}).items():
-            day = Krm3Day(date=date)
+            day = Krm3Day(day=date)
 
             this_day_time_entries = time_entries.filter(date=date)
             this_day_time_entry_data = [
@@ -147,7 +147,10 @@ class Krm3Day(KrmDay):
             day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
             day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
             day.data_special_leave_reason = (
-                ', '.join(entry_data['special_leave_reason'] for entry_data in this_day_time_entry_data) or None
+                ', '.join(
+                    reason for entry_data in this_day_time_entry_data if (reason := entry_data['special_leave_reason'])
+                )
+                or None
             )
             day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
