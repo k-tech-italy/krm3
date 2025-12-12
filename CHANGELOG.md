@@ -1,3 +1,9 @@
+## 2.2.8 (2025-12-12)
+
+### Fix
+
+- **report**: prevent crashes when accessing the report pages (#193)
+
 ## 2.2.7 (2025-12-11)
 
 ### Fix
