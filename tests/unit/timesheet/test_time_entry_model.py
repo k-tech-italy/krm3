@@ -4,6 +4,8 @@ from contextlib import nullcontext as does_not_raise
 from decimal import Decimal
 from constance.test import override_config
 
+import freezegun
+from krm3.timesheet.rules import Krm3Day
 import pytest
 from django.core import exceptions
 
@@ -338,7 +340,6 @@ class TestTimeEntry:
                 bank_from=6,
             )
 
-
     def test_holiday_rejects_any_bank_transactions(self):
         """Test that holiday entries cannot have any bank transactions."""
         resource = ResourceFactory()
@@ -607,7 +608,7 @@ class TestTimeEntry:
 
     def test_is_saved_as_leave(self):
         """Leave hours with no work or task-related hours logged"""
-        entry = TimeEntryFactory(date=datetime.date(2025,9,9), day_shift_hours=8, task=TaskFactory())
+        entry = TimeEntryFactory(date=datetime.date(2025, 9, 9), day_shift_hours=8, task=TaskFactory())
         entry.day_shift_hours = 0
         entry.leave_hours = 8
 
@@ -699,7 +700,7 @@ class TestTimeEntry:
         reason = SpecialLeaveReasonFactory()
         with expected_to_raise:
             TimeEntryFactory(
-                date=datetime.date(2025,10,21),
+                date=datetime.date(2025, 10, 21),
                 task=(
                     None
                     if str(hours_key).removesuffix('_hours') in ('sick', 'holiday', 'leave', 'special_leave')
@@ -828,34 +829,169 @@ class TestTimeEntry:
 
         # Should be able to create time entries when timesheet is not submitted
         with does_not_raise():
-            TimeEntryFactory(
-                date=date,
-                resource=resource,
-                task=task,
-                day_shift_hours=8
-            )
+            TimeEntryFactory(date=date, resource=resource, task=task, day_shift_hours=8)
 
         # Create a submitted timesheet for this period
         TimesheetSubmissionFactory(
-            resource=resource,
-            closed=True,
-            period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
+            resource=resource, closed=True, period=(datetime.date(2020, 5, 1), datetime.date(2020, 6, 1))
         )
 
         # Should not be able to create a new time entry in the submitted period
         with pytest.raises(exceptions.ValidationError, match='Cannot modify time entries for submitted timesheets'):
-            TimeEntryFactory(
-                date=date,
-                resource=resource,
-                task=task,
-                day_shift_hours=8
-            )
+            TimeEntryFactory(date=date, resource=resource, task=task, day_shift_hours=8)
 
         # Should be able to create time entries outside the submitted period
         with does_not_raise():
-            TimeEntryFactory(
-                date=datetime.date(2020, 6, 15),
-                resource=resource,
-                task=task,
-                day_shift_hours=8
-            )
+            TimeEntryFactory(date=datetime.date(2020, 6, 15), resource=resource, task=task, day_shift_hours=8)
+
+
+@freezegun.freeze_time(datetime.date(2025, 12, 10))
+class TestTimesheetSubmission:
+    def test_empty_special_leave_reason_regression(self):
+        timesheet_data = """{
+  "days": {
+    "2025-12-01": {
+      "hol": false,
+      "nwd": false,
+      "closed": false,
+      "bank_to": 0,
+      "overtime": 0,
+      "bank_from": 0,
+      "rest_hours": 0,
+      "sick_hours": 0,
+      "leave_hours": 0,
+      "meal_voucher": null,
+      "travel_hours": 0,
+      "holiday_hours": 0,
+      "on_call_hours": 0,
+      "day_shift_hours": 8,
+      "night_shift_hours": 0,
+      "special_leave_hours": 0,
+      "special_leave_reason": null
+    },
+    "2025-12-02": {
+      "hol": false,
+      "nwd": false,
+      "closed": false,
+      "bank_to": 0,
+      "overtime": 0,
+      "bank_from": 0,
+      "rest_hours": 0,
+      "sick_hours": 0,
+      "leave_hours": 0,
+      "meal_voucher": null,
+      "travel_hours": 0,
+      "holiday_hours": 0,
+      "on_call_hours": 0,
+      "day_shift_hours": 8,
+      "night_shift_hours": 0,
+      "special_leave_hours": 0,
+      "special_leave_reason": null
+    }
+  },
+  "tasks": [
+    {
+      "id": 16,
+      "color": null,
+      "title": "Some task",
+      "end_date": null,
+      "admin_url": "",
+      "start_date": "2025-12-01",
+      "client_name": "Some client",
+      "basket_title": null,
+      "project_name": "Some project"
+    }
+  ],
+  "schedule": {
+    "2025-12-01": 8,
+    "2025-12-02": 8,
+    "2025-12-03": 8,
+    "2025-12-04": 8,
+    "2025-12-05": 8,
+    "2025-12-06": 0,
+    "2025-12-07": 0,
+    "2025-12-08": 0,
+    "2025-12-09": 8,
+    "2025-12-10": 8,
+    "2025-12-11": 8,
+    "2025-12-12": 8,
+    "2025-12-13": 0,
+    "2025-12-14": 0,
+    "2025-12-15": 8,
+    "2025-12-16": 8,
+    "2025-12-17": 8,
+    "2025-12-18": 8,
+    "2025-12-19": 8,
+    "2025-12-20": 0,
+    "2025-12-21": 0,
+    "2025-12-22": 8,
+    "2025-12-23": 8,
+    "2025-12-24": 8,
+    "2025-12-25": 0,
+    "2025-12-26": 0,
+    "2025-12-27": 0,
+    "2025-12-28": 0,
+    "2025-12-29": 8,
+    "2025-12-30": 8,
+    "2025-12-31": 8
+  },
+  "bank_hours": "0.00",
+  "time_entries": [
+    {
+      "id": 806,
+      "date": "2025-12-01",
+      "task": 16,
+      "bank_to": "0.00",
+      "comment": null,
+      "bank_from": "0.00",
+      "rest_hours": "0.00",
+      "sick_hours": "0.00",
+      "task_title": "Some task",
+      "leave_hours": "0.00",
+      "travel_hours": "0.00",
+      "holiday_hours": "0.00",
+      "last_modified": "2025-12-11T08:40:56.708222+00:00",
+      "on_call_hours": "0.00",
+      "day_shift_hours": "8.00",
+      "protocol_number": null,
+      "night_shift_hours": "0.00",
+      "special_leave_hours": "0.00",
+      "special_leave_reason": null
+    },
+    {
+      "id": 807,
+      "date": "2025-12-02",
+      "task": 16,
+      "bank_to": "0.00",
+      "comment": null,
+      "bank_from": "0.00",
+      "rest_hours": "0.00",
+      "sick_hours": "0.00",
+      "task_title": "Some task",
+      "leave_hours": "0.00",
+      "travel_hours": "0.00",
+      "holiday_hours": "0.00",
+      "last_modified": "2025-12-11T08:40:56.745659+00:00",
+      "on_call_hours": "0.00",
+      "day_shift_hours": "8.00",
+      "protocol_number": null,
+      "night_shift_hours": "0.00",
+      "special_leave_hours": "0.00",
+      "special_leave_reason": null
+    }
+  ],
+  "timesheet_colors": {
+    "exact_schedule_color_dark_theme": "#3d3846",
+    "exact_schedule_color_bright_theme": "#ffffff",
+    "less_than_schedule_color_dark_theme": "#e01b24",
+    "more_than_schedule_color_dark_theme": "#1a5fb4",
+    "less_than_schedule_color_bright_theme": "#f66151",
+    "more_than_schedule_color_bright_theme": "#99c1f1"
+  }
+}
+"""
+        submission = TimesheetSubmissionFactory.build(
+            period=(datetime.date(2025, 12, 1), datetime.date(2026, 1, 1)), timesheet=json.loads(timesheet_data)
+        )
+        days = Krm3Day.from_submission(submission)
+        assert all(day.data_special_leave_reason is None for day in days)
