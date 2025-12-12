@@ -1,5 +1,5 @@
 import datetime
-from decimal import Decimal as D  # noqa: N817
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -60,7 +60,7 @@ class TimesheetTaskReport(TimesheetReport):
                 if te.task_id == task.id
             )
             if task_hours > 0:
-                setattr(kd, f'task_{task.id}_hours', D(task_hours))
+                setattr(kd, f'task_{task.id}_hours', Decimal(task_hours))
 
 
 class TimesheetTaskReportOnline(TimesheetTaskReport):
@@ -75,10 +75,10 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             row = block.add_row(ReportRow())
             resources_report_days = self.calendars[resource.id]
 
-            num_giorni, tot_hh = self._calculate_summary_data(resources_report_days)
+            scheduled_working_days, scheduled_working_hours = self._calculate_summary_data(resources_report_days)
 
-            row.add_cell(normal(num_giorni))
-            row.add_cell(normal(tot_hh))
+            row.add_cell(normal(scheduled_working_days))
+            row.add_cell(normal(scheduled_working_hours))
 
             for kd in resources_report_days:
                 row.add_cell(kd)
@@ -86,22 +86,22 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             self._add_task_rows(block, resource)
             self._add_days_per_task_row(block, resource, resources_report_days)
             self._add_timeentry_type_rows(block, resources_report_days)
-            self._add_absence_row(block, resource, resources_report_days)
+            self._add_absence_row(block, resources_report_days)
 
         return blocks
 
-    def _calculate_summary_data(self, resources_report_days: list[Krm3Day]) -> tuple[int, D]:
+    def _calculate_summary_data(self, resources_report_days: list[Krm3Day]) -> tuple[int, Decimal]:
         """Calculate number of working days and total scheduled hours."""
-        num_giorni = 0
-        tot_hh = D(0)
+        scheduled_working_days = 0
+        scheduled_working_hours = Decimal(0)
 
         for kd in resources_report_days:
             if not kd.nwd:
-                num_giorni += 1
+                scheduled_working_days += 1
                 scheduled_hours = self._get_min_working_hours(kd)
-                tot_hh += D(scheduled_hours)
+                scheduled_working_hours += Decimal(scheduled_hours)
 
-        return num_giorni, tot_hh
+        return scheduled_working_days, scheduled_working_hours
 
     def _add_timeentry_type_rows(self, block: ReportBlock, resources_report_days: list[Krm3Day]) -> None:
         """Add rows for different time entry types (night shift, on call, travel)."""
@@ -109,8 +109,8 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             row = block.add_row(ReportRow())
             row.add_cell(label)
 
-            entry_giorni = D(0)
-            entry_total_hours = D(0)
+            entry_days = Decimal(0)
+            entry_total_hours = Decimal(0)
 
             for kd in resources_report_days:
                 if not kd.nwd:
@@ -119,10 +119,10 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                         entry_total_hours += value
                         scheduled_hours = self._get_min_working_hours(kd)
                         if scheduled_hours > 0:
-                            giorni_for_day = value / D(scheduled_hours)
-                            entry_giorni += giorni_for_day
+                            hours_ratio = value / Decimal(scheduled_hours)
+                            entry_days += hours_ratio
 
-            row.add_cell(normal(entry_giorni))
+            row.add_cell(normal(entry_days))
             row.add_cell(normal(entry_total_hours))
 
             for rkd in resources_report_days:
@@ -139,24 +139,24 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
         row = ReportRow()
         row.add_cell(_('Total per day'))
 
-        total_giorni = D(0)
+        total_days = Decimal(0)
         total_hours = sum(daily_totals.values())
 
-        for kd in resources_report_days:
-            if not kd.nwd:
-                daily_total = daily_totals.get(kd.date, D(0))
+        for day in resources_report_days:
+            if not day.nwd:
+                daily_total = daily_totals.get(day.date, Decimal(0))
                 if daily_total > 0:
-                    scheduled_hours = self._get_min_working_hours(kd)
+                    scheduled_hours = self._get_min_working_hours(day)
                     if scheduled_hours > 0:
-                        giorni_for_day = daily_total / D(scheduled_hours)
-                        total_giorni += giorni_for_day
+                        hours_ratio = daily_total / Decimal(scheduled_hours)
+                        total_days += hours_ratio
 
-        row.add_cell(normal(total_giorni))
+        row.add_cell(normal(total_days))
         row.add_cell(normal(total_hours))
 
-        for kd in resources_report_days:
-            daily_total = daily_totals.get(kd.date, D(0))
-            row.add_cell(normal(daily_total) if daily_total > 0 else '').nwd = kd.nwd
+        for day in resources_report_days:
+            daily_total = daily_totals.get(day.date, Decimal(0))
+            row.add_cell(normal(daily_total) if daily_total > 0 else '').nwd = day.nwd
 
         block.rows.append(row)
 
@@ -164,13 +164,13 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
         """Calculate daily totals for all tasks."""
         daily_totals = {}
 
-        for kd in resources_report_days:
-            daily_total = D(0)
+        for day in resources_report_days:
+            daily_total = Decimal(0)
             for task in resource_tasks:
-                task_hours = getattr(kd, f'task_{task.id}_hours', None)
+                task_hours = getattr(day, f'task_{task.id}_hours', None)
                 if task_hours and task_hours > 0:
                     daily_total += task_hours
-            daily_totals[kd.date] = daily_total
+            daily_totals[day.date] = daily_total
 
         return daily_totals
 
@@ -179,66 +179,64 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
         resources_report_days: list[Krm3Day] = self.calendars[resource.id]
         resource_tasks = self.tasks.get(resource.id, [])
 
-        block.has_tasks = bool(resource_tasks)
-
         for task in resource_tasks:
             row = ReportRow()
-            row.add_cell(task.title)
+            row.add_cell(task)
 
-            task_giorni = D(0)
-            task_total_hours = D(0)
+            total_days = Decimal(0)
+            total_hours = Decimal(0)
 
-            for kd in resources_report_days:
-                task_hours = getattr(kd, f'task_{task.id}_hours', None)
+            for day in resources_report_days:
+                task_hours = getattr(day, f'task_{task.id}_hours', None)
 
                 if task_hours and task_hours > 0:
-                    task_total_hours += task_hours
+                    total_hours += task_hours
 
-                if not kd.nwd and task_hours and task_hours > 0:
-                    scheduled_hours = self._get_min_working_hours(kd)
+                if not day.nwd and task_hours and task_hours > 0:
+                    scheduled_hours = self._get_min_working_hours(day)
                     if scheduled_hours > 0:
-                        giorni_for_day = task_hours / D(scheduled_hours)
-                        task_giorni += giorni_for_day
+                        hours_ratio = task_hours / Decimal(scheduled_hours)
+                        total_days += hours_ratio
 
-            row.add_cell(normal(task_giorni))
-            row.add_cell(normal(task_total_hours))
+            row.add_cell(normal(total_days))
+            row.add_cell(normal(total_hours))
 
-            for kd in resources_report_days:
-                task_hours = getattr(kd, f'task_{task.id}_hours', None)
-                row.add_cell(normal(task_hours) if task_hours else '').nwd = kd.nwd
+            for day in resources_report_days:
+                task_hours = getattr(day, f'task_{task.id}_hours', None)
+                row.add_cell(normal(task_hours) if task_hours else '').nwd = day.nwd
 
             block.rows.append(row)
 
-    def _add_absence_row(self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]) -> None:
+    def _add_absence_row(self, block: ReportBlock, resources_report_days: list[Krm3Day]) -> None:
         """Add a row showing absence markers with schedule-based calculation."""
         row = ReportRow()
         row.add_cell(_('Absences'))
 
-        total_absence_giorni = D(0)
-        total_absence_hours = D(0)
+        total_absence_days = Decimal(0)
+        total_absence_hours = Decimal(0)
 
-        for kd in resources_report_days:
-            if not kd.nwd:
-                absence_hours = self._calculate_absence_hours_for_day(kd)
+        for day in resources_report_days:
+            if not day.nwd:
+                absence_hours = self._calculate_absence_hours_for_day(day)
                 if absence_hours > 0:
                     total_absence_hours += absence_hours
-                    scheduled_hours = self._get_min_working_hours(kd)
+                    scheduled_hours = self._get_min_working_hours(day)
                     if scheduled_hours > 0:
-                        giorni_for_day = absence_hours / D(scheduled_hours)
-                        total_absence_giorni += giorni_for_day
+                        hours_ratio = absence_hours / Decimal(scheduled_hours)
+                        total_absence_days += hours_ratio
 
-        row.add_cell(normal(total_absence_giorni))
+        row.add_cell(normal(total_absence_days))
         row.add_cell(normal(total_absence_hours))
 
-        for kd in resources_report_days:
-            marker = self._get_absence_marker(kd)
-            row.add_cell(marker).nwd = kd.nwd
+        for day in resources_report_days:
+            marker = self._get_absence_marker(day)
+            row.add_cell(marker).nwd = day.nwd
 
         block.rows.append(row)
 
-    def _calculate_absence_hours_for_day(self, kd: Krm3Day) -> D:
+    def _calculate_absence_hours_for_day(self, kd: Krm3Day) -> Decimal:
         """Calculate total absence hours for a single day."""
-        absence_hours = D(0)
+        absence_hours = Decimal(0)
 
         if kd.data_holiday:
             absence_hours += kd.data_holiday

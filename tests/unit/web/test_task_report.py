@@ -5,8 +5,7 @@ from django.urls import reverse
 from freezegun import freeze_time
 
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
-from tests._extras.testutils.factories import SuperUserFactory, TaskFactory, TimeEntryFactory, \
-    ContractFactory
+from tests._extras.testutils.factories import SuperUserFactory, TaskFactory, TimeEntryFactory, ContractFactory
 from tests.unit.web.test_views import _assert_homepage_content
 
 
@@ -22,21 +21,15 @@ class TestTimesheetTaskReport:
         self.r2 = contract_2.resource
 
         self.task_1 = TaskFactory(
-            start_date=datetime.date(2025, 6, 15),
-            end_date=datetime.date(2025, 7, 30),
-            resource=self.r1
+            start_date=datetime.date(2025, 6, 15), end_date=datetime.date(2025, 7, 30), resource=self.r1
         )
 
         self.task_2 = TaskFactory(
-            start_date=datetime.date(2025, 6, 5),
-            end_date=datetime.date(2025, 6, 10),
-            resource=self.r1
+            start_date=datetime.date(2025, 6, 5), end_date=datetime.date(2025, 6, 10), resource=self.r1
         )
 
         self.task_3 = TaskFactory(
-            start_date=datetime.date(2025, 6, 5),
-            end_date=datetime.date(2025, 7, 10),
-            resource=self.r2
+            start_date=datetime.date(2025, 6, 5), end_date=datetime.date(2025, 7, 10), resource=self.r2
         )
 
         TimeEntryFactory(
@@ -54,32 +47,16 @@ class TestTimesheetTaskReport:
             resource=self.r1,
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 25),
-            day_shift_hours=0,
-            travel_hours=5,
-            task=self.task_1,
-            resource=self.r1
+            date=datetime.date(2025, 6, 25), day_shift_hours=0, travel_hours=5, task=self.task_1, resource=self.r1
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 22),
-            day_shift_hours=0,
-            on_call_hours=5,
-            task=self.task_1,
-            resource=self.r1
+            date=datetime.date(2025, 6, 22), day_shift_hours=0, on_call_hours=5, task=self.task_1, resource=self.r1
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 22),
-            day_shift_hours=0,
-            on_call_hours=3,
-            task=self.task_2,
-            resource=self.r1
+            date=datetime.date(2025, 6, 22), day_shift_hours=0, on_call_hours=3, task=self.task_2, resource=self.r1
         )
         TimeEntryFactory(
-            date=datetime.date(2025, 6, 23),
-            day_shift_hours=0,
-            on_call_hours=4,
-            task=self.task_2,
-            resource=self.r1
+            date=datetime.date(2025, 6, 23), day_shift_hours=0, on_call_hours=4, task=self.task_2, resource=self.r1
         )
         TimeEntryFactory(
             date=datetime.date(2025, 6, 17),
@@ -100,12 +77,7 @@ class TestTimesheetTaskReport:
             sick_hours=8,
             resource=self.r1,
         )
-        TimeEntryFactory(
-            date=datetime.date(2025, 6, 20),
-            leave_hours=3,
-            day_shift_hours=0,
-            resource=self.r1
-        )
+        TimeEntryFactory(date=datetime.date(2025, 6, 20), leave_hours=3, day_shift_hours=0, resource=self.r1)
 
         self.start_date = datetime.date(2025, 6, 1)
         self.end_date = datetime.date(2025, 6, 30)
@@ -115,7 +87,7 @@ class TestTimesheetTaskReport:
         report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
         blocks = report.report_html()
 
-        matching_blocks = [b for b in blocks if b.resource.id == self.r1.id]
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
         resource1_block = matching_blocks[0]
         assert resource1_block is not None
 
@@ -131,33 +103,27 @@ class TestTimesheetTaskReport:
         report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
         blocks = report.report_html()
 
-        matching_blocks = [b for b in blocks if b.resource.id == self.r1.id]
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
         resource1_block = matching_blocks[0]
         assert resource1_block is not None
 
-        assert hasattr(resource1_block, 'has_tasks')
-        assert resource1_block.has_tasks is True
+        def has_expected_task_title(row):
+            return row.cells[0].render() == str(self.task_1)
 
-        task_row_found = False
-        for row in resource1_block.rows[1:]:
-            if row.cells[0].render() == self.task_1.title:
-                task_row_found = True
-                break
-
-        assert task_row_found
+        assert any(has_expected_task_title(row) for row in resource1_block.rows[1:])
 
     def test_task_hours_calculation(self):
         """Test that task hours are calculated correctly."""
         report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
         blocks = report.report_html()
 
-        matching_blocks = [b for b in blocks if b.resource.id == self.r1.id]
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
         resource1_block = matching_blocks[0]
         assert resource1_block is not None
 
         task1_row = None
         for row in resource1_block.rows[1:]:
-            if row.cells[0].render() == self.task_1.title:
+            if row.cells[0].render() == str(self.task_1):
                 task1_row = row
                 break
 
@@ -171,13 +137,13 @@ class TestTimesheetTaskReport:
         report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
         blocks = report.report_html()
 
-        matching_blocks = [b for b in blocks if b.resource.id == self.r1.id]
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
         resource1_block = matching_blocks[0]
         assert resource1_block is not None
 
         tot_row = None
         for row in resource1_block.rows:
-            if row.cells[0].render() == "Total per day":
+            if row.cells[0].render() == 'Total per day':
                 tot_row = row
                 break
 
@@ -191,13 +157,13 @@ class TestTimesheetTaskReport:
         report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
         blocks = report.report_html()
 
-        matching_blocks = [b for b in blocks if b.resource.id == self.r1.id]
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
         resource1_block = matching_blocks[0]
         assert resource1_block is not None
 
         absence_row = None
         for row in resource1_block.rows:
-            if row.cells[0].render() == "Absences":
+            if row.cells[0].render() == 'Absences':
                 absence_row = row
                 break
 
