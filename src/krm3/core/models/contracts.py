@@ -1,7 +1,7 @@
 import datetime
 import json
-import typing
 from decimal import Decimal
+from typing import Self, TYPE_CHECKING
 
 from constance import config as constance_config
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -13,8 +13,20 @@ from django.db import models
 from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from krm3.core.models import Task
+
+
+class ContractQuerySet(models.QuerySet['Contract']):
+    def active_between(self, start: datetime.date, end: datetime.date) -> Self:
+        """Return the contracts valid in the given interval.
+
+        :param start: the start of the interval (inclusive).
+        :param end: the end of the interval (inclusive).
+        :return: the filtered `Contract`s.
+        """
+        end = end + datetime.timedelta(days=1)
+        return self.filter(period__overlap=(start, end))
 
 
 class Contract(models.Model):
@@ -35,6 +47,8 @@ class Contract(models.Model):
         validators=[FileExtensionValidator(['pdf'])],
         help_text='Optional PDF document (PDF files only)',
     )
+
+    objects = ContractQuerySet.as_manager()
 
     class Meta:
         ordering = ('period',)
