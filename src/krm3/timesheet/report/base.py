@@ -105,9 +105,16 @@ class TimesheetReport:
             resource_id = resource.pk
             contracts: list[Contract] = self.resource_contracts.get(resource_id) or []
 
-            calendar_data[resource_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
+            if resource_id not in calendar_data:
+                calendar_data[resource_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
 
-            for day in calendar_data[resource_id]:
+            for calendar_day in KrmDay(self.from_date).range_to(self.to_date):
+                # XXX: highly inefficient!
+                if found := [day for day in calendar_data[resource_id] if day.date == calendar_day.date]:
+                    day = found[0]
+                    if day.generated_from_submission:
+                        continue
+
                 day.resource = resource
                 for c in contracts:
                     if c.falls_in(day):
@@ -125,8 +132,7 @@ class TimesheetReport:
                 if not day.nwd:
                     day.data_due_hours = min_working_hours
                 for p_lower, p_upper in self.submission_periods.get(resource_id, []):
-                    if p_lower <= day.date < p_upper:
-                        day.submitted = True
+                    day.submitted = p_lower <= day.date < p_upper
                 day.apply([te for te in self.time_entries if te.resource.pk == resource_id and te.date == day.date])
 
         return calendar_data

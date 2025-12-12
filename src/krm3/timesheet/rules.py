@@ -69,6 +69,7 @@ class Krm3Day(KrmDay):
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
         self.has_data: bool = False
+        self.generated_from_submission = False
 
         self.nwd: bool = False
         """`True` if this is a non-working day, `False` otherwise."""
@@ -122,6 +123,7 @@ class Krm3Day(KrmDay):
 
         for date, day_data in timesheet_data.get('days', {}).items():
             day = Krm3Day(day=date)
+            day.generated_from_submission = True
 
             this_day_time_entries = time_entries.filter(date=date)
             this_day_time_entry_data = [
@@ -155,10 +157,14 @@ class Krm3Day(KrmDay):
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
             day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
             day.data_bank_to = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
-            day.data_due_hours = (
-                contract.get_due_hours(day.date) if contract else Contract.get_default_schedule(day.date)
-            )
+            if (due_hours := timesheet_data.get('schedule', {}).get(date)) is not None:
+                day.data_due_hours = due_hours
+            else:
+                day.data_due_hours = (
+                    contract.get_due_hours(day.date) if contract else Contract.get_default_schedule(day.date)
+                )
             day.data_meal_voucher = day_data.get('meal_voucher')
+            day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
             # XXX: a property would be nicer, as this piece of information depends on other attributes
             day.has_data = this_day_time_entries.exists()
 
