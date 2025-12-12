@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import datetime
 from decimal import Decimal as D  # noqa: N817
 
+from krm3.core.models import SpecialLeaveReason
 import pytest
 import tablib
 from testutils.factories import SpecialLeaveReasonFactory
@@ -48,7 +49,7 @@ class TimeEntryMock:
     leave_hours: D | None
     rest_hours: D | None
     sick_hours: D | None
-    special_leave_reason: str | None
+    special_leave_reason: SpecialLeaveReason | None
     special_leave_hours: D | None
 
     # XXX: this is why we should use factories
