@@ -14,8 +14,13 @@ from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
+<<<<<<< HEAD
     from krm3.core.models import User as UserType
 
+=======
+    from collections.abc import Iterable
+    from krm3.core.models import User as UserType
+>>>>>>> 634662e (chore(typing): fix User type hints)
 
 type _SubmissionPeriodData = dict[int, list[tuple[datetime.date, datetime.date]]]
 
@@ -74,7 +79,11 @@ class TimesheetReport:
 
         self.calendars = self._get_calendars()
 
+<<<<<<< HEAD
     def _get_resources(self, user: UserType) -> list[Resource]:
+=======
+    def _get_resources(self, user: UserType) -> Iterable[Resource]:
+>>>>>>> 634662e (chore(typing): fix User type hints)
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             active_resource_ids = self.valid_contracts.values_list('resource', flat=True)
             return [*Resource.objects.filter(pk__in=active_resource_ids)]
