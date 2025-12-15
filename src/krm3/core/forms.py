@@ -2,7 +2,6 @@ import datetime
 import typing
 
 from django import forms
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
@@ -10,9 +9,7 @@ from krm3.core.models import Contract
 from krm3.utils.dates import DATE_INFINITE
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models.auth import Resource, User
-
-User = get_user_model()
+    from krm3.core.models.auth import Resource
 
 
 class ContractForm(ModelForm):
@@ -39,7 +36,7 @@ class ContractForm(ModelForm):
             return {}
         return value
 
-    def clean(self) -> dict:
+    def clean(self) -> dict | None:
         ret = super().clean()
         if self.instance.id and (new_period := self.cleaned_data.get('period')) and (self.cleaned_data.get('resource')):
             old_period = [self.instance.period.lower, self.instance.period.upper or DATE_INFINITE]
