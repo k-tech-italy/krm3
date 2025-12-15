@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import datetime
 import json
+from collections import defaultdict
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from constance import config
@@ -14,13 +15,8 @@ from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
-<<<<<<< HEAD
     from krm3.core.models import User as UserType
 
-=======
-    from collections.abc import Iterable
-    from krm3.core.models import User as UserType
->>>>>>> 634662e (chore(typing): fix User type hints)
 
 type _SubmissionPeriodData = dict[int, list[tuple[datetime.date, datetime.date]]]
 
@@ -79,11 +75,7 @@ class TimesheetReport:
 
         self.calendars = self._get_calendars()
 
-<<<<<<< HEAD
     def _get_resources(self, user: UserType) -> list[Resource]:
-=======
-    def _get_resources(self, user: UserType) -> Iterable[Resource]:
->>>>>>> 634662e (chore(typing): fix User type hints)
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             active_resource_ids = self.valid_contracts.values_list('resource', flat=True)
             return [*Resource.objects.filter(pk__in=active_resource_ids)]
@@ -139,7 +131,7 @@ class TimesheetReport:
                 min_working_hours = self._get_min_working_hours(day)
                 day.nwd = day.contract is None or day.holiday or min_working_hours == 0
                 if not day.nwd:
-                    day.data_due_hours = min_working_hours
+                    day.data_due_hours = Decimal(min_working_hours)
                 for p_lower, p_upper in self.submission_periods.get(resource_id, []):
                     day.submitted = p_lower <= day.date < p_upper
                 day.apply([te for te in self.time_entries if te.resource.pk == resource_id and te.date == day.date])
@@ -192,6 +184,10 @@ class TimesheetReport:
         calendar_data = defaultdict(list)
 
         for submission in self.submissions:
-            calendar_data[submission.resource.pk].extend(Krm3Day.from_submission(submission))
+            calendar_data[submission.resource.pk].extend(
+                day_data
+                for day_data in Krm3Day.from_submission(submission)
+                if self.from_date <= day_data.date <= self.to_date
+            )
 
         return calendar_data
