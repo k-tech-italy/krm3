@@ -68,6 +68,7 @@ class Krm3Day(KrmDay):
         self.data_meal_voucher = None
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
+        self.data_regular_hours = None
         self.has_data: bool = False
         self.generated_from_submission = False
 
@@ -163,6 +164,7 @@ class Krm3Day(KrmDay):
                 day.data_due_hours = (
                     contract.get_due_hours(day.date) if contract else Contract.get_default_schedule(day.date)
                 )
+            # XXX: there are no defaults settings, so this will be 0 or None if thresholds are not set explicitly
             day.data_meal_voucher = day_data.get('meal_voucher')
             day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
             # XXX: a property would be nicer, as this piece of information depends on other attributes

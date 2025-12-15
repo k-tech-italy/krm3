@@ -158,7 +158,7 @@ class TimesheetSubmission(models.Model):
 
         lower = KrmDay(self.period.lower).date
         upper = KrmDay(self.period.upper).date
-        timesheet = TimesheetDTO().fetch(self.resource, lower, upper + relativedelta(days=1))
+        timesheet = TimesheetDTO().fetch(self.resource, lower, upper)
         return TimesheetSerializer(timesheet).data
 
 
@@ -464,16 +464,11 @@ class TimeEntry(models.Model):
 
     def _verify_timesheet_not_submitted(self) -> None:
         submitted = TimesheetSubmission.objects.filter(
-            resource=self.resource,
-            closed=True,
-            period__contains=self.date
+            resource=self.resource, closed=True, period__contains=self.date
         ).exists()
 
         if submitted:
-            raise ValidationError(
-                _('Cannot modify time entries for submitted timesheets'),
-                code='timesheet_submitted'
-            )
+            raise ValidationError(_('Cannot modify time entries for submitted timesheets'), code='timesheet_submitted')
 
     def _verify_protocol_number(self) -> None:
         if self.protocol_number and not self.is_sick_day:
@@ -664,6 +659,7 @@ class TimeEntry(models.Model):
                 code='bank_withdraw_above_scheduled_hours',
             )
 
+
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
@@ -677,6 +673,7 @@ def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: Tim
         overwritten = TimeEntry.objects.none()
     overwritten.delete()
 
+
 @receiver(models.signals.post_delete, sender=TimeEntry)
 def clear_bank_hours_when_no_work(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     """Auto-clear bank deposits if there are no work hours."""
@@ -688,6 +685,7 @@ def clear_bank_hours_when_no_work(sender: TimeEntry, instance: TimeEntry, **kwar
     if instance.is_task_entry and total_task_hours < scheduled_hours and bank_to_entry:
         bank_to_entry.bank_to = 0
         bank_to_entry.save()
+
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
 def clear_task_entries_on_same_day(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
