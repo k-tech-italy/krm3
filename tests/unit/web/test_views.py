@@ -28,7 +28,7 @@ def _assert_homepage_content(response):
 @pytest.mark.parametrize(
     'url', ('/be/', '/be/home/', '/be/availability/', '/be/releases/', '/be/report/', '/be/task_report/')
 )
-def test_resource_user_should_see_all_be_views(resource_client, url):
+def test_resource_user_can_see_all_report_links(resource_client, url):
     response = resource_client.get(url)
     _assert_homepage_content(response)
 
@@ -40,7 +40,7 @@ def test_resource_user_should_see_all_be_views(resource_client, url):
         pytest.param('/be/task_report/', id='task_report'),
     ],
 )
-def test_user_without_permission_should_only_see_its_reports(url, resource_client):
+def test_user_without_permission_can_only_see_their_reports(url, resource_client):
     another_user = UserFactory(username='user01', password='pass123')
     another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
     response = resource_client.get(url)
@@ -54,7 +54,7 @@ def test_user_without_permission_should_only_see_its_reports(url, resource_clien
 
 @freezegun.freeze_time(datetime.datetime(2025, 1, 1))
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_user_with_permissions_should_see_reports_of_all_resources_with_valid_contract(url, client):
+def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contract(url, client):
     contracted_user = UserFactory(username='user00', password='pass123')
     preferred_user = UserFactory(username='user01', password='pass123')
     expired_user = UserFactory(username='former', password='pass123')
@@ -95,7 +95,7 @@ def test_user_with_permissions_should_see_reports_of_all_resources_with_valid_co
 @pytest.mark.parametrize(
     'url', ('/be/home/', '/be/', '/be/availability/', '/be/report/', '/be/task_report/', '/be/releases/')
 )
-def test_not_authenticated_user_should_be_redirected_to_login_page(client, url):
+def test_unauthenticated_user_is_redirected_to_login_page(client, url):
     response = client.get(url)
     assert response.status_code == 302
     assert response.url == f'/admin/login/?next={url}'
