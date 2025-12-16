@@ -53,10 +53,18 @@ def test_user_without_permission_can_only_see_their_reports(url, resource_client
 
 
 @freezegun.freeze_time(datetime.datetime(2025, 1, 1))
+@pytest.mark.parametrize(
+    'permissions',
+    (
+        pytest.param(['view_any_timesheet'], id='read_only'),
+        pytest.param(['manage_any_timesheet'], id='read_write'),
+        pytest.param(['view_any_timesheet', 'manage_any_timesheet'], id='both'),
+    ),
+)
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
-def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contract(url, client):
-    contracted_user = UserFactory(username='user00', password='pass123')
-    preferred_user = UserFactory(username='user01', password='pass123')
+def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contract(permissions, url, client):
+    contracted_user = UserFactory(username='ihaveavalidcontract', password='pass123')
+    preferred_user = UserFactory(username='ihaveonetoo', password='pass123')
     expired_user = UserFactory(username='former', password='pass123')
     user_without_contract = UserFactory(username='illegal', password='pass123')
 
@@ -80,16 +88,16 @@ def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contr
     def expected_rendered_name(resource):
         return f'{resource.last_name}</strong> {resource.first_name}'
 
-    for perm in ['manage_any_timesheet', 'view_any_timesheet']:
-        contracted_user.user_permissions.add(Permission.objects.get(codename=perm))
-        client.login(username='user00', password='pass123')
-        response = client.get(url)
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert expected_rendered_name(contracted_resource) in content
-        assert expected_rendered_name(preferred_resource) in content
-        assert expected_rendered_name(expired_resource) not in content
-        assert expected_rendered_name(resource_without_contract) not in content
+    for permission in permissions:
+        contracted_user.user_permissions.add(Permission.objects.get(codename=permission))
+    client.login(username='ihaveavalidcontract', password='pass123')
+    response = client.get(url)
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert expected_rendered_name(contracted_resource) in content
+    assert expected_rendered_name(preferred_resource) in content
+    assert expected_rendered_name(expired_resource) not in content
+    assert expected_rendered_name(resource_without_contract) not in content
 
 
 @pytest.mark.parametrize(
