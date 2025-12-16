@@ -14,6 +14,10 @@ setup() {
           --admin-username ${KRM3_ADMIN_USERNAME:-admin} \
           --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
           --admin-password ${KRM3_ADMIN_PASSWORD:-admin}
+
+  # Generate nginx configuration based on Django URL patterns
+  echo "Generating nginx configuration..."
+  django-admin generate_nginx_config --output /etc/nginx/sites-enabled/krm3.conf --verbose
 }
 if [ "${STACK_PROTOCOL}" = "https" ]; then
       echo "setting up HTTPS"
