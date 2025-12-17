@@ -179,6 +179,9 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
         resources_report_days: list[Krm3Day] = self.calendars[resource.id]
         resource_tasks = self.tasks.get(resource.id, [])
 
+        # FIXME: this is a pure function of the current state, use a property
+        block.has_tasks = bool(resource_tasks)
+
         for task in resource_tasks:
             row = ReportRow()
             row.add_cell(task)
