@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 import freezegun
 import pytest
 from django.core import exceptions
+from django.urls import reverse
 
 from krm3.projects.forms import ProjectForm
 from testutils.factories import POFactory, ProjectFactory, TaskFactory
@@ -19,6 +20,25 @@ class TestProjectForm:
         project = ProjectFactory(start_date=datetime.date(2020, 1, 1))
         form = ProjectForm(instance=project)
         assert form.fields['start_date'].initial is None
+
+    def test_project_start_date_cannot_be_later_than_task_start_date(self,  krm3client, resource, admin_client):
+        url = reverse('admin:core_project_add')
+        data = {
+            'name': 'Test Project',
+            'start_date': '2020-01-01',
+            'client': krm3client.id,
+            'task_set-TOTAL_FORMS': 1,
+            'task_set-INITIAL_FORMS': 0,
+            'task_set-MIN_NUM_FORMS': 0,
+            'task_set-MAX_NUM_FORMS': 1000,
+            'task_set-0-title': 'Test Task',
+            'task_set-0-work_price': 1,
+            'task_set-0-start_date': '2019-01-01',
+            'task_set-0-resource': resource.id
+        }
+        response = admin_client.post(url, data)
+        formset = response.context['inline_admin_formsets'][0].formset
+        assert 'A task must not start before its related project' in formset.errors[0]['__all__'][0]
 
 
 class TestProject:

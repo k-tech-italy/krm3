@@ -1,3 +1,13 @@
+## 2.3.0 (2025-12-17)
+
+### Feat
+
+- **report**: show project name alongside task name in task report (#194)
+
+### Fix
+
+- **Task**: re-add creating tasks inline (#198)
+
 ## 2.2.8 (2025-12-12)
 
 ### Fix

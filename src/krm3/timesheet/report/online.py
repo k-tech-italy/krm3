@@ -1,7 +1,7 @@
-import typing
+from typing import override, Any
 
 from krm3.core.models import Resource
-from krm3.utils.numbers import normal
+from krm3.utils.numbers import normal as normalized
 
 
 class UiElement:
@@ -19,17 +19,18 @@ class UiElement:
 
 
 class ReportCell(UiElement):
-    def __init__(self, value: typing.Any, **kwargs: dict) -> None:
+    def __init__(self, value: Any, **kwargs: dict) -> None:
         super().__init__(**kwargs)
         self.value = value
 
     @property
     def negative(self) -> bool:
         """Return True if the cell value is negative."""
-        return normal(self.value).startswith('-')
+        return normalized(self.value).startswith('-')
 
 
 class ResourceCell(ReportCell):
+    @override
     def render(self) -> str:
         return (
             f'{self.value["index"]} -'
@@ -42,7 +43,7 @@ class ReportRow(UiElement):
         super().__init__(**kwargs)
         self.cells: list[ReportCell] = []
 
-    def add_cell(self, cell: ReportCell | typing.Any, **kwargs: dict) -> ReportCell:
+    def add_cell(self, cell: ReportCell | Any, **kwargs: dict) -> ReportCell:
         if not isinstance(cell, ReportCell):
             cell = ReportCell(cell, **kwargs)
         self.cells.append(cell)

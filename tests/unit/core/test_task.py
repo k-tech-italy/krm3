@@ -1,9 +1,11 @@
 import datetime
 import typing
+from unittest.mock import patch
 
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.forms import model_to_dict
+from django.urls import reverse
 
 from krm3.projects.forms import TaskForm
 from testutils.date_utils import _dt
@@ -182,12 +184,20 @@ def test_orphan_te_check_nok(orphan_scenario):
     assert form.errors == {'__all__': ['Would leave 1 orphan time_entries']}
 
 
-def test_task_model_validation_without_project():
-    from django.core.exceptions import ValidationError
+@pytest.mark.django_db
+def test_task_form_requires_project(admin_client):
+        url = reverse('admin:core_task_add')
+        data = {
+            'title': 'Test task',
+            'resource': 1,
+            'start_date': "2022-01-01",
+            'basket_title': "example title",
+            'color': '#FFFFFF',
+        }
+        with patch("krm3.core.models.Task.clean") as clean_mock:
+            admin_client.post(url, data)
+            assert clean_mock.called
 
-    task: 'Task' = TaskFactory.build(project=None, start_date=datetime.date(2020, 1, 1), end_date=None)
-
-    with pytest.raises(ValidationError) as exc_info:
-        task.clean()
-
-    assert exc_info.value.code == 'project_required'
+        response = admin_client.post(url, data)
+        errors = response.context["adminform"].form.errors
+        assert errors['project'][0] == 'This field is required.'
