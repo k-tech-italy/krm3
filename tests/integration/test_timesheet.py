@@ -284,7 +284,6 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '2')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -312,7 +311,6 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '4')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
