@@ -8,6 +8,7 @@ from django.test import override_settings
 from freezegun import freeze_time
 from selenium.webdriver.common.by import By
 from testutils.factories import (
+    ContractFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
@@ -54,6 +55,7 @@ def test_timesheet_data_for_current_week(
 ):
     freeze_frontend_time('2025-06-19T00:00:00Z')
     resource = resource_factory(user=regular_user)
+    ContractFactory(resource=resource)
 
     TaskFactory(
         resource=resource,
@@ -284,7 +286,6 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '2')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -312,7 +313,6 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
 
     day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
     browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-leave-div")]')
 
     browser.fill('//label[contains(text(),"Leave Hours")]/following-sibling::input', '4')
     browser.fill('//label[contains(text(),"Special Leave Hours")]/following-sibling::input', '3')
@@ -478,9 +478,11 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
 
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
-    expected_error = ('Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit '
-                      'to bank hours on the same day; Cannot deposit 2.00 bank hours. Total hours '
-                      'would become 6.00 which is below scheduled hours (8).')
+    expected_error = (
+        'Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit '
+        'to bank hours on the same day; Cannot deposit 2.00 bank hours. Total hours '
+        'would become 6.00 which is below scheduled hours (8).'
+    )
     actual_error = error_element.text.strip()
 
     assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
@@ -780,6 +782,7 @@ def test_timesheet_scheduled_hours_more_colors(
     browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
 ):
     resource = resource_factory(user=regular_user)
+    ContractFactory(resource=resource)
     freeze_frontend_time('2025-06-25T00:00:00Z')
     TaskFactory(
         resource=resource,
@@ -808,6 +811,7 @@ def test_timesheet_scheduled_hours_more_colors(
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
     )
     browser.wait_for_element_visible(element_path)
+
 
 @freeze_time('2025-06-28')
 @pytest.mark.selenium

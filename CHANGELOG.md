@@ -1,3 +1,16 @@
+## 2.4.0 (2025-12-18)
+
+### Feat
+
+- **Contact**: add contacts module (#195)
+
+### Fix
+
+- **report**: privileged users can now see all "active" resources - address missing hours data in task report
+- **report**: privileged users can now see all "active" resources (#192)
+- address missing hours data in task report (#199)
+- **integration-tests**: update integration tests for timesheet to match FE changes (#190)
+
 ## 2.3.0 (2025-12-17)
 
 ### Feat

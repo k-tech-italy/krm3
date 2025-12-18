@@ -85,6 +85,13 @@ def regular_user(db):
 
     return UserFactory()
 
+@pytest.fixture
+def user_with_profile(regular_user):
+    from testutils.factories import UserProfileFactory
+
+    UserProfileFactory(user=regular_user)
+
+    return regular_user
 
 @pytest.fixture
 def staff_user(db):
