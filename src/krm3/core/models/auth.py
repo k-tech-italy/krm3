@@ -3,7 +3,8 @@ from __future__ import annotations
 import datetime
 import json
 from decimal import Decimal
-import typing
+from typing import Any, Self, TYPE_CHECKING
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
@@ -18,13 +19,13 @@ from krm3.config import settings
 from krm3.utils.dates import KrmCalendar, KrmDay
 from constance import config
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from datetime import date
     from krm3.core.models import Contract
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
+    def create_user(self, email: str, password: str | None = None, **kwargs: Any) -> User:
         if not email:
             raise ValueError('Users must have an email address')
         email = self.normalize_email(email)
@@ -33,7 +34,7 @@ class UserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, username: str, email: str, password: str | None = None, **kwargs: typing.Any) -> User:
+    def create_superuser(self, username: str, email: str, password: str | None = None, **kwargs: Any) -> User:
         kwargs.setdefault('is_active', True)
         kwargs.setdefault('is_staff', True)
         kwargs.setdefault('is_superuser', True)
@@ -50,6 +51,9 @@ class User(AbstractUser):
     objects = UserManager()  # type: ignore
     picture = models.TextField(null=True, blank=True)
     social_profile = models.TextField(null=True, blank=True)
+
+    if TYPE_CHECKING:
+        profile: 'UserProfile'
 
     @staticmethod
     def get_natural_key_fields() -> list[str]:
@@ -92,7 +96,7 @@ class UserProfile(NaturalKeyModel):
         return self.user.username
 
     @classmethod
-    def new(cls, user: User) -> typing.Self:
+    def new(cls, user: User) -> Self:
         return cls.objects.create(user=user)
 
 
@@ -138,14 +142,10 @@ class Resource(models.Model):
             vobject.readOne(self.vcard_text)
         except vobject.base.ParseError as e:
             # ParseError is raised for malformed vCards
-            raise ValidationError({
-                'vcard_text': f'Invalid vCard format: {str(e)}'
-            }) from e
+            raise ValidationError({'vcard_text': f'Invalid vCard format: {str(e)}'}) from e
         except Exception as e:
             # Catch any other unexpected errors
-            raise ValidationError({
-                'vcard_text': f'Error parsing vCard: {str(e)}'
-            }) from e
+            raise ValidationError({'vcard_text': f'Error parsing vCard: {str(e)}'}) from e
 
     def scheduled_working_hours_for_day(self, day: KrmDay) -> float:
         """Scheduled number of hours a resource should work each day.

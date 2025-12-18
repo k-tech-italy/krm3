@@ -1,9 +1,10 @@
-import typing
+from decimal import Decimal
+from typing import override, Protocol
 
 import openpyxl
 
-from decimal import Decimal as D  # noqa: N817
 from django.utils.translation import gettext as _
+from krm3.core.models import Resource, User
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.utils.numbers import safe_dec
 from krm3.web.report_styles import (
@@ -34,12 +35,13 @@ def get_report_timeentry_key_mapping() -> dict[str, str]:
 report_timeentry_key_mapping = get_report_timeentry_key_mapping()
 
 
-class StreamWriter(typing.Protocol):
+class StreamWriter(Protocol):
     def write(self, data) -> None: ...  # noqa: ANN001
 
 
 class TimesheetReportExport(TimesheetReport):
-    need = { 'extra_holidays'}
+    need = {'extra_holidays'}
+
     def write_excel(self, stream: StreamWriter, title: str) -> None:  # noqa: C901,PLR0912,PLR0915
         mapping = get_report_timeentry_key_mapping()
         wb = openpyxl.Workbook()
@@ -110,7 +112,7 @@ class TimesheetReportExport(TimesheetReport):
                             dynamic_mapping[f'sick_days_{protocol}'] = _('Sick {protocol}').format(protocol=protocol)
 
                 plain_sick_row: int = 0
-                plain_sick_dec: float = D(0)
+                plain_sick_dec: float = Decimal(0)
 
                 for lnum, (key, label) in enumerate(dynamic_mapping.items()):
                     rownum = current_row + lnum
@@ -164,3 +166,9 @@ class TimesheetReportExport(TimesheetReport):
                 current_row -= 1
 
         wb.save(stream)
+
+    @override
+    def _get_resources(self, user: User) -> list[Resource]:
+        if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            return [*Resource.objects.filter(preferred_in_report=True)]
+        return [user.get_resource()]
