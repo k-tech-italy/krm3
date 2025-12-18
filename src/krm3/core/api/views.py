@@ -11,10 +11,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 import logging
-from krm3.core.api.serializers import UserSerializer, ResourceSerializer
+from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer
 from krm3.core.models import (
     City,
     Client,
@@ -22,7 +22,7 @@ from krm3.core.models import (
     Project,
     Resource,
     User,
-    TimesheetSubmission,
+    TimesheetSubmission, Contact,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 from krm3.utils.dates import dt
@@ -97,8 +97,8 @@ class GoogleOAuthView(APIView):
         try:
             state_data = json.loads(base64.urlsafe_b64decode(encoded_state).decode())
             redirect_uri = state_data.get('redirect_uri')
-            original_oauth_state = state_data.get('state')
-        except Exception as e:
+            state_data.get('state')
+        except Exception:
             logging.exception("Failed to decode OAuth state parameter.")
             return Response(
                 {'error': 'Failed to decode state.'},
@@ -291,3 +291,14 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
         if ts:
             ts.delete()
         return super().create(request, *args, **kwargs)
+
+
+class ContactAPIViewSet(ReadOnlyModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[Contact]:
+        if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
+            return Contact.objects.all()
+        return Contact.objects.filter(user=self.request.user)
