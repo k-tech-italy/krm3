@@ -9,7 +9,8 @@ from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyDecimal
 
 from krm3.config import settings
-from krm3.core.models import User
+from krm3.core.models import User, Phone, Email, Address, Website, PhoneInfo, WebsiteInfo, AddressInfo, \
+    EmailInfo, Contact, UserProfile
 from krm3.currencies.models import Currency
 
 factories_registry = {}
@@ -49,6 +50,11 @@ class UserFactory(DjangoModelFactory):
         model = User
         django_get_or_create = ('username',)
 
+class UserProfileFactory(DjangoModelFactory):
+    user = SubFactory(UserFactory)
+    picture = Sequence(lambda n: 'picture%02d.jpg' % n)
+    class Meta:
+        model = UserProfile
 
 class SuperUserFactory(UserFactory):
     username = Sequence(lambda n: 'superuser%03d@example.com' % n)
@@ -315,3 +321,97 @@ class DocumentGrantFactory(DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     document = factory.SubFactory(DocumentFactory)
     granted_permissions = ['R']
+
+class PhoneFactory(DjangoModelFactory):
+    class Meta:
+        model = Phone
+
+    number = factory.Sequence(lambda n: f'+4811111{n:04d}')
+
+class EmailFactory(DjangoModelFactory):
+    class Meta:
+        model = Email
+    address = factory.Faker("email")
+
+class AddressFactory(DjangoModelFactory):
+    class Meta:
+        model = Address
+    address = factory.Faker("address")
+
+class WebsiteFactory(DjangoModelFactory):
+    class Meta:
+        model = Website
+    url = factory.Faker("url")
+
+class ContactFactory(DjangoModelFactory):
+    class Meta:
+        model = Contact
+        skip_postgeneration_save = True
+
+    first_name = Faker('first_name')
+    last_name = Faker('last_name')
+    tax_id = Faker('text')
+    picture = Faker('url')
+    internal_notes = Faker('text')
+    user = None
+    is_active = True
+    job_title = factory.Sequence(lambda n: f'Job_{n}')
+
+    @factory.post_generation
+    def phones(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                PhoneInfoFactory(contact=self)
+
+    @factory.post_generation
+    def emails(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                EmailInfoFactory(contact=self)
+
+    @factory.post_generation
+    def addresses(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                AddressInfoFactory(contact=self)
+
+    @factory.post_generation
+    def websites(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                WebsiteInfoFactory(contact=self)
+
+class PhoneInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = PhoneInfo
+    phone = factory.SubFactory(PhoneFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")
+
+class WebsiteInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = WebsiteInfo
+    website = factory.SubFactory(WebsiteFactory)
+    contact = factory.SubFactory(ContactFactory)
+
+class AddressInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = AddressInfo
+    address = factory.SubFactory(AddressFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")
+
+class EmailInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = EmailInfo
+    email = factory.SubFactory(EmailFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")

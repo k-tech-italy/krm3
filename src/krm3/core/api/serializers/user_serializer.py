@@ -25,6 +25,11 @@ LABEL_TO_FLAG_URL_MAP = [
         'flag': 'REPORT_ENABLED',
         'url': 'be/',
         'label': 'Report',
+    },
+    {
+        'flag': 'CONTACTS_ENABLED',
+        'url': 'contacts',
+        'label': 'Contacts',
     }
 ]
 

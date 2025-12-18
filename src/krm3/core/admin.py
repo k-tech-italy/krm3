@@ -1,15 +1,19 @@
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
+from admin_extra_buttons.decorators import button
+from admin_extra_buttons.mixins import ExtraButtonsMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
+from django.http import HttpRequest
 from django.utils.html import format_html
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm
-from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile
+from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile, Contact, \
+    AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address
 
 
 @admin.register(UserProfile)
@@ -106,3 +110,58 @@ class ExtraHolidayAdmin(ModelAdmin):
     @admin.display(description='Period', ordering='period')
     def get_period(self, obj: ExtraHoliday) -> str:
         return str(obj)
+
+
+class WebsiteInfoInline(admin.TabularInline):
+    model = WebsiteInfo
+    extra = 1
+
+
+class PhoneInfoInline(admin.TabularInline):
+    model = PhoneInfo
+    extra = 1
+
+
+class EmailInfoInline(admin.TabularInline):
+    model = EmailInfo
+    extra = 1
+
+
+class AddressInfoInline(admin.TabularInline):
+    model = AddressInfo
+    extra = 1
+
+
+@admin.register(Contact)
+class ContactAdmin(ExtraButtonsMixin, admin.ModelAdmin):
+    list_display = ('first_name', 'last_name', 'job_title', 'is_active')
+    search_fields = ('first_name', 'last_name', 'tax_id')
+    inlines = [
+        WebsiteInfoInline,
+        PhoneInfoInline,
+        EmailInfoInline,
+        AddressInfoInline,
+    ]
+
+    @button(label="fetch photo")
+    def fetch_picture(self, request: HttpRequest, contact_id: str) -> None:
+        Contact.objects.get(pk=contact_id).fetch_picture()
+
+@admin.register(Website)
+class WebsiteAdmin(admin.ModelAdmin):
+    list_display = ('url',)
+
+
+@admin.register(Phone)
+class PhoneAdmin(admin.ModelAdmin):
+    list_display = ('number',)
+
+
+@admin.register(Email)
+class EmailAddressAdmin(admin.ModelAdmin):
+    list_display = ('address',)
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('address',)
