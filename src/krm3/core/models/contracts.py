@@ -10,11 +10,13 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
+from krm3.core.storage import PrivateMediaStorage, ProtectedFileField
 from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
     from krm3.core.models import Task
+    from krm3.core.models.auth import User
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
@@ -28,6 +30,49 @@ class ContractQuerySet(models.QuerySet['Contract']):
         end = end + datetime.timedelta(days=1)
         return self.filter(period__overlap=(start, end))
 
+    def accessible_by(self, user: 'User') -> Self:
+        """Return contracts accessible by the given user.
+
+        A contract is accessible if:
+        1. User is superuser, OR
+        2. User has 'view_any_contract' or 'manage_any_contract' permission, OR
+        3. The contract's resource matches the user's resource
+
+        Args:
+            user: The user to check access for
+
+        Returns:
+            QuerySet of accessible contracts
+
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Superuser has access to all contracts
+        if user.is_superuser:
+            return self.all()
+
+        # Check if user has the any-contract permissions
+        if user.get_all_permissions().intersection({'core.view_any_contract', 'core.manage_any_contract'}):
+            return self.all()
+
+        # Filter by user's own resource
+        try:
+            if user_resource := user.get_resource():
+                return self.filter(resource=user_resource)
+            # User has no resource
+            logger.warning(
+                f"User {user.username} (id={user.id}) does not have an associated resource. "
+                "No contract access granted."
+            )
+            return self.none()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Error getting resource for user {user.username} (id={user.id}). "
+                f"No contract access granted. Error: {e}"
+            )
+            return self.none()
+
 
 class Contract(models.Model):
     resource = models.ForeignKey('core.Resource', on_delete=models.CASCADE)
@@ -40,8 +85,12 @@ class Contract(models.Model):
     working_schedule = models.JSONField(blank=True, default=dict)
     meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
-    document = models.FileField(
+    # Use ProtectedFileField for secure file serving via nginx X-Accel-Redirect
+    # The url property will automatically return the protected Django view URL
+    document = ProtectedFileField(
         upload_to=contract_directory_path,
+        storage=PrivateMediaStorage,
+        protected_url_name='protected_contract',
         null=True,
         blank=True,
         validators=[FileExtensionValidator(['pdf'])],
@@ -52,6 +101,10 @@ class Contract(models.Model):
 
     class Meta:
         ordering = ('period',)
+        permissions = [
+            ('view_any_contract', "Can view(only) everybody's contracts"),
+            ('manage_any_contract', "Can view, and manage everybody's contracts"),
+        ]
         constraints = [
             ExclusionConstraint(
                 name='exclude_overlapping_contracts',
