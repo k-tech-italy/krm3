@@ -86,6 +86,16 @@
                             {% endfor %}
                         {% endif %}
                     </div>
+
+                    <div class="profile-field-group">
+                        <label for="id_preferred_language">{% trans "Preferred Language" %} *</label>
+                        {{ form.preferred_language }}
+                        {% if form.preferred_language.errors %}
+                            {% for error in form.preferred_language.errors %}
+                                <span class="preferred-language-field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Form Actions -->
