@@ -51,6 +51,8 @@ def test_response_structure_empty_m2m_fields(admin_client):
     assert results['lastName'] == contact.last_name
     assert results['taxId'] == contact.tax_id
     assert results['jobTitle'] == contact.job_title
+    assert results['company']['name'] == contact.company.name
+    assert results['company']['picture'] == contact.company.picture
 
     results['phones'] = []
     results['websites'] = []
