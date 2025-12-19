@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 import datetime
-from decimal import Decimal as D  # noqa: N817
+from decimal import Decimal
 
 from krm3.core.models import SpecialLeaveReason
 import pytest
@@ -10,7 +10,7 @@ from testutils.factories import SpecialLeaveReasonFactory
 
 from krm3.timesheet.rules import TimesheetRule
 from krm3.utils.dates import dt
-from krm3.utils.numbers import safe_dec
+from krm3.utils.numbers import safe_dec as to_decimal
 
 # Mock TimeEntry model
 
@@ -39,32 +39,34 @@ out_fields = {
 class TimeEntryMock:
     date: datetime.date | str
     protocol_number: str | None
-    bank_to: D | None
-    bank_from: D | None
-    day_shift_hours: D | None
-    night_shift_hours: D | None
-    on_call_hours: D | None
-    travel_hours: D | None
-    holiday_hours: D | None
-    leave_hours: D | None
-    rest_hours: D | None
-    sick_hours: D | None
+    bank_to: Decimal | None
+    bank_from: Decimal | None
+    day_shift_hours: Decimal | None
+    night_shift_hours: Decimal | None
+    on_call_hours: Decimal | None
+    travel_hours: Decimal | None
+    holiday_hours: Decimal | None
+    leave_hours: Decimal | None
+    rest_hours: Decimal | None
+    sick_hours: Decimal | None
     special_leave_reason: SpecialLeaveReason | None
-    special_leave_hours: D | None
+    special_leave_hours: Decimal | None
 
     # XXX: this is why we should use factories
     @property
     def special_hours(self):
         return (
-            D(self.leave_hours or 0)
-            + D(self.special_leave_hours or 0)
-            + D(self.sick_hours or 0)
-            + D(self.holiday_hours or 0)
+            Decimal(self.leave_hours or 0)
+            + Decimal(self.special_leave_hours or 0)
+            + Decimal(self.sick_hours or 0)
+            + Decimal(self.holiday_hours or 0)
         )
 
     @property
     def total_task_hours(self):
-        return D(self.day_shift_hours or 0) + D(self.night_shift_hours or 0) + D(self.travel_hours or 0)
+        return (
+            Decimal(self.day_shift_hours or 0) + Decimal(self.night_shift_hours or 0) + Decimal(self.travel_hours or 0)
+        )
 
 
 def column_index_to_name(n):
@@ -95,6 +97,7 @@ def _get_raw_scenarios(file_path: str) -> dict:
 
 
 def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
+    # FIXME: shouldn't these be fixtures?
     for name, scenario in raw_scenarios.items():
         if scenario['special_leave_reason']:
             special_leave_reason = SpecialLeaveReasonFactory.build(title=scenario['special_leave_reason'])
@@ -104,10 +107,10 @@ def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
             date=dt('2020-04-13'),
             special_leave_reason=special_leave_reason,
             protocol_number=scenario['n. prot.'] if scenario['n. prot.'] else None,
-            bank_from=safe_dec(scenario['bank_from (prelevo)'])
+            bank_from=to_decimal(scenario['bank_from (prelevo)'])
             if scenario['bank_from (prelevo)'] not in ('', None)
             else None,
-            bank_to=safe_dec(scenario['bank_to (aggiungo)'])
+            bank_to=to_decimal(scenario['bank_to (aggiungo)'])
             if scenario['bank_to (aggiungo)'] not in ('', None)
             else None,
             **{
@@ -132,38 +135,38 @@ def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
             special_leave_title = None
 
         if bf := scenario['bank_from (prelevo)']:
-            bank = -safe_dec(bf)
+            bank = -to_decimal(bf)
         elif bt := scenario['bank_to (aggiungo)']:
-            bank = safe_dec(bt)
+            bank = to_decimal(bt)
         else:
             bank = None
 
         expected = {
-            'day_shift': safe_dec(scenario['day_shift_hours'])
+            'day_shift': to_decimal(scenario['day_shift_hours'])
             if scenario['day_shift_hours'] not in ('', None)
             else None,
-            'night_shift': safe_dec(scenario['Ore Notturne']) if scenario['Ore Notturne'] not in ('', None) else None,
-            'on_call': safe_dec(scenario['Reperibilità']) if scenario['Reperibilità'] not in ('', None) else None,
-            'travel': safe_dec(scenario['travel_hours']) if scenario['travel_hours'] not in ('', None) else None,
-            'holiday': safe_dec(scenario['Ferie']) if scenario['Ferie'] not in ('', None) else None,
-            'leave': safe_dec(scenario['Permessi']) if scenario['Permessi'] not in ('', None) else None,
-            'rest': safe_dec(scenario['Riposo']) if scenario['Riposo'] not in ('', None) else None,
-            'sick': safe_dec(scenario['Malattie ']) if scenario['Malattie '] not in ('', None) else None,
+            'night_shift': to_decimal(scenario['Ore Notturne']) if scenario['Ore Notturne'] not in ('', None) else None,
+            'on_call': to_decimal(scenario['Reperibilità']) if scenario['Reperibilità'] not in ('', None) else None,
+            'travel': to_decimal(scenario['travel_hours']) if scenario['travel_hours'] not in ('', None) else None,
+            'holiday': to_decimal(scenario['Ferie']) if scenario['Ferie'] not in ('', None) else None,
+            'leave': to_decimal(scenario['Permessi']) if scenario['Permessi'] not in ('', None) else None,
+            'rest': to_decimal(scenario['Riposo']) if scenario['Riposo'] not in ('', None) else None,
+            'sick': to_decimal(scenario['Malattie ']) if scenario['Malattie '] not in ('', None) else None,
             'special_leave_hours': scenario['Permessi Speciali ']
             if scenario['Permessi Speciali '] not in ('', None)
             else None,
             'special_leave_reason': special_leave_reason,
             'special_leave_title': special_leave_title,
             'protocol_number': scenario['n. prot.'] if scenario['n. prot.'] not in ('', None) else None,
-            'regular_hours': safe_dec(scenario['Ore Ordinarie']) if scenario['Ore Ordinarie'] else None,
-            'overtime': safe_dec(scenario['Ore Straordinarie']) if scenario['Ore Straordinarie'] else None,
+            'regular_hours': to_decimal(scenario['Ore Ordinarie']) if scenario['Ore Ordinarie'] else None,
+            'overtime': to_decimal(scenario['Ore Straordinarie']) if scenario['Ore Straordinarie'] else None,
             'meal_voucher': 1 if scenario['Buoni pasto'] == 1 else None,
             'bank': bank,
             'fulfilled': scenario['fulfilled'] == 'T',
         }
 
-        due_hours = D(scenario['due_hours']) if scenario['due_hours'] not in ('', None) else None
-        meal_threshold = D(scenario['meal_threshold']) if scenario['meal_threshold'] not in ('', None) else None
+        due_hours = Decimal(scenario['due_hours']) if scenario['due_hours'] not in ('', None) else None
+        meal_threshold = Decimal(scenario['meal_threshold']) if scenario['meal_threshold'] not in ('', None) else None
 
         yield name, due_hours, meal_threshold, time_entry, expected
 

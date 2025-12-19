@@ -68,6 +68,7 @@ class Krm3Day(KrmDay):
         self.data_meal_voucher = None
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
+        self.data_regular_hours = None
         self.has_data: bool = False
 
         self.nwd: bool = False
@@ -133,6 +134,7 @@ class Krm3Day(KrmDay):
             except Contract.DoesNotExist:
                 contract = None
 
+            day.submitted = True
             day.resource = submission.resource
             day.contract = contract
             day.holiday = day_data.get('hol')
@@ -156,11 +158,14 @@ class Krm3Day(KrmDay):
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
             day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
             day.data_bank_to = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
-            day.data_due_hours = (
-                contract.get_due_hours(day.date) if contract else Contract.get_default_schedule(day.date)
-            )
+
+            # NOTE: due to how the source Timesheet DTO is created, we will always have a schedule
+            day.data_due_hours = timesheet_data.get('schedule', {}).get(date)
+
+            # XXX: there are no default settings, so this will be 0 or None if thresholds are not set explicitly
             day.data_meal_voucher = day_data.get('meal_voucher')
-            # XXX: a property would be nicer, as this piece of information depends on other attributes
+            day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
+            # FIXME: this is a pure function of internal state - use a property instead
             day.has_data = this_day_time_entries.exists()
 
             yield day
@@ -169,7 +174,7 @@ class Krm3Day(KrmDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: list['TimeEntry']
+        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: Iterable[TimeEntry]
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 
