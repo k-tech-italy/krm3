@@ -19,6 +19,7 @@ from .geo import City
 from .auth import Resource
 from .projects import Project
 
+from krm3.core.storage import PrivateMediaStorage, ProtectedFileField
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
@@ -287,6 +288,49 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
             return self.all()
         return self.filter(mission__resource__user_id=user.id)
 
+    def accessible_by(self, user: 'User') -> models.QuerySet['Expense']:
+        """Return expenses accessible by the given user.
+
+        An expense is accessible if:
+        1. User is superuser, OR
+        2. User has 'view_any_expense' or 'manage_any_expense' permission, OR
+        3. The expense's mission resource matches the user's resource
+
+        Args:
+            user: The user to check access for
+
+        Returns:
+            QuerySet of accessible expenses
+
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Superuser has access to all expenses
+        if user.is_superuser:
+            return self.all()
+
+        # Check if user has the any-expense permissions
+        if user.get_all_permissions().intersection({'core.view_any_expense', 'core.manage_any_expense'}):
+            return self.all()
+
+        # Filter by user's own resource
+        try:
+            if user_resource := user.get_resource():
+                return self.filter(mission__resource=user_resource)
+            # User has no resource
+            logger.warning(
+                f"User {user.username} (id={user.id}) does not have an associated resource. "  # type: ignore[attr-defined]
+                "No expense access granted."
+            )
+            return self.none()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Error getting resource for user {user.username} (id={user.id}). "  # type: ignore[attr-defined]
+                f"No expense access granted. Error: {e}"
+            )
+            return self.none()
+
 
 class Expense(models.Model):
     mission = models.ForeignKey(Mission, related_name='expenses', on_delete=models.CASCADE)
@@ -309,7 +353,15 @@ class Expense(models.Model):
         Reimbursement, related_name='expenses', on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
+    # Use ProtectedFileField for secure file serving via nginx X-Accel-Redirect
+    # The url property will automatically return the protected Django view URL
+    image = ProtectedFileField(
+        upload_to=mission_directory_path,
+        storage=PrivateMediaStorage,
+        protected_url_name='protected_expense',
+        null=True,
+        blank=True,
+    )
 
     created_ts = models.DateTimeField(auto_now_add=True)
     modified_ts = models.DateTimeField(auto_now=True)

@@ -2,10 +2,11 @@
 
 STATIC_ROOT=${KRM3_STATIC_ROOT}
 MEDIA_ROOT=${KRM3_MEDIA_ROOT}
+PRIVATE_MEDIA_ROOT=${KRM3_PRIVATE_MEDIA_ROOT}
 CELERY_BROKER_URL=${KRM3_CELERY_BROKER_URL}
 STACK_PROTOCOL=${KRM3_STACK_PROTOCOL:-http}
 
-mkdir -p "/krm3/logs" "${STATIC_ROOT}" "${MEDIA_ROOT}"
+mkdir -p "/krm3/logs" "${STATIC_ROOT}" "${MEDIA_ROOT}" "${PRIVATE_MEDIA_ROOT}"
 
 
 setup() {
@@ -14,6 +15,10 @@ setup() {
           --admin-username ${KRM3_ADMIN_USERNAME:-admin} \
           --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
           --admin-password ${KRM3_ADMIN_PASSWORD:-admin}
+
+  # Generate nginx configuration based on Django URL patterns
+  echo "Generating nginx configuration..."
+  django-admin generate_nginx_config --output /etc/nginx/sites-enabled/krm3.conf --verbose
 }
 if [ "${STACK_PROTOCOL}" = "https" ]; then
       echo "setting up HTTPS"
