@@ -576,3 +576,57 @@ class DocumentListView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['available_tags'] = self._get_available_tags()
 
         return context
+
+
+class ProtectedDocumentView(LoginRequiredMixin, TemplateView):
+    """Serve protected documents via nginx X-Accel-Redirect with permission checks.
+
+    This view authorizes document access using django_simple_dms's built-in
+    permission system, then instructs nginx to serve the file efficiently
+    using X-Accel-Redirect.
+
+    Features:
+    - Access control: Only authenticated users with proper permissions
+    - Performance: nginx handles file serving (zero-copy sendfile)
+    - Security: Real file paths never exposed to clients
+    """
+
+    login_url = '/admin/login/'
+
+    def get(self, request: HttpRequest, pk: int) -> HttpResponse:
+        """Handle GET request for protected document.
+
+        Args:
+            request: The HTTP request object
+            pk: Primary key of the Document to serve
+
+        Returns:
+            HttpResponse with X-Accel-Redirect header
+
+        Raises:
+            Http404: If document doesn't exist or user lacks permission
+
+        """
+        # Get document
+        doc = get_object_or_404(Document, pk=pk)
+
+        # Check permission using django_simple_dms built-in permission system
+        # This checks if user is admin, has direct grant, or has group grant
+        accessible_docs = Document.objects.accessible_by(request.user)  # type: ignore[attr-defined]
+        if not accessible_docs.filter(pk=doc.pk).exists():
+            raise Http404('Document not found or access denied')
+
+        # Build the internal nginx path for X-Accel-Redirect
+        # doc.document.name is like 'documents/2025/01/19/file.pdf'
+        protected_path = f"{settings.PRIVATE_MEDIA_URL.rstrip('/')}/{doc.document.name}"
+
+        # Create response with X-Accel-Redirect header
+        response = HttpResponse()
+        response['Content-Type'] = ''  # Let nginx determine the content type
+        response['X-Accel-Redirect'] = protected_path
+
+        # Set content disposition to inline (display in browser) with original filename
+        filename = doc.document.name.split('/')[-1]
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+        return response
