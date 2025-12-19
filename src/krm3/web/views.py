@@ -28,10 +28,10 @@ from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
 from krm3.core.models.projects import Project
-from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
+from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from krm3.web.document_filter import DocumentFilter
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
@@ -108,9 +108,12 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         form = ResourceForm(resource=self.resource, data=request.POST)
         if form.is_valid():
             form.save()
+            response = self.get(request, *args, **kwargs)
+            if "preferred_language" in form.cleaned_data:
+                response.set_cookie('django_language', form.cleaned_data['preferred_language'])
             messages.success(request, _('Profile updated successfully.'))
             # Redirect to the same profile page after successful save
-            return self.get(request, *args, **kwargs)
+            return response
 
         # If form is invalid, re-render with errors
         context = self.get_context_data(**kwargs)

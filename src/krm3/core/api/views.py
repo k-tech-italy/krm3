@@ -3,11 +3,12 @@ from typing import cast
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login as djlogin, logout as djlogout
 from django.db.models import QuerySet
+from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,7 +16,9 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 from rest_framework.pagination import PageNumberPagination
 
 import logging
-from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer
+
+from krm3.core.api.permissions import IsSelfOrReadOnly
+from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer, PreferredLanguageSerializer
 from krm3.core.models import (
     City,
     Client,
@@ -217,6 +220,27 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
         active_resources = self.get_queryset().filter(active=True)
         serializer = ResourceSerializer(active_resources, many=True)
         return Response(serializer.data)
+
+    @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
+    def preferred_language(self, request: Request, pk) -> Response:
+        resource = self.get_object()
+
+        if request.method == 'PATCH':
+            language_code = request.data.get('language_code')
+            serializer = PreferredLanguageSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            if resource.preferred_language != language_code:
+                resource.preferred_language = language_code
+                resource.save()
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(resource.preferred_language, status=status.HTTP_200_OK)
+
+    def get_permissions(self):
+        if self.action == 'preferred_language':
+            return [IsAuthenticated(), IsSelfOrReadOnly()]
+        return super().get_permissions()
 
 
 class CitySerializer(serializers.ModelSerializer):
