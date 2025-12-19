@@ -66,7 +66,6 @@ DEFAULTS = dict(  # noqa: C408
     DECIMAL_DIGITS=(int, 2),
     CURRENCY_FORMAT=(str, '{:,.2f}'),
     # # Django debug toolbar
-    DDT_KEY=(str, get_random_string(length=12)),
     DDT_PANELS=(
         list,
         [
