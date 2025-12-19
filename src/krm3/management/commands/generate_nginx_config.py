@@ -122,10 +122,10 @@ def generate_nginx_config(output_path: str | None = None) -> str:
     # Filter out paths that should be served as static files
     django_paths = sorted([p for p in django_paths if not should_exclude_path(p, static_url_path, media_url_path)])
 
-    # Get environment variables
+    # Get paths from Django settings (which use environ with proper defaults)
     # Strip quotes that might be in the environment variables
-    static_root = env.str('STATIC_ROOT', '/tmp/static').strip('"').strip("'")  # noqa: S108
-    media_root = env.str('MEDIA_ROOT', '/tmp/media').strip('"').strip("'")  # noqa: S108
+    static_root = env.str('STATIC_ROOT').strip('"').strip("'")
+    media_root = env.str('MEDIA_ROOT').strip('"').strip("'")
     static_url = settings.STATIC_URL.rstrip('/')
     media_url = settings.MEDIA_URL.rstrip('/')
 
