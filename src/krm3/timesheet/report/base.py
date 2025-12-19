@@ -112,8 +112,10 @@ class TimesheetReport:
             for calendar_day in KrmDay(self.from_date).range_to(self.to_date):
                 # XXX: highly inefficient!
                 if found := [day for day in calendar_data[resource_id] if day.date == calendar_day.date]:
+                    # NOTE: submission periods for the same resource are
+                    #       not allowed to overlap
                     day = found[0]
-                    if day.generated_from_submission:
+                    if day.submitted:
                         continue
 
                 day.resource = resource
@@ -132,8 +134,6 @@ class TimesheetReport:
                 day.nwd = day.contract is None or day.holiday or min_working_hours == 0
                 if not day.nwd:
                     day.data_due_hours = Decimal(min_working_hours)
-                for p_lower, p_upper in self.submission_periods.get(resource_id, []):
-                    day.submitted = p_lower <= day.date < p_upper
                 day.apply([te for te in self.time_entries if te.resource.pk == resource_id and te.date == day.date])
 
         return calendar_data
