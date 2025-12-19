@@ -1,0 +1,39 @@
+name: 'Generate Git Info'
+description: 'Generates git_info.py file with commit information'
+inputs:
+  output-path:
+    description: 'Path where git_info.py should be created'
+    required: true
+    default: 'src/krm3/git_info.py'
+outputs:
+  git-commit:
+    description: 'Git commit hash'
+    value: ${{ steps.generate.outputs.git-commit }}
+  git-branch:
+    description: 'Git branch name'
+    value: ${{ steps.generate.outputs.git-branch }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate git_info.py
+      id: generate
+      shell: bash
+      run: |
+        OUTPUT_PATH="${{ inputs.output-path }}"
+        mkdir -p "$(dirname "$OUTPUT_PATH")"
+
+        GIT_COMMIT=$(git rev-parse HEAD)
+        GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+        cat > "$OUTPUT_PATH" << EOF
+        # Auto-generated file - do not edit manually
+        # This file is updated automatically during CI/CD pipeline
+        git_commit = "${GIT_COMMIT}"
+        git_branch = "${GIT_BRANCH}"
+        EOF
+
+        echo "Generated git_info.py:"
+        cat "$OUTPUT_PATH"
+
+        echo "git-commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+        echo "git-branch=${GIT_BRANCH}" >> $GITHUB_OUTPUT

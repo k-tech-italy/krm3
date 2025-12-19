@@ -42,6 +42,10 @@ jobs:
       - name: Install Commitizen
         run: pip install commitizen
 
+      # Generate git_info.py
+      - name: Generate git_info.py
+        uses: ./.github/actions/generate-git-info
+
       # Bump version
       - name: Bump version with Commitizen
         id: bump

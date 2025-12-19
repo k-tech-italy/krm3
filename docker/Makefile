@@ -50,7 +50,13 @@ compile:
 	@cd .. && ./manage.py tailwind build
 	@cd .. && ./manage.py compilemessages -i .tox -i .venv
 
-build: compile requirements ## Builds the image
+git_info:
+	@head -n 2 ../src/krm3/git_info.py > ../src/krm3/.git_info.py
+	@mv ../src/krm3/.git_info.py ../src/krm3/git_info.py
+	@echo "git_commit = \"`git rev-parse --verify HEAD`\"" >> ../src/krm3/git_info.py
+	@echo "git_branch = \"`git rev-parse --abbrev-ref HEAD`\"" >> ../src/krm3/git_info.py
+
+build: compile requirements git_info ## Builds the image
 	cd .. && docker build \
 		${BUILD_OPTIONS} \
 		--platform linux/amd64 \
