@@ -130,7 +130,7 @@ class ExtraHolidayFactory(DjangoModelFactory):
 
 class ClientFactory(DjangoModelFactory):
     name = Faker('company')
-
+    picture = Faker('url')
     class Meta:
         model = 'core.Client'
         django_get_or_create = ('name',)
@@ -355,6 +355,7 @@ class ContactFactory(DjangoModelFactory):
     internal_notes = Faker('text')
     user = None
     is_active = True
+    company = factory.SubFactory(ClientFactory)
     job_title = factory.Sequence(lambda n: f'Job_{n}')
 
     @factory.post_generation

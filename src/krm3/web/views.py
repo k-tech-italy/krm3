@@ -142,6 +142,10 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         return context
 
 
+class ScanQRView(TemplateView):
+    template_name = 'scan_qr.html'
+
+
 class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     login_url = '/admin/login/'
     template_name = 'availability_report.html'

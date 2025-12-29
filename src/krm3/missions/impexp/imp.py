@@ -26,7 +26,7 @@ class MissionImporter:
         if not zipfile.is_zipfile(self.in_memory_file):
             raise ValidationError('Can only accept .zip files')
         with zipfile.ZipFile(self.in_memory_file, 'r') as zip_ref:
-            if {'images/', 'data.json'} - set(zip_ref.namelist()):
+            if {'data.json'} - set(zip_ref.namelist()):
                 raise ValidationError('It oes not look like a valid Missions .zip file export')
         self.in_memory_file.seek(0)
 

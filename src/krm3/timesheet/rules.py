@@ -91,7 +91,7 @@ class Krm3Day(KrmDay):
         if self.contract and (thresholds := self.contract.meal_voucher):
             meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
         for k, v in TimesheetRule.calculate(
-            not self.nwd, float(self.data_due_hours), meal_voucher_threshold, time_entries
+                not self.nwd, float(self.data_due_hours), meal_voucher_threshold, time_entries
         ).items():
             setattr(self, f'data_{k}', v)
 
@@ -147,10 +147,9 @@ class Krm3Day(KrmDay):
             day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
             day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
             day.data_special_leave_reason = (
-                ', '.join(
-                    reason for entry_data in this_day_time_entry_data if (reason := entry_data['special_leave_reason'])
-                )
-                or None
+                    ', '.join(reason for entry_data in this_day_time_entry_data if
+                              (reason := entry_data['special_leave_reason']))
+                    or None
             )
             day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
@@ -169,7 +168,7 @@ class Krm3Day(KrmDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: list['TimeEntry']
+            work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: list['TimeEntry']
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 

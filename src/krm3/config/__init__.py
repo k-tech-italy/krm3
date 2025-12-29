@@ -93,4 +93,5 @@ DEFAULTS = dict(  # noqa: C408
     TICKETING_PROJECT_ID=(int, None),
     TICKETING_ISSUES=(str, None),
     TICKETING_URL=(str, None),
+    URL_REPLACE=(dict, None),
 )

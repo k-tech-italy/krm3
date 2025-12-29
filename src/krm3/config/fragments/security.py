@@ -33,6 +33,9 @@ CORS_ORIGIN_WHITELIST = [f'{_proto}://{x}:8000' for x in ALLOWED_HOSTS]
 CORS_ORIGIN_WHITELIST.extend([f'{_proto}://{x}:3000' for x in ALLOWED_HOSTS])
 FORCE_DEBUG_SSL = _env('FORCE_DEBUG_SSL')
 
+URL_REPLACE = _env('URL_REPLACE')
+
+
 CORS_ALLOW_CREDENTIALS = True
 
 FERNET_KEY = Fernet(_env('FERNET_KEY'))

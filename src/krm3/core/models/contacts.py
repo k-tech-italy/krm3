@@ -7,6 +7,7 @@ from krm3.config import settings
 
 class Client(NaturalKeyModel):
     name = models.CharField(max_length=80, unique=True)
+    picture = models.URLField(null=True, blank=True, help_text='Picture URL')
 
     def __str__(self) -> str:
         return str(self.name)
@@ -85,6 +86,7 @@ class Contact(models.Model):
     job_title = models.CharField(max_length=80)
     picture = models.TextField(null=True, blank=True, help_text='Picture URL')
     internal_notes = models.TextField(null=True, blank=True)
+    company = models.ForeignKey(Client, null=True, blank=True, on_delete=models.SET_NULL)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
