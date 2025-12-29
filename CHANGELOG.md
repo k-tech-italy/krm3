@@ -1,3 +1,10 @@
+## 2.4.1 (2025-12-29)
+
+### Fix
+
+- **Report**: Fix 524 and introduces scan new QR
+- **Contact**: add client fk to contact and picture to client model (#200)
+
 ## 2.4.0 (2025-12-18)
 
 ### Feat
