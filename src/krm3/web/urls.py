@@ -7,12 +7,13 @@ from .views import (
     TaskReportView,
     ReleasesView,
     UserResourceView,
-    DocumentListView,
+    DocumentListView, ScanQRView,
 )
 
 urlpatterns = [
     path('', HomeView.as_view()),
     path('home/', HomeView.as_view(), name='home'),
+    path('scan_qr/', ScanQRView.as_view(), name='scan-qr'),
     path('availability/', AvailabilityReportView.as_view(), name='availability'),
     path('availability/<str:month>/', AvailabilityReportView.as_view(), name='availability-report-month'),
     path('report/', ReportView.as_view(), name='report'),

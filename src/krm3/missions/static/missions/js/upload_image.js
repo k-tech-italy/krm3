@@ -2,10 +2,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedFile = null;
     let stream = null;
     let isFromCamera = false;
+    let animationFrameId = null;
 
     const fileInput = document.getElementById('fileInput');
     const fileSelectBtn = document.getElementById('fileSelectBtn');
     const cameraBtn = document.getElementById('cameraBtn');
+    const qrScanBtn = document.getElementById('qrScanBtn');
     const captureBtn = document.getElementById('captureBtn');
     const video = document.getElementById('video');
     const imagePreview = document.getElementById('imagePreview');
@@ -63,6 +65,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 'image/png');
     });
 
+    qrScanBtn.addEventListener('click', () => {
+        window.location.replace( '/be/scan_qr/');
+    });
+
     // Display image preview
     function displayPreview(file) {
         const reader = new FileReader();
@@ -87,6 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
             stream.getTracks().forEach(track => track.stop());
             video.style.display = 'none';
             captureBtn.style.display = 'none';
+        }
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
         }
     }
 
@@ -140,6 +150,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok || response.status === 204) {
                 showMessage('Image uploaded successfully!', 'success');
                 submitBtn.textContent = 'Submitted';
+                qrScanBtn.style.display = "block";
+                imagePreview.style.display = 'none';
+                fileSelectBtn.style.display = "none";
+                cameraBtn.style.display = "none";
+
             } else {
                 showMessage('Upload error', 'error');
                 toggleAllButtons(false);

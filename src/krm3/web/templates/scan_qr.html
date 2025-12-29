@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static tailwind_tags i18n %}
+
+{% block head-title %}
+    {% trans "Scan QR" %}
+{% endblock %}
+
+{% block head %}
+    <meta name="otp" content="{{ request.GET.otp }}">
+    <script src="{% static "js/jsQR.min.js" %}"></script>
+    {% tailwind_css %}
+{% endblock %}
+
+{% block body %}
+    <div class="upload-image-body">
+        <div class="upload-image-container">
+
+            <div class="upload-image-header-section">
+                <p>Scan QR code for action</p>
+            </div>
+
+            <div class="upload-image-video-container">
+                <video id="video" class="upload-image-video" autoplay playsinline></video>
+                <button type="button" id="captureBtn" class="upload-image-button upload-image-btn-primary upload-image-capture-btn" style="display: none; margin-top: 10px;">{% trans "Capture Photo" %}</button>
+            </div>
+
+            <div id="spinner" class="upload-image-spinner"></div>
+
+            <div id="message" class="upload-image-message"></div>
+        </div>
+    </div>
+{% endblock body %}
+
+{% block js-frameworks %}
+    <script src="{% static 'js/scan_qr.js' %}"></script>
+{% endblock js-frameworks %}

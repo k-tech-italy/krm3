@@ -5,6 +5,7 @@ import shutil
 import typing
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import cv2
 from admin_extra_buttons.decorators import button
@@ -277,6 +278,8 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         ref = rest_reverse('missions:expense-upload-image', args=[pk], request=request) + f'?otp={expense.get_otp()}'
         if settings.FORCE_DEBUG_SSL:
             ref = 'https' + ref[ref.index(':') :]  # force https also locally for ngrok
+        if settings.URL_REPLACE:
+            ref = urlparse(ref)._replace(**settings.URL_REPLACE).geturl()
         return TemplateResponse(
             request,
             context={'site_header': site.site_header, 'expense': expense, 'ref': ref, 'debug': True},
