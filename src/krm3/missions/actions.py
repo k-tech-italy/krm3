@@ -16,6 +16,12 @@ if typing.TYPE_CHECKING:
     from django.contrib.admin.options import ModelAdmin
 
 
+@admin.action(description='Recalculate reimbursement')
+def recalculate_reimbursement(modeladmin: 'ModelAdmin', request: 'HttpRequest', queryset: 'QuerySet[Expense]') -> None:
+    for expense in queryset.filter(reimbursement=None).all():
+        expense.amount_reimbursement = expense.get_reimbursement_amount()
+        expense.save()
+
 @admin.action(description='Reset reimbursement')
 def reset_reimbursement(modeladmin: 'ModelAdmin', request: 'HttpRequest', queryset: 'QuerySet[Expense]') -> None:
     queryset.filter(reimbursement=None).update(amount_reimbursement=None)

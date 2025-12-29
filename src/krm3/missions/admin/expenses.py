@@ -27,7 +27,7 @@ from rangefilter.filters import NumericRangeFilterBuilder
 from rest_framework.reverse import reverse as rest_reverse
 
 from krm3.currencies.models import Currency
-from krm3.missions.actions import create_reimbursement, get_rates, reset_reimbursement
+from krm3.missions.actions import create_reimbursement, get_rates, reset_reimbursement, recalculate_reimbursement
 from krm3.missions.forms import ExpenseAdminForm
 from krm3.core.models import Expense, Mission
 from krm3.missions.session import EXPENSE_UPLOAD_IMAGES
@@ -112,7 +112,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
             },
         )
     ]
-    actions = [reset_reimbursement, get_rates, create_reimbursement]
+    actions = [recalculate_reimbursement, reset_reimbursement, get_rates, create_reimbursement]
     _resource_link = 'mission__resource'
 
     def lookup_allowed(self, lookup: str, value: Any, request: 'HttpRequest' = None) -> bool:
