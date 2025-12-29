@@ -1,3 +1,9 @@
+## 2.4.3 (2025-12-29)
+
+### Fix
+
+- **Expenses**: Added Recalculate reimbursement actions
+
 ## 2.4.2 (2025-12-29)
 
 ### Fix
