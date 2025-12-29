@@ -134,7 +134,7 @@ test:
 	@cp -R tools/zapdata/demo/media/* ~media
 
 test-fast: ## runtest integration and unit tests in parallel
-	@pytest -n auto -m "selenium or not selenium" --no-cov
+	@pytest -n auto -m "selenium or not selenium" --no-cov --headless
 
 test-cov: ## run tests with coverage
 	@pytest -m "selenium or not selenium" tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \

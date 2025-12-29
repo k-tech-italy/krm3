@@ -147,7 +147,7 @@ class Krm3Day(KrmDay):
             day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
             day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
             day.data_special_leave_reason = (
-                    ', '.join(reason for entry_data in this_day_time_entry_data if
+                    ', '.join(str(reason) for entry_data in this_day_time_entry_data if
                               (reason := entry_data['special_leave_reason']))
                     or None
             )
