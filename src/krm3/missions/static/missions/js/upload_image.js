@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 imagePreview.style.display = 'none';
                 fileSelectBtn.style.display = "none";
                 cameraBtn.style.display = "none";
-
+                stopCamera();
             } else {
                 showMessage('Upload error', 'error');
                 toggleAllButtons(false);
