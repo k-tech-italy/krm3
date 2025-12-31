@@ -39,6 +39,7 @@ def prepare_resources_html(resources: dict, max_missions: int) -> dict:
         for i, (mission_num, summary) in enumerate(mission_summaries.items()):
             missions.append(
                 {
+                    'id': summary['mission_id'],
                     'n_mission': mission_num,
                     'tot_expenses': summary['summary'][ReimbursementSummaryEnum.TOTALE_COSTO],
                     'tot_company': summary['bypayment']['Company'][0],
@@ -125,7 +126,7 @@ def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict
                 calculate_reimbursement_summaries(expenses_in_mr),
                 strict=False,
             )
-        )
+        ) | {'mission_id': mission_id}
 
     return results
 
@@ -221,5 +222,5 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         return TemplateResponse(
             request,
             'admin/missions/reimbursement/report.html',
-            context=context,
+            context=context | {'mid':99},
         )

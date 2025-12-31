@@ -33,7 +33,13 @@
                     <th rowspan="7">{{ resource }}</th>
                     <th>N. Mission</th>
                     {% for mission in missions %}
-                        <th>{{ mission.n_mission }}</th>
+                        <th>
+                        {% if mission.id %}
+                            <a href="{% url "admin:core_mission_change" mission.id %}" target="_blank">{{ mission.n_mission }}</a>
+                        {% else %}
+                            {{ mission.n_mission }}
+                        {% endif %}
+                        </th>
                     {% endfor %}
                 </tr>
                 <tr>

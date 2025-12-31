@@ -3,11 +3,14 @@
 This document outlines the release process for KRM3, which involves the following key steps:
 
 1.  **Development**: All changes are made in feature branches and merged into the `develop` branch via Pull Requests.
-2.  **Automated Versioning**: When ready the `Build and Deploy` GitHub Actions workflow is manually triggered, which uses Commitizen to automatically bump the version number.
-3.  **Build and Publish**: The workflow builds the frontend, creates a Docker image, and pushes it to the GitHub Container Registry.
-4.  **Manual Approval**: The workflow pauses for manual approval before deploying to the development environment.
-5.  **Development Deployment**: After approval, the new version is automatically deployed to the `krm3int` development Kubernetes cluster.
-6.  **Production Deployment**: Production deployment is a manual process that must be coordinated with the DevOps team or the Development Team Leader.
+2.  **Build and Publish**: The workflow (to be triggered manually on `develop` branch) will:
+  - Bump the version via Commitizen
+  - Perform a commit (on Develop)
+  - Build the frontend
+  - Create a Docker image and push it to the GitHub Container Registry.
+3. **Manual Approval**: The workflow pauses for manual approval before deploying to the development environment.
+4. **Development Deployment**: After approval, the new version is automatically deployed to the `krm3int` development Kubernetes cluster.
+5. **Production Deployment**: Production deployment currently require updating the Workload image version on Rancher and redeploy.
 
 # Release Process
 
