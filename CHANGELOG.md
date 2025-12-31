@@ -1,3 +1,9 @@
+## 2.4.4 (2025-12-31)
+
+### Fix
+
+- **Reimbursement-report**: Added link to mission
+
 ## 2.4.3 (2025-12-29)
 
 ### Fix
