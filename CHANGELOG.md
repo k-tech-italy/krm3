@@ -1,3 +1,9 @@
+## 2.5.0 (2026-01-05)
+
+### Feat
+
+- **fe-module**: align fe module for contacts (#205)
+
 ## 2.4.4 (2025-12-31)
 
 ### Fix
