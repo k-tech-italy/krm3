@@ -38,6 +38,10 @@ LOCALE_PATHS = [BASE_DIR / 'LOCALE']
 MEDIA_ROOT = env('MEDIA_ROOT')
 MEDIA_URL = env('MEDIA_URL')
 
+# Private media (served via nginx X-Accel-Redirect)
+PRIVATE_MEDIA_ROOT = env('PRIVATE_MEDIA_ROOT')
+PRIVATE_MEDIA_URL = env('PRIVATE_MEDIA_URL')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 RELOAD = env('RELOAD')

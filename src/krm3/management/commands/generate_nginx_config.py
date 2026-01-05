@@ -126,8 +126,10 @@ def generate_nginx_config(output_path: str | None = None) -> str:
     # Strip quotes that might be in the environment variables
     static_root = env.str('STATIC_ROOT').strip('"').strip("'")
     media_root = env.str('MEDIA_ROOT').strip('"').strip("'")
+    private_media_root = env.str('PRIVATE_MEDIA_ROOT').strip('"').strip("'")
     static_url = settings.STATIC_URL.rstrip('/')
     media_url = settings.MEDIA_URL.rstrip('/')
+    private_media_url = env.str('PRIVATE_MEDIA_URL').strip('"').strip("'").rstrip('/')
 
     # Build nginx location pattern for Django routes
     # Escape special nginx characters and format as regex alternatives
@@ -180,6 +182,12 @@ server {{
         alias {media_root}/;
         expires 7d;
         add_header Cache-Control "public";
+    }}
+
+    # Private media files (internal only - served via X-Accel-Redirect)
+    location {private_media_url}/ {{
+        internal;
+        alias {private_media_root}/;
     }}
 
     # Django application routes (auto-detected)

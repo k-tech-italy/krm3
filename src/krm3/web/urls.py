@@ -8,6 +8,9 @@ from .views import (
     ReleasesView,
     UserResourceView,
     DocumentListView, ScanQRView,
+    ProtectedDocumentView,
+    ProtectedExpenseView,
+    ProtectedContractView,
 )
 
 urlpatterns = [
@@ -25,4 +28,7 @@ urlpatterns = [
     path('missions/', include('krm3.missions.urls')),
     path('resource/<int:pk>/', UserResourceView.as_view(), name='user_resource'),
     path('documents/', DocumentListView.as_view(), name='document_list'),
+    path('media-auth/document/<int:pk>/', ProtectedDocumentView.as_view(), name='protected_document'),
+    path('media-auth/expense/<int:pk>/', ProtectedExpenseView.as_view(), name='protected_expense'),
+    path('media-auth/contract/<int:pk>/', ProtectedContractView.as_view(), name='protected_contract'),
 ]

@@ -39,6 +39,8 @@ FROM python:3.12-slim-bookworm AS final
 
 ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
     KRM3_MEDIA_ROOT="/tmp/media" \
+    KRM3_PRIVATE_MEDIA_ROOT="/data/private-media" \
+    KRM3_PRIVATE_MEDIA_URL="/protected-media/" \
     KRM3_ADMIN_EMAIL="" \
     KRM3_ADMIN_PASSWORD="" \
     KRM3_ADMIN_USERNAME="" \

@@ -22,11 +22,13 @@ from django.http import HttpRequest, HttpResponse, Http404, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.text import slugify
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, View
 from django.utils.translation import gettext_lazy as _
 from django_simple_dms.models import Document, DocumentTag
 
 from krm3.core.forms import ResourceForm
+from krm3.core.models import Contract
+from krm3.core.models.missions import Expense
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
@@ -38,7 +40,7 @@ from krm3.web.report_styles import centered, header_alignment, header_fill, head
 if typing.TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
 
-    from krm3.core.models import Contract, User as UserType
+    from krm3.core.models import User as UserType
 
 logger = logging.getLogger(__name__)
 
@@ -580,3 +582,101 @@ class DocumentListView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['available_tags'] = self._get_available_tags()
 
         return context
+
+
+class ProtectedMediaViewBase(LoginRequiredMixin, View):
+    """Base view for serving protected media files via nginx X-Accel-Redirect.
+
+    This base class handles authorization and file serving for any model with
+    a FileField. Subclasses must define model_class and file_field_name.
+
+    Features:
+    - Access control: Only authenticated users with proper permissions
+    - Performance: nginx handles file serving (zero-copy sendfile)
+    - Security: Real file paths never exposed to clients
+    """
+
+    login_url = '/admin/login/'
+    model_class = None  # Must be set in subclass
+    file_field_name = None  # Must be set in subclass
+
+    def get(self, request: HttpRequest, pk: int) -> HttpResponse:
+        """Handle GET request for protected media file.
+
+        Args:
+            request: The HTTP request object
+            pk: Primary key of the object to serve
+
+        Returns:
+            HttpResponse with X-Accel-Redirect header
+
+        Raises:
+            Http404: If object doesn't exist or user lacks permission
+            PermissionDenied: If user is not authorized to access the file
+
+        """
+        if not self.model_class or not self.file_field_name:
+            raise ValueError('model_class and file_field_name must be set in subclass')
+
+        # Get the object
+        obj = get_object_or_404(self.model_class, pk=pk)
+
+        # Check permission using the model's accessible_by method
+        accessible_objects = self.model_class.objects.accessible_by(request.user)
+        if not accessible_objects.filter(pk=obj.pk).exists():
+            raise PermissionDenied('You do not have permission to access this file')
+
+        # Get the file field
+        file_field = getattr(obj, self.file_field_name)
+        if not file_field:
+            raise Http404('No file attached to this object')
+
+        # Build the internal nginx path for X-Accel-Redirect
+        protected_path = f"{settings.PRIVATE_MEDIA_URL.rstrip('/')}/{file_field.name}"
+
+        # Create response with X-Accel-Redirect header
+        response = HttpResponse()
+        response['Content-Type'] = ''  # Let nginx determine the content type
+        response['X-Accel-Redirect'] = protected_path
+
+        # Set content disposition to inline (display in browser) with original filename
+        filename = file_field.name.split('/')[-1]
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+        return response
+
+
+class ProtectedDocumentView(ProtectedMediaViewBase):
+    """Serve protected Document files via nginx X-Accel-Redirect.
+
+    Uses django_simple_dms's built-in permission system to check access.
+    """
+
+    model_class = Document
+    file_field_name = 'document'
+
+
+class ProtectedExpenseView(ProtectedMediaViewBase):
+    """Serve protected Expense image files via nginx X-Accel-Redirect.
+
+    Uses custom accessible_by manager method to check access based on:
+    - Superuser status
+    - view_any_expense or manage_any_expense permissions
+    - User's resource matching expense.mission.resource
+    """
+
+    model_class = Expense
+    file_field_name = 'image'
+
+
+class ProtectedContractView(ProtectedMediaViewBase):
+    """Serve protected Contract document files via nginx X-Accel-Redirect.
+
+    Uses custom accessible_by manager method to check access based on:
+    - Superuser status
+    - view_any_contract or manage_any_contract permissions
+    - User's resource matching contract.resource
+    """
+
+    model_class = Contract
+    file_field_name = 'document'
