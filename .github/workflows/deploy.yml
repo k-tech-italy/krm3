@@ -187,6 +187,9 @@ jobs:
           name: built-frontend
           path: krm3-fe/dist/
 
+      - name: Generate git_info.py
+        uses: ./.github/actions/generate-git-info
+
       - name: build
         id: build
         run: |

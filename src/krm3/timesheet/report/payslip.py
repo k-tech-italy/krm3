@@ -32,7 +32,8 @@ class TimesheetReportOnline(TimesheetReport):
                     row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
                     for rkd in resources_report_days:
                         value = getattr(rkd, f'data_{key}')
-                        row.add_cell(normal(value)).nwd = rkd.nwd
+                        cell = row.add_cell(normal(value) if value != 0 else None)
+                        cell.nwd = rkd.nwd
                         cell_tot_hh.value += value or decimal.Decimal(0)
                     cell_tot_hh.value = normal(cell_tot_hh.value)
 

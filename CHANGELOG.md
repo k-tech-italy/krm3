@@ -1,3 +1,10 @@
+## 2.5.1 (2026-01-07)
+
+### Fix
+
+- **ci/cd-pipeline**: add git_info file generation in pipeline
+- **reports**: Show submitted schedules instead of recomputing them (#196)
+
 ## 2.5.0 (2026-01-05)
 
 ### Feat
