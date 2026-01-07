@@ -1,3 +1,9 @@
+## 2.5.2 (2026-01-07)
+
+### Fix
+
+- **ci/cd-pipeline**: update GIT_BRANCH variable (#206)
+
 ## 2.5.1 (2026-01-07)
 
 ### Fix
