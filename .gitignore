@@ -19,6 +19,8 @@ src/krm3/LOCALE/**/*.mo
 
 src/krm3/core/static/release.json
 
+src/krm3/git_info.py
+
 coverage.xml
 junit.xml
 
