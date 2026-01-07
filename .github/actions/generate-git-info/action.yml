@@ -23,7 +23,7 @@ runs:
         mkdir -p "$(dirname "$OUTPUT_PATH")"
 
         GIT_COMMIT=$(git rev-parse HEAD)
-        GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        GIT_BRANCH=${GITHUB_REF_NAME:-${GITHUB_HEAD_REF:-$(git rev-parse --abbrev-ref HEAD)}}
 
         cat > "$OUTPUT_PATH" << EOF
         # Auto-generated file - do not edit manually
