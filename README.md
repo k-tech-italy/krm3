@@ -60,6 +60,7 @@
 
 * **IMPORTANT**: Edit the .env file according to your personal setup.
   * Most importantly, edit the `KRM3_DATABASE_URL` variable to match your database's DSN.
+  * For local development, ensure `KRM3_LOCAL_DEVELOPMENT=True` is set to enable Django to serve static files (in production, nginx handles this).
 
 * If using `direnv`:
     ```shell

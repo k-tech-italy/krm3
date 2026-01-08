@@ -14,6 +14,28 @@ setup() {
           --admin-username ${KRM3_ADMIN_USERNAME:-admin} \
           --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
           --admin-password ${KRM3_ADMIN_PASSWORD:-admin}
+
+  # Export Django configuration as environment variables for nginx
+  echo "Exporting Django configuration for nginx..."
+  # Capture the secure temp file path from command output
+  NGINX_ENV_FILE=$(django-admin generate_nginx_config --verbose)
+
+  # Source the variables into the current shell environment
+  source "${NGINX_ENV_FILE}"
+
+  # Clean up the temporary file
+  rm -f "${NGINX_ENV_FILE}"
+
+  # Generate nginx site configuration from template using envsubst
+  echo "Generating nginx site configuration from template..."
+  # Only substitute our specific variables, leaving nginx variables untouched
+  envsubst '${DJANGO_ROUTES_PATTERN} ${STATIC_URL} ${MEDIA_URL} ${KRM3_STATIC_ROOT} ${KRM3_MEDIA_ROOT}' < /etc/nginx/sites-available/krm3.conf.template > /etc/nginx/sites-enabled/krm3.conf
+
+  # Validate the generated nginx configuration
+  echo "Validating nginx configuration..."
+  nginx -t
+
+  echo "Nginx configuration generated and validated successfully"
 }
 if [ "${STACK_PROTOCOL}" = "https" ]; then
       echo "setting up HTTPS"
