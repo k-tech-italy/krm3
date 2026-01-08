@@ -1,3 +1,13 @@
+## 2.6.0 (2026-01-08)
+
+### Feat
+
+- **nginx.conf**: Django app behind a nginx proxy
+
+### Fix
+
+- **TimeEntryAdmin**: remove search_fields since redundancy with list_filters (#207)
+
 ## 2.5.2 (2026-01-07)
 
 ### Fix

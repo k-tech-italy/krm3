@@ -76,7 +76,9 @@ if settings.DEBUG:
     )
 
 # Add fe catch-all pattern last so it doesn't interfere with other routes
-urlpatterns.append(path('', include('krm3.fe.urls')))
+# Only include in local development mode, in production nginx serves static files
+if settings.LOCAL_DEVELOPMENT:
+    urlpatterns.append(path('', include('krm3.fe.urls')))
 
 if not settings.TESTING:
     from debug_toolbar.toolbar import debug_toolbar_urls

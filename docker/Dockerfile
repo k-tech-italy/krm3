@@ -40,28 +40,34 @@ FROM python:3.12-slim-bookworm AS final
 ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
     KRM3_MEDIA_ROOT="/tmp/media" \
     KRM3_ADMIN_EMAIL="" \
-    KRM3_ADMIN_PASSWORD="" \
     KRM3_ADMIN_USERNAME="" \
     KRM3_CELERY_BROKER="" \
     KRM3_DATABASE_URL="" \
     KRM3_REDIS_CACHE_URL="" \
-    KRM3_SECRET_KEY="" \
     KRM3_STATIC_ROOT="/tmp/static"
 
 RUN apt-get update && \
     apt-get install -y --no-install-suggests --no-install-recommends \
     gosu libpcre3 libxml2 libmagic1 file \
     libgettextpo-dev \
+    gettext-base \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1024 -r ktech && \
     useradd -m -g ktech krm3 && \
-    mkdir -p /code /krm3 /data && \
-    chown krm3:ktech /code /krm3 /data
+    mkdir -p /code /krm3 /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx && \
+    chown krm3:ktech /code /krm3 /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx
 
 COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/etc/circus.conf /etc/circus.conf
 COPY docker/etc/mime.types /etc/mime.types
+COPY docker/etc/nginx.conf /etc/nginx/nginx.conf
+COPY docker/etc/sites-available/krm3.conf.template /etc/nginx/sites-available/krm3.conf.template
+
+# Set proper permissions for nginx to run as krm3 user
+RUN chown -R krm3:ktech /etc/nginx /var/log/nginx /var/lib/nginx /tmp/nginx && \
+    chmod -R 755 /etc/nginx
 
 WORKDIR /code
 
@@ -78,8 +84,7 @@ RUN chgrp -R ktech /usr/local/lib/python3.12/site-packages/krm3/LOCALE && chmod 
 USER krm3
 SHELL ["/bin/bash", "-c"]
 
-VOLUME /etc/certs
-EXPOSE 8000 8443
+EXPOSE 80
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["stack"]
 
