@@ -40,6 +40,7 @@ MEDIA_URL = env('MEDIA_URL')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+LOCAL_DEVELOPMENT = env('LOCAL_DEVELOPMENT')
 RELOAD = env('RELOAD')
 
 INSTALLED_APPS = (

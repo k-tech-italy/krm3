@@ -14,6 +14,7 @@ from krm3.utils.tools import parse_emails
 DEFAULTS = dict(  # noqa: C408
     DATABASE_URL=(str, 'psql://postgres:@127.0.0.1:5432/krm3_db', 'The database URl'),
     DEBUG=(bool, False),
+    LOCAL_DEVELOPMENT=(bool, False, 'Enable local development mode to serve static files via Django'),
     RELOAD=(bool, False),
     DEV_FOOTER_INFO=(str, uuid.uuid4()),
     CV2_SHOW_IMAGES=(bool, False),

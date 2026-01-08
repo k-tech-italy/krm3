@@ -1,0 +1,58 @@
+# KRM3 nginx site configuration template
+# This file uses envsubst for templating - variables are replaced at container startup
+#
+# Variables provided by Django (via export_nginx_vars command):
+#   ${DJANGO_ROUTES_PATTERN} - Regex pattern matching Django URL routes
+#   ${STATIC_URL}            - Static files URL prefix (e.g., /static)
+#   ${MEDIA_URL}             - Media files URL prefix (e.g., /media)
+#
+# Variables from environment:
+#   ${KRM3_STATIC_ROOT}      - Filesystem path to static files
+#   ${KRM3_MEDIA_ROOT}       - Filesystem path to media files
+
+upstream django {
+    server 127.0.0.1:8000;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    client_max_body_size 100M;
+
+    # Logging
+    access_log /var/log/nginx/krm3_access.log;
+    error_log /var/log/nginx/krm3_error.log;
+
+    # Static files
+    location ${STATIC_URL}/ {
+        alias ${KRM3_STATIC_ROOT}/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Media files
+    location ${MEDIA_URL}/ {
+        alias ${KRM3_MEDIA_ROOT}/;
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    # Django application routes (auto-detected from Django URLconf)
+    location ~ ^(${DJANGO_ROUTES_PATTERN})$ {
+        proxy_pass http://django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    # Frontend SPA - serve index.html for all other routes
+    location / {
+        root ${KRM3_STATIC_ROOT};
+        index index.html;
+        try_files $uri $uri/ /index.html =404;
+    }
+}

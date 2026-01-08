@@ -81,6 +81,8 @@ jobs:
       DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       KRM3_DATABASE_URL: postgres://postgres:postgres@localhost:15432/krm3
       KRM3_ALLOWED_HOSTS: 0.0.0.0,localhost,127.0.0.1
+      # Enable Django to serve static files during tests (no nginx proxy in CI environment)
+      KRM3_LOCAL_DEVELOPMENT: "True"
       RUNNER_TOOL_CACHE: /tmp/
     steps:
     - name: Checkout code
