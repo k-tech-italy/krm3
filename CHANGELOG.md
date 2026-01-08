@@ -1,3 +1,9 @@
+## 2.6.1 (2026-01-08)
+
+### Fix
+
+- **Dockerfile**: fix nginx listen port
+
 ## 2.6.0 (2026-01-08)
 
 ### Feat
