@@ -84,7 +84,7 @@ RUN chgrp -R ktech /usr/local/lib/python3.12/site-packages/krm3/LOCALE && chmod 
 USER krm3
 SHELL ["/bin/bash", "-c"]
 
-EXPOSE 80
+EXPOSE 8080
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["stack"]
 
