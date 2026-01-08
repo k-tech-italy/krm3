@@ -5,6 +5,7 @@ This test verifies that when LOCAL_DEVELOPMENT is True, Django serves the fronte
 application (static files), and when False, it returns 404 (nginx would serve in production).
 """
 
+import copy
 import typing
 
 import pytest
@@ -17,9 +18,28 @@ if typing.TYPE_CHECKING:
 pytestmark = [pytest.mark.selenium, pytest.mark.django_db]
 
 
+@pytest.fixture
+def restore_urlpatterns():
+    """
+    Fixture to save and restore URL patterns after test.
+    This ensures that changes to urlpatterns during the test don't affect other tests.
+    """
+    from krm3.config import urls
+
+    # Save original urlpatterns
+    original_urlpatterns = copy.copy(urls.urlpatterns)
+
+    # Yield control to the test
+    yield
+
+    # Restore original urlpatterns after test completes (even if test fails)
+    urls.urlpatterns = original_urlpatterns
+    clear_url_caches()
+
+
 @override_settings(LOCAL_DEVELOPMENT=True)
 @pytest.mark.django_db
-def test_static_serve_enabled_with_local_development(browser: 'AppTestBrowser'):
+def test_static_serve_enabled_with_local_development(browser: 'AppTestBrowser', restore_urlpatterns):
     """
     When LOCAL_DEVELOPMENT=True, navigating to '/' should serve the frontend application.
     The login form should be visible, indicating Django is serving static files.
@@ -47,7 +67,7 @@ def test_static_serve_enabled_with_local_development(browser: 'AppTestBrowser'):
 
 @override_settings(LOCAL_DEVELOPMENT=False)
 @pytest.mark.django_db
-def test_static_serve_disabled_without_local_development(browser: 'AppTestBrowser'):
+def test_static_serve_disabled_without_local_development(browser: 'AppTestBrowser', restore_urlpatterns):
     """
     When LOCAL_DEVELOPMENT=False, navigating to '/' should return 404.
     In production, nginx serves static files, so Django shouldn't handle this route.
