@@ -58,7 +58,6 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
 @admin.register(TimeEntry)
 class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     list_display = ('date', 'get_resource', 'get_task', 'get_timesheet', 'holiday_hours', 'sick_hours')
-    search_fields = ('date', 'category')
 
     list_filter = [
         ('resource', AutoCompleteFilter),
