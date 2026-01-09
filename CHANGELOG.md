@@ -1,3 +1,9 @@
+## 2.6.2 (2026-01-09)
+
+### Fix
+
+- **krm3.conf.template**: fix CSRF token failed for wrong header forwarding (#209)
+
 ## 2.6.1 (2026-01-08)
 
 ### Fix
