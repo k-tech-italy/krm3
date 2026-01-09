@@ -29,9 +29,7 @@ if not TESTING:
                 return False
             # use https://bewisse.com/modheader/ to set custom header
             # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)`
-            if flag_enabled('DDT_ENABLED', request=request):
-                return True
-            return False
+            return flag_enabled("DDT_ENABLED", request=request)
 
         DEBUG_TOOLBAR_CONFIG = {
             'SHOW_TOOLBAR_CALLBACK': show_ddt,
