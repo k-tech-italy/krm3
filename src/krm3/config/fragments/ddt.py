@@ -18,7 +18,7 @@ TESTING = 'test' in sys.argv or 'PYTEST_VERSION' in os.environ
 DDT_APPS = []
 DDT_MIDDLEWARES = []
 
-if (ddt_key := _env('DDT_KEY')) and not TESTING:
+if not TESTING:
     logger = _logging.getLogger(__name__)
     try:
         ignored = _RegexList(('/api/.*',))
@@ -29,9 +29,7 @@ if (ddt_key := _env('DDT_KEY')) and not TESTING:
                 return False
             # use https://bewisse.com/modheader/ to set custom header
             # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)`
-            if flag_enabled('DDT_ENABLED', request=request):
-                return request.META.get('HTTP_DDT_KEY') == ddt_key
-            return False
+            return flag_enabled("DDT_ENABLED", request=request)
 
         DEBUG_TOOLBAR_CONFIG = {
             'SHOW_TOOLBAR_CALLBACK': show_ddt,
