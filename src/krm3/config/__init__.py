@@ -7,7 +7,6 @@ import uuid
 from pathlib import Path
 
 from cryptography.fernet import Fernet
-from django.utils.crypto import get_random_string
 from krm3.utils.tools import parse_emails
 
 
@@ -36,6 +35,8 @@ DEFAULTS = dict(  # noqa: C408
     SENTRY_ENVIRONMENT=(str, 'local'),
     MEDIA_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~media')),
     MEDIA_URL=(str, '/media/'),
+    PRIVATE_MEDIA_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~private')),
+    PRIVATE_MEDIA_URL=(str, '/protected-media/'),
     STATIC_ROOT=(str, str(Path(__file__).parent.parent.parent.parent / '~static')),
     ADMINS=(parse_emails, ''),
     TEST_USERS=(parse_emails, ''),
