@@ -1,3 +1,9 @@
+## 2.7.0 (2026-01-12)
+
+### Feat
+
+- **settings.py**: Private media root initialization and nginx handling (#210)
+
 ## 2.6.2 (2026-01-09)
 
 ### Fix
