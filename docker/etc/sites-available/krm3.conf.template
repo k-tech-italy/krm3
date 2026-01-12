@@ -5,10 +5,12 @@
 #   ${DJANGO_ROUTES_PATTERN} - Regex pattern matching Django URL routes
 #   ${STATIC_URL}            - Static files URL prefix (e.g., /static)
 #   ${MEDIA_URL}             - Media files URL prefix (e.g., /media)
+#   ${PRIVATE_MEDIA_URL}     - Private media URL prefix (e.g., /protected-media)
 #
 # Variables from environment:
 #   ${KRM3_STATIC_ROOT}      - Filesystem path to static files
-#   ${KRM3_MEDIA_ROOT}       - Filesystem path to media files
+#   ${KRM3_MEDIA_ROOT}       - Filesystem path to media files (public)
+#   ${KRM3_PRIVATE_MEDIA_ROOT} - Filesystem path to private media files
 
 upstream django {
     server 127.0.0.1:8000;
@@ -31,11 +33,18 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Media files
+    # Media files (public)
     location ${MEDIA_URL}/ {
         alias ${KRM3_MEDIA_ROOT}/;
         expires 7d;
         add_header Cache-Control "public";
+    }
+
+    # Protected media files (internal only - served via X-Accel-Redirect from Django)
+    # Django views at /media-auth/ will validate permissions and return X-Accel-Redirect
+    location ${PRIVATE_MEDIA_URL} {
+        internal;
+        alias ${KRM3_PRIVATE_MEDIA_ROOT}/;
     }
 
     # Django application routes (auto-detected from Django URLconf)

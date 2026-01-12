@@ -98,14 +98,16 @@ def extract_first_level_paths(urlpatterns: list, prefix: str = '') -> set[str]:
     return paths
 
 
-def export_nginx_vars(output_path: str | None = None) -> str:
+def export_nginx_vars(output_path: str | None = None) -> tuple[str, list[str]]:
     """Export Django configuration as shell environment variables.
 
     Args:
         output_path: Path where to write the shell script with exported variables
 
     Returns:
-        str: Generated shell script content with export statements
+        tuple: (shell_script_content, filtered_django_paths)
+            - shell_script_content: Generated shell script with export statements
+            - filtered_django_paths: Sorted list of Django paths that will be proxied
 
     """
     # Get URL resolver
@@ -119,16 +121,17 @@ def export_nginx_vars(output_path: str | None = None) -> str:
     media_url_path = settings.MEDIA_URL.strip('/')
 
     # Filter out paths that should be served as static files
-    django_paths = sorted([p for p in django_paths if not should_exclude_path(p, static_url_path, media_url_path)])
+    filtered_paths = sorted([p for p in django_paths if not should_exclude_path(p, static_url_path, media_url_path)])
 
     # Get URLs from Django settings
     static_url = settings.STATIC_URL.rstrip('/')
     media_url = settings.MEDIA_URL.rstrip('/')
+    private_media_url = settings.PRIVATE_MEDIA_URL.rstrip('/')
 
     # Build nginx location pattern for Django routes
     # Escape special nginx characters and format as regex alternatives
     escaped_paths = []
-    for p in django_paths:
+    for p in filtered_paths:
         # Escape special nginx regex characters
         escaped = p.replace('.', r'\.')
         # Remove leading slash if present (we'll add it in the pattern)
@@ -155,6 +158,7 @@ def export_nginx_vars(output_path: str | None = None) -> str:
 export DJANGO_ROUTES_PATTERN='{django_routes_pattern.replace("'", "'\"'\"'")}'
 export STATIC_URL='{static_url.replace("'", "'\"'\"'")}'
 export MEDIA_URL='{media_url.replace("'", "'\"'\"'")}'
+export PRIVATE_MEDIA_URL='{private_media_url.replace("'", "'\"'\"'")}'
 """
 
     if output_path:
@@ -164,7 +168,7 @@ export MEDIA_URL='{media_url.replace("'", "'\"'\"'")}'
         # Make the file executable
         output_file.chmod(0o755)
 
-    return shell_script
+    return shell_script, filtered_paths
 
 
 @click.command()
@@ -211,26 +215,15 @@ def command(output: str | None, dry_run: bool, verbose: bool) -> None:
             output_path = temp_file.name
             temp_file.close()
 
+        # Export nginx variables and get filtered paths
+        shell_script, filtered_paths = export_nginx_vars(output_path=output_path)
+
         if verbose and not dry_run:
-            # Show detected routes before generating
-            resolver = get_resolver()
-            all_paths = extract_first_level_paths(resolver.url_patterns)
-
-            # Get static and media URLs for filtering
-            static_url_path = settings.STATIC_URL.strip('/')
-            media_url_path = settings.MEDIA_URL.strip('/')
-
-            filtered_paths = sorted(
-                [p for p in all_paths if not should_exclude_path(p, static_url_path, media_url_path)]
-            )
-
             click.secho('Detected Django routes (will be proxied to Django):', fg='green', err=True)
             for path in filtered_paths:
                 # Remove leading slash for display since we add it in the format
                 display_path = path.lstrip('/')
                 click.echo(f'  - /{display_path}/', err=True)
-
-        shell_script = export_nginx_vars(output_path=output_path)
 
         if dry_run:
             click.echo(shell_script)
