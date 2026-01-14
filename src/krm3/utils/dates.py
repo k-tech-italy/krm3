@@ -67,6 +67,7 @@ class KrmDay:
         return self.date in get_country_holidays(country_calendar_code=country_calendar_code)
 
     def is_non_working_day(self, country_calendar_code: str | None = None) -> bool:
+        # FIXME: you cannot assume Saturdays and Sundays are non-working in every country
         return self.day_of_week_short in ['Sat', 'Sun'] or self.is_holiday(country_calendar_code=country_calendar_code)
 
     @property

@@ -5,7 +5,6 @@ from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
-from dateutil.relativedelta import relativedelta
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -95,7 +94,7 @@ class SpecialLeaveReason(models.Model):
         return not self.is_not_valid_yet(date) and not self.is_expired(date)
 
 
-class TimesheetSubmissionManager(models.Manager):
+class TimesheetSubmissionQuerySet(models.QuerySet):
     """Custom Manager for TimesheetSubmission with utility methods."""
 
     def get_closed_in_period(
@@ -121,7 +120,7 @@ class TimesheetSubmission(models.Model):
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     timesheet = models.JSONField(null=True, blank=True, default=dict)
 
-    objects: TimesheetSubmissionManager = TimesheetSubmissionManager()
+    objects = TimesheetSubmissionQuerySet.as_manager()
 
     class Meta:
         constraints = [
@@ -273,6 +272,7 @@ class TimeEntry(models.Model):
     comment = models.TextField(null=True, blank=True)
     protocol_number = models.CharField(null=True, blank=True)
     metadata = models.JSONField(default=dict, null=True, blank=True)
+    # FIXME: should be called `submission` and have a significant related name
     timesheet = models.ForeignKey(TimesheetSubmission, on_delete=models.SET_NULL, null=True, blank=True)
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)

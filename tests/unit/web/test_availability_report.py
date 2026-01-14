@@ -15,6 +15,7 @@ from testutils.factories import (
     SuperUserFactory,
     TaskFactory,
     TimeEntryFactory,
+    WorkScheduleFactory,
 )
 
 from tests.unit.web.test_views import _assert_homepage_content
@@ -27,7 +28,8 @@ from tests.unit.web.test_views import _assert_homepage_content
 def test_availability_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     resource = ResourceFactory()
-    ContractFactory(resource=resource)
+    contract = ContractFactory(resource=resource)
+    WorkScheduleFactory(contract=contract)
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,
@@ -89,11 +91,13 @@ def test_availability_view_filtered_by_project(client):
     SuperUserFactory(username='user00', password='pass123')
     project = ProjectFactory()
     resource = ResourceFactory()
-    ContractFactory(resource=resource)
+    contract = ContractFactory(resource=resource)
+    WorkScheduleFactory(contract=contract)
     TaskFactory(project=project, resource=resource)
     another_project = ProjectFactory()
     another_resource = ResourceFactory()
-    ContractFactory(resource=another_resource)
+    another_contract = ContractFactory(resource=another_resource)
+    WorkScheduleFactory(contract=another_contract)
     TaskFactory(project=another_project, resource=another_resource)
     TimeEntryFactory(
         resource=resource,
@@ -125,11 +129,14 @@ def test_availability_report_only_resources_with_contract(client):
     project = ProjectFactory()
 
     r_current = ResourceFactory()
-    ContractFactory(resource=r_current)
+    current_contract = ContractFactory(resource=r_current)
+    WorkScheduleFactory(contract=current_contract)
     r_past = ResourceFactory()
-    ContractFactory(resource=r_past, period=(_dt('2020-01-01'), _dt('2021-01-01')))
+    past_contract = ContractFactory(resource=r_past, period=(_dt('2020-01-01'), _dt('2021-01-01')))
+    WorkScheduleFactory(contract=past_contract)
     r_future = ResourceFactory()
-    ContractFactory(resource=r_future, period=(_dt('2025-09-01'), _dt('2026-01-01')))
+    future_contract = ContractFactory(resource=r_future, period=(_dt('2025-09-01'), _dt('2026-01-01')))
+    WorkScheduleFactory(contract=future_contract)
 
     TaskFactory(project=project, resource=r_current)
     TaskFactory(project=project, resource=r_past, end_date=_dt('20201231'))

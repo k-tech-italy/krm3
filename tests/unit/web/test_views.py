@@ -4,7 +4,7 @@ import freezegun
 import pytest
 from django.contrib.auth.models import Permission
 from django.urls import reverse
-from testutils.factories import ContractFactory, ResourceFactory, UserFactory
+from testutils.factories import ContractFactory, ResourceFactory, UserFactory, WorkScheduleFactory
 
 
 def _assert_homepage_content(response):
@@ -75,15 +75,19 @@ def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contr
         user=user_without_contract, profile=user_without_contract.profile, preferred_in_report=True
     )
 
-    _contract_for_contracted_resource = ContractFactory(
+    contract_for_contracted_resource = ContractFactory(
         resource=contracted_resource, period=(datetime.date(2024, 1, 1), None)
     )
-    _contract_for_preferred_resource = ContractFactory(
+    contract_for_preferred_resource = ContractFactory(
         resource=preferred_resource, period=(datetime.date(2024, 1, 1), None)
     )
-    _contract_for_expired_resource = ContractFactory(
+    contract_for_expired_resource = ContractFactory(
         resource=expired_resource, period=(datetime.date(2024, 1, 1), datetime.date(2024, 6, 1))
     )
+
+    _schedule_for_contracted_resource = WorkScheduleFactory(contract=contract_for_contracted_resource)
+    _schedule_for_preferred_resource = WorkScheduleFactory(contract=contract_for_preferred_resource)
+    _schedule_for_expired_resource = WorkScheduleFactory(contract=contract_for_expired_resource)
 
     def expected_rendered_name(resource):
         return f'{resource.last_name}</strong> {resource.first_name}'

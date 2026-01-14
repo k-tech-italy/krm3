@@ -1,12 +1,13 @@
 import datetime
 from datetime import date
 import json
+from decimal import Decimal
 
 import pytest
 from constance import test as constance_test
 from django.core.exceptions import ValidationError
 from testutils.date_utils import _dt
-from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
+from testutils.factories import ContractFactory, ProjectFactory, TaskFactory, WorkScheduleFactory
 
 from krm3.core.forms import ContractForm
 from krm3.core.models import Contract
@@ -153,8 +154,15 @@ def test_get_due_hours(date, expected_fixed, expected_unbounded):
     unbounded_period = (datetime.date(2024, 1, 1), None)
     schedule = _default_schedule | dict.fromkeys(_default_workdays, 4)
 
-    fixed_time_contract = ContractFactory(period=fixed_period, working_schedule=schedule)
-    unbounded_contract = ContractFactory(period=unbounded_period, working_schedule=schedule)
+    fixed_time_contract = ContractFactory(period=fixed_period)
+    unbounded_contract = ContractFactory(period=unbounded_period)
+    for contract in (fixed_time_contract, unbounded_contract):
+        work_schedule_kwargs = (
+            {'hours': [Decimal(schedule[day]) for day in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')]}
+            if schedule
+            else {}
+        )
+        WorkScheduleFactory(contract=contract, **work_schedule_kwargs)
 
     assert fixed_time_contract.get_due_hours(date) == expected_fixed
     assert unbounded_contract.get_due_hours(date) == expected_unbounded

@@ -1,9 +1,8 @@
+from __future__ import annotations
+
 import datetime
-import json
-from decimal import Decimal
 from typing import Self, TYPE_CHECKING
 
-from constance import config as constance_config
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -14,7 +13,11 @@ from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
+    from decimal import Decimal
+
+    from django.db.models.fields.related_descriptors import RelatedManager
     from krm3.core.models import Task
+    from krm3.core.models import schedule
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
@@ -37,8 +40,6 @@ class Contract(models.Model):
         blank=True,
         help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
     )
-    working_schedule = models.JSONField(blank=True, default=dict)
-    meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
     document = models.FileField(
         upload_to=contract_directory_path,
@@ -49,6 +50,10 @@ class Contract(models.Model):
     )
 
     objects = ContractQuerySet.as_manager()
+
+    if TYPE_CHECKING:
+        work_schedules: RelatedManager[schedule.WorkSchedule]
+        meal_voucher_thresholds: RelatedManager[schedule.MealVoucherThresholds]
 
     class Meta:
         ordering = ('period',)
@@ -119,11 +124,38 @@ class Contract(models.Model):
     def get_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
         day = KrmDay(day)
         if not self.falls_in(day):
-            return self.get_default_schedule(day)
-        schedule = self.working_schedule.get(day.day_of_week_short.casefold(), self.get_default_schedule(day))
-        return Decimal(schedule)
+            from krm3.utils import schedule as schedule_utils  # noqa: PLC0415 - circular import
 
-    @classmethod
-    def get_default_schedule(cls, day: datetime.date | KrmDay) -> Decimal:
-        day_of_week = KrmDay(day).day_of_week_short.casefold()
-        return json.loads(constance_config.DEFAULT_RESOURCE_SCHEDULE).get(day_of_week, 0)
+            return schedule_utils.get_default_schedule(self, day.date)
+        return self.get_scheduled_hours_for_day(day.date)
+
+    def working_schedule(self, day: datetime.date | None) -> schedule.WorkSchedule:
+        """Return the weekly work schedule for the given `day`.
+
+        :param day: the day for which the schedule is valid.
+            Defaults to today.
+        :return: a weekly schedule.
+        """
+        if not day:
+            day = datetime.date.today()
+        return self.work_schedules.valid_on(day).get()
+
+    def get_scheduled_hours_for_day(self, day: datetime.date) -> Decimal:
+        """Return how long the contract's resource is supposed work on a given `day`.
+
+        :param day: the day to check the schedule for
+        :return: how many hours the resource is supposed to work on the
+            given `day`.
+        """
+        return self.working_schedule(day).get_hours_for_day(day)
+
+    def meal_voucher(self, day: datetime.date | None) -> schedule.MealVoucherThresholds | None:
+        """Return the weekly meal voucher thresholds for the given `day`.
+
+        :param day: the day for which the thresholds are valid.
+            Defaults to today.
+        :return: a weekly schedule.
+        """
+        if not day:
+            day = datetime.date.today()
+        return self.meal_voucher_thresholds.valid_on(day).first()
