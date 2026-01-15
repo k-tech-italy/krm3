@@ -13,6 +13,10 @@ if SENTRY_DSN:
     from ... import __version__
     from ..environ import env as _env
 
+    SENTRY_PROJECT = _env('SENTRY_PROJECT')
+    SENTRY_ENVIRONMENT = _env('SENTRY_ENVIRONMENT')
+    SENTRY_DEBUG = _env('SENTRY_DEBUG')
+
     sentry_logging = LoggingIntegration(
         level=_logging.INFO,  # Capture info and above as breadcrumbs
         event_level=_logging.ERROR,  # Send errors as events
@@ -25,7 +29,7 @@ if SENTRY_DSN:
             sentry_logging,
         ],
         release=__version__,
-        debug=_env('SENTRY_DEBUG'),
-        environment=_env('SENTRY_ENVIRONMENT'),
+        debug=SENTRY_DEBUG,
+        environment=SENTRY_ENVIRONMENT,
         send_default_pii=True,
     )

@@ -1,3 +1,9 @@
+## 2.7.1 (2026-01-15)
+
+### Fix
+
+- **sentry.py**: Update sentry config fragment, aligned FE submodule with contanct detail UI changes (#212)
+
 ## 2.7.0 (2026-01-12)
 
 ### Feat
