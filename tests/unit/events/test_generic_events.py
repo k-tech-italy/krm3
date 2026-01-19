@@ -58,7 +58,7 @@ class TestEventDispatcherConfigurationErrors:
 class TestEventDispatcher:
     def test_forwards_event_to_backend(self, caplog):
         dispatcher = EventDispatcher()
-        with caplog.at_level(logging.INFO):
+        with caplog.at_level(logging.DEBUG):
             dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
         assert len(caplog.records) == 1
         record = caplog.records[0]
