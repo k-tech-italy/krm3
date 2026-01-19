@@ -126,6 +126,7 @@ MIDDLEWARE = (
     + SOCIAL_MIDDLEWARES  # noqa: F405
     + DDT_MIDDLEWARES  # noqa: F405
     + [
+        'src.krm3.middlewares.language_selection.UserLanguageMiddleware',
         'django.contrib.admindocs.middleware.XViewMiddleware',
         # Third party middlewares.
         'djangorestframework_camel_case.middleware.CamelCaseMiddleWare',

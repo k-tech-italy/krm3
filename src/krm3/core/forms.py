@@ -1,9 +1,11 @@
 import datetime
 import typing
+from random import choices
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
+from django.conf import settings
 
 from krm3.core.models import Contract
 from krm3.utils.dates import DATE_INFINITE
@@ -47,7 +49,8 @@ class ContractForm(ModelForm):
                 for task in self.instance.get_tasks():
                     task_period = [task.start_date, task.end_date or DATE_INFINITE]
                     if (new_period[0] > old_period[0] and new_period[0] > task_period[0]) or (
-                        new_period[1] < old_period[1] and new_period[1] - datetime.timedelta(days=1) < task_period[1]
+                            new_period[1] < old_period[1] and new_period[1] - datetime.timedelta(days=1) < task_period[
+                        1]
                     ):
                         raise ValidationError('Shrinking contract period would leave orphan tasks', code='orphan-tasks')
 
@@ -61,6 +64,7 @@ class ContractForm(ModelForm):
 class ResourceForm(forms.Form):
     first_name = forms.CharField(max_length=50, required=True)
     last_name = forms.CharField(max_length=50, required=True)
+    preferred_language = forms.ChoiceField(choices=settings.LANGUAGES, required=True)
 
     def __init__(self, resource: 'Resource', *args: typing.Any, **kwargs: typing.Any) -> None:
         super().__init__(*args, **kwargs)
@@ -69,11 +73,12 @@ class ResourceForm(forms.Form):
         # Populate initial values from resource object
         self.fields['first_name'].initial = resource.first_name
         self.fields['last_name'].initial = resource.last_name
+        self.fields['preferred_language'].initial = resource.preferred_language
 
     def save(self) -> 'Resource':
         """Save the form data to Resource model."""
         self.resource.first_name = self.cleaned_data['first_name']
         self.resource.last_name = self.cleaned_data['last_name']
+        self.resource.preferred_language = self.cleaned_data['preferred_language']
         self.resource.save()
-
         return self.resource
