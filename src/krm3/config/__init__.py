@@ -95,4 +95,7 @@ DEFAULTS = dict(  # noqa: C408
     TICKETING_ISSUES=(str, None),
     TICKETING_URL=(str, None),
     URL_REPLACE=(dict, None),
+    # Event dispatching
+    EVENT_DISPATCHER_BACKEND=(str, 'krm3.events.backends.NullEventDispatcherBackend'),
+    EVENT_DISPATCHER_OPTIONS=(dict, {}),
 )
