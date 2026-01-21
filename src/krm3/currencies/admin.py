@@ -37,15 +37,22 @@ class RateAdmin(ExtraButtonsMixin, ModelAdmin):
 
     @button(html_attrs=NORMAL)
     def import_rates(self, request):  # noqa: D102
+        form = None
         if request.method == 'POST':
             form = RatesImportForm(request.POST, request.FILES)
             if form.is_valid():
                 rate_importer = RateImporter(request)
+                rate_importer.store(form.cleaned_data['file'])
                 return self._return_preview(rate_importer, request)
-        else:
+
+        if request.method == 'GET' and RateImporter.SESSION_KEY in request.session:
             sorting = request.GET.get('sort')
             rate_importer = RateImporter(request, from_session=True)
             return self._return_preview(rate_importer, request, sorting)
+
+        if form is None:
+            form = RatesImportForm()
+        return TemplateResponse(request, 'admin/currencies/import_rates.html', {'form': form})
 
     @staticmethod
     def _return_preview(rate_importer, request, sorting=None):
