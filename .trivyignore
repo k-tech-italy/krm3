@@ -15,3 +15,6 @@ CVE-2023-31484
 CVE-2025-6021
 CVE-2025-6020
 CVE-2025-4802
+# glibc integer overflow in memalign - fixed in Debian Sid (glibc 2.42-10), not yet in Bookworm
+# Marked "minor issue" by Debian, requires attacker-controlled size AND alignment to exploit
+CVE-2026-0861
