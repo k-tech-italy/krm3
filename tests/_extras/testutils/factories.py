@@ -104,7 +104,7 @@ class ResourceFactory(DjangoModelFactory):
     last_name = Faker('last_name')
     user = SubFactory(UserFactory)
     preferred_in_report = True
-    preferred_language = 'it'
+    preferred_language = 'pl'
 
     class Meta:
         model = 'core.Resource'

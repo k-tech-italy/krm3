@@ -6,6 +6,7 @@ from typing import cast
 import pytest
 import responses
 from rest_framework.test import APIClient
+from django.test import Client
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
@@ -317,3 +318,12 @@ def self_cleaning_add(db):
     Document.add = original
     for file in _to_delete:
         Path(file).unlink(missing_ok=True)
+
+
+@pytest.fixture
+def django_client_and_auth_resource(resource, staff_user):
+    client = Client()
+    resource.user = staff_user
+    resource.save()
+    client.force_login(resource.user)
+    return client, resource

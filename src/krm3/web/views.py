@@ -111,14 +111,10 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
             if 'preferred_language' in form.changed_data:
                 preferred_language = form.cleaned_data['preferred_language']
                 translation.activate(preferred_language)
-                request.LANGUAGE_CODE = preferred_language
 
                 response = self.get(request, *args, **kwargs)
-
-                response.set_cookie(
-                    settings.LANGUAGE_COOKIE_NAME,
-                    preferred_language
-                )
+                response.LANGUAGE_CODE = preferred_language
+                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, preferred_language)
                 messages.success(request, _('Profile updated successfully.'))
                 return response
 

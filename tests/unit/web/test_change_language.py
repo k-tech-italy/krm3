@@ -1,48 +1,35 @@
-from unittest.mock import Mock
-
-from django.contrib.auth import get_user_model
-from django.contrib.sessions.middleware import SessionMiddleware
-from django.shortcuts import reverse
 import pytest
-from django.test import Client
+from django.contrib.auth import get_user_model
+from django.shortcuts import reverse
 from django.conf import settings
 
 
 User = get_user_model()
 
 
-@pytest.fixture
-def django_client_with_auth_resource(resource, staff_user):
-    client = Client()
-    resource.user = staff_user
-    resource.save()
-    client.force_login(resource.user)
-    return client
-
-
-def add_session_to_request(request):
-    """Helper to add session to request"""
-    session_middleware = SessionMiddleware(Mock(return_value=Mock()))
-    session_middleware.process_request(request)
-    request.session.save()
-
-
 @pytest.mark.db
-def test_language_change_happy_path(django_client_with_auth_resource, resource):
+def test_language_change_happy_path(django_client_and_auth_resource):
+    client, resource = django_client_and_auth_resource
+    assert resource.preferred_language == 'pl', "Sanity check, ResourceFactory should be setting this."
 
-    assert resource.preferred_language == 'it', "Sanity check, ResourceFactory should be setting this."
+    home_response = client.get('/')
+    home_cookie = home_response.cookies.get(settings.LANGUAGE_COOKIE_NAME)
+    assert home_cookie.coded_value == 'pl', "Verify the set up - language cookie"
+    assert home_response.LANGUAGE_CODE == 'pl', "Verify the set up - response language code"
 
-    response = django_client_with_auth_resource.post(
+
+    response = client.post(
         reverse('user_resource', args=[resource.user.id]),
         data={
             'first_name': resource.first_name,
             'last_name': resource.last_name,
-            'preferred_language': 'en-uk'
+            'preferred_language': 'it'
         }
     )
 
-    session_language = response.cookies.get(settings.LANGUAGE_COOKIE_NAME)
-    assert session_language.coded_value == 'en-uk', "Check the session cookie has been updated."
+    language_cookie = response.cookies.get(settings.LANGUAGE_COOKIE_NAME)
+    assert language_cookie.coded_value == 'it', "Check the language cookie has been updated."
+    assert response.LANGUAGE_CODE == 'it', "Check the language code has been updated."
 
-    admin_panel_body = django_client_with_auth_resource.get('/admin/').content.decode()
-    assert 'Welcome' in admin_panel_body, "Check that the language has been updated."
+    admin_panel_body = client.get('/admin/').content.decode()
+    assert 'Benvenuto' in admin_panel_body, "Check that the language has been updated."
