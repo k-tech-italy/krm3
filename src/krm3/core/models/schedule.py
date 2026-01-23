@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 import json
-from typing import Self, override
+from typing import Self, override, TYPE_CHECKING
 
 import constance
 from django.contrib.postgres import constraints as pg_constraints
@@ -49,7 +49,6 @@ class ScheduleQuerySet[T: Schedule](models.QuerySet[T]):
 class Schedule(models.Model):
     """Represents a weekly schedule in hours."""
 
-    period = pg_fields.DateRangeField()
     hours = pg_fields.ArrayField(
         models.DecimalField(max_digits=4, decimal_places=2),
         size=7,
@@ -72,10 +71,8 @@ class Schedule(models.Model):
         abstract = True
 
     def __str__(self) -> str:
-        start_date_part = f'from {self.period.lower}'
-        end_date_part = f' to {self.period.upper} (excluded)' if self.period.upper else ''
         hours = tuple(str(day_hours for day_hours in self.hours))
-        return f'{self._describe()} {start_date_part}{end_date_part}: {hours}'
+        return f'{self._describe()}: {hours}'
 
     @override
     def save(self, *args, **kwargs) -> None:
@@ -90,34 +87,16 @@ class Schedule(models.Model):
             # TODO: i18n
             raise ValidationError({'hours': 'All hours must be between 0 and 24.'})
 
-    @classmethod
-    def new(cls, start: datetime.date, end: datetime.date | None = None, **kwargs) -> Self:
-        return cls.objects.create(period=(start, end), **kwargs)
-
     def get_hours_for_day(self, day: datetime.date) -> Decimal:
         return self.hours[day.weekday()]
-
-    def get_hours_for_today(self) -> Decimal:
-        return self.get_hours_for_day(datetime.date.today())
 
     def _describe(self) -> str:
         return 'Schedule'
 
 
 class WorkSchedule(Schedule):
-    # FIXME: should be one-to-one
-    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='work_schedules')
-
-    class Meta(Schedule.Meta):
-        constraints = (
-            pg_constraints.ExclusionConstraint(
-                name='exclude_overlapping_work_schedules_for_contract',
-                expressions=[
-                    ('period', pg_fields.RangeOperators.OVERLAPS),
-                    ('contract', pg_fields.RangeOperators.EQUAL),
-                ],
-            ),
-        )
+    if TYPE_CHECKING:
+        contract: Contract
 
     @override
     def _describe(self) -> str:
@@ -129,19 +108,8 @@ class MealVoucherThresholds(Schedule):
     non_working_day_hours = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal(4.0))
     """The meal voucher threshold for any non-working day (e.g. national holidays)"""
 
-    # FIXME: should be one-to-one
-    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='meal_voucher_thresholds')
-
-    class Meta(Schedule.Meta):
-        constraints = (
-            pg_constraints.ExclusionConstraint(
-                name='exclude_overlapping_meal_voucher_thresholds_for_contract',
-                expressions=[
-                    ('period', pg_fields.RangeOperators.OVERLAPS),
-                    ('contract', pg_fields.RangeOperators.EQUAL),
-                ],
-            ),
-        )
+    if TYPE_CHECKING:
+        contract: Contract
 
     @override
     def __str__(self) -> str:

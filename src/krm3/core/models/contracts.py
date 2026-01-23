@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import warnings
 from typing import Self, TYPE_CHECKING
 
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -48,12 +49,12 @@ class Contract(models.Model):
         validators=[FileExtensionValidator(['pdf'])],
         help_text='Optional PDF document (PDF files only)',
     )
+    work_schedule = models.OneToOneField(schedule.WorkSchedule, on_delete=models.CASCADE)
+    meal_voucher_thresholds = models.OneToOneField(
+        schedule.MealVoucherThresholds, on_delete=models.CASCADE, null=True, blank=True
+    )
 
     objects = ContractQuerySet.as_manager()
-
-    if TYPE_CHECKING:
-        work_schedules: RelatedManager[schedule.WorkSchedule]
-        meal_voucher_thresholds: RelatedManager[schedule.MealVoucherThresholds]
 
     class Meta:
         ordering = ('period',)
@@ -95,6 +96,18 @@ class Contract(models.Model):
                     {'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'}
                 )
 
+    @property
+    def working_schedule(self) -> schedule.WorkSchedule:
+        """Backwards compatibility property for `work_schedule`."""
+        warnings.warn("Use 'work_schedule' instead", DeprecationWarning, stacklevel=1)
+        return self.work_schedule
+
+    @property
+    def meal_voucher(self) -> schedule.MealVoucherThresholds:
+        """Backwards compatibility property for `meal_voucher_thresholds`."""
+        warnings.warn("Use 'meal_voucher_thresholds' instead", DeprecationWarning, stacklevel=1)
+        return self.meal_voucher_thresholds
+
     def falls_in(self, day: datetime.date | KrmDay) -> bool:
         """Check if the provided day falls into the contract period."""
         if isinstance(day, KrmDay):
@@ -129,17 +142,6 @@ class Contract(models.Model):
             return schedule_utils.get_default_schedule(self, day.date)
         return self.get_scheduled_hours_for_day(day.date)
 
-    def working_schedule(self, day: datetime.date | None) -> schedule.WorkSchedule:
-        """Return the weekly work schedule for the given `day`.
-
-        :param day: the day for which the schedule is valid.
-            Defaults to today.
-        :return: a weekly schedule.
-        """
-        if not day:
-            day = datetime.date.today()
-        return self.work_schedules.valid_on(day).get()
-
     def get_scheduled_hours_for_day(self, day: datetime.date) -> Decimal:
         """Return how long the contract's resource is supposed work on a given `day`.
 
@@ -148,14 +150,3 @@ class Contract(models.Model):
             given `day`.
         """
         return self.working_schedule(day).get_hours_for_day(day)
-
-    def meal_voucher(self, day: datetime.date | None) -> schedule.MealVoucherThresholds | None:
-        """Return the weekly meal voucher thresholds for the given `day`.
-
-        :param day: the day for which the thresholds are valid.
-            Defaults to today.
-        :return: a weekly schedule.
-        """
-        if not day:
-            day = datetime.date.today()
-        return self.meal_voucher_thresholds.valid_on(day).first()
