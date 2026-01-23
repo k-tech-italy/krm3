@@ -1,5 +1,3 @@
-from urllib.request import Request
-
 from django.conf import settings
 from django.utils import translation
 from django.http import HttpResponse
@@ -11,7 +9,7 @@ class UserLanguageMiddleware:
 
     def __call__(self, request) -> HttpResponse:
         # Check if language is already set in session (priority 1)
-        session_language = request.session.get(settings.LANGUAGE_COOKIE_NAME)
+        session_language = request.COOKIES.get(settings.LANGUAGE_COOKIE_NAME)
 
         if not session_language and request.user.is_authenticated:
             # Priority 2: Use profile language if no session override exists

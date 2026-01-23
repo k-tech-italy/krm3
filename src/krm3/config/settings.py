@@ -269,3 +269,14 @@ if (_changelog := Path(krm3.__file__).parent / 'CHANGELOG.md').exists():
 else:
     CHANGELOG_PATH = Path(krm3.__file__).parents[2] / 'CHANGELOG.md'
 HOLIDAYS_CALENDAR = env('HOLIDAYS_CALENDAR')
+
+
+CSRF_TRUSTED_ORIGINS=[
+    'http://localhost:3000'
+]
+# ALLOWED_HOSTS=[
+#     "localhost","127.0.0.1"
+# ]
+# CORS_ORIGIN_WHITELIST=[
+#     "http://localhost:3000"
+# ]

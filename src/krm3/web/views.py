@@ -24,6 +24,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
+from django.utils import translation
 from django_simple_dms.models import Document, DocumentTag
 
 from krm3.core.forms import ResourceForm
@@ -107,6 +108,20 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         form = ResourceForm(resource=self.resource, data=request.POST)
         if form.is_valid():
             form.save()
+            if 'preferred_language' in form.changed_data:
+                preferred_language = form.cleaned_data['preferred_language']
+                translation.activate(preferred_language)
+                request.LANGUAGE_CODE = preferred_language
+
+                response = self.get(request, *args, **kwargs)
+
+                response.set_cookie(
+                    settings.LANGUAGE_COOKIE_NAME,
+                    preferred_language
+                )
+                messages.success(request, _('Profile updated successfully.'))
+                return response
+
             messages.success(request, _('Profile updated successfully.'))
             # Redirect to the same profile page after successful save
             return self.get(request, *args, **kwargs)

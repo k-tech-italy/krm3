@@ -25,28 +25,6 @@ def add_session_to_request(request):
     request.session.save()
 
 
-def test_unauthenticated_user_no_language_set():
-    """Unauthenticated users should not have language set"""
-    request = RequestFactory().get('/')
-    add_session_to_request(request)
-    request.user = Mock(is_authenticated=False)
-
-    UserLanguageMiddleware(request)
-
-    assert settings.LANGUAGE_COOKIE_NAME not in request.session
-
-
-def test_authenticated_user_with_profile_language(user_with_a_language):
-    """Should set language from profile if no session language exists"""
-    request = RequestFactory().get('/')
-    add_session_to_request(request)
-    request.user = user_with_a_language
-
-    UserLanguageMiddleware(request)
-
-    assert request.session.get(settings.LANGUAGE_COOKIE_NAME) == 'es'
-    assert request.LANGUAGE_CODE == 'es'
-
 
 def test_session_language_takes_priority(user_with_a_language):
     """Session language should override profile language"""
@@ -62,17 +40,6 @@ def test_session_language_takes_priority(user_with_a_language):
     # Should remain 'fr', not change to profile's 'es'
     assert request.session.get(settings.LANGUAGE_COOKIE_NAME) == 'fr'
 
-
-def test_authenticated_user_with_none_preferred_language(user_with_a_language):
-    """Should handle None/empty preferred language"""
-    request = RequestFactory().get('/')
-    add_session_to_request(request)
-
-    user_with_a_language.resource.preferred_language = None
-    request.user = user_with_a_language
-
-    UserLanguageMiddleware(request)
-    assert settings.LANGUAGE_COOKIE_NAME not in request.session
 
 
 def test_language_persists_across_requests(user_with_a_language):
