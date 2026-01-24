@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
@@ -19,6 +20,7 @@ from .geo import City
 from .auth import Resource
 from .projects import Project
 
+from krm3.core.storage import PrivateMediaStorage
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
@@ -309,7 +311,7 @@ class Expense(models.Model):
         Reimbursement, related_name='expenses', on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    image = models.FileField(upload_to=mission_directory_path, null=True, blank=True)
+    image = models.FileField(upload_to=mission_directory_path, storage=PrivateMediaStorage(), null=True, blank=True)
 
     created_ts = models.DateTimeField(auto_now_add=True)
     modified_ts = models.DateTimeField(auto_now=True)
@@ -387,6 +389,13 @@ class Expense(models.Model):
         if self.image:
             return 0
         return Decimal(-1) * Decimal(self.amount_base)
+
+    @property
+    def image_url(self) -> str | None:
+        """Return the authenticated URL for the expense image."""
+        if self.image:
+            return reverse('media-auth:expense-image', args=[self.pk])
+        return None
 
 
 @receiver(pre_save, sender=Expense)

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
 from krm3.core.models import Contract
+from krm3.core.widgets import PrivateMediaFileInput
 from krm3.utils.dates import DATE_INFINITE
 
 if typing.TYPE_CHECKING:
@@ -56,6 +57,9 @@ class ContractForm(ModelForm):
     class Meta:
         model = Contract
         fields = '__all__'  # noqa: DJ007
+        widgets = {
+            'document': PrivateMediaFileInput(url_field='document_url'),
+        }
 
 
 class ResourceForm(forms.Form):
