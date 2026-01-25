@@ -1,10 +1,13 @@
 import datetime
 from datetime import date
 import json
+from unittest.mock import MagicMock
 
 import pytest
 from constance import test as constance_test
 from django.core.exceptions import ValidationError
+from django.core.files import File
+from django.urls import reverse
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
 
@@ -158,3 +161,17 @@ def test_get_due_hours(date, expected_fixed, expected_unbounded):
 
     assert fixed_time_contract.get_due_hours(date) == expected_fixed
     assert unbounded_contract.get_due_hours(date) == expected_unbounded
+
+
+def test_document_url_returns_none_when_no_file(db):
+    contract = ContractFactory()
+    assert contract.document_url is None
+
+
+def test_document_url_returns_authenticated_url_when_file_exists(db):
+    document = MagicMock(spec=File)
+    document.name = 'contract.pdf'
+    contract = ContractFactory(document=document)
+
+    expected_url = reverse('media-auth:contract-document', args=[contract.pk])
+    assert contract.document_url == expected_url

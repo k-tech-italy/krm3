@@ -9,7 +9,9 @@ from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from django.urls import reverse
 
+from krm3.core.storage import PrivateMediaStorage
 from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
@@ -42,6 +44,7 @@ class Contract(models.Model):
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
     document = models.FileField(
         upload_to=contract_directory_path,
+        storage=PrivateMediaStorage(),
         null=True,
         blank=True,
         validators=[FileExtensionValidator(['pdf'])],
@@ -127,3 +130,10 @@ class Contract(models.Model):
     def get_default_schedule(cls, day: datetime.date | KrmDay) -> Decimal:
         day_of_week = KrmDay(day).day_of_week_short.casefold()
         return json.loads(constance_config.DEFAULT_RESOURCE_SCHEDULE).get(day_of_week, 0)
+
+    @property
+    def document_url(self) -> str | None:
+        """Return the authenticated URL for the contract document."""
+        if self.document:
+            return reverse('media-auth:contract-document', args=[self.pk])
+        return None

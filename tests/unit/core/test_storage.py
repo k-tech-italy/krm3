@@ -1,7 +1,9 @@
 """Unit tests for custom storage backends."""
 
+import pytest
 from django.conf import settings
 
+from krm3.core.exceptions import PrivateMediaDirectUrlError
 from krm3.core.storage import PrivateMediaStorage
 
 
@@ -28,3 +30,10 @@ class TestPrivateMediaStorage:
         # Our __init__ forces these to use settings
         assert storage.location == settings.PRIVATE_MEDIA_ROOT
         assert storage.base_url == settings.PRIVATE_MEDIA_URL
+
+    def test_url_raises_private_media_direct_url_error(self):
+        """Test that calling url() raises PrivateMediaDirectUrlError."""
+        storage = PrivateMediaStorage()
+
+        with pytest.raises(PrivateMediaDirectUrlError):
+            storage.url('some_file.pdf')

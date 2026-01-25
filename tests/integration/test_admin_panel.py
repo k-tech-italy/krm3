@@ -333,6 +333,34 @@ def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user_with_plain_p
     assert mission.number is not None
 
 
+def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_with_plain_password):
+    """Test that the expense list displays image link when image exists and '-' when not."""
+    from unittest.mock import MagicMock
+    from django.core.files import File
+
+    mission = MissionFactory(number=1, status=Mission.MissionStatus.SUBMITTED, to_date=datetime.date.today())
+
+    # Create expense without image
+    ExpenseFactory(mission=mission, image=None)
+
+    # Create expense with image
+    image = MagicMock(spec=File)
+    image.name = 'receipt.jpg'
+    expense_with_image = ExpenseFactory(mission=mission)
+    expense_with_image.image = image
+    expense_with_image.save()
+
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+
+    # Check that expense without image shows '-'
+    browser.assert_element('//td[@class="field-image_link" and text()="-"]')
+
+    # Check that expense with image shows 'View' link
+    browser.assert_element('//td[@class="field-image_link"]//a[text()="View"]')
+
+
 def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user_with_plain_password):
     mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
     expense = ExpenseFactory(mission=mission, amount_reimbursement=100)

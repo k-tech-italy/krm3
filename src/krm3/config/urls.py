@@ -59,7 +59,7 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    re_path(rf'^{settings.MEDIA_URL[1:]}(?P<path>.*)$', protected_serve, {'document_root': settings.MEDIA_ROOT}),
+    path('media-auth/', include('krm3.core.media_urls')),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]
 
@@ -76,8 +76,12 @@ if settings.DEBUG:
     )
 
 # Add fe catch-all pattern last so it doesn't interfere with other routes
-# Only include in local development mode, in production nginx serves static files
+# Only include in local development mode
+# in production nginx serves static and media files
 if settings.LOCAL_DEVELOPMENT:
+    urlpatterns.append(
+        re_path(rf'^{settings.MEDIA_URL[1:]}(?P<path>.*)$', protected_serve, {'document_root': settings.MEDIA_ROOT})
+    )
     urlpatterns.append(path('', include('krm3.fe.urls')))
 
 if not settings.TESTING:
