@@ -83,7 +83,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         'payment_type',
         'document_type',
         'link_to_reimbursement',
-        'image',
+        'image_link',
     )
     list_filter = [
         ('reimbursement', admin.EmptyFieldListFilter),
@@ -170,6 +170,12 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         return '--'
 
     link_to_reimbursement.short_description = 'Reimbursement'
+
+    @admin.display(description='Image')
+    def image_link(self, obj: Expense) -> str:
+        if obj.image_url:
+            return format_html('<a href="{}">View</a>', obj.image_url)
+        return '-'
 
     def formfield_for_foreignkey(self, db_field: 'ModelField', request: 'HttpRequest' = None, **kwargs) -> 'Field':
         if db_field.name == 'currency':

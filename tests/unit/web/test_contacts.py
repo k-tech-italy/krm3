@@ -85,3 +85,16 @@ def test_response_structure_with_m2m_fields(admin_client):
 
     for website in contact.websites.all():
         assert website.url in (website['url'] for website in results['websites'])
+
+
+def test_can_filter_active_contacts(admin_client):
+    ContactFactory(is_active=True)
+    ContactFactory(is_active=False)
+
+    response = admin_client.get(reverse('core-api:contacts-list'), {'active': 'true'})
+
+    assert response.status_code == 200
+
+    assert response.json()['count'] == 1
+    assert len(response.json()['results']) == 1
+    assert response.json()['results'][0]['isActive'] is True

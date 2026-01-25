@@ -1,3 +1,19 @@
+## 3.0.0 (2026-01-25)
+
+### BREAKING CHANGE
+
+- Release Notes [IMPORTANT!!] After the release manually run the command django-admin migrate_to_private_media --verbose to copy all the models media file inside the private media folder
+
+### Feat
+
+- **PrivateStorage**: PrivateStorage view and migration command to move media documents (#216)
+- **Contact-API**: add filtering for active contacts
+- **events**: add a generic event dispatcher (#213)
+
+### Fix
+
+- **CVE**: Fix trivy HIGH severity vulnerabilities (#218)
+
 ## 2.7.1 (2026-01-15)
 
 ### Fix

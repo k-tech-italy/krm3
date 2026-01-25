@@ -17,6 +17,7 @@ import krm3
 
 from .fragments.constance import *  # noqa: F401,F403
 from .fragments.ddt import *  # noqa: F401,F403
+from .fragments.events import *  # noqa: F401,F403
 from .fragments.flags import *  # noqa: F401,F403
 from .fragments.security import *  # noqa: F401,F403
 from .fragments.sentry import *  # noqa: F401,F403
@@ -97,7 +98,7 @@ INSTALLED_APPS = (
         'tailwind',
         'krm3.theme.apps.ThemeConfig',
         'django_cotton.apps.SimpleAppConfig',
-        'pwa'
+        'pwa',
     ]
 )
 
@@ -183,10 +184,10 @@ DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django,public'}
 LANGUAGE_CODE = 'en-uk'
 
 LANGUAGES = [
-    ("en-uk", gettext_lazy("English")),
-    ("it", gettext_lazy("Italian")),
-    ("fr", gettext_lazy("French")),
-    ("pl", gettext_lazy("Polish")),
+    ('en-uk', gettext_lazy('English')),
+    ('it', gettext_lazy('Italian')),
+    ('fr', gettext_lazy('French')),
+    ('pl', gettext_lazy('Polish')),
 ]
 
 TIME_ZONE = 'UTC'
@@ -219,9 +220,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework.authentication.SessionAuthentication',),
     'DEFAULT_RENDERER_CLASSES': (
         'djangorestframework_camel_case.render.CamelCaseJSONRenderer',
         'djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer',

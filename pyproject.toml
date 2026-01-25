@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "2.7.1"
+version = "3.0.0"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -83,6 +83,7 @@ dependencies = [
     "python-magic>=0.4.27",
     "pdfminer>=20191125",
     "pypdf>=6.4.0",
+    "urllib3>=2.6.3",  # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
 ]
 
 [project.optional-dependencies]

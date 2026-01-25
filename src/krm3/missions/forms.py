@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from krm3.core.models import Expense, Mission, Reimbursement
+from krm3.core.widgets import PrivateMediaFileInput
 from krm3.currencies.models import Currency
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.impexp.imp import MissionImporter
@@ -75,6 +76,9 @@ class ExpenseAdminForm(forms.ModelForm):
     class Meta:
         model = Expense
         fields = '__all__'  # noqa: DJ007
+        widgets = {
+            'image': PrivateMediaFileInput(url_field='image_url'),
+        }
 
 
 class MissionsImportForm(forms.Form):

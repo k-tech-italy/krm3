@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import responses
 from django.core.files import File
+from django.urls import reverse
 from testutils.factories import CurrencyFactory, ExpenseFactory, PaymentCategoryFactory, ReimbursementFactory
 
 from krm3.missions.exceptions import AlreadyReimbursed
@@ -105,3 +106,17 @@ def test_expense_recalculate_reimbursement_with_image(exp_type, reimbursement, r
         expense.save()
         expense.refresh_from_db()
         assert expense.amount_reimbursement == result
+
+
+def test_image_url_returns_none_when_no_file(db):
+    expense = ExpenseFactory(image=None)
+    assert expense.image_url is None
+
+
+def test_image_url_returns_authenticated_url_when_file_exists(db):
+    image = MagicMock(spec=File)
+    image.name = 'receipt.jpg'
+    expense = ExpenseFactory(image=image)
+
+    expected_url = reverse('media-auth:expense-image', args=[expense.pk])
+    assert expense.image_url == expected_url

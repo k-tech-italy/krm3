@@ -300,5 +300,12 @@ class ContactAPIViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
-            return Contact.objects.all()
-        return Contact.objects.filter(user=self.request.user)
+            queryset = Contact.objects.all()
+        else:
+            queryset = Contact.objects.filter(user=self.request.user)
+
+        active = self.request.query_params.get('active')
+        if active:
+            queryset = queryset.filter(is_active=True)
+
+        return queryset
