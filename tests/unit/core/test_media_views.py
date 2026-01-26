@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 from django.conf import settings
 from django.core.files import File
 from django.urls import reverse
-from testutils.factories import ContractFactory, ExpenseFactory
+from testutils.factories import ContractFactory, DocumentFactory, ExpenseFactory
 
 
 class TestServeExpenseImage:
@@ -107,3 +107,42 @@ class TestServeContractDocument:
         assert 'X-Accel-Redirect' in response
         assert response['X-Accel-Redirect'] == f'{settings.PRIVATE_MEDIA_URL}{contract.document.name}'
         assert response['Content-Disposition'] == f'inline; filename="{contract.document.name.split("/")[-1]}"'
+
+
+class TestServeDocumentFile:
+    """Tests for the serve_document_file view."""
+
+    def test_unauthenticated_user_is_redirected_to_login(self, client, db):
+        doc = DocumentFactory()
+        url = reverse('media-auth:document-file', args=[doc.pk])
+
+        response = client.get(url)
+
+        assert response.status_code == 302
+        assert '/login/' in response.url
+
+    def test_returns_404_for_non_existent_document(self, resource_client, db):
+        url = reverse('media-auth:document-file', args=[99999])
+
+        response = resource_client.get(url)
+
+        assert response.status_code == 404
+
+    def test_returns_404_when_document_has_no_file(self, resource_client, db):
+        doc = DocumentFactory(document=None)
+        url = reverse('media-auth:document-file', args=[doc.pk])
+
+        response = resource_client.get(url)
+
+        assert response.status_code == 404
+
+    def test_returns_x_accel_redirect_for_valid_file(self, resource_client, db):
+        doc = DocumentFactory()
+
+        url = reverse('media-auth:document-file', args=[doc.pk])
+        response = resource_client.get(url)
+
+        assert response.status_code == 200
+        assert 'X-Accel-Redirect' in response
+        assert response['X-Accel-Redirect'] == f'{settings.PRIVATE_MEDIA_URL}{doc.document.name}'
+        assert response['Content-Disposition'] == f'inline; filename="{doc.document.name.split("/")[-1]}"'

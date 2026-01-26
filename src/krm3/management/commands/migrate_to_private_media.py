@@ -17,10 +17,14 @@ from krm3.missions.media import CONTRACT_DOCUMENT_PREFIX, EXPENSES_IMAGE_PREFIX
 
 logger = logging.getLogger(__name__)
 
+# Directory prefix for DMS documents (relative to MEDIA_ROOT)
+DMS_DOCUMENTS_PREFIX = 'documents'
+
 # Directory prefixes to migrate (relative to MEDIA_ROOT)
 PATHS_TO_MIGRATE = [
     EXPENSES_IMAGE_PREFIX,    # missions/expenses - Expense.image
     CONTRACT_DOCUMENT_PREFIX,  # contracts/documents - Contract.document
+    DMS_DOCUMENTS_PREFIX,     # documents - Document.document (django-simple-dms)
 ]
 
 
@@ -106,6 +110,7 @@ def command(dry_run: bool, verbose: bool) -> None:
     Migrated paths:
     - missions/expenses (Expense.image)
     - contracts/documents (Contract.document)
+    - documents (Document.document from django-simple-dms)
     """
     # Configure logging based on verbosity
     if verbose:

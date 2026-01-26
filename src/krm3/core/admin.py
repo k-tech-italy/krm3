@@ -12,8 +12,8 @@ from django.utils.html import format_html
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm
-from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile, Contact, \
-    AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address
+from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile, \
+    Contact, AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address
 
 
 @admin.register(UserProfile)

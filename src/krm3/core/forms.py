@@ -5,7 +5,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
-from krm3.core.models import Contract
+from krm3.core.models import Contract, ProtectedDocument
 from krm3.core.widgets import PrivateMediaFileInput
 from krm3.utils.dates import DATE_INFINITE
 
@@ -81,3 +81,14 @@ class ResourceForm(forms.Form):
         self.resource.save()
 
         return self.resource
+
+
+class ProtectedDocumentForm(ModelForm):
+    """Form for ProtectedDocument with custom widget for private media files."""
+
+    class Meta:
+        model = ProtectedDocument
+        fields = '__all__'  # noqa: DJ007
+        widgets = {
+            'document': PrivateMediaFileInput(url_field='file_url'),
+        }
