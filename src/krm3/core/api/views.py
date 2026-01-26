@@ -12,6 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.pagination import PageNumberPagination
 
 import logging
 from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer
@@ -292,11 +293,16 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
             ts.delete()
         return super().create(request, *args, **kwargs)
 
+class ContactPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 20
 
 class ContactAPIViewSet(ReadOnlyModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = ContactPagination
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
