@@ -27,8 +27,6 @@ def test_preferred_language_persists_across_sessions(django_client_and_auth_reso
 
 @pytest.mark.db
 def test_cookie_takes_priority_over_preferred_language(django_client_and_auth_resource):
-
-
     client, resource = django_client_and_auth_resource
     client.cookies[LANGUAGE_COOKIE_NAME] = 'fr'
 
