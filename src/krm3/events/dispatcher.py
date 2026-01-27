@@ -1,6 +1,7 @@
 from django.core import exceptions as django_exceptions
 from django.conf import settings
 from django.utils.module_loading import import_string
+from flags.state import flag_enabled
 
 from krm3.events import Event
 
@@ -22,6 +23,8 @@ class EventDispatcher:
         :raises ImportError: when the specified backend class cannot be
             found
         """
+        # TODO: run these checks at Django start-up time so we don't
+        #       waste time rerunning them every time we fire an event
         try:
             backend_class = import_string(settings.EVENTS['BACKEND'])
             options = settings.EVENTS['OPTIONS']
@@ -40,6 +43,10 @@ class EventDispatcher:
         The actual event processing and dispatch work is done by the
         underlying backend.
 
+        To disable event dispatching, set the `EVENTS_ENABLED` feature
+        flag to `False`.
+
         :param event: the event to send.
         """
-        self.backend.send(event)
+        if flag_enabled('EVENTS_ENABLED'):
+            self.backend.send(event)

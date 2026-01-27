@@ -1,9 +1,12 @@
 import logging
+
 from django.core import exceptions as django_exceptions
 from django.conf import settings
+from django import test as django_test
+import pytest
+
 from krm3.events import Event
 from krm3.events.dispatcher import EventDispatcher
-import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -56,10 +59,18 @@ class TestEventDispatcherConfigurationErrors:
 
 
 class TestEventDispatcher:
-    def test_forwards_event_to_backend(self, caplog):
+    @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
+    def test_forwards_event_to_backend_with_feature_flag_enabled(self, caplog):
         dispatcher = EventDispatcher()
         with caplog.at_level(logging.DEBUG):
             dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
         assert len(caplog.records) == 1
         record = caplog.records[0]
         assert record.msg == 'Event "test" sent. Payload: lorem ipsum dolor'
+
+    @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', False)]})
+    def test_swallows_event_with_feature_flag_disabled(self, caplog):
+        dispatcher = EventDispatcher()
+        with caplog.at_level(logging.DEBUG):
+            dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
+        assert not caplog.records
