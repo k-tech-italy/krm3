@@ -7,7 +7,7 @@ from django.core import exceptions as django_exceptions
 from krm3.events.backends import EventDispatcherBackend
 
 
-_DEFAULT_REQUEST_TIMEOUT_SECONDS = 10
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 10
 
 
 class _Options(TypedDict):
@@ -47,9 +47,6 @@ class _Options(TypedDict):
 class BitcasterBackend(EventDispatcherBackend):
     @override
     def __init__(self, options: _Options) -> None:
-        if not all(bool(value) for value in options.values()):
-            raise django_exceptions.ImproperlyConfigured('No empty values allowed in Bitcaster options')
-
         try:
             self.api_key = options['api_key']
             self.url = options['url']
@@ -59,7 +56,7 @@ class BitcasterBackend(EventDispatcherBackend):
         except KeyError as e:
             raise django_exceptions.ImproperlyConfigured(f'Missing option {e} required by Bitcaster')
 
-        self.timeout_seconds = options.get('timeout_seconds', _DEFAULT_REQUEST_TIMEOUT_SECONDS)
+        self.timeout_seconds = options.get('timeout_seconds', DEFAULT_REQUEST_TIMEOUT_SECONDS)
 
     @override
     def send[T](self, event: Event[T]) -> None:
