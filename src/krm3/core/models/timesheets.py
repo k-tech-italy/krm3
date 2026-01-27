@@ -15,6 +15,8 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
 from constance import config
+from krm3.events import Event
+from krm3.events.dispatcher import EventDispatcher
 
 from .auth import Resource
 from krm3.utils.dates import KrmDay

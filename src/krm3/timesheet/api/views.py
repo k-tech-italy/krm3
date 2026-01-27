@@ -6,6 +6,8 @@ from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
+from krm3.events import Event
+from krm3.events.dispatcher import EventDispatcher
 from krm3.timesheet.dto import TimesheetDTO
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -192,6 +194,23 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                     serializer = self.get_serializer(data=time_entry_data, context={'request': request})
                     if serializer.is_valid(raise_exception=True):
                         self.perform_create(serializer)
+
+                # NOTE: ideally this should be async
+                sorted_dates = sorted(dates)
+                EventDispatcher().send(
+                    Event(
+                        name='holidays',
+                        payload={
+                            'user': {
+                                'name': resource.full_name,
+                                'email': resource.user.email,
+                            },
+                            'start_date': sorted_dates[0],
+                            'end_date': sorted_dates[-1],
+                        },
+                    )
+                )
+
             except django_exceptions.ValidationError as e:
                 return Response(
                     data={'error': f'Invalid time entry for {date}: {"; ".join(e.messages)}.'},
@@ -199,6 +218,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                 )
 
         headers = self.get_success_headers(serializer.data)
+
         return Response(status=status.HTTP_201_CREATED, headers=headers)
 
     @action(methods=['post'], detail=False)
