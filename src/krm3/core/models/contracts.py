@@ -17,6 +17,7 @@ from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
     from krm3.core.models import Task
+    from krm3.core.models.auth import User
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
@@ -29,6 +30,49 @@ class ContractQuerySet(models.QuerySet['Contract']):
         """
         end = end + datetime.timedelta(days=1)
         return self.filter(period__overlap=(start, end))
+
+    def accessible_by(self, user: 'User') -> Self:
+        """Return contracts accessible by the given user.
+
+        A contract is accessible if:
+        1. User is superuser, OR
+        2. User has 'view_any_contract' or 'manage_any_contract' permission, OR
+        3. The contract's resource matches the user's resource
+
+        Args:
+            user: The user to check access for
+
+        Returns:
+            QuerySet of accessible contracts
+
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Superuser has access to all contracts
+        if user.is_superuser:
+            return self.all()
+
+        # Check if user has the any-contract permissions
+        if user.get_all_permissions().intersection({'core.view_any_contract', 'core.manage_any_contract'}):
+            return self.all()
+
+        # Filter by user's own resource
+        try:
+            if user_resource := user.get_resource():
+                return self.filter(resource=user_resource)
+            # User has no resource
+            logger.warning(
+                f"User {user.username} (id={user.pk}) does not have an associated resource. "
+                "No contract access granted."
+            )
+            return self.none()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Error getting resource for user {user.username} (id={user.pk}). "
+                f"No contract access granted. Error: {e}"
+            )
+            return self.none()
 
 
 class Contract(models.Model):
@@ -64,6 +108,10 @@ class Contract(models.Model):
                 ],
             )
         ]
+        permissions = [
+                    ('view_any_contract', "Can view(only) everybody's contracts"),
+                    ('manage_any_contract', "Can view, and manage everybody's contracts"),
+                ]
 
     def __str__(self) -> str:
         if self.period.lower is None:
