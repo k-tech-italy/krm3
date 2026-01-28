@@ -22,7 +22,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
-from django_simple_dms.models import Document
+from krm3.core.models.documents import ProtectedDocument as Document
 
 from krm3.core.models import Contract, Expense
 

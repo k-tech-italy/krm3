@@ -300,7 +300,7 @@ def timesheet_api_staff_user():
 
 @pytest.fixture
 def self_cleaning_add(db):
-    from django_simple_dms.models import Document
+    from krm3.core.models.documents import ProtectedDocument as Document
 
     _to_delete = []
     original = Document.add
