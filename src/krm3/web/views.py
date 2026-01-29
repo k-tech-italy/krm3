@@ -18,8 +18,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Min
-from django.http import HttpRequest, HttpResponse, Http404, HttpResponseBase
-from django.shortcuts import get_object_or_404, redirect
+from django.http import HttpRequest, HttpResponse, Http404, HttpResponseBase, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
@@ -112,7 +112,7 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
                 preferred_language = form.cleaned_data['preferred_language']
                 translation.activate(preferred_language)
 
-                response = self.get(request, *args, **kwargs)
+                response = HttpResponseRedirect(request.path)
                 response.LANGUAGE_CODE = preferred_language
                 response.set_cookie(settings.LANGUAGE_COOKIE_NAME, preferred_language)
                 messages.success(request, _('Profile updated successfully.'))

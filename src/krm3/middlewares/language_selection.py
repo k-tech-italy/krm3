@@ -13,32 +13,39 @@ class UserLanguageMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        # Check if language is already set in session (priority 1)
+        # Check if language is already set in cookies
         language_cookie_name = settings.LANGUAGE_COOKIE_NAME
-        if session_language_cookie := request.COOKIES.get(language_cookie_name):
+        response = self.get_response(request)
+
+        response_language = response.cookies.get(language_cookie_name, '')
+        request_language = request.COOKIES.get(language_cookie_name, '')
+
+        # Only update language when strictly necessary
+        if (request_language and response_language) and (request_language != response_language.value):
             return self._set_response_language(
-                request=request,
-                language=session_language_cookie,
+                response=response,
+                language=response_language.value,
                 language_cookie_name=language_cookie_name
             )
 
-        if not session_language_cookie and request.user.is_authenticated:
-            # Priority 2: Use profile language if no session override exists
-            if hasattr(request.user, 'resource'):  #noqa: SIM102 - combining ifs would lose readability
-                if user_preferred_language := getattr(request.user.resource, 'preferred_language', None):
-                    return self._set_response_language(
-                        request=request,
-                        language=user_preferred_language,
-                        language_cookie_name=language_cookie_name
-                    )
+        # We don't have a language in the cookie, check the resource
+        if not request_language and request.user.is_authenticated:
+            if (
+                hasattr(request.user, 'resource')
+                and (user_preferred_language := getattr(request.user.resource, 'preferred_language', None))
+            ):
+                return self._set_response_language(
+                    response=response,
+                    language=user_preferred_language,
+                    language_cookie_name=language_cookie_name
+                )
 
-        # Priority 3: Browser headers
-        return self.get_response(request)
+        # Fall back to the original response
+        return response
 
-    def _set_response_language(self, request: HttpRequest, language_cookie_name: str, language: str) -> HttpResponse:
+    def _set_response_language(self, response: HttpResponse, language_cookie_name: str, language: str) -> HttpResponse:
         """Set language of the response."""
         translation.activate(language)
-        response = self.get_response(request)
         response.LANGUAGE_CODE = language
         response.set_cookie(language_cookie_name, language)
         return response
