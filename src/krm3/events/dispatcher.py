@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
 from django.core import exceptions as django_exceptions
 from django.conf import settings
 from django.utils.module_loading import import_string
 from flags.state import flag_enabled
 
 from krm3.events import Event
+
+if TYPE_CHECKING:
+    from krm3.events.backends import EventDispatcherBackend
 
 
 class EventDispatcher:
@@ -35,7 +39,7 @@ class EventDispatcher:
         except ImportError:
             raise
 
-        self.backend = backend_class(options)
+        self.backend: EventDispatcherBackend = backend_class(options)
 
     def send[T](self, event: Event[T]) -> None:
         """Send an `Event` to the configured notification system.
