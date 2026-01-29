@@ -30,7 +30,7 @@ class TestDocumentListView:
         def mock_accessible_by(*args, **kwargs):
             raise Exception('Database connection error')
 
-        from django_simple_dms.models import Document
+        from krm3.core.models.documents import ProtectedDocument as Document
         monkeypatch.setattr(Document.objects, 'accessible_by', mock_accessible_by)
 
         UserFactory(username='testuser', password='pass123')

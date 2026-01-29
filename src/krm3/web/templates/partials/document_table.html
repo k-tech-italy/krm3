@@ -71,7 +71,7 @@
                 {% for doc in documents %}
                     <tr>
                         <td class="doc-table-filename">
-                            <a href="{{ doc.document.url }}" download class="doc-download-link">
+                            <a href="{{ doc.document.file_url }}" download class="doc-download-link">
                                 {{ doc.document.name|basename }}
                             </a>
                         </td>

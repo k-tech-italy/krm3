@@ -39,11 +39,11 @@ def resources():
 
 
 def test_file_upload_view(app, resources):
-    from django_simple_dms.models import Document
+    from krm3.core.models import ProtectedDocument
 
     test_file = Path(__file__).parents[2] / 'examples' / 'KTPayslip_ANON.2022.pdf'
 
-    response = app.get(reverse('admin:django_simple_dms_document_import_payslips'))
+    response = app.get(reverse('admin:core_protecteddocument_import_payslips'))
     form = response.forms['payslip-upload-form']
 
     form['basename'] = 'BustaPaga'
@@ -55,6 +55,6 @@ def test_file_upload_view(app, resources):
     response = response.follow()
     assert 'Successfully imported 4 payslips.' in response.text
 
-    assert Document.objects.count() == 4
-    tags = list(Document.objects.values_list('document2tag__tag__title', flat=True))
+    assert ProtectedDocument.objects.count() == 4
+    tags = list(ProtectedDocument.objects.values_list('document2tag__tag__title', flat=True))
     assert tags == ['payslip.monthly'] * 4

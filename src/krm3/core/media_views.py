@@ -22,6 +22,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 
+from krm3.core.models.documents import ProtectedDocument as Document
+
 from krm3.core.models import Contract, Expense
 
 if TYPE_CHECKING:
@@ -121,3 +123,24 @@ def serve_contract_document(request: HttpRequest, contract_id: int) -> HttpRespo
     """
     contract = get_object_or_404(Contract, pk=contract_id)
     return _serve_protected_file(contract.document, request)
+
+
+@login_required
+def serve_document_file(request: HttpRequest, document_id: int) -> HttpResponse:
+    """Serve a DMS document file via nginx X-Accel-Redirect.
+
+    URL: /media-auth/documents/<document_id>/
+
+    Args:
+        request: The HTTP request
+        document_id: The ID of the Document record
+
+    Returns:
+        HttpResponse with X-Accel-Redirect header pointing to the file
+
+    Raises:
+        Http404: If document not found or has no file
+
+    """
+    doc = get_object_or_404(Document, pk=document_id)
+    return _serve_protected_file(doc.document, request)

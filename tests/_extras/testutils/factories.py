@@ -301,7 +301,7 @@ class SpecialLeaveReasonFactory(DjangoModelFactory):
 # Django Simple DMS Factories
 class DocumentFactory(DjangoModelFactory):
     class Meta:
-        model = 'django_simple_dms.Document'
+        model = 'core.ProtectedDocument'
 
     document = factory.django.FileField(filename='test_document.txt', data=b'test content')
     admin = factory.SubFactory(UserFactory)
