@@ -149,14 +149,12 @@ class Krm3Day(KrmDay):
             day.data_holiday = sum(map(Decimal, _extract('holiday_hours', this_day_time_entry_data)))
             day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
             day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
-            day.data_special_leave_reason = (
-                ', '.join(
-                    str(reason)
-                    for entry_data in this_day_time_entry_data
-                    if (reason := entry_data['special_leave_reason'])
+            try:
+                day.data_special_leave_reason = (
+                    this_day_time_entries.filter(special_leave_reason__isnull=False).get().special_leave_reason
                 )
-                or None
-            )
+            except TimeEntry.DoesNotExist:
+                day.data_special_leave_reason = None
             day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
             day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
