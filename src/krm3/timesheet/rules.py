@@ -169,6 +169,7 @@ class Krm3Day(KrmDay):
                 0 < (day.data_meal_voucher_threshold or 0) <= utils.worked_hours(this_day_time_entries)
             )
             day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
+            day.data_overtime = utils.overtime(day.time_entries, day.data_due_hours)
             # FIXME: this is a pure function of internal state - use a property instead
             day.has_data = this_day_time_entries.exists()
 
