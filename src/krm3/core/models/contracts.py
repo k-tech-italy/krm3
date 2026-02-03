@@ -12,6 +12,7 @@ from django.db import models
 
 from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
+from krm3.core.models import TimeEntry
 
 if TYPE_CHECKING:
     from krm3.core.models import Task
@@ -127,3 +128,18 @@ class Contract(models.Model):
     def get_default_schedule(cls, day: datetime.date | KrmDay) -> Decimal:
         day_of_week = KrmDay(day).day_of_week_short.casefold()
         return json.loads(constance_config.DEFAULT_RESOURCE_SCHEDULE).get(day_of_week, 0)
+
+    def get_remaining_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
+        """Calculate the difference between expected scheduled hours and hours logged thus far."""
+        day_of_week = KrmDay(day).day_of_week_short.casefold()
+        schedule = self.working_schedule.get(day_of_week, self.get_default_schedule(day))
+
+        day_entries = TimeEntry.objects.filter(resource=self.resource, date=day.date())
+
+        if day_entries:
+           total_logged_hours = 0
+           for entry in day_entries:
+               total_logged_hours = total_logged_hours + entry.total_task_hours()
+           return schedule - total_logged_hours
+
+        return schedule
