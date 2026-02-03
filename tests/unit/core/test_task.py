@@ -9,7 +9,8 @@ from django.urls import reverse
 
 from krm3.projects.forms import TaskForm
 from testutils.date_utils import _dt
-from testutils.factories import ContractFactory, ProjectFactory, ResourceFactory, TaskFactory
+from testutils.factories import ContractFactory, ProjectFactory, ResourceFactory, TaskFactory, WorkScheduleFactory
+
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, Resource, Task
@@ -158,8 +159,12 @@ def orphan_scenario():
     task: 'Task' = TaskFactory.create()
     task2: 'Task' = TaskFactory.create()
 
-    ContractFactory(resource=task.resource, period=(task.start_date, task.end_date))
-    ContractFactory(resource=task2.resource, period=(task2.start_date, task2.end_date))
+    ContractFactory(
+        resource=task.resource, period=(task.start_date, task.end_date), work_schedule=WorkScheduleFactory()
+    )
+    ContractFactory(
+        resource=task2.resource, period=(task2.start_date, task2.end_date), work_schedule=WorkScheduleFactory()
+    )
 
     te_date = task.start_date + relativedelta(days=2)
 
@@ -173,31 +178,31 @@ def test_orphan_te_check_ok(orphan_scenario):
     task, task2 = orphan_scenario
 
     form = TaskForm(instance=task, data=model_to_dict(task) | {'color': '#FFFFFF'})
-    assert form.is_valid() is True, form.errors
+    assert form.is_valid(), form.errors
 
 
 def test_orphan_te_check_nok(orphan_scenario):
     task, task2 = orphan_scenario
 
     form = TaskForm(instance=task, data=model_to_dict(task) | {'color': '#FFFFFF', 'end_date': task.start_date})
-    assert form.is_valid() is False, form.errors
+    assert not form.is_valid(), form.errors
     assert form.errors == {'__all__': ['Would leave 1 orphan time_entries']}
 
 
 @pytest.mark.django_db
 def test_task_form_requires_project(admin_client):
-        url = reverse('admin:core_task_add')
-        data = {
-            'title': 'Test task',
-            'resource': 1,
-            'start_date': "2022-01-01",
-            'basket_title': "example title",
-            'color': '#FFFFFF',
-        }
-        with patch("krm3.core.models.Task.clean") as clean_mock:
-            admin_client.post(url, data)
-            assert clean_mock.called
+    url = reverse('admin:core_task_add')
+    data = {
+        'title': 'Test task',
+        'resource': 1,
+        'start_date': '2022-01-01',
+        'basket_title': 'example title',
+        'color': '#FFFFFF',
+    }
+    with patch('krm3.core.models.Task.clean') as clean_mock:
+        admin_client.post(url, data)
+        assert clean_mock.called
 
-        response = admin_client.post(url, data)
-        errors = response.context["adminform"].form.errors
-        assert errors['project'][0] == 'This field is required.'
+    response = admin_client.post(url, data)
+    errors = response.context['adminform'].form.errors
+    assert errors['project'][0] == 'This field is required.'

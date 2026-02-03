@@ -10,11 +10,11 @@ from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
     ProjectFactory,
-    ResourceFactory,
     SpecialLeaveReasonFactory,
     SuperUserFactory,
     TaskFactory,
     TimeEntryFactory,
+    WorkScheduleFactory,
 )
 
 from tests.unit.web.test_views import _assert_homepage_content
@@ -26,8 +26,8 @@ from tests.unit.web.test_views import _assert_homepage_content
 @freeze_time('2025-08-22')
 def test_availability_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
-    resource = ResourceFactory()
-    ContractFactory(resource=resource)
+    contract = ContractFactory(work_schedule=WorkScheduleFactory())
+    resource = contract.resource
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,
@@ -88,12 +88,12 @@ def test_availability_view_current_month(client):
 def test_availability_view_filtered_by_project(client):
     SuperUserFactory(username='user00', password='pass123')
     project = ProjectFactory()
-    resource = ResourceFactory()
-    ContractFactory(resource=resource)
+    contract = ContractFactory(work_schedule=WorkScheduleFactory())
+    resource = contract.resource
     TaskFactory(project=project, resource=resource)
     another_project = ProjectFactory()
-    another_resource = ResourceFactory()
-    ContractFactory(resource=another_resource)
+    another_contract = ContractFactory(work_schedule=WorkScheduleFactory())
+    another_resource = another_contract.resource
     TaskFactory(project=another_project, resource=another_resource)
     TimeEntryFactory(
         resource=resource,
@@ -124,18 +124,20 @@ def test_availability_report_only_resources_with_contract(client):
     """Test that unprivileged user gets their own resource when project filter excludes them."""
     project = ProjectFactory()
 
-    r_current = ResourceFactory()
-    ContractFactory(resource=r_current)
-    r_past = ResourceFactory()
-    ContractFactory(resource=r_past, period=(_dt('2020-01-01'), _dt('2021-01-01')))
-    r_future = ResourceFactory()
-    ContractFactory(resource=r_future, period=(_dt('2025-09-01'), _dt('2026-01-01')))
+    current_contract = ContractFactory(work_schedule=WorkScheduleFactory())
+    current_resource = current_contract.resource
+    past_contract = ContractFactory(period=(_dt('2020-01-01'), _dt('2021-01-01')), work_schedule=WorkScheduleFactory())
+    past_resource = past_contract.resource
+    future_contract = ContractFactory(
+        period=(_dt('2025-09-01'), _dt('2026-01-01')), work_schedule=WorkScheduleFactory()
+    )
+    future_resource = future_contract.resource
 
-    TaskFactory(project=project, resource=r_current)
-    TaskFactory(project=project, resource=r_past, end_date=_dt('20201231'))
-    TaskFactory(project=project, resource=r_future)
+    TaskFactory(project=project, resource=current_resource)
+    TaskFactory(project=project, resource=past_resource, end_date=_dt('20201231'))
+    TaskFactory(project=project, resource=future_resource)
 
-    client.login(username=r_current.user.username, password=r_current.user._password)
+    client.login(username=current_resource.user.username, password=current_resource.user._password)
 
     url = reverse('availability')
     response = client.get(f'{url}?project={project.id}')
@@ -143,9 +145,9 @@ def test_availability_report_only_resources_with_contract(client):
     assert response.status_code == 200
     content = response.content.decode()
 
-    assert f'{r_current.first_name} {r_current.last_name}' in content
-    assert f'{r_past.first_name} {r_past.last_name}' not in content
-    assert f'{r_future.first_name} {r_future.last_name}' not in content
+    assert f'{current_resource.first_name} {current_resource.last_name}' in content
+    assert f'{past_resource.first_name} {past_resource.last_name}' not in content
+    assert f'{future_resource.first_name} {future_resource.last_name}' not in content
 
 
 @freeze_time('2025-08-22')

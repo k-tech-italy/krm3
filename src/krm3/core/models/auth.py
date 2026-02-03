@@ -163,16 +163,17 @@ class Resource(models.Model):
 
     def _get_min_working_hours(self, contract: Contract | None, day: KrmDay) -> float:
         """Return the minimum working hours for a given day."""
-        if contract and contract.working_schedule:
-            schedule = contract.working_schedule
+        if contract and contract.work_schedule:
+            min_working_hours = contract.work_schedule.get_hours_for_day(day.date)
         else:
             schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
+            # FIXME: this could also be a list...
+            min_working_hours = schedule[day.day_of_week_short.lower()]
         if contract and contract.country_calendar_code:
             country_calendar_code = contract.country_calendar_code
         else:
             country_calendar_code = settings.HOLIDAYS_CALENDAR
 
-        min_working_hours = schedule[day.day_of_week_short.lower()]
         if day.is_holiday(country_calendar_code, False):
             min_working_hours = 0
         return min_working_hours

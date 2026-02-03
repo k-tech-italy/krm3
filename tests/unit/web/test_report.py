@@ -11,6 +11,7 @@ from testutils.factories import (
     SuperUserFactory,
     TaskFactory,
     TimeEntryFactory,
+    WorkScheduleFactory,
 )
 
 from krm3.timesheet.report.payslip_report import report_timeentry_key_mapping
@@ -21,7 +22,7 @@ from tests.unit.web.test_views import _assert_homepage_content
 def test_report_view_current_month(client):
     SuperUserFactory(username='user00', password='pass123')
     resource = ResourceFactory()
-    ContractFactory(resource=resource)
+    ContractFactory(resource=resource, work_schedule=WorkScheduleFactory())
     TimeEntryFactory(
         resource=resource,
         day_shift_hours=0,
@@ -57,8 +58,8 @@ def test_report_view_next_previous_month(client, month, expected_result):
 
 @pytest.mark.django_db
 def test_report_creation(admin_client):  # noqa: PLR0915
-    contract_1 = ContractFactory()
-    contract_2 = ContractFactory()
+    contract_1 = ContractFactory(work_schedule=WorkScheduleFactory())
+    contract_2 = ContractFactory(work_schedule=WorkScheduleFactory())
     r1 = contract_1.resource
     r2 = contract_2.resource
 

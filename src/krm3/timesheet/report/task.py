@@ -1,11 +1,12 @@
 import datetime
 from decimal import Decimal
+from typing import cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from krm3.core.models import Resource, Task
+from krm3.core.models import Resource, Task, User as UserType
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
@@ -24,7 +25,7 @@ class TimesheetTaskReport(TimesheetReport):
     """Task-focused timesheet report that extends the base TimesheetReport."""
 
     def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User) -> None:
-        super().__init__(from_date, to_date, user)
+        super().__init__(from_date, to_date, cast('UserType', user))
 
         self.tasks: dict[int, list[Task]] = {}
         self._load_tasks()

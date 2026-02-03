@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 import datetime
 from decimal import Decimal
 from typing import Any, override
@@ -6,7 +6,8 @@ from typing import Any, override
 from django.db import IntegrityError
 from django.urls.base import reverse
 from django.utils.translation import gettext_lazy as _
-from krm3.timesheet.rules import Krm3Day
+from krm3.core.models.schedule import WorkSchedule
+from krm3.utils.dates import KrmDay
 from psycopg.types.range import DateRange
 from rest_framework import exceptions, serializers
 
@@ -218,14 +219,12 @@ class TimesheetSerializer(serializers.Serializer):
 
             if contract and contract.country_calendar_code:
                 this_day_data['hol'] = day.is_holiday(contract.country_calendar_code)
-                is_non_working_day = this_day_data['nwd'] = day.is_non_working_day(contract.country_calendar_code)
             else:
                 this_day_data['hol'] = day.is_holiday()
-                is_non_working_day = this_day_data['nwd'] = day.is_non_working_day()
 
-            meal_voucher_thresholds = contract.meal_voucher if contract else {}
-            this_day_data['meal_voucher'] = meal_voucher_thresholds.get(
-                'sun' if is_non_working_day else day.day_of_week_short.casefold()
+            meal_voucher_thresholds = contract.meal_voucher_thresholds if contract else None
+            this_day_data['meal_voucher'] = (
+                meal_voucher_thresholds.get_hours_for_day(day.date) if meal_voucher_thresholds else None
             )
 
             this_day_time_entries = timesheet.time_entries.filter(date=day.date)
@@ -263,10 +262,10 @@ class TimesheetSerializer(serializers.Serializer):
 
         return (entry.special_leave_hours, entry.special_leave_reason.title)
 
-    def _get_due_hours(self, contract: Contract | None, day: Krm3Day) -> Decimal:
+    def _get_due_hours(self, contract: Contract | None, day: KrmDay) -> Decimal:
         if contract:
             return contract.get_due_hours(day.date)
-        return Contract.get_default_schedule(day)
+        return WorkSchedule().get_hours_for_day(day.date)
 
 
 class StartEndDateRangeField(serializers.Field):
