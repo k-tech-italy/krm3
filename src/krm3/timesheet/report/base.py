@@ -11,12 +11,12 @@ from django.utils.translation import gettext_lazy as _
 
 from krm3.config import settings
 from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday
+from krm3.core.models.schedule import WorkSchedule
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
     from krm3.core.models import User as UserType
-
 
 type _SubmissionPeriodData = dict[int, list[tuple[datetime.date, datetime.date]]]
 
@@ -56,7 +56,7 @@ class TimesheetReport:
         # loading submissions up front, no matter the flags passed in
         # `need`, allows us to access all the pre-computed data in their
         # `timesheet` json field
-        self.submissions = TimesheetSubmission.objects.get_closed_in_period(
+        self.submissions = TimesheetSubmission.objects.get_closed_in_period(  # pyright: ignore
             self.from_date, self.to_date, resources=self.resources
         )
         # TODO: get rid of this, only collect submissions
@@ -138,7 +138,7 @@ class TimesheetReport:
 
         return calendar_data
 
-    def _get_min_working_hours(self, kd: Krm3Day) -> float:
+    def _get_min_working_hours(self, kd: Krm3Day) -> Decimal:
         """Return the minimum working hours for a given day.
 
         This function only takes working hours into account, disregarding
@@ -146,10 +146,8 @@ class TimesheetReport:
         for holiday, you should do it at the call site.
         """
         if kd.contract and kd.contract.working_schedule:
-            schedule = kd.contract.working_schedule
-        else:
-            schedule = self.default_schedule
-        return schedule[kd.day_of_week_short.lower()]
+            return kd.contract.working_schedule.get_hours_for_day(kd.date)
+        return WorkSchedule().get_hours_for_day(kd.date)
 
     def _get_time_entries(self) -> list[TimeEntry]:
         """Return a list of time entries, preloading their special leave reason if any."""

@@ -4,7 +4,13 @@ import freezegun
 import pytest
 from django.contrib.auth.models import Permission
 from django.urls import reverse
-from testutils.factories import ContractFactory, ResourceFactory, UserFactory
+from testutils.factories import (
+    ContractFactory,
+    ResourceFactory,
+    UserFactory,
+    WorkScheduleFactory,
+    MealVoucherThresholdsFactory,
+)
 
 
 def _assert_homepage_content(response):
@@ -75,14 +81,23 @@ def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contr
         user=user_without_contract, profile=user_without_contract.profile, preferred_in_report=True
     )
 
-    _contract_for_contracted_resource = ContractFactory(
-        resource=contracted_resource, period=(datetime.date(2024, 1, 1), None)
+    ContractFactory(
+        resource=contracted_resource,
+        period=(datetime.date(2024, 1, 1), None),
+        work_schedule=WorkScheduleFactory(),
+        meal_voucher_thresholds=MealVoucherThresholdsFactory(),
     )
-    _contract_for_preferred_resource = ContractFactory(
-        resource=preferred_resource, period=(datetime.date(2024, 1, 1), None)
+    ContractFactory(
+        resource=preferred_resource,
+        period=(datetime.date(2024, 1, 1), None),
+        work_schedule=WorkScheduleFactory(),
+        meal_voucher_thresholds=MealVoucherThresholdsFactory(),
     )
-    _contract_for_expired_resource = ContractFactory(
-        resource=expired_resource, period=(datetime.date(2024, 1, 1), datetime.date(2024, 6, 1))
+    ContractFactory(
+        resource=expired_resource,
+        period=(datetime.date(2024, 1, 1), datetime.date(2024, 6, 1)),
+        work_schedule=WorkScheduleFactory(),
+        meal_voucher_thresholds=MealVoucherThresholdsFactory(),
     )
 
     def expected_rendered_name(resource):

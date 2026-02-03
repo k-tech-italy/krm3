@@ -89,8 +89,8 @@ class Krm3Day(KrmDay):
         self.time_entries = time_entries
         self.has_data = bool(time_entries)
         meal_voucher_threshold = None
-        if self.contract and (thresholds := self.contract.meal_voucher):
-            meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
+        if self.contract and (thresholds := self.contract.meal_voucher_thresholds):
+            meal_voucher_threshold = thresholds.get_hours_for_day(self.date)
         for k, v in TimesheetRule.calculate(
             not self.nwd, float(self.data_due_hours), meal_voucher_threshold, time_entries
         ).items():
@@ -176,7 +176,7 @@ class Krm3Day(KrmDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: Iterable[TimeEntry]
+        work_day: bool, due_hours: float, meal_voucher_threshold: Decimal | None, time_entries: Iterable[TimeEntry]
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 

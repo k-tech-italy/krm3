@@ -5,7 +5,13 @@ from django.urls import reverse
 from freezegun import freeze_time
 
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
-from tests._extras.testutils.factories import SuperUserFactory, TaskFactory, TimeEntryFactory, ContractFactory
+from tests._extras.testutils.factories import (
+    SuperUserFactory,
+    TaskFactory,
+    TimeEntryFactory,
+    ContractFactory,
+    WorkScheduleFactory,
+)
 from tests.unit.web.test_views import _assert_homepage_content
 
 
@@ -14,8 +20,8 @@ class TestTimesheetTaskReport:
     def set_up_method(self):
         self.user = SuperUserFactory()
 
-        contract_1 = ContractFactory()
-        contract_2 = ContractFactory()
+        contract_1 = ContractFactory(work_schedule=WorkScheduleFactory())
+        contract_2 = ContractFactory(work_schedule=WorkScheduleFactory())
 
         self.r1 = contract_1.resource
         self.r2 = contract_2.resource

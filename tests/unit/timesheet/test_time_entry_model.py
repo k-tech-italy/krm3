@@ -19,6 +19,7 @@ from testutils.factories import (
     TaskFactory,
     TimeEntryFactory,
     TimesheetSubmissionFactory,
+    WorkScheduleFactory,
 )
 
 from krm3.core.models.timesheets import TimeEntry
@@ -413,10 +414,9 @@ class TestTimeEntry:
     def test_bank_deposit_success_with_correct_custom_schedule(self):
         start_dt = datetime.date(2020, 1, 1)
         end_dt = datetime.date(2026, 1, 1)
-        contract = ContractFactory(
-            period=(start_dt, end_dt),
-            working_schedule={'fri': 3, 'mon': 3, 'sat': 0, 'sun': 0, 'thu': 3, 'tue': 3, 'wed': 3},
-        )
+        contract = ContractFactory(period=(start_dt, end_dt),
+                                   work_schedule=WorkScheduleFactory(hours=list(map(Decimal, [3, 3, 3, 3, 3, 0, 0]))))
+
         project = ProjectFactory()
         resource = contract.resource
         task = TaskFactory(project=project, resource=resource)

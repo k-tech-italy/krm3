@@ -13,7 +13,7 @@ from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm
 from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile, Contact, \
-    AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address
+    AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address, WorkSchedule, MealVoucherThresholds
 
 
 @admin.register(UserProfile)
@@ -173,3 +173,29 @@ class EmailAddressAdmin(admin.ModelAdmin):
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
     list_display = ('address',)
+
+
+@admin.register(WorkSchedule)
+class WorkScheduleAdmin(admin.ModelAdmin):
+    list_display = ('hours', 'contract__resource')
+    readonly_fields = ('display_contract',)
+
+    @admin.display(description='Contract')
+    def display_contract(self, obj: Contract) -> Contract | None:
+        try:
+            return obj.contract.resource
+        except AttributeError:
+            return None
+
+
+@admin.register(MealVoucherThresholds)
+class MealVoucherThresholdsAdmin(admin.ModelAdmin):
+    list_display = ('hours', 'non_working_day_hours', 'contract__resource')
+    readonly_fields = ('display_contract',)
+
+    @admin.display(description='Contract')
+    def display_contract(self, obj: Contract) -> Contract | None:
+        try:
+            return obj.contract.resource
+        except AttributeError:
+            return None

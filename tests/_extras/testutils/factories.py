@@ -9,8 +9,20 @@ from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyDecimal
 
 from krm3.config import settings
-from krm3.core.models import User, Phone, Email, Address, Website, PhoneInfo, WebsiteInfo, AddressInfo, \
-    EmailInfo, Contact, UserProfile
+from krm3.core.models import (
+    User,
+    Phone,
+    Email,
+    Address,
+    Website,
+    PhoneInfo,
+    WebsiteInfo,
+    AddressInfo,
+    EmailInfo,
+    Contact,
+    UserProfile,
+)
+from krm3.core.models.schedule import MealVoucherThresholds, WorkSchedule
 from krm3.currencies.models import Currency
 
 factories_registry = {}
@@ -50,11 +62,14 @@ class UserFactory(DjangoModelFactory):
         model = User
         django_get_or_create = ('username',)
 
+
 class UserProfileFactory(DjangoModelFactory):
     user = SubFactory(UserFactory)
     picture = Sequence(lambda n: 'picture%02d.jpg' % n)
+
     class Meta:
         model = UserProfile
+
 
 class SuperUserFactory(UserFactory):
     username = Sequence(lambda n: 'superuser%03d@example.com' % n)
@@ -109,10 +124,21 @@ class ResourceFactory(DjangoModelFactory):
         model = 'core.Resource'
         django_get_or_create = ('first_name', 'last_name')
 
+class WorkScheduleFactory(DjangoModelFactory):
+    class Meta:
+        model = WorkSchedule
+
+
+class MealVoucherThresholdsFactory(DjangoModelFactory):
+    class Meta:
+        model = MealVoucherThresholds
+
 
 class ContractFactory(DjangoModelFactory):
     resource = SubFactory(ResourceFactory)
     period = (date(2020, 1, 1), None)
+    work_schedule = SubFactory(WorkScheduleFactory)
+    meal_voucher_thresholds = SubFactory(MealVoucherThresholdsFactory)
     country_calendar_code = settings.HOLIDAYS_CALENDAR
 
     class Meta:
@@ -131,6 +157,7 @@ class ExtraHolidayFactory(DjangoModelFactory):
 class ClientFactory(DjangoModelFactory):
     name = Faker('company')
     picture = Faker('url')
+
     class Meta:
         model = 'core.Client'
         django_get_or_create = ('name',)
@@ -322,26 +349,34 @@ class DocumentGrantFactory(DjangoModelFactory):
     document = factory.SubFactory(DocumentFactory)
     granted_permissions = ['R']
 
+
 class PhoneFactory(DjangoModelFactory):
     class Meta:
         model = Phone
 
     number = factory.Sequence(lambda n: f'+4811111{n:04d}')
 
+
 class EmailFactory(DjangoModelFactory):
     class Meta:
         model = Email
-    address = factory.Faker("email")
+
+    address = factory.Faker('email')
+
 
 class AddressFactory(DjangoModelFactory):
     class Meta:
         model = Address
-    address = factory.Faker("address")
+
+    address = factory.Faker('address')
+
 
 class WebsiteFactory(DjangoModelFactory):
     class Meta:
         model = Website
-    url = factory.Faker("url")
+
+    url = factory.Faker('url')
+
 
 class ContactFactory(DjangoModelFactory):
     class Meta:
@@ -390,29 +425,37 @@ class ContactFactory(DjangoModelFactory):
             for _ in range(extracted):
                 WebsiteInfoFactory(contact=self)
 
+
 class PhoneInfoFactory(DjangoModelFactory):
     class Meta:
         model = PhoneInfo
+
     phone = factory.SubFactory(PhoneFactory)
     contact = factory.SubFactory(ContactFactory)
-    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')
+
 
 class WebsiteInfoFactory(DjangoModelFactory):
     class Meta:
         model = WebsiteInfo
+
     website = factory.SubFactory(WebsiteFactory)
     contact = factory.SubFactory(ContactFactory)
+
 
 class AddressInfoFactory(DjangoModelFactory):
     class Meta:
         model = AddressInfo
+
     address = factory.SubFactory(AddressFactory)
     contact = factory.SubFactory(ContactFactory)
-    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')
+
 
 class EmailInfoFactory(DjangoModelFactory):
     class Meta:
         model = EmailInfo
+
     email = factory.SubFactory(EmailFactory)
     contact = factory.SubFactory(ContactFactory)
-    kind = factory.sequence(lambda n: "work" if n % 2 == 0 else "personal")
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')

@@ -2,14 +2,15 @@ import datetime
 import json
 import typing
 from datetime import date
+from decimal import Decimal
+
 import pytest
 from constance.test import override_config
 from django.test import override_settings
 
-
 from krm3.utils.dates import KrmDay
 from testutils.date_utils import _dt
-from testutils.factories import ResourceFactory, ContractFactory
+from testutils.factories import ResourceFactory, ContractFactory, WorkScheduleFactory
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Contract
@@ -103,10 +104,15 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
     ],
 )
 def test_get_schedule_with_contract(start_day, end_day, country_calendar_code, custom_schedule, expected_schedule):
+    work_schedule_kwargs = (
+        {'hours': [Decimal(custom_schedule[day]) for day in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')]}
+        if custom_schedule
+        else {}
+    )
     contract = ContractFactory(
         country_calendar_code=country_calendar_code,
         period=(start_day, end_day + datetime.timedelta(days=1)),
-        working_schedule=custom_schedule,
+        work_schedule=WorkScheduleFactory(**work_schedule_kwargs),
     )
     schedule = contract.resource.get_schedule(start_day, end_day)
 
@@ -125,9 +131,11 @@ def test_get_krm_days_with_contract_days(contracts, expected):
     resource: 'Resource' = ResourceFactory()
     contract_generated = [None]
     for contract_from, contract_to in contracts:
-        contract_generated.append(
-            ContractFactory(resource=resource, period=(_dt(contract_from), _dt(contract_to) if contract_to else None))
+        contract = ContractFactory(
+            resource=resource, period=(_dt(contract_from), _dt(contract_to) if contract_to else None),
+            work_schedule =WorkScheduleFactory()
         )
+        contract_generated.append(contract)
     result = resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
     assert result == [
         KrmDay('2023-06-24'),
@@ -151,8 +159,10 @@ def test_get_krm_days_with_contract_days(contracts, expected):
 )
 def test_get_krm_days_with_contract_holidays(country_code, expected):
     contract: 'Contract' = ContractFactory(
-        period=(_dt('20230601'), _dt('20230630')), country_calendar_code=country_code
+        period=(_dt('20230601'), _dt('20230630')), country_calendar_code=country_code,
+        work_schedule = WorkScheduleFactory()
     )
+
     result = contract.resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
 
     assert [d.is_holiday() for d in result] == [False, True, False, False, False, expected, False]
@@ -177,7 +187,14 @@ def test_get_krm_days_with_contract_holidays(country_code, expected):
 )
 def test_get_krm_days_with_contract_min_working_hours(schedule, expected):
     # NB: Contract from 1st Jun to 29th Jun. Hence 30th 0 hours
-    contract: 'Contract' = ContractFactory(period=(_dt('20230601'), _dt('20230630')), working_schedule=schedule)
+    work_schedule_kwargs = (
+        {'hours': [Decimal(schedule[day]) for day in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')]}
+        if schedule
+        else {}
+    )
+    contract: 'Contract' = ContractFactory(period=(_dt('20230601'), _dt('20230630')),
+                                           work_schedule=WorkScheduleFactory(**work_schedule_kwargs))
+
     result = contract.resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
     assert [kd.min_working_hours for kd in result] == expected
 

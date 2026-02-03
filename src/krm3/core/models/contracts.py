@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import datetime
-import json
-from decimal import Decimal
+import warnings
 from typing import Self, TYPE_CHECKING
 
-from constance import config as constance_config
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -16,7 +16,10 @@ from krm3.missions.media import contract_directory_path
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
+    from decimal import Decimal
+
     from krm3.core.models import Task
+    from krm3.core.models import schedule
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
@@ -39,8 +42,6 @@ class Contract(models.Model):
         blank=True,
         help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
     )
-    working_schedule = models.JSONField(blank=True, default=dict)
-    meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
     document = models.FileField(
         upload_to=contract_directory_path,
@@ -49,6 +50,10 @@ class Contract(models.Model):
         blank=True,
         validators=[FileExtensionValidator(['pdf'])],
         help_text='Optional PDF document (PDF files only)',
+    )
+    work_schedule = models.OneToOneField('core.WorkSchedule', on_delete=models.CASCADE, null=True, blank=True)
+    meal_voucher_thresholds = models.OneToOneField(
+        'core.MealVoucherThresholds', on_delete=models.CASCADE, null=True, blank=True
     )
 
     objects = ContractQuerySet.as_manager()
@@ -93,6 +98,18 @@ class Contract(models.Model):
                     {'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'}
                 )
 
+    @property
+    def working_schedule(self) -> schedule.WorkSchedule:
+        """Backwards compatibility property for `work_schedule`."""
+        warnings.warn("Use 'work_schedule' instead", DeprecationWarning, stacklevel=1)
+        return self.work_schedule
+
+    @property
+    def meal_voucher(self) -> schedule.MealVoucherThresholds:
+        """Backwards compatibility property for `meal_voucher_thresholds`."""
+        warnings.warn("Use 'meal_voucher_thresholds' instead", DeprecationWarning, stacklevel=1)
+        return self.meal_voucher_thresholds
+
     def falls_in(self, day: datetime.date | KrmDay) -> bool:
         """Check if the provided day falls into the contract period."""
         if isinstance(day, KrmDay):
@@ -121,15 +138,20 @@ class Contract(models.Model):
 
     def get_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
         day = KrmDay(day)
-        if not self.falls_in(day):
-            return self.get_default_schedule(day)
-        schedule = self.working_schedule.get(day.day_of_week_short.casefold(), self.get_default_schedule(day))
-        return Decimal(schedule)
+        if not self.falls_in(day) or not self.work_schedule:
+            from krm3.utils import schedule as schedule_utils  # noqa: PLC0415 - circular import
 
-    @classmethod
-    def get_default_schedule(cls, day: datetime.date | KrmDay) -> Decimal:
-        day_of_week = KrmDay(day).day_of_week_short.casefold()
-        return json.loads(constance_config.DEFAULT_RESOURCE_SCHEDULE).get(day_of_week, 0)
+            return schedule_utils.get_default_schedule(self, day.date)
+        return self.get_scheduled_hours_for_day(day.date)
+
+    def get_scheduled_hours_for_day(self, day: datetime.date) -> Decimal:
+        """Return how long the contract's resource is supposed to work on a given `day`.
+
+        :param day: the day to check the schedule for
+        :return: how many hours the resource is supposed to work on the
+            given `day`.
+        """
+        return self.work_schedule.get_hours_for_day(day)
 
     @property
     def document_url(self) -> str | None:
