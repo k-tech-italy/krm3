@@ -34,7 +34,7 @@ class TimesheetReportOnline(TimesheetReport):
                         value = getattr(rkd, f'data_{key}')
                         cell = row.add_cell(normal(value) if value != 0 else None)
                         cell.nwd = rkd.nwd
-                        cell_tot_hh.value += value or decimal.Decimal(0)
+                        cell_tot_hh.value += decimal.Decimal(value) if value else decimal.Decimal(0)
                     cell_tot_hh.value = normal(cell_tot_hh.value)
 
                 self._add_special_leaves(block)

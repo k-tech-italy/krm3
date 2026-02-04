@@ -141,7 +141,7 @@ class TimesheetReportExport(TimesheetReport):
                             )
                         else:
                             value = getattr(rkd, f'data_{key}')
-                        cell = ws.cell(row=rownum, column=dd_num, value=value)
+                        cell = ws.cell(row=rownum, column=dd_num, value=value if value != 0 else None)
                         cell.alignment = centered
                         if rkd.nwd:
                             cell.fill = nwd_fill
