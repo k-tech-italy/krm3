@@ -1,3 +1,14 @@
+## 3.1.0 (2026-02-04)
+
+### Feat
+
+- **events**: Add out-of-the-box Bitcaster support (#219)
+- **ContactAPIViewSet**: set pagination details (#215)
+
+### Fix
+
+- **report**: fix issues with data collection from submissions (#222)
+
 ## 3.0.0 (2026-01-25)
 
 ### BREAKING CHANGE
