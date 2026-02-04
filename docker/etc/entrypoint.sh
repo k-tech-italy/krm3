@@ -16,6 +16,9 @@ setup() {
           --admin-email "${KRM3_ADMIN_EMAIL:-noreply@k-tech.it}" \
           --admin-password ${KRM3_ADMIN_PASSWORD:-admin}
 
+  # Migrate media files to private media storage (idempotent - skips existing files)
+  django-admin migrate_to_private_media --verbose
+
   # Export Django configuration as environment variables for nginx
   echo "Exporting Django configuration for nginx..."
   # Capture the secure temp file path from command output
