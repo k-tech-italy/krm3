@@ -1,3 +1,9 @@
+## 3.2.1 (2026-02-04)
+
+### Fix
+
+- **document_table.html**: Fix broken link to Document file download (#225)
+
 ## 3.2.0 (2026-02-04)
 
 ### Feat
