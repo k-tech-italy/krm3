@@ -24,10 +24,8 @@ permissions:
   id-token: write
   attestations: write
   actions: write
-  packages: read
   packages: write
   security-events: write
-  contents: read
 
 jobs:
   changes:
