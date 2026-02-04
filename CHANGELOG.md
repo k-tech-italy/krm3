@@ -1,3 +1,9 @@
+## 3.2.0 (2026-02-04)
+
+### Feat
+
+- **media_views.py**: Added permissions check for private media views
+
 ## 3.1.0 (2026-02-04)
 
 ### Feat
