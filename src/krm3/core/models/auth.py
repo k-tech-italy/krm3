@@ -123,6 +123,10 @@ class Resource(models.Model):
         super().clean()
         self._validate_vcard_text()
 
+    @property
+    def full_name(self) -> str:
+        return f'{self.first_name} {self.last_name}'
+
     def _validate_vcard_text(self) -> None:
         """Validate that vcard_text contains a valid vCard format.
 

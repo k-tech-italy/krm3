@@ -66,6 +66,7 @@ class Krm3Day(KrmDay):
         self.data_sick = None
         self.data_overtime = None
         self.data_meal_voucher = None
+        self.data_meal_voucher_threshold = None
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
         self.data_regular_hours = None
@@ -148,14 +149,12 @@ class Krm3Day(KrmDay):
             day.data_holiday = sum(map(Decimal, _extract('holiday_hours', this_day_time_entry_data)))
             day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
             day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
-            day.data_special_leave_reason = (
-                ', '.join(
-                    str(reason)
-                    for entry_data in this_day_time_entry_data
-                    if (reason := entry_data['special_leave_reason'])
+            try:
+                day.data_special_leave_reason = (
+                    this_day_time_entries.filter(special_leave_reason__isnull=False).get().special_leave_reason
                 )
-                or None
-            )
+            except TimeEntry.DoesNotExist:
+                day.data_special_leave_reason = None
             day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
             day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
@@ -165,8 +164,12 @@ class Krm3Day(KrmDay):
             day.data_due_hours = timesheet_data.get('schedule', {}).get(date)
 
             # XXX: there are no default settings, so this will be 0 or None if thresholds are not set explicitly
-            day.data_meal_voucher = day_data.get('meal_voucher')
+            day.data_meal_voucher_threshold = day_data.get('meal_voucher')
+            day.data_meal_voucher = int(
+                0 < (day.data_meal_voucher_threshold or 0) <= utils.worked_hours(this_day_time_entries)
+            )
             day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
+            day.data_overtime = utils.overtime(day.time_entries, day.data_due_hours)
             # FIXME: this is a pure function of internal state - use a property instead
             day.has_data = this_day_time_entries.exists()
 

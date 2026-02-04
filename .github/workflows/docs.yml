@@ -1,11 +1,13 @@
 name: "Documentation"
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - develop
     paths:
       - docs/**
+      - .github/workflows/docs.yml
   schedule:
     - cron: '37 23 * * 2'
 
@@ -21,7 +23,7 @@ concurrency:
 jobs:
   generate:
     name: Generate docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install mdBook

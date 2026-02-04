@@ -1,12 +1,14 @@
 import abc
 import logging
+from collections.abc import Mapping
 from typing import TypedDict, override
+
 from krm3.events import Event
 
 
 class EventDispatcherBackend(abc.ABC):
     @abc.abstractmethod
-    def __init__(self, options: dict) -> None:
+    def __init__(self, options: Mapping) -> None:
         """Set up the event dispatching backend with the given `options`.
 
         Setup details are left to the subclass.
