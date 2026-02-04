@@ -7,7 +7,17 @@ import pytest
 import responses
 from django.core.files import File
 from django.urls import reverse
-from testutils.factories import CurrencyFactory, ExpenseFactory, PaymentCategoryFactory, ReimbursementFactory
+from testutils.factories import (
+    CurrencyFactory,
+    ExpenseFactory,
+    MissionFactory,
+    PaymentCategoryFactory,
+    ReimbursementFactory,
+    ResourceFactory,
+    SuperUserFactory,
+    UserFactory,
+)
+from testutils.permissions import add_permissions
 
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.core.models import Expense
@@ -120,3 +130,85 @@ def test_image_url_returns_authenticated_url_when_file_exists(db):
 
     expected_url = reverse('media-auth:expense-image', args=[expense.pk])
     assert expense.image_url == expected_url
+
+
+def test_accessible_by_superuser_can_access_all_expenses(db):
+    """Superuser should have access to all expenses."""
+    superuser = SuperUserFactory()
+    expense1 = ExpenseFactory()
+    expense2 = ExpenseFactory()
+
+    result = Expense.objects.accessible_by(superuser)
+
+    assert expense1 in result
+    assert expense2 in result
+
+
+def test_accessible_by_user_with_view_any_expense_permission(db):
+    """User with view_any_expense permission should access all expenses."""
+    user = UserFactory()
+    ResourceFactory(user=user)
+    add_permissions(user, 'core.view_any_expense')
+    expense1 = ExpenseFactory()
+    expense2 = ExpenseFactory()
+
+    result = Expense.objects.accessible_by(user)
+
+    assert expense1 in result
+    assert expense2 in result
+
+
+def test_accessible_by_user_with_manage_any_expense_permission(db):
+    """User with manage_any_expense permission should access all expenses."""
+    user = UserFactory()
+    ResourceFactory(user=user)
+    add_permissions(user, 'core.manage_any_expense')
+    expense1 = ExpenseFactory()
+    expense2 = ExpenseFactory()
+
+    result = Expense.objects.accessible_by(user)
+
+    assert expense1 in result
+    assert expense2 in result
+
+
+def test_accessible_by_user_with_matching_resource(db):
+    """User can access expenses belonging to missions with their resource."""
+    user = UserFactory()
+    resource = ResourceFactory(user=user)
+    mission = MissionFactory(resource=resource)
+    own_expense = ExpenseFactory(mission=mission)
+    other_expense = ExpenseFactory()  # Different resource via different mission
+
+    result = Expense.objects.accessible_by(user)
+
+    assert own_expense in result
+    assert other_expense not in result
+
+
+def test_accessible_by_user_without_resource_returns_empty(db):
+    """User without an associated resource should get empty queryset."""
+    user = UserFactory()
+    # User has no resource associated
+    expense = ExpenseFactory()
+
+    result = Expense.objects.accessible_by(user)
+
+    assert result.count() == 0
+    assert expense not in result
+
+
+def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
+    """When get_resource() raises an exception, should return empty queryset."""
+    user = UserFactory()
+    expense = ExpenseFactory()
+
+    def raise_exception():
+        raise RuntimeError("Database error")
+
+    monkeypatch.setattr(user, 'get_resource', raise_exception)
+
+    result = Expense.objects.accessible_by(user)
+
+    assert result.count() == 0
+    assert expense not in result
