@@ -838,13 +838,13 @@ sdist = { url = "https://files.pythonhosted.org/packages/02/09/f510713bb0d7f539b
 
 [[package]]
 name = "django-simple-dms"
-version = "2.1.2"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "psycopg", extra = ["binary"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/c7/99369e6a1f5e0cfd67175380e02bd426c43d0a4b193cb6b8098465f6c4c4/django_simple_dms-2.1.2.tar.gz", hash = "sha256:18da641c1aaf63f8e538c710b32db720d27e76ffd4b5522be0762743a53f0a08", size = 182562, upload-time = "2025-11-30T18:00:21.322Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/c9/9a19e698680088791ed35a8c671f2bd1092e0d828e42c2cf0164c969931c/django_simple_dms-2.2.0.tar.gz", hash = "sha256:59300b68e7ff0eeceda1b788d519495b8418d15ba6acf8fdc594602c9b0c14a2", size = 353108, upload-time = "2026-01-23T16:17:56.419Z" }
 
 [[package]]
 name = "django-smart-admin"
@@ -1452,7 +1452,7 @@ requires-dist = [
     { name = "django-pwa", specifier = ">=2.0.1" },
     { name = "django-qr-code", specifier = ">=4.1.0" },
     { name = "django-regex", specifier = ">=0.5.0" },
-    { name = "django-simple-dms", specifier = ">2.1.0" },
+    { name = "django-simple-dms", specifier = ">=2.2.0" },
     { name = "django-smart-admin", extras = ["sysinfo"], specifier = ">=3.0" },
     { name = "django-smart-env", specifier = ">=0.1.0" },
     { name = "django-sysinfo", specifier = ">=2.7.0" },

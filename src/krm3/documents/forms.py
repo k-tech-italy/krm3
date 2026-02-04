@@ -7,7 +7,7 @@ from pypdf import PdfWriter
 from django import forms
 from django.core.files.uploadedfile import UploadedFile
 from django.utils.translation import gettext_lazy as _l
-from django_simple_dms.models import Document
+from krm3.core.models.documents import ProtectedDocument as Document
 
 from krm3.core.models import Resource
 from krm3.documents.importers import dms_registry

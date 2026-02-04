@@ -24,10 +24,11 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
-from django_simple_dms.models import Document, DocumentTag
+from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
 from krm3.core.models.projects import Project
+from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
