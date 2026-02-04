@@ -43,6 +43,9 @@ MEDIA_URL = env('MEDIA_URL')
 PRIVATE_MEDIA_ROOT = env('PRIVATE_MEDIA_ROOT')
 PRIVATE_MEDIA_URL = env('PRIVATE_MEDIA_URL')
 
+# django-simple-dms storage - use private media storage for documents
+DMS_DOCUMENT_STORAGE = 'krm3.core.storage.PrivateMediaStorage'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 LOCAL_DEVELOPMENT = env('LOCAL_DEVELOPMENT')

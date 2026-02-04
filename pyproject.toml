@@ -79,7 +79,7 @@ dependencies = [
     "django-pwa>=2.0.1",
     "bs4>=0.0.2",
     "vobject>=0.9.9",
-    "django-simple-dms>2.1.0",
+    "django-simple-dms>=2.2.0",
     "python-magic>=0.4.27",
     "pdfminer>=20191125",
     "pypdf>=6.4.0",

@@ -21,6 +21,7 @@ omit =
     src/krm3/sentry.py
     src/krm3/config/environ.py
     src/krm3/config/fragments/ddt.py
+    src/krm3/core/models/__init__.py
     */admin_extras/*
 disable_warnings =
     module-not-measured

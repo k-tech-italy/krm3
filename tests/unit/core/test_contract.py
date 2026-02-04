@@ -9,7 +9,15 @@ from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.urls import reverse
 from testutils.date_utils import _dt
-from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
+from testutils.factories import (
+    ContractFactory,
+    ProjectFactory,
+    ResourceFactory,
+    SuperUserFactory,
+    TaskFactory,
+    UserFactory,
+)
+from testutils.permissions import add_permissions
 
 from krm3.core.forms import ContractForm
 from krm3.core.models import Contract
@@ -175,3 +183,84 @@ def test_document_url_returns_authenticated_url_when_file_exists(db):
 
     expected_url = reverse('media-auth:contract-document', args=[contract.pk])
     assert contract.document_url == expected_url
+
+
+def test_accessible_by_superuser_can_access_all_contracts(db):
+    """Superuser should have access to all contracts."""
+    superuser = SuperUserFactory()
+    contract1 = ContractFactory()
+    contract2 = ContractFactory()
+
+    result = Contract.objects.accessible_by(superuser)
+
+    assert contract1 in result
+    assert contract2 in result
+
+
+def test_accessible_by_user_with_view_any_contract_permission(db):
+    """User with view_any_contract permission should access all contracts."""
+    user = UserFactory()
+    ResourceFactory(user=user)
+    add_permissions(user, 'core.view_any_contract')
+    contract1 = ContractFactory()
+    contract2 = ContractFactory()
+
+    result = Contract.objects.accessible_by(user)
+
+    assert contract1 in result
+    assert contract2 in result
+
+
+def test_accessible_by_user_with_manage_any_contract_permission(db):
+    """User with manage_any_contract permission should access all contracts."""
+    user = UserFactory()
+    ResourceFactory(user=user)
+    add_permissions(user, 'core.manage_any_contract')
+    contract1 = ContractFactory()
+    contract2 = ContractFactory()
+
+    result = Contract.objects.accessible_by(user)
+
+    assert contract1 in result
+    assert contract2 in result
+
+
+def test_accessible_by_user_with_matching_resource(db):
+    """User can access contracts belonging to their resource."""
+    user = UserFactory()
+    resource = ResourceFactory(user=user)
+    own_contract = ContractFactory(resource=resource)
+    other_contract = ContractFactory()  # Different resource
+
+    result = Contract.objects.accessible_by(user)
+
+    assert own_contract in result
+    assert other_contract not in result
+
+
+def test_accessible_by_user_without_resource_returns_empty(db):
+    """User without an associated resource should get empty queryset."""
+    user = UserFactory()
+    # User has no resource associated
+    contract = ContractFactory()
+
+    result = Contract.objects.accessible_by(user)
+
+    assert result.count() == 0
+    assert contract not in result
+
+
+def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
+    """When get_resource() raises an exception, should return empty queryset."""
+    user = UserFactory()
+    contract = ContractFactory()
+
+    def raise_exception():
+        raise RuntimeError('Database error')
+
+    monkeypatch.setattr(user, 'get_resource', raise_exception)
+
+    result = Contract.objects.accessible_by(user)
+
+    assert result.count() == 0
+    assert contract not in result

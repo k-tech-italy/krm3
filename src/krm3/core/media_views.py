@@ -19,16 +19,55 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404
+
+from krm3.core.models.documents import ProtectedDocument as Document
 
 from krm3.core.models import Contract, Expense
 
 if TYPE_CHECKING:
+    from django.db.models import Model
     from django.db.models.fields.files import FieldFile
     from django.http import HttpRequest
 
+    from krm3.core.models import User
+
 logger = logging.getLogger(__name__)
+
+
+def _get_object_with_permission_check(
+    model_class: type['Model'],
+    pk: int,
+    user: 'User',
+) -> 'Model':
+    """Get object after verifying user has access via accessible_by.
+
+    This function first checks if the object exists, then verifies that
+    the user has permission to access it using the model's accessible_by method.
+
+    Args:
+        model_class: The Django model class to query
+        pk: The primary key of the object to retrieve
+        user: The user requesting access
+
+    Returns:
+        The model instance if found and accessible
+
+    Raises:
+        Http404: If the object doesn't exist
+        PermissionDenied: If the user doesn't have permission to access the object
+
+    """
+    # First check if object exists at all
+    if not model_class.objects.filter(pk=pk).exists():
+        raise Http404('Object not found')
+
+    # Try to get it through accessible_by
+    try:
+        return model_class.objects.accessible_by(user).get(pk=pk)
+    except model_class.DoesNotExist:
+        raise PermissionDenied("You don't have permission to access this file.")
 
 
 def _serve_protected_file(file_field: FieldFile | None, request: HttpRequest) -> HttpResponse:
@@ -96,9 +135,10 @@ def serve_expense_image(request: HttpRequest, expense_id: int) -> HttpResponse:
 
     Raises:
         Http404: If expense not found or has no image
+        PermissionDenied: If user doesn't have permission to access the expense
 
     """
-    expense = get_object_or_404(Expense, pk=expense_id)
+    expense = _get_object_with_permission_check(Expense, expense_id, request.user)
     return _serve_protected_file(expense.image, request)
 
 
@@ -117,7 +157,30 @@ def serve_contract_document(request: HttpRequest, contract_id: int) -> HttpRespo
 
     Raises:
         Http404: If contract not found or has no document
+        PermissionDenied: If user doesn't have permission to access the contract
 
     """
-    contract = get_object_or_404(Contract, pk=contract_id)
+    contract = _get_object_with_permission_check(Contract, contract_id, request.user)
     return _serve_protected_file(contract.document, request)
+
+
+@login_required
+def serve_document_file(request: HttpRequest, document_id: int) -> HttpResponse:
+    """Serve a DMS document file via nginx X-Accel-Redirect.
+
+    URL: /media-auth/documents/<document_id>/
+
+    Args:
+        request: The HTTP request
+        document_id: The ID of the Document record
+
+    Returns:
+        HttpResponse with X-Accel-Redirect header pointing to the file
+
+    Raises:
+        Http404: If document not found or has no file
+        PermissionDenied: If user doesn't have permission to access the document
+
+    """
+    doc = _get_object_with_permission_check(Document, document_id, request.user)
+    return _serve_protected_file(doc.document, request)

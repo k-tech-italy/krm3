@@ -16,7 +16,7 @@ from typing import Any
 from psycopg.types.range import DateRange
 from django.db.models import Q, QuerySet
 
-from django_simple_dms.models import Document
+from krm3.core.models.documents import ProtectedDocument as Document
 
 logger = logging.getLogger(__name__)
 
