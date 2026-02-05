@@ -24,6 +24,42 @@ guard-%:
         exit 1; \
     fi
 
+# Build the frontend in a deterministic "test" mode (no global installs, no clobbering dev .env)
+# - Uses Corepack to ensure the project's Yarn version is used (no `npm -g yarn`)
+# - Uses Vite mode "test" so the FE can read from `.env.test`
+# - Skips work when output is already up-to-date
+.PHONY: build-ui-test
+build-ui-test:
+	@set -e; \
+	FE_DIR="krm3-fe"; \
+	DIST_DIR="$$FE_DIR/dist"; \
+	ENV_EXAMPLE="$$FE_DIR/.env.example"; \
+	ENV_TEST="$$FE_DIR/.env.test"; \
+	echo "[build-ui-test] Using FE dir: $$FE_DIR"; \
+	if [ ! -d "$$FE_DIR" ]; then \
+		echo "[build-ui-test] ERROR: $$FE_DIR not found (is the submodule initialized?)"; \
+		exit 1; \
+	fi; \
+	if [ -f "$$ENV_EXAMPLE" ] && [ ! -f "$$ENV_TEST" ]; then \
+		echo "[build-ui-test] Creating $$ENV_TEST from $$ENV_EXAMPLE"; \
+		cp "$$ENV_EXAMPLE" "$$ENV_TEST"; \
+	fi; \
+	NEEDS_BUILD="1"; \
+	if [ -f "$$DIST_DIR/index.html" ]; then \
+		NEEDS_BUILD="0"; \
+		if [ -f "$$FE_DIR/yarn.lock" ] && [ "$$FE_DIR/yarn.lock" -nt "$$DIST_DIR/index.html" ]; then NEEDS_BUILD="1"; fi; \
+		if [ -f "$$FE_DIR/package.json" ] && [ "$$FE_DIR/package.json" -nt "$$DIST_DIR/index.html" ]; then NEEDS_BUILD="1"; fi; \
+		if [ -d "$$FE_DIR/src" ] && [ "`find $$FE_DIR/src -type f -newer $$DIST_DIR/index.html 2>/dev/null | head -n 1`" != "" ]; then NEEDS_BUILD="1"; fi; \
+	fi; \
+	if [ "$$NEEDS_BUILD" = "0" ]; then \
+		echo "[build-ui-test] dist/ is up-to-date; skipping build"; \
+		exit 0; \
+	fi; \
+	echo "[build-ui-test] Building FE (mode=test, BASE_URL=/fe)"; \
+	cd "$$FE_DIR"; \
+	corepack enable; \
+	corepack yarn install --immutable 2>/dev/null || corepack yarn install --frozen-lockfile; \
+	BASE_URL=/fe corepack yarn build --mode test
 
 define BROWSER_PYSCRIPT
 import os, webbrowser, sys

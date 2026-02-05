@@ -298,6 +298,20 @@ def timesheet_api_staff_user():
     return user
 
 
+def pytest_sessionstart(session):
+    """
+    Run a make command if --selenium is passed.
+    """
+    import subprocess
+    options = session.config.option
+
+    if options.enable_selenium and not options.skip_fe_build:
+        try:
+            subprocess.run(["make", "build-ui-test"], capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            pytest.exit(f"'make build-ui-test' failed with error:\n{e.stderr}", returncode=e.returncode)
+
+
 @pytest.fixture
 def self_cleaning_add(db):
     from krm3.core.models.documents import ProtectedDocument as Document
