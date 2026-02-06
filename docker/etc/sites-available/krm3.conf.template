@@ -45,6 +45,12 @@ server {
     location ${PRIVATE_MEDIA_URL} {
         internal;
         alias ${KRM3_PRIVATE_MEDIA_ROOT}/;
+
+        # Cache validation: allow browser caching but require revalidation
+        # Browser will send If-None-Match/If-Modified-Since headers
+        # Nginx returns 304 Not Modified if file unchanged, or serves new file
+        etag on;
+        add_header Cache-Control "private, no-cache, must-revalidate";
     }
 
     # Django application routes (auto-detected from Django URLconf)
