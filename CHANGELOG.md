@@ -1,3 +1,11 @@
+## 3.3.2 (2026-02-06)
+
+### Fix
+
+- **releases.html**: Fix Changelog not shown with bright theme (#235)
+
+## 1.12.1 (2025-10-31)
+
 ## 3.3.1 (2026-02-06)
 
 ### Fix
