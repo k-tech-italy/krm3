@@ -8,6 +8,7 @@
 
 - **pyproject.toml**: Upgraded Django to 5.2.11 (#229)
 - **krm3.conf.template**: Fix browser file caching invalidation on file change (#227)
+- **test.yaml**: Fix broken build on test pipeline
 
 ## 3.2.1 (2026-02-04)
 
