@@ -1,7 +1,9 @@
 name: Build and Deploy
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,74 +21,63 @@ permissions:
   contents: write
 
 jobs:
-  bump:
+  validate:
     runs-on: ubuntu-latest
     outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
-      new_commit: ${{ steps.bump.outputs.new_commit }}
+      version: ${{ steps.validate.outputs.version }}
     steps:
-      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
 
-     # Setup Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      # Install Commitizen
-      - name: Install Commitizen
-        run: pip install commitizen
-
-      # Bump version
-      - name: Bump version with Commitizen
-        id: bump
-        run: |
-          git config --global user.email "noreply@k-tech.it"
-          git config --global user.name "K-Tech Bot"
-          cz bump --yes
-          # Read the new version from __init__.py
-          new_version=$(grep -Po "__version__\s*=\s*'\K[^']+" src/krm3/__init__.py)
-          new_commit=$(git rev-parse HEAD)
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-          echo "new_commit=$new_commit" >> $GITHUB_OUTPUT
-
-      # Push commit and tag
-      - name: Push bump commit and tags to develop
+      - name: Validate version tag
+        id: validate
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          git push origin develop
-          git push origin --tags
-          git checkout master
-          git pull
-          git merge develop
-          git push
+          # Get the latest git tag (commitizen format: plain semver)
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "Latest git tag: $LATEST_TAG"
 
-#      # Sync master with develop
-#      - name: Sync master with develop
-#        env:
-#          GH_TOKEN: ${{ secrets.GH_PAT }}
-#        run: |
-#          gh auth setup-git
-#          gh pr list --base master --head develop || \
-#          gh pr create \
-#            --base master \
-#            --head develop \
-#            --title "Sync master with develop (auto)" \
-#            --body "Automatic sync after version bump" \
-#            --assignee "@me" \
-#            --label "auto-sync" \
-#            --fill \
-#            --draft=false \
-#            --merge
+          # Query GHCR for existing image tags
+          REPO="${{ github.repository }}"
+          REPO_LOWER=$(echo "$REPO" | tr '[:upper:]' '[:lower:]')
+          ORG=$(echo "$REPO_LOWER" | cut -d/ -f1)
+          PACKAGE=$(echo "$REPO_LOWER" | cut -d/ -f2)
+
+          # Get all existing tags from the registry
+          EXISTING_TAGS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/${ORG}/packages/container/${PACKAGE}/versions" \
+            --paginate --jq '.[].metadata.container.tags[]' 2>/dev/null || echo "")
+
+          echo "Existing registry tags: $EXISTING_TAGS"
+
+          # Check tag doesn't already exist in registry
+          if echo "$EXISTING_TAGS" | grep -qx "$LATEST_TAG"; then
+            echo "::error::Version $LATEST_TAG already exists in the container registry!"
+            exit 1
+          fi
+
+          # Find the highest existing semver tag in registry (excluding 'latest')
+          HIGHEST_REGISTRY_TAG=$(echo "$EXISTING_TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+
+          if [ -n "$HIGHEST_REGISTRY_TAG" ]; then
+            echo "Highest registry tag: $HIGHEST_REGISTRY_TAG"
+            # Compare: LATEST_TAG must be greater than HIGHEST_REGISTRY_TAG
+            HIGHER=$(printf '%s\n%s' "$HIGHEST_REGISTRY_TAG" "$LATEST_TAG" | sort -V | tail -n1)
+            if [ "$HIGHER" != "$LATEST_TAG" ]; then
+              echo "::error::Version $LATEST_TAG is not greater than existing registry version $HIGHEST_REGISTRY_TAG!"
+              exit 1
+            fi
+          fi
+
+          echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "::notice title=VERSION::Deploying version $LATEST_TAG"
 
   build-frontend:
-    needs: [bump]
+    needs: [validate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -94,7 +85,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.bump.outputs.new_commit }}
           fetch-depth: 0
 
       - name: Install the latest version of uv
@@ -152,7 +142,7 @@ jobs:
           if-no-files-found: warn
 
   build-and-push:
-    needs: [bump, build-frontend]
+    needs: [validate, build-frontend]
     if: always() && needs.build-frontend.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -164,7 +154,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.1.7
         with:
-          ref: ${{ needs.bump.outputs.new_commit }}
           fetch-depth: 0
 
       - name: Install the latest version of uv
@@ -193,7 +182,7 @@ jobs:
       - name: build
         id: build
         run: |
-          VERSION=${{ needs.bump.outputs.new_version }}
+          VERSION=${{ needs.validate.outputs.version }}
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT_SHA" >> $GITHUB_OUTPUT
@@ -237,25 +226,13 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
           labels: ${{ steps.meta.outputs.labels }}
-# release part
+
   release:
-    needs: [ build-and-push ]
+    needs: [build-and-push]
     runs-on: ubuntu-latest
-    environment:
-      name: development   # manual approve
     permissions:
       contents: write
     steps:
-      - name: Wait for manual approval
-        run: echo " Environment approved, starting release redeploy..."
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.bump.outputs.new_commit }}
-          fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
-
       - name: Call Rancher API deploy
         env:
           RANCHER_URL: ${{ vars.RANCHER_URL }}

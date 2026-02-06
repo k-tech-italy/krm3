@@ -1,6 +1,6 @@
 [project]
 name = "krm3"
-version = "3.2.1"
+version = "3.3.0"
 description = "KRM3"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -33,7 +33,7 @@ classifiers = [
 
 dependencies = [
     "cryptography>=44.0.2",
-    "django<6",
+    "django>=5.2.11,<6",
     "django-admin-rangefilter>=0.13.2",
     "django-adminfilters>=2.7",
     "django-click>=2.4.1",
