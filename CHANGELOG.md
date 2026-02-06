@@ -1,3 +1,9 @@
+## 3.3.1 (2026-02-06)
+
+### Fix
+
+- **Makefile**: removed pytest parallel option in test-cov (#232)
+
 ## 3.3.0 (2026-02-06)
 
 ### Feat
