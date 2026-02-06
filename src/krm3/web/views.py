@@ -424,7 +424,7 @@ class ReleasesView(HomeView):
                 # FIXME: `element.get()` does not necessarily return a list
                 h2['class'] = h2.get('class', []) + [
                     'text-2xl',
-                    'text-blue-300',
+                    'text-blue-500',
                     'border-b',
                     'border-white/20',
                     'pb-2',
@@ -434,19 +434,19 @@ class ReleasesView(HomeView):
                 ]
 
             for h3 in soup.find_all('h3'):
-                h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-300', 'mb-3', 'font-medium']
+                h3['class'] = h3.get('class', []) + ['text-xl', 'text-purple-500', 'mb-3', 'font-medium']
 
             for ul in soup.find_all('ul'):
                 ul['class'] = ul.get('class', []) + ['space-y-2', 'my-4']
 
             for li in soup.find_all('li'):
-                li['class'] = li.get('class', []) + ['marker:text-blue-400', 'marker:font-bold', 'ml-4']
+                li['class'] = li.get('class', []) + ['marker:text-blue-500', 'marker:font-bold', 'ml-4']
 
             for p in soup.find_all('p'):
                 p['class'] = p.get('class', []) + ['text-gray-200', 'leading-relaxed']
 
             for strong in soup.find_all('strong'):
-                strong['class'] = strong.get('class', []) + ['text-white', 'font-semibold']
+                strong['class'] = strong.get('class', []) + ['text-inherit', 'font-semibold']
 
             changelog_html = str(soup)
         except FileNotFoundError:
