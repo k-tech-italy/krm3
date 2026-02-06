@@ -1,3 +1,14 @@
+## 3.3.0 (2026-02-06)
+
+### Feat
+
+- **deploy.yaml**: New release workflow in int (trunk based) (#226)
+
+### Fix
+
+- **pyproject.toml**: Upgraded Django to 5.2.11 (#229)
+- **krm3.conf.template**: Fix browser file caching invalidation on file change (#227)
+
 ## 3.2.1 (2026-02-04)
 
 ### Fix
