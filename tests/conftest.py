@@ -36,6 +36,32 @@ def dummy_currencies(settings):
 
 
 @pytest.fixture(autouse=True)
+def events_settings(settings):
+    """Ensure we're using a log-only event dispatcher.
+
+    If you need to assert on events:
+
+    * make sure you enable events by decorating your tests with::
+
+        from django import test as django_test
+
+        @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
+
+    * in your test, use the `caplog` fixture and ensure that you
+      explicitly capture `DEBUG` level logs::
+
+        dispatcher = EventDispatcher()
+        with caplog.at_level(logging.DEBUG):
+            dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
+        assert len(caplog.records) == 1
+    """
+    settings.EVENTS = {
+        'BACKEND': 'krm3.events.backends.NullEventDispatcherBackend',
+        'OPTIONS': {},
+    }
+
+
+@pytest.fixture(autouse=True)
 def currencies(db):
     from krm3.currencies.models import Currency
 
@@ -85,6 +111,7 @@ def regular_user(db):
 
     return UserFactory()
 
+
 @pytest.fixture
 def user_with_profile(regular_user):
     from testutils.factories import UserProfileFactory
@@ -92,6 +119,7 @@ def user_with_profile(regular_user):
     UserProfileFactory(user=regular_user)
 
     return regular_user
+
 
 @pytest.fixture
 def staff_user(db):
