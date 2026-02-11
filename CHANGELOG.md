@@ -1,3 +1,11 @@
+## 3.3.3 (2026-02-11)
+
+### Fix
+
+- **frontend**: Fix Tooltip not visible on edit TimeEntry via TimeEntryModal (#238)
+- **deploy.yaml**: Fix build frontend for deploy action (#237)
+- **deploy.yaml**: Fix build frontend for deploy action
+
 ## 3.3.2 (2026-02-06)
 
 ### Fix
