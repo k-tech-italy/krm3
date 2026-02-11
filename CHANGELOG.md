@@ -1,3 +1,9 @@
+## 3.3.4 (2026-02-11)
+
+### Fix
+
+- update cryptography package (#244)
+
 ## 3.3.3 (2026-02-11)
 
 ### Fix
