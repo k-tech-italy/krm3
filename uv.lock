@@ -1315,7 +1315,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "3.3.4"
+version = "3.3.3"
 source = { editable = "." }
 dependencies = [
     { name = "bs4" },
