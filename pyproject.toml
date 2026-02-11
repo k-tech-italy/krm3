@@ -160,6 +160,7 @@ name = "cz_conventional_commits"
 tag_format = "$version"
 version_scheme = "pep440"
 version_provider = "uv"
+annotated_tag = true
 update_changelog_on_bump = true
 changelog_start_rev = "1.5.32"
 version_files = [
