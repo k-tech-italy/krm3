@@ -185,3 +185,20 @@ class Contract(models.Model):
         if self.document:
             return reverse('media-auth:contract-document', args=[self.pk])
         return None
+
+    def get_remaining_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
+        """Calculate the difference between expected scheduled hours and hours logged thus far."""
+        from krm3.core.models import TimeEntry  # noqa: PLC0415
+
+        day_of_week = KrmDay(day).day_of_week_short.casefold()
+        schedule = self.working_schedule.get(day_of_week, self.get_default_schedule(day))
+
+        day_entries = TimeEntry.objects.filter(resource=self.resource, date=day)
+
+        if day_entries:
+            total_logged_hours = 0
+            for entry in day_entries:
+                total_logged_hours = total_logged_hours + entry.total_hours
+            return schedule - total_logged_hours
+
+        return schedule

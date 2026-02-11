@@ -7,15 +7,21 @@ from decimal import Decimal
 
 import pytest
 from constance.test import override_config
+from django.contrib.auth.models import Permission
 from django.core import exceptions
+from rest_framework import status
+from rest_framework.reverse import reverse
 from django.contrib.auth.models import Permission
 from django import test as django_test
 from testutils.factories import (
+    ContractFactory,
+    ExtraHolidayFactory,
     ProjectFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
     TimeEntryFactory,
+    TimesheetSubmissionFactory,
     UserFactory,
     TimesheetSubmissionFactory,
     ContractFactory,
@@ -853,15 +859,15 @@ class TestTimeEntryAPICreateView:
             pytest.param(['2024-02-01', '2024-02-02'], status.HTTP_400_BAD_REQUEST, id='range_after_end'),
             pytest.param(['2024-01-31', '2024-02-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_end'),
             pytest.param(
-                ['2023-12-31', *[f'2024-01-{x}' for x in range(1, 32)], '2024-02-01'],
+                ['2023-12-31', *[f'2024-01-{x:02d}' for x in range(1, 32)], '2024-02-01'],
                 status.HTTP_400_BAD_REQUEST,
                 id='range_containing_validity_period',
             ),
             pytest.param(
-                [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
+                [f'2024-01-{x:02d}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
             ),
             pytest.param(  # 2024-01-06 italian holiday
-                [f'2024-01-{x}' for x in range(2, 32) if x != 6],
+                [f'2024-01-{x:02d}' for x in range(2, 32) if x != 6],
                 status.HTTP_201_CREATED,
                 id='range_equal_to_validity_period',
             ),
@@ -881,6 +887,63 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == expected_status_code
         assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
+
+    @pytest.mark.parametrize(
+        ('existing_entries', 'expected_fill_hours'),
+        (
+            pytest.param([], 8, id='empty_day'),
+            pytest.param([{'day_shift_hours': 3}], 5, id='partial_work'),
+            pytest.param([{'sick_hours': 8}], 0, id='full_sick_leave'),
+            pytest.param([{'holiday_hours': 8}], 0, id='full_holiday'),
+            pytest.param([{'day_shift_hours': 10}], 0, id='overtime_already'),
+        ),
+    )
+    def test_auto_fill_scenarios(self, existing_entries, expected_fill_hours, api_client, admin_user):
+        resource = ResourceFactory()
+        date_str = '2024-01-01'
+        date_obj = datetime.date.fromisoformat(date_str)
+        ContractFactory(
+            resource=resource,
+            period=(date_obj, None),
+            working_schedule={
+                'mon': 8,
+                'tue': 8,
+                'wed': 8,
+                'thu': 8,
+                'fri': 8,
+                'sat': 0,
+                'sun': 0,
+            },
+        )
+        task = TaskFactory(resource=resource)
+
+        for entry_data in existing_entries:
+            is_day_entry = any(
+                k in entry_data
+                for k in ('sick_hours', 'holiday_hours', 'leave_hours', 'special_leave_hours', 'rest_hours')
+            )
+            data = entry_data.copy()
+            if is_day_entry:
+                data.setdefault('day_shift_hours', 0)
+            TimeEntryFactory(resource=resource, date=date_obj, task=None if is_day_entry else task, **data)
+
+        time_entry_data = {
+            'dates': [date_str],
+            'taskId': task.pk,
+            'resourceId': resource.pk,
+            'auto_fill': True,
+        }
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+
+        entry = TimeEntry.objects.get(resource=resource, date=date_obj, task=task)
+
+        initial_task_hours = 0
+        for entry_data in existing_entries:
+            initial_task_hours += entry_data.get('day_shift_hours', 0)
+
+        assert entry.day_shift_hours == Decimal(initial_task_hours) + Decimal(expected_fill_hours)
 
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))

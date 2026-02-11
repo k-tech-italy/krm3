@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
@@ -156,6 +157,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
+            auto_fill = request.data.pop('auto_fill', False)
         except KeyError as e:
             match str(e):
                 case 'resource_id':
@@ -189,16 +191,31 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                     TimeEntry.objects.filter(
                         resource_id=resource_id, task__isnull=is_day_entry, date__in=dates
                     ).delete()
-                for date in dates:
+                for date_str in dates:
                     time_entry_data = request.data.copy()
-                    time_entry_data.setdefault('date', date)
+                    time_entry_data.setdefault('date', date_str)
+                    date = datetime.date.fromisoformat(date_str)
+
+                    if auto_fill:
+                        contracts = resource.get_contracts(date, date)
+                        contract = resource.contract_for_date(contracts, date)
+                        if contract:
+                            remaining = contract.get_remaining_due_hours(date)
+                            existing = TimeEntry.objects.filter(
+                                resource=resource, date=date, task_id=time_entry_data.get('task')
+                            ).first()
+                            current_hours = existing.day_shift_hours if existing else Decimal(0)
+                            time_entry_data['day_shift_hours'] = current_hours + max(Decimal(0), remaining)
+                        else:
+                            time_entry_data['day_shift_hours'] = Decimal(0)
+
                     serializer = self.get_serializer(data=time_entry_data, context={'request': request})
                     if serializer.is_valid(raise_exception=True):
                         self.perform_create(serializer)
 
             except django_exceptions.ValidationError as e:
                 return Response(
-                    data={'error': f'Invalid time entry for {date}: {"; ".join(e.messages)}.'},
+                    data={'error': f'Invalid time entry for {date_str}: {"; ".join(e.messages)}.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
