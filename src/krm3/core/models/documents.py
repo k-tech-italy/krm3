@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.db.models.signals import post_delete, pre_save
+from django.dispatch import receiver
 from django.urls import reverse
 from django_simple_dms.models import Document
 
@@ -25,3 +27,31 @@ class ProtectedDocument(Document):
         if self.document:
             return reverse('media-auth:document-file', args=[self.pk])
         return None
+
+
+@receiver(pre_save, sender=ProtectedDocument)
+def delete_old_file_on_change(sender: type[ProtectedDocument], instance: ProtectedDocument, **kwargs: object) -> None:
+    """Delete the old file from storage when a document's file is replaced.
+
+    Uses save=False to only delete the file without re-saving the model,
+    which is about to be saved with the new file anyway.
+    """
+    if not instance.pk:
+        return
+    try:
+        old = sender.objects.get(pk=instance.pk)
+    except sender.DoesNotExist:
+        return
+    if old.document and old.document != instance.document:
+        old.document.delete(save=False)
+
+
+@receiver(post_delete, sender=ProtectedDocument)
+def delete_document_file(sender: type[ProtectedDocument], instance: ProtectedDocument, **kwargs: object) -> None:
+    """Delete the file from storage when a document is deleted.
+
+    Uses save=False to only delete the file without re-saving the model,
+    which no longer exists in the database at this point.
+    """
+    if instance.document:
+        instance.document.delete(save=False)
