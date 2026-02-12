@@ -126,23 +126,8 @@ jobs:
     - name: Init Frontend Submodule
       run: cd krm3-fe && git submodule update --init
 
-    - name: Install yarn and build frontend
-      run: cd krm3-fe && npm install -g yarn && yarn install && yarn build
-
     - name: Build static folder
       run: uv venv --clear && uv run make release && uv run manage.py collectstatic
-
-    - name: Move the release.json file into the FE folder
-      run: cp src/krm3/core/static/release.json krm3-fe/dist
-
-    - name: Upload built frontend
-      uses: actions/upload-artifact@v4
-      with:
-        name: built-frontend
-        path: |
-          krm3-fe/dist/
-        retention-days: 1
-        if-no-files-found: warn
 
     - name: Run Test suite
       run: uv run tox -e tests

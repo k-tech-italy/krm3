@@ -1,4 +1,5 @@
 import datetime
+import subprocess
 from typing import Generator
 
 import pytest
@@ -9,6 +10,14 @@ import typing
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppSeleniumTC
+
+
+@pytest.fixture(autouse=True, scope='session')
+def _build_frontend():
+    try:
+        subprocess.run(["make", "build-ui"], capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        pytest.exit(f"'make build-ui-test' failed with error:\n{e.stderr}", returncode=e.returncode)
 
 
 @pytest.fixture
