@@ -1350,14 +1350,16 @@ class TestTimeEntryAPICreateView:
             'end_date': '2024-01-02',
         }
         _, _, message = caplog.record_tuples[0]
-        assert str(expected_event_payload) in message
+        event_sent_log, payload_sent_log = message.split('. ', 1)
+        assert event_sent_log == 'Event "holidays" sent'
+        assert payload_sent_log == f'Payload: {expected_event_payload}'
 
     @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
     def test_sends_holiday_event_with_start_and_end_dates(self, admin_user, api_client, caplog):
         resource = ResourceFactory(user=admin_user)
 
         holiday_entry_data = {
-            'dates': ['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04'],
+            'dates': ['2024-01-03', '2024-01-01', '2024-01-04', '2024-01-02'],
             'dayShiftHours': 0,
             'holidayHours': 8,
             'resourceId': resource.id,
