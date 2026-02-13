@@ -9,14 +9,6 @@ from krm3.events import Event
 from krm3.events.dispatcher import EventDispatcher
 
 
-@pytest.fixture(autouse=True)
-def events_settings():
-    settings.EVENTS = {
-        'BACKEND': 'krm3.events.backends.NullEventDispatcherBackend',
-        'OPTIONS': {},
-    }
-
-
 @pytest.fixture
 def no_events_settings():
     settings.EVENTS = None
