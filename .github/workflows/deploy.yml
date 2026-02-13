@@ -36,9 +36,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Get the latest git tag (commitizen format: plain semver)
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          echo "Latest git tag: $LATEST_TAG"
+          # Get the version from pyproject.toml
+          LATEST_TAG=$(grep -m1 '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "Version from pyproject.toml: $LATEST_TAG"
 
           # Query GHCR for existing image tags
           REPO="${{ github.repository }}"
