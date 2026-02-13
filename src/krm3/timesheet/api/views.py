@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -195,27 +196,14 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                     if serializer.is_valid(raise_exception=True):
                         self.perform_create(serializer)
 
-                # NOTE: ideally this should be async
-                sorted_dates = sorted(dates)
-                EventDispatcher().send(
-                    Event(
-                        name='holidays',
-                        payload={
-                            'user': {
-                                'name': resource.full_name,
-                                'email': resource.user.email,
-                            },
-                            'start_date': sorted_dates[0],
-                            'end_date': sorted_dates[-1],
-                        },
-                    )
-                )
-
             except django_exceptions.ValidationError as e:
                 return Response(
                     data={'error': f'Invalid time entry for {date}: {"; ".join(e.messages)}.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            if time_entry_data.get('holiday_hours'):
+                self.notify_holiday(resource, dates)
 
         headers = self.get_success_headers(serializer.data)
 
@@ -272,6 +260,19 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
         if time_entry.is_submitted:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
         return None
+
+    def notify_holiday(self, resource: Resource, dates: Iterable[str]) -> None:
+        sorted_dates = sorted(dates)
+        EventDispatcher().send(
+            Event(
+                name='holidays',
+                payload={
+                    'resource': {'name': resource.full_name, 'email': resource.user.email},
+                    'start_date': sorted_dates[0],
+                    'end_date': sorted_dates[-1],
+                },
+            )
+        )
 
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
