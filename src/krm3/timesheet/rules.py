@@ -141,7 +141,9 @@ class Krm3Day(KrmDay):
             day.holiday = day_data.get('hol')
             day.nwd = day_data.get('nwd')
             day.time_entries = this_day_time_entries
-            day.data_bank = Decimal(timesheet_data.get('bank_hours', 0))
+            bank_deposits = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
+            bank_withdrawals = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
+            day.data_bank = bank_deposits - bank_withdrawals
             day.data_day_shift = sum(map(Decimal, _extract('day_shift_hours', this_day_time_entry_data)))
             day.data_night_shift = sum(map(Decimal, _extract('night_shift_hours', this_day_time_entry_data)))
             day.data_on_call = sum(map(Decimal, _extract('on_call_hours', this_day_time_entry_data)))
