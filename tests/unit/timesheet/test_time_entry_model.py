@@ -443,15 +443,22 @@ class TestTimeEntry:
         )
         assert time_deposit_at_weekend.bank_to == 1
 
-    def test_is_saved_without_hours_logged(self):
-        """Valid edge case: 0 total hours on a task."""
+    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'rest_hours', 'special_leave_hours')
+    _task_entry_fields = ('day_shift_hours', 'night_shift_hours', 'travel_hours', 'on_call_hours')
+    _bank_fields = ('bank_from', 'bank_to')
+    _all_hours_and_bank_fields = (*_day_entry_fields, *_task_entry_fields, *_bank_fields)
+
+    @pytest.mark.parametrize('field', _all_hours_and_bank_fields)
+    def test_rejects_time_entries_with_negative_hours(self, field):
         task = TaskFactory()
-        entry = TimeEntryFactory(day_shift_hours=8, task=task, resource=task.resource)
-        entry.day_shift_hours = 0
-        entry.save()
-        # NOTE: asserting the obvious to appease Ruff :^)
-        entry.refresh_from_db()
-        assert entry.day_shift_hours == 0
+        task_entry_kwargs = {'task': task, 'resource': task.resource} if field in self._task_entry_fields else {}
+        entry_kwargs = {'day_shift_hours': 8} | task_entry_kwargs | {field: -1}
+        with pytest.raises(exceptions.ValidationError, match='must be 0 or greater'):
+            TimeEntryFactory(**entry_kwargs)
+
+    def test_rejects_time_entries_with_all_hours_and_bank_fields_set_to_zero(self):
+        with pytest.raises(exceptions.ValidationError, match='must be greater than 0'):
+            TimeEntryFactory(day_shift_hours=0)
 
     def test_is_saved_with_all_task_entry_hours_filled(self):
         """Non-zero total hours on a task, all non-full-day non-task hours fields filled"""
@@ -469,8 +476,6 @@ class TestTimeEntry:
         assert entry.travel_hours + entry.day_shift_hours + entry.night_shift_hours == 8
         assert entry.on_call_hours == 2
 
-    _day_entry_fields = ('sick_hours', 'holiday_hours', 'leave_hours', 'rest_hours', 'special_leave_hours')
-
     def test_is_deposit_cleared_after_task_entry_hours_deleted(self):
         """No negative hours when clearing working hours"""
         date = datetime.date(2025, 1, 14)
@@ -478,8 +483,8 @@ class TestTimeEntry:
         entry = TimeEntryFactory(date=date, day_shift_hours=10, task=task, resource=task.resource)
         deposit = TimeEntryFactory(date=date, day_shift_hours=0, bank_to=2, task=None, resource=task.resource)
         entry.delete()
-        deposit.refresh_from_db()
-        assert deposit.bank_to == 0
+        with pytest.raises(TimeEntry.DoesNotExist):
+            deposit.refresh_from_db()
 
     @pytest.mark.parametrize('existing_hours_field', _day_entry_fields)
     @pytest.mark.parametrize('new_hours_field', _day_entry_fields)
@@ -527,8 +532,6 @@ class TestTimeEntry:
         day_entries = TimeEntry.objects.day_entries().filter(date=absence_day, resource=resource)  # pyright: ignore
         assert day_entries.count() == 1
         assert getattr(day_entries.get(), new_hours_field) == 8
-
-    _task_entry_fields = ('day_shift_hours', 'travel_hours', 'night_shift_hours', 'on_call_hours')
 
     @pytest.mark.parametrize('field', _task_entry_fields)
     def test_task_entry_is_saved_only_when_no_other_task_entry_exists_on_the_same_day_for_the_same_task(self, field):
@@ -643,10 +646,9 @@ class TestTimeEntry:
         assert entry.special_leave_reason
 
     def test_raises_if_more_than_one_absence_fields_is_filled(self):
-        entry = TimeEntryFactory(day_shift_hours=0)
+        entry = TimeEntryFactory(day_shift_hours=0, leave_hours=1)
         entry.sick_hours = 4
         entry.holiday_hours = 4
-        entry.leave_hours = 1
         with pytest.raises(exceptions.ValidationError, match='more than one kind of non-task hours in a day'):
             entry.save()
 
