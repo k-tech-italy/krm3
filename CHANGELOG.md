@@ -1,3 +1,13 @@
+## 3.3.5 (2026-02-18)
+
+### Fix
+
+- **deploy.toml**: Validate the new version retrieved from pyproject.toml (#249)
+- **report**: compute correct bank hour transactions from submissions (#248)
+- **events**: prevent holiday event from firing at every timesheet update (#247)
+- update cryptography package (#244)
+- **frontend**: Fix Tooltip not visible on edit TimeEntry via TimeEntryModal (#238)
+
 ## 3.3.4 (2026-02-11)
 
 ### Fix
