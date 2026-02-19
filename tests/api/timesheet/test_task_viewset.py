@@ -889,61 +889,69 @@ class TestTimeEntryAPICreateView:
         assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
 
     @pytest.mark.parametrize(
-        ('existing_entries', 'expected_fill_hours'),
         (
-            pytest.param([], 8, id='empty_day'),
-            pytest.param([{'day_shift_hours': 3}], 5, id='partial_work'),
-            pytest.param([{'sick_hours': 8}], 0, id='full_sick_leave'),
-            pytest.param([{'holiday_hours': 8}], 0, id='full_holiday'),
-            pytest.param([{'day_shift_hours': 10}], 0, id='overtime_already'),
+            'task_1_hours',
+            'task_2_hours',
+            'sick_hours',
+            'holiday_hours',
+            'leave_hours',
+            'expected_autofill',
+        ),
+        (
+            pytest.param(0, 0, 0, 0, 0, 8, id='empty_day'),
+            pytest.param(3, 0, 0, 0, 0, 5, id='same_task_partial_fills_to_8'),
+            pytest.param(0, 3, 0, 0, 0, 5, id='other_task_partial_fills_to_8'),
+            pytest.param(2, 3, 0, 0, 0, 3, id='two_tasks_partial_fills_to_8'),
+            pytest.param(0, 0, 8, 0, 0, 0, id='full_sick_leave'),
+            pytest.param(0, 0, 0, 8, 0, 0, id='full_holiday'),
+            pytest.param(10, 0, 0, 0, 0, 0, id='overtime_same_task_no_change'),
+            pytest.param(0, 10, 0, 0, 0, 0, id='overtime_other_task_no_change'),
+            pytest.param(0, 8, 0, 0, 0, 0, id='full_day_other_task_no_change'),
+            pytest.param(2, 0, 0, 0, 2, 4, id='task_and_leave'),
+            pytest.param(0, 0, 0, 0, 4, 4, id='leave_half_day'),
         ),
     )
-    def test_auto_fill_scenarios(self, existing_entries, expected_fill_hours, api_client, admin_user):
+    def test_autofill_scenarios(
+        self,
+        task_1_hours,
+        task_2_hours,
+        sick_hours,
+        holiday_hours,
+        leave_hours,
+        expected_autofill,
+        api_client,
+        admin_user,
+    ):
         resource = ResourceFactory()
-        date_str = '2024-01-01'
+        date_str = '2024-01-08'
         date_obj = datetime.date.fromisoformat(date_str)
         ContractFactory(
             resource=resource,
             period=(date_obj, None),
-            working_schedule={
-                'mon': 8,
-                'tue': 8,
-                'wed': 8,
-                'thu': 8,
-                'fri': 8,
-                'sat': 0,
-                'sun': 0,
-            },
+            working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
         )
-        task = TaskFactory(resource=resource)
+        task_1 = TaskFactory(resource=resource, title='Task 1')
+        task_2 = TaskFactory(resource=resource, title='Task 2')
 
-        for entry_data in existing_entries:
-            is_day_entry = any(
-                k in entry_data
-                for k in ('sick_hours', 'holiday_hours', 'leave_hours', 'special_leave_hours', 'rest_hours')
+        if task_1_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=task_1, day_shift_hours=task_1_hours)
+        if task_2_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=task_2, day_shift_hours=task_2_hours)
+        if sick_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=None, sick_hours=sick_hours, day_shift_hours=0)
+        if holiday_hours > 0:
+            TimeEntryFactory(
+                resource=resource, date=date_obj, task=None, holiday_hours=holiday_hours, day_shift_hours=0
             )
-            data = entry_data.copy()
-            if is_day_entry:
-                data.setdefault('day_shift_hours', 0)
-            TimeEntryFactory(resource=resource, date=date_obj, task=None if is_day_entry else task, **data)
+        if leave_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=None, leave_hours=leave_hours, day_shift_hours=0)
 
-        time_entry_data = {
-            'dates': [date_str],
-            'taskId': task.pk,
-            'resourceId': resource.pk,
-            'auto_fill': True,
-        }
-
+        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'auto_fill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
-        entry = TimeEntry.objects.get(resource=resource, date=date_obj, task=task)
-
-        initial_task_hours = 0
-        for entry_data in existing_entries:
-            initial_task_hours += entry_data.get('day_shift_hours', 0)
-
-        assert entry.day_shift_hours == Decimal(initial_task_hours) + Decimal(expected_fill_hours)
+        entry = TimeEntry.objects.get(resource=resource, date=date_obj, task=task_1)
+        assert entry.day_shift_hours == Decimal(str(task_1_hours)) + Decimal(str(expected_autofill))
 
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))

@@ -8,16 +8,15 @@ from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
-from krm3.events import Event
-from krm3.events.dispatcher import EventDispatcher
-from krm3.timesheet.dto import TimesheetDTO
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Resource
+from krm3.core.models import Contract, Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
+from krm3.events import Event
+from krm3.events.dispatcher import EventDispatcher
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -25,6 +24,7 @@ from krm3.timesheet.api.serializers import (
     TimeEntryReadSerializer,
     TimesheetSerializer,
 )
+from krm3.timesheet.dto import TimesheetDTO
 
 if TYPE_CHECKING:
     from krm3.core.models import User
@@ -153,11 +153,10 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
             ),
         ],
     )
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # noqa: C901
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # noqa: C901, PLR0912
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
-            auto_fill = request.data.pop('auto_fill', False)
         except KeyError as e:
             match str(e):
                 case 'resource_id':
@@ -183,6 +182,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
         request.data['task'] = request.data.pop('task_id', None)
         request.data['resource'] = resource_id
 
+        auto_fill = request.data.pop('auto_fill', False)
         is_day_entry = request.data.get('task', None) is None
 
         with transaction.atomic():
@@ -191,21 +191,23 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                     TimeEntry.objects.filter(
                         resource_id=resource_id, task__isnull=is_day_entry, date__in=dates
                     ).delete()
-                for date_str in dates:
+                for formatted_date in dates:
                     time_entry_data = request.data.copy()
-                    time_entry_data.setdefault('date', date_str)
-                    date = datetime.date.fromisoformat(date_str)
+                    time_entry_data.setdefault('date', formatted_date)
+                    date = datetime.date.fromisoformat(formatted_date)
 
                     if auto_fill:
-                        contracts = resource.get_contracts(date, date)
-                        contract = resource.contract_for_date(contracts, date)
+                        contract = Contract.objects.get(
+                            resource=resource,
+                            period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
+                        )
                         if contract:
-                            remaining = contract.get_remaining_due_hours(date)
                             existing = TimeEntry.objects.filter(
                                 resource=resource, date=date, task_id=time_entry_data.get('task')
                             ).first()
-                            current_hours = existing.day_shift_hours if existing else Decimal(0)
-                            time_entry_data['day_shift_hours'] = current_hours + max(Decimal(0), remaining)
+                            time_entry_data['day_shift_hours'] = contract.get_remaining_due_hours(
+                                date, existing.pk if existing else None
+                            )
                         else:
                             time_entry_data['day_shift_hours'] = Decimal(0)
 
@@ -215,7 +217,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
 
             except django_exceptions.ValidationError as e:
                 return Response(
-                    data={'error': f'Invalid time entry for {date_str}: {"; ".join(e.messages)}.'},
+                    data={'error': f'Invalid time entry for {formatted_date}: {"; ".join(e.messages)}.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
