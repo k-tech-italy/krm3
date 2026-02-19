@@ -476,7 +476,7 @@ class TestTimeEntry:
         assert entry.travel_hours + entry.day_shift_hours + entry.night_shift_hours == 8
         assert entry.on_call_hours == 2
 
-    def test_is_deposit_cleared_after_task_entry_hours_deleted(self):
+    def test_is_deposit_deleted_after_task_entry_hours_deleted(self):
         """No negative hours when clearing working hours"""
         date = datetime.date(2025, 1, 14)
         task = TaskFactory()
@@ -646,7 +646,13 @@ class TestTimeEntry:
         assert entry.special_leave_reason
 
     def test_raises_if_more_than_one_absence_fields_is_filled(self):
-        entry = TimeEntryFactory(day_shift_hours=0, leave_hours=1)
+        # NOTE: we are specifying a date to guarantee that we can
+        #       actually log a leave. If we can't guarantee it, then
+        #       this test has the chance of failing because the factory
+        #       might pick (pseudo-randomly) a non-working day, and you
+        #       can't log a leave on a non-working day.
+        #       2026-01-02 is a Friday.
+        entry = TimeEntryFactory(date=datetime.date(2026, 1, 2), day_shift_hours=0, leave_hours=1)
         entry.sick_hours = 4
         entry.holiday_hours = 4
         with pytest.raises(exceptions.ValidationError, match='more than one kind of non-task hours in a day'):
