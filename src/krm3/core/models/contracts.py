@@ -1,7 +1,7 @@
 import datetime
 import json
 from decimal import Decimal
-from typing import Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from constance import config as constance_config
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -47,6 +47,7 @@ class ContractQuerySet(models.QuerySet['Contract']):
 
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         # Superuser has access to all contracts
@@ -63,14 +64,13 @@ class ContractQuerySet(models.QuerySet['Contract']):
                 return self.filter(resource=user_resource)
             # User has no resource
             logger.warning(
-                f"User {user.username} (id={user.pk}) does not have an associated resource. "
-                "No contract access granted."
+                f'User {user.username} (id={user.pk}) does not have an associated resource. No contract access granted.'
             )
             return self.none()
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                f"Error getting resource for user {user.username} (id={user.pk}). "
-                f"No contract access granted. Error: {e}"
+                f'Error getting resource for user {user.username} (id={user.pk}). '
+                f'No contract access granted. Error: {e}'
             )
             return self.none()
 
@@ -109,9 +109,9 @@ class Contract(models.Model):
             )
         ]
         permissions = [
-                    ('view_any_contract', "Can view(only) everybody's contracts"),
-                    ('manage_any_contract', "Can view, and manage everybody's contracts"),
-                ]
+            ('view_any_contract', "Can view(only) everybody's contracts"),
+            ('manage_any_contract', "Can view, and manage everybody's contracts"),
+        ]
 
     def __str__(self) -> str:
         if self.period.lower is None:
@@ -185,3 +185,20 @@ class Contract(models.Model):
         if self.document:
             return reverse('media-auth:contract-document', args=[self.pk])
         return None
+
+    def get_remaining_due_hours(self, day: datetime.date | KrmDay, exclude_id: int | None = None) -> Decimal:
+        """Calculate the difference between expected scheduled hours and hours logged thus far."""
+        from krm3.core.models import TimeEntry  # noqa: PLC0415
+
+        day_of_week = day.strftime('%a').casefold()
+        schedule = self.working_schedule.get(day_of_week, self.get_default_schedule(day))
+
+        time_entries = TimeEntry.objects.filter(resource=self.resource, date=day)
+        if exclude_id:
+            time_entries = time_entries.exclude(pk=exclude_id)
+
+        if time_entries:
+            total_logged_hours = sum(entry.total_hours for entry in time_entries)
+            return max(Decimal(0), Decimal(schedule) - total_logged_hours)
+
+        return Decimal(schedule)

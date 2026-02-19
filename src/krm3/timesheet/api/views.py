@@ -1,5 +1,6 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
@@ -7,16 +8,15 @@ from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
-from krm3.events import Event
-from krm3.events.dispatcher import EventDispatcher
-from krm3.timesheet.dto import TimesheetDTO
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Resource
+from krm3.core.models import Contract, Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TimeEntry, TimeEntryQuerySet
+from krm3.events import Event
+from krm3.events.dispatcher import EventDispatcher
 from krm3.timesheet.api.serializers import (
     BaseTimeEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -24,10 +24,18 @@ from krm3.timesheet.api.serializers import (
     TimeEntryReadSerializer,
     TimesheetSerializer,
 )
+from krm3.timesheet.dto import TimesheetDTO
 
 if TYPE_CHECKING:
     from krm3.core.models import User
     from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
+
+
+class _TimeEntryCreationFailure(Exception):
+    @override
+    def __init__(self, time_entry_date: str, messages: Iterable) -> None:
+        self.time_entry_date = time_entry_date
+        self.messages = messages
 
 
 class TimesheetAPIViewSet(viewsets.GenericViewSet):
@@ -152,7 +160,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
             ),
         ],
     )
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # noqa: C901
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         try:
             resource_id = request.data.pop('resource_id')
             dates = request.data.pop('dates')
@@ -181,33 +189,63 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
         request.data['task'] = request.data.pop('task_id', None)
         request.data['resource'] = resource_id
 
-        is_day_entry = request.data.get('task', None) is None
-
         with transaction.atomic():
             try:
-                if is_day_entry and len(dates) == 1:  # TODO: Provisional fix for #423. Will allow single day edits
-                    TimeEntry.objects.filter(
-                        resource_id=resource_id, task__isnull=is_day_entry, date__in=dates
-                    ).delete()
-                for date in dates:
-                    time_entry_data = request.data.copy()
-                    time_entry_data.setdefault('date', date)
-                    serializer = self.get_serializer(data=time_entry_data, context={'request': request})
-                    if serializer.is_valid(raise_exception=True):
-                        self.perform_create(serializer)
-
-            except django_exceptions.ValidationError as e:
+                headers = self._create_time_entries(request, resource, dates)
+            except _TimeEntryCreationFailure as e:
                 return Response(
-                    data={'error': f'Invalid time entry for {date}: {"; ".join(e.messages)}.'},
+                    data={'error': f'Invalid time entry for {e.time_entry_date}: {"; ".join(e.messages)}.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        return Response(status=status.HTTP_201_CREATED, headers=headers)
+
+    def _create_time_entries(self, request: Request, resource: Resource, dates: Sequence[str]) -> dict[str, str]:
+        """Generate new time entries for the `resource`.
+
+        :param request: the API request
+        :param resource: the resource requesting to log hours in the timesheet
+        :param dates: the dates for which the resource is logging hours
+        :raises _TimeEntryCreationFailure: when any time entry fails validation
+        :return: the response headers on success
+        """
+        is_day_entry = request.data.get('task', None) is None
+
+        # TODO: Provisional fix for #423. Will allow single day edits
+        if is_day_entry and len(dates) == 1:
+            TimeEntry.objects.filter(resource_id=resource.pk, task__isnull=is_day_entry, date__in=dates).delete()
+
+        for formatted_date in dates:
+            time_entry_data = request.data.copy()
+            time_entry_data.setdefault('date', formatted_date)
+            date = datetime.date.fromisoformat(formatted_date)
+
+            if request.data.get('auto_fill', False):
+                contract = Contract.objects.get(
+                    resource=resource,
+                    period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
+                )
+                if contract:
+                    existing = TimeEntry.objects.filter(
+                        resource=resource, date=date, task_id=time_entry_data.get('task')
+                    ).first()
+                    time_entry_data['day_shift_hours'] = contract.get_remaining_due_hours(
+                        date, existing.pk if existing else None
+                    )
+                else:
+                    time_entry_data['day_shift_hours'] = Decimal(0)
+
+            serializer = self.get_serializer(data=time_entry_data, context={'request': request})
+            if serializer.is_valid(raise_exception=True):
+                try:
+                    self.perform_create(serializer)
+                except django_exceptions.ValidationError as e:
+                    raise _TimeEntryCreationFailure(time_entry_date=formatted_date, messages=e.messages) from e
 
             if time_entry_data.get('holiday_hours'):
                 self.notify_holiday(resource, dates)
 
-        headers = self.get_success_headers(serializer.data)
-
-        return Response(status=status.HTTP_201_CREATED, headers=headers)
+        return self.get_success_headers(serializer.data)
 
     @action(methods=['post'], detail=False)
     def clear(self, request: Request) -> Response:  # noqa: C901

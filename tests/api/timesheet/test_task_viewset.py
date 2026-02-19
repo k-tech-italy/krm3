@@ -7,15 +7,21 @@ from decimal import Decimal
 
 import pytest
 from constance.test import override_config
+from django.contrib.auth.models import Permission
 from django.core import exceptions
+from rest_framework import status
+from rest_framework.reverse import reverse
 from django.contrib.auth.models import Permission
 from django import test as django_test
 from testutils.factories import (
+    ContractFactory,
+    ExtraHolidayFactory,
     ProjectFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
     TimeEntryFactory,
+    TimesheetSubmissionFactory,
     UserFactory,
     TimesheetSubmissionFactory,
     ContractFactory,
@@ -853,15 +859,15 @@ class TestTimeEntryAPICreateView:
             pytest.param(['2024-02-01', '2024-02-02'], status.HTTP_400_BAD_REQUEST, id='range_after_end'),
             pytest.param(['2024-01-31', '2024-02-01'], status.HTTP_400_BAD_REQUEST, id='range_overlapping_end'),
             pytest.param(
-                ['2023-12-31', *[f'2024-01-{x}' for x in range(1, 32)], '2024-02-01'],
+                ['2023-12-31', *[f'2024-01-{x:02d}' for x in range(1, 32)], '2024-02-01'],
                 status.HTTP_400_BAD_REQUEST,
                 id='range_containing_validity_period',
             ),
             pytest.param(
-                [f'2024-01-{x}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
+                [f'2024-01-{x:02d}' for x in range(11, 16)], status.HTTP_201_CREATED, id='range_within_validity_period'
             ),
             pytest.param(  # 2024-01-06 italian holiday
-                [f'2024-01-{x}' for x in range(2, 32) if x != 6],
+                [f'2024-01-{x:02d}' for x in range(2, 32) if x != 6],
                 status.HTTP_201_CREATED,
                 id='range_equal_to_validity_period',
             ),
@@ -881,6 +887,71 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == expected_status_code
         assert TimeEntry.objects.exists() is (expected_status_code == status.HTTP_201_CREATED)
+
+    @pytest.mark.parametrize(
+        (
+            'task_1_hours',
+            'task_2_hours',
+            'sick_hours',
+            'holiday_hours',
+            'leave_hours',
+            'expected_autofill',
+        ),
+        (
+            pytest.param(0, 0, 0, 0, 0, 8, id='empty_day'),
+            pytest.param(3, 0, 0, 0, 0, 5, id='same_task_partial_fills_to_8'),
+            pytest.param(0, 3, 0, 0, 0, 5, id='other_task_partial_fills_to_8'),
+            pytest.param(2, 3, 0, 0, 0, 3, id='two_tasks_partial_fills_to_8'),
+            pytest.param(0, 0, 8, 0, 0, 0, id='full_sick_leave'),
+            pytest.param(0, 0, 0, 8, 0, 0, id='full_holiday'),
+            pytest.param(10, 0, 0, 0, 0, 0, id='overtime_same_task_no_change'),
+            pytest.param(0, 10, 0, 0, 0, 0, id='overtime_other_task_no_change'),
+            pytest.param(0, 8, 0, 0, 0, 0, id='full_day_other_task_no_change'),
+            pytest.param(2, 0, 0, 0, 2, 4, id='task_and_leave'),
+            pytest.param(0, 0, 0, 0, 4, 4, id='leave_half_day'),
+        ),
+    )
+    def test_autofill_scenarios(
+        self,
+        task_1_hours,
+        task_2_hours,
+        sick_hours,
+        holiday_hours,
+        leave_hours,
+        expected_autofill,
+        api_client,
+        admin_user,
+    ):
+        resource = ResourceFactory()
+        date_str = '2024-01-08'
+        date_obj = datetime.date.fromisoformat(date_str)
+        ContractFactory(
+            resource=resource,
+            period=(date_obj, None),
+            working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+        )
+        task_1 = TaskFactory(resource=resource, title='Task 1')
+        task_2 = TaskFactory(resource=resource, title='Task 2')
+
+        if task_1_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=task_1, day_shift_hours=task_1_hours)
+        if task_2_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=task_2, day_shift_hours=task_2_hours)
+        if sick_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=None, sick_hours=sick_hours, day_shift_hours=0)
+        if holiday_hours > 0:
+            TimeEntryFactory(
+                resource=resource, date=date_obj, task=None, holiday_hours=holiday_hours, day_shift_hours=0
+            )
+        if leave_hours > 0:
+            TimeEntryFactory(resource=resource, date=date_obj, task=None, leave_hours=leave_hours, day_shift_hours=0)
+
+        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'auto_fill': True}
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+
+        entry = TimeEntry.objects.get(resource=resource, date=date_obj, task=task_1)
+        assert entry.day_shift_hours == Decimal(str(task_1_hours)) + Decimal(str(expected_autofill))
 
     @pytest.mark.parametrize(
         'hours_key', (pytest.param(key, id=kind) for key, kind in zip(_day_entry_keys, _day_entry_kinds, strict=True))
