@@ -15,6 +15,7 @@ DEFAULTS = dict(  # noqa: C408
     DEBUG=(bool, False),
     LOCAL_DEVELOPMENT=(bool, False, 'Enable local development mode to serve static files via Django'),
     RELOAD=(bool, False),
+    LOGGING_LEVEL=(str, 'INFO'),
     DEV_FOOTER_INFO=(str, uuid.uuid4()),
     CV2_SHOW_IMAGES=(bool, False),
     EMAIL_BACKEND=(str, 'django.core.mail.backends.smtp.EmailBackend'),

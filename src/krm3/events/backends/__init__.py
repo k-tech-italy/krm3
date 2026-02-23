@@ -5,6 +5,8 @@ from typing import TypedDict, override
 
 from krm3.events import Event
 
+logger = logging.getLogger(__name__)
+
 
 class EventDispatcherBackend(abc.ABC):
     @abc.abstractmethod
@@ -37,8 +39,8 @@ class _NullEventDispatcherOptions(TypedDict):
 class NullEventDispatcherBackend(EventDispatcherBackend):
     @override
     def __init__(self, _options: _NullEventDispatcherOptions) -> None:
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logger
 
     @override
     def send[T](self, event: Event[T]) -> None:
-        self.logger.info(f'Event "{event.name}" sent. Payload: {event.payload}')
+        self._logger.info(f'Event "{event.name}" sent. Payload: {event.payload}')
