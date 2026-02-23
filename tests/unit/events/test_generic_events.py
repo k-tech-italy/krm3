@@ -54,7 +54,7 @@ class TestEventDispatcher:
     @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
     def test_forwards_event_to_backend_with_feature_flag_enabled(self, caplog):
         dispatcher = EventDispatcher()
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
         assert len(caplog.records) == 1
         record = caplog.records[0]
@@ -63,6 +63,6 @@ class TestEventDispatcher:
     @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', False)]})
     def test_swallows_event_with_feature_flag_disabled(self, caplog):
         dispatcher = EventDispatcher()
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
         assert not caplog.records

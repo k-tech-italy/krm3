@@ -41,4 +41,4 @@ class NullEventDispatcherBackend(EventDispatcherBackend):
 
     @override
     def send[T](self, event: Event[T]) -> None:
-        self.logger.debug(f'Event "{event.name}" sent. Payload: {event.payload}')
+        self.logger.info(f'Event "{event.name}" sent. Payload: {event.payload}')
