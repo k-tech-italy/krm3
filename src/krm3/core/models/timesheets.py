@@ -5,7 +5,6 @@ from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
-from dateutil.relativedelta import relativedelta
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -15,8 +14,6 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet
 from constance import config
-from krm3.events import Event
-from krm3.events.dispatcher import EventDispatcher
 
 from .auth import Resource
 from krm3.utils.dates import KrmDay
@@ -431,6 +428,7 @@ class TimeEntry(models.Model):
         - Logging task entries (work, night shift, etc.) removes
           existing day entries for the related resource, and vice versa.
         - Comment is mandatory for sick days and leave hours.
+        - You are not allowed to log 0 hours in every hours field
 
         :raises exceptions.ValidationError: when any of the rules above
           is violated.
@@ -440,6 +438,8 @@ class TimeEntry(models.Model):
         errors = []
         validators = (
             self._verify_timesheet_not_submitted,
+            self._verify_no_negative_hours_and_bank_fields,
+            self._verify_at_least_one_nonzero_hours_and_bank_field,
             self._verify_task_hours_not_logged_in_day_entry,
             self._verify_day_hours_not_logged_in_task_entry,
             self._verify_task_and_day_hours_not_logged_together,
@@ -471,6 +471,40 @@ class TimeEntry(models.Model):
 
         if submitted:
             raise ValidationError(_('Cannot modify time entries for submitted timesheets'), code='timesheet_submitted')
+
+    def _verify_no_negative_hours_and_bank_fields(self) -> None:
+        hours_fields = (
+            self.day_shift_hours,
+            self.night_shift_hours,
+            self.travel_hours,
+            self.leave_hours,
+            self.special_leave_hours,
+            self.sick_hours,
+            self.holiday_hours,
+            self.rest_hours,
+            self.on_call_hours,
+            self.bank_from,
+            self.bank_to,
+        )
+        if any(field < 0 for field in hours_fields):
+            raise ValidationError(_('All hours and bank fields must be 0 or greater'), code='negative_hours')
+
+    def _verify_at_least_one_nonzero_hours_and_bank_field(self) -> None:
+        hours_fields = (
+            self.day_shift_hours,
+            self.night_shift_hours,
+            self.travel_hours,
+            self.leave_hours,
+            self.special_leave_hours,
+            self.sick_hours,
+            self.holiday_hours,
+            self.rest_hours,
+            self.on_call_hours,
+            self.bank_from,
+            self.bank_to,
+        )
+        if all(field == 0 for field in hours_fields):
+            raise ValidationError(_('At least one hours or bank field must be greater than 0'), code='all_zero_hours')
 
     def _verify_protocol_number(self) -> None:
         if self.protocol_number and not self.is_sick_day:
@@ -679,14 +713,13 @@ def clear_sick_day_or_holiday_entry_on_same_day(sender: TimeEntry, instance: Tim
 @receiver(models.signals.post_delete, sender=TimeEntry)
 def clear_bank_hours_when_no_work(sender: TimeEntry, instance: TimeEntry, **kwargs: Any) -> None:
     """Auto-clear bank deposits if there are no work hours."""
-    entries = cast('TimeEntryQuerySet', TimeEntry.objects).filter(date=instance.date, resource=instance.resource)
+    entries: TimeEntryQuerySet = TimeEntry.objects.filter(date=instance.date, resource=instance.resource)
     bank_to_entry = entries.filter(bank_to__gt=0).first()
     total_task_hours = sum(entry.total_task_hours for entry in entries)
     schedule = instance.resource.get_schedule(instance.date, instance.date + datetime.timedelta(days=1))
     scheduled_hours = schedule[instance.date]
     if instance.is_task_entry and total_task_hours < scheduled_hours and bank_to_entry:
-        bank_to_entry.bank_to = 0
-        bank_to_entry.save()
+        bank_to_entry.delete()
 
 
 @receiver(models.signals.pre_save, sender=TimeEntry)
