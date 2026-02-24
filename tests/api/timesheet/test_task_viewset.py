@@ -762,7 +762,6 @@ class TestTimeEntryAPICreateView:
     @pytest.mark.parametrize(
         ('day_shift_hours', 'optional_data'),
         (
-            pytest.param(0, {}, id='no_work'),
             pytest.param(8, {}, id='only_day_shift_hours'),
             pytest.param(
                 1,
@@ -813,6 +812,16 @@ class TestTimeEntryAPICreateView:
         day_entry = entries.get()
         assert day_entry.special_leave_hours == 0
         assert day_entry.special_leave_reason is None
+
+    def test_rejects_time_entry_without_hours_and_bank(self, admin_user, api_client):
+        resource = ResourceFactory()
+        task = TaskFactory()
+
+        time_entry_data = {'dates': ['2024-01-01'], 'dayShiftHours': 0, 'resourceId': resource.pk}
+
+        response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not TimeEntry.objects.filter(task=task).exists()
 
     @override_config(
         DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})

@@ -489,7 +489,9 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
 
 
 @freeze_time('2025-07-13')
-def test_use_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+def test_cannot_withdraw_hours_below_lower_bound(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    # NOTE: default lower bound is -16
+    # FIXME: this test should also change the lower bound
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -510,7 +512,7 @@ def test_use_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, fr
     )
 
     TimeEntryFactory(
-        day_shift_hours=0,
+        day_shift_hours=2,
         resource=resource,
         task=TaskFactory(resource=resource),
         date='2025-07-09',
@@ -526,14 +528,14 @@ def test_use_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, fr
     day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-09")]')
     browser.click_and_release(day_tile)
 
-    browser.fill('//input[contains(@id,"from-bank-hour-input")]', '8')
+    browser.fill('//input[contains(@id,"from-bank-hour-input")]', '1')
     browser.click('//button[contains(text(), "Save")]')
 
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
         'Invalid time entry for 2025-07-09: This transaction would exceed the minimum bank'
-        ' balance of -16.0 hours. Current balance: -16.00, attempting to change by: 8.00.'
+        ' balance of -16.0 hours. Current balance: -16.00, attempting to change by: 1.00.'
     )
     actual_error = error_element.text.strip()
 
@@ -542,6 +544,8 @@ def test_use_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, fr
 
 @freeze_time('2025-07-13')
 def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    # NOTE: default upper bound is 16
+    # FIXME: this test should also change the upper bound
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
@@ -576,7 +580,7 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
     )
 
     TimeEntryFactory(
-        day_shift_hours=0,
+        day_shift_hours=1,
         resource=resource,
         task=TaskFactory(resource=resource),
         date='2025-07-09',
@@ -600,7 +604,7 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
     expected_error = (
         'Invalid time entry for 2025-07-09: This transaction would exceed the maximum bank balance of 16.0 hours. '
         'Current balance: 16.00, attempting to add: -8.00; Cannot deposit 8.00 bank hours.'
-        ' Total hours would become -8.00 which is below scheduled hours (8).'
+        ' Total hours would become -7.00 which is below scheduled hours (8).'
     )
     actual_error = error_element.text.strip()
 
