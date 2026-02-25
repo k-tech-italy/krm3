@@ -271,3 +271,39 @@ if (_changelog := Path(krm3.__file__).parent / 'CHANGELOG.md').exists():
 else:
     CHANGELOG_PATH = Path(krm3.__file__).parents[2] / 'CHANGELOG.md'
 HOLIDAYS_CALENDAR = env('HOLIDAYS_CALENDAR')
+
+# logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s - %(asctime)s - %(name)s %(funcName)s:%(lineno)d :: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'short': {
+            'format': '%(levelname)s - %(name)s %(funcName)s:%(lineno)d :: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'short',
+            'stream': 'ext://sys.stderr',
+        },
+    },
+    'loggers': {
+        'django': {
+            'level': 'ERROR',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'krm3': {
+            'level': env('LOGGING_LEVEL'),
+            'handlers': ['console'],
+            'propagate': True,
+        },
+    },
+}
