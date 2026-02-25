@@ -37,7 +37,7 @@ def dummy_currencies(settings):
 
 @pytest.fixture(autouse=True)
 def events_settings(settings):
-    """Ensure we're using a log-only event dispatcher.
+    """Ensure we are using a log-only event dispatcher.
 
     If you need to assert on events:
 
@@ -47,11 +47,10 @@ def events_settings(settings):
 
         @django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
 
-    * in your test, use the `caplog` fixture and ensure that you
-      explicitly capture `DEBUG` level logs::
+    * in your test, use the `caplog` fixture to capture logs::
 
         dispatcher = EventDispatcher()
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             dispatcher.send(Event(name='test', payload='lorem ipsum dolor'))
         assert len(caplog.records) == 1
     """
