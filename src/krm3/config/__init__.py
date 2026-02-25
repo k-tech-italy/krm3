@@ -1,8 +1,3 @@
-#  :copyright: Copyright (c) 2018-2020. OS4D Ltd - All Rights Reserved
-#  :license: Commercial
-#  Unauthorized copying of this file, via any medium is strictly prohibited
-#  Written by Stefano Apostolico <s.apostolico@gmail.com>, October 2020
-
 import uuid
 from pathlib import Path
 
@@ -15,6 +10,7 @@ DEFAULTS = dict(  # noqa: C408
     DEBUG=(bool, False),
     LOCAL_DEVELOPMENT=(bool, False, 'Enable local development mode to serve static files via Django'),
     RELOAD=(bool, False),
+    LOGGING_LEVEL=(str, 'INFO'),
     DEV_FOOTER_INFO=(str, uuid.uuid4()),
     CV2_SHOW_IMAGES=(bool, False),
     EMAIL_BACKEND=(str, 'django.core.mail.backends.smtp.EmailBackend'),

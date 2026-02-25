@@ -1345,12 +1345,12 @@ class TestTimeEntryAPICreateView:
             'taskId': task.id,
             'resourceId': resource.id,
         }
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             api_client(user=admin_user).post(self.url(), data=day_shift_entry_data, format='json')
         assert not caplog.records
 
         holiday_entry_data = {'dates': ['2024-01-02'], 'dayShiftHours': 0, 'holidayHours': 8, 'resourceId': resource.id}
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             api_client(user=admin_user).post(self.url(), data=holiday_entry_data, format='json')
         assert len(caplog.records) == 1
         expected_event_payload = {
@@ -1373,7 +1373,7 @@ class TestTimeEntryAPICreateView:
             'holidayHours': 8,
             'resourceId': resource.id,
         }
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.INFO):
             api_client(user=admin_user).post(self.url(), data=holiday_entry_data, format='json')
         assert len(caplog.records) == 1
         expected_event_payload = {
