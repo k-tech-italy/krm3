@@ -236,8 +236,8 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                 except django_exceptions.ValidationError as e:
                     raise _TimeEntryCreationFailure(time_entry_date=formatted_date, messages=e.messages) from e
 
-            if time_entry_data.get('holiday_hours'):
-                self.notify_holiday(resource, dates)
+        if request.data.get('holiday_hours'):
+            self.notify_holiday(resource, dates)
 
         return self.get_success_headers(serializer.data)
 
