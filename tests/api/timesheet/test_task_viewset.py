@@ -945,14 +945,14 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
-        entry = TimeEntry.objects.filter(resource=resource, date=date_obj, task=task_1).first()
+        entry = TimeEntry.objects.get(resource=resource, date=date_obj, task=task_1)
         assert entry.day_shift_hours == Decimal(str(expected_day_shift_hours))
 
     @pytest.mark.parametrize(
         ('time_entries_params',),
         (
-            pytest.param([{'sick_hours': 8}], id='full_sick_leave'),
-            pytest.param([{'holiday_hours': 8}], id='full_holiday'),
+            pytest.param({'sick_hours': 8}, id='full_sick_leave'),
+            pytest.param({'holiday_hours': 8}, id='full_holiday'),
         ),
     )
     def test_autofill_skips_when_day_is_full(
@@ -971,11 +971,7 @@ class TestTimeEntryAPICreateView:
         )
         task_1 = TaskFactory(resource=resource, title='Task 1')
 
-        day_entry_keys = {'sick_hours', 'leave_hours', 'rest_hours', 'holiday_hours', 'special_leave_hours'}
-        for entry_params in time_entries_params:
-            day_params = {k: v for k, v in entry_params.items() if k in day_entry_keys}
-            if day_params:
-                TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **day_params)
+        TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **time_entries_params)
 
         time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autoFill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
