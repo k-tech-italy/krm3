@@ -1,6 +1,5 @@
-from collections.abc import Iterable, Sequence
 import datetime
-from decimal import Decimal
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
@@ -226,14 +225,9 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
                     period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
                 )
                 if contract:
-                    existing = TimeEntry.objects.filter(
-                        resource=resource, date=date, task_id=time_entry_data.get('task')
-                    ).first()
                     time_entry_data['day_shift_hours'] = contract.get_remaining_due_hours(
-                        date, existing.pk if existing else None
+                        date, time_entry_data.get('task')
                     )
-                else:
-                    time_entry_data['day_shift_hours'] = Decimal(0)
 
             serializer = self.get_serializer(data=time_entry_data, context={'request': request})
             if serializer.is_valid(raise_exception=True):

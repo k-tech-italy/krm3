@@ -186,19 +186,19 @@ class Contract(models.Model):
             return reverse('media-auth:contract-document', args=[self.pk])
         return None
 
-    def get_remaining_due_hours(self, day: datetime.date | KrmDay, exclude_id: int | None = None) -> Decimal:
+    def get_remaining_due_hours(self, day: datetime.date | KrmDay, task_id: int | None = None) -> Decimal:
         """Calculate the difference between expected scheduled hours and hours logged thus far."""
         from krm3.core.models import TimeEntry  # noqa: PLC0415
 
         day_of_week = day.strftime('%a').casefold()
-        schedule = self.working_schedule.get(day_of_week, self.get_default_schedule(day))
+        schedule = Decimal(self.working_schedule.get(day_of_week, self.get_default_schedule(day)))
 
         time_entries = TimeEntry.objects.filter(resource=self.resource, date=day)
-        if exclude_id:
-            time_entries = time_entries.exclude(pk=exclude_id)
+        # These are task_entries for task which is being autofilled
+        task_entries = time_entries.task_entries().filter(task_id=task_id)
 
-        if time_entries:
-            total_logged_hours = sum(entry.total_hours for entry in time_entries)
-            return max(Decimal(0), Decimal(schedule) - total_logged_hours)
+        total_logged_hours = sum(entry.total_hours for entry in time_entries) - sum(
+            entry.day_shift_hours for entry in task_entries
+        )
 
-        return Decimal(schedule)
+        return max(Decimal(0), schedule - total_logged_hours)
