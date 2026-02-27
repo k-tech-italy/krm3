@@ -1,3 +1,11 @@
+## 3.3.6 (2026-02-27)
+
+### Fix
+
+- **expense**: Fix image url for expense image rendering (#254)
+- **events**: raise NullEventDispatcherBackend's logging level to INFO (#252)
+- **timesheet**: reject time entries with 0 in all hours and bank fields (#251)
+
 ## 3.3.5 (2026-02-18)
 
 ### Fix
