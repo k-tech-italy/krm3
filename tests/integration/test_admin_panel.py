@@ -423,11 +423,14 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
         number=314,
         status=Mission.MissionStatus.SUBMITTED,
         to_date=datetime.date.today(),
+        year=datetime.date.today().year,
     )
-    ExpenseFactory(
+    expense = ExpenseFactory(
         mission=mission,
         amount_reimbursement=100,
     )
+    expense.image = "fake_image.jpg"
+    expense.save()
     browser.admin_user = admin_user_with_plain_password
     browser.login()
     browser.click('//a[@href="/admin/core/expense/"]')
@@ -438,6 +441,12 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
         By.XPATH,
         '//p[contains(text(), "Are you sure you want to create a reimbursement for the following expenses?")]',
     )
+    # submit the preview form
+    browser.click('//input[@type="submit"]')
+    # the rembursment is correctly created
+    expense.refresh_from_db()
+    assert expense.reimbursement is not None
+
 
 
 def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user_with_plain_password):
