@@ -132,6 +132,18 @@ jobs:
     - name: Run Test suite
       run: uv run tox -e tests
 
+    - name: Move the release.json file into the FE folder
+      run: cp src/krm3/core/static/release.json krm3-fe/dist
+
+    - name: Upload built frontend
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-frontend
+        path: |
+          krm3-fe/dist/
+          retention-days: 1
+          if-no-files-found: warn
+
     - name: Show code coverage report
       run: uv run coverage report
 
