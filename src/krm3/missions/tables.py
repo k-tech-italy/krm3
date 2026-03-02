@@ -97,7 +97,7 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
 
     class Meta:
         model = Expense
-        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
+        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency', 'image')
 
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
