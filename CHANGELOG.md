@@ -3,12 +3,6 @@
 ### Fix
 
 - **reimbursment**: Fix image preview in reimbursement overview (#256)
-- **expense**: Fix image url for expense image rendering (#254)
-- **events**: raise NullEventDispatcherBackend's logging level to INFO (#252)
-- **timesheet**: reject time entries with 0 in all hours and bank fields (#251)
-- **deploy.toml**: Validate the new version retrieved from pyproject.toml (#249)
-- **report**: compute correct bank hour transactions from submissions (#248)
-- **events**: prevent holiday event from firing at every timesheet update (#247)
 
 ## 3.3.6 (2026-02-27)
 
