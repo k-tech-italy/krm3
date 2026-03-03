@@ -129,6 +129,9 @@ jobs:
     - name: Build static folder
       run: uv venv --clear && uv run make release && uv run manage.py collectstatic
 
+    - name: Install yarn
+      run: cd krm3-fe && npm install -g yarn && yarn install
+
     - name: Run Test suite
       run: uv run tox -e tests
 

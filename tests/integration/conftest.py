@@ -26,7 +26,6 @@ def _build_frontend():
     }
 
     try:
-        subprocess.run(["yarn", "install"], capture_output=True, check=True, cwd=frontend_dir, env=env)
         subprocess.run(["yarn", "build"], capture_output=True, check=True, cwd=frontend_dir, env=env)
     except subprocess.CalledProcessError as e:
         pytest.exit(f"'make build-ui-test' failed with error:\n{e.stderr}", returncode=e.returncode)
