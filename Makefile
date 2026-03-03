@@ -25,10 +25,6 @@ guard-%:
     fi
 
 
-build-ui:
-	@cd krm3-fe && yarn install && KRM3_FE_API_BASE_URL="" yarn build
-
-
 define BROWSER_PYSCRIPT
 import os, webbrowser, sys
 
