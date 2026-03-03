@@ -17,19 +17,19 @@ if typing.TYPE_CHECKING:
 
 @pytest.fixture(autouse=True, scope='session')
 def _build_frontend():
-    frontend_dir = Path(__file__).parent.parent.parent / "krm3-fe"  # adjust as needed
-    env = {k: v for k, v in os.environ.items() if k.startswith("VITE_")}
-    print(env)
+    frontend_dir = Path(__file__).parent.parent.parent / "krm3-fe"
+    env = {
+        "KRM3_NODE_ENV": "development",
+        "KRM3_GENERATE_SOURCEMAP":"true",
+        "KRM3_HTTPS":"true",
+        "KRM3_FE_API_BASE_URL":""
+    }
 
-    for cmd in [["yarn", "install"], ["yarn", "build"]]:
-        subprocess.run(
-            cmd,
-            cwd=frontend_dir,
-            env=env,  # empty env {} will also break yarn
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,  # raises CalledProcessError on failure
-        )
+    try:
+        subprocess.run(["yarn", "install"], capture_output=True, check=True, cwd=frontend_dir, env=env)
+        subprocess.run(["yarn", "build"], capture_output=True, check=True, cwd=frontend_dir, env=env)
+    except subprocess.CalledProcessError as e:
+        pytest.exit(f"'make build-ui-test' failed with error:\n{e.stderr}", returncode=e.returncode)
 
 
 @pytest.fixture
