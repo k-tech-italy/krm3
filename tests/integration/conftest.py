@@ -22,7 +22,8 @@ def _build_frontend():
         "KRM3_NODE_ENV": "development",
         "KRM3_GENERATE_SOURCEMAP":"true",
         "KRM3_HTTPS":"true",
-        "KRM3_FE_API_BASE_URL":""
+        "KRM3_FE_API_BASE_URL":"",
+        "PATH": os.environ.get("PATH"),
     }
 
     try:
