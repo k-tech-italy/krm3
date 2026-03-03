@@ -1,4 +1,8 @@
 import datetime
+import os
+import signal
+import subprocess
+from pathlib import Path
 from typing import Generator
 
 import pytest
@@ -9,6 +13,23 @@ import typing
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppSeleniumTC
+
+
+@pytest.fixture(autouse=True, scope='session')
+def _build_frontend():
+    frontend_dir = Path(__file__).parent.parent.parent / "krm3-fe"
+    env = {
+        "KRM3_NODE_ENV": "development",
+        "KRM3_GENERATE_SOURCEMAP":"true",
+        "KRM3_HTTPS":"true",
+        "KRM3_FE_API_BASE_URL":"",
+        "PATH": os.environ.get("PATH"),
+    }
+
+    try:
+        subprocess.run(["yarn", "build"], capture_output=True, check=True, cwd=frontend_dir, env=env)
+    except subprocess.CalledProcessError as e:
+        pytest.exit(f"'make build-ui-test' failed with error:\n{e.stderr}", returncode=e.returncode)
 
 
 @pytest.fixture
