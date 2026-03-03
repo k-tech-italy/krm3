@@ -941,7 +941,7 @@ class TestTimeEntryAPICreateView:
             if task_params:
                 TimeEntryFactory(resource=resource, date=date_obj, task=task_1, **task_params)
 
-        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autoFill': True}
+        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -973,7 +973,7 @@ class TestTimeEntryAPICreateView:
 
         TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **time_entries_params)
 
-        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autoFill': True}
+        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -1038,7 +1038,7 @@ class TestTimeEntryAPICreateView:
         for task_entries_params in other_task_entries_params:
             TimeEntryFactory(resource=resource, date=date_obj, task=task_2, **task_entries_params)
 
-        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autoFill': True}
+        time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 

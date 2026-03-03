@@ -186,7 +186,7 @@ class Contract(models.Model):
             return reverse('media-auth:contract-document', args=[self.pk])
         return None
 
-    def get_remaining_due_hours(self, day: datetime.date | KrmDay, task_id: int | None = None) -> Decimal:
+    def get_remaining_due_hours(self, day: datetime.date, task_id: int | None = None) -> Decimal:
         """Calculate the difference between expected scheduled hours and hours logged thus far."""
         from krm3.core.models import TimeEntry  # noqa: PLC0415
 

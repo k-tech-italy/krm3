@@ -219,7 +219,7 @@ class TimeEntryAPIViewSet(viewsets.ModelViewSet):
             time_entry_data.setdefault('date', formatted_date)
             date = datetime.date.fromisoformat(formatted_date)
 
-            if request.data.get('auto_fill', False):
+            if request.data.get('autofill', False):
                 contract = Contract.objects.get(
                     resource=resource,
                     period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
