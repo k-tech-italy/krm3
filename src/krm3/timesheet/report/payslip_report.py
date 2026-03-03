@@ -1,9 +1,9 @@
 from decimal import Decimal
-from typing import override, Protocol
+from typing import Protocol, override
 
 import openpyxl
-
 from django.utils.translation import gettext as _
+
 from krm3.core.models import Resource, User
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.utils.numbers import safe_dec
@@ -84,7 +84,7 @@ class TimesheetReportExport(TimesheetReport):
             for col, giorno in enumerate(giorni):
                 cell = ws.cell(row=current_row, column=col + 1, value=giorno)
                 cell.alignment = header_alignment
-                cell.fill = header_fill
+                cell.border = thin_border
                 if col > 1 and resources_report_days[col - 2].nwd:
                     cell.fill = nwd_fill
 
@@ -120,6 +120,7 @@ class TimesheetReportExport(TimesheetReport):
                         plain_sick_row = rownum
 
                     cell = ws.cell(row=rownum, column=1, value=get_report_timeentry_key_mapping().get(label, label))
+                    cell.border = thin_border
                     if lnum % 2:
                         cell.fill = light_grey_fill
 
@@ -143,6 +144,7 @@ class TimesheetReportExport(TimesheetReport):
                             value = getattr(rkd, f'data_{key}')
                         cell = ws.cell(row=rownum, column=dd_num, value=value if value != 0 else None)
                         cell.alignment = centered
+                        cell.border = thin_border
                         if rkd.nwd:
                             cell.fill = nwd_fill
                         elif lnum % 2:
@@ -152,6 +154,7 @@ class TimesheetReportExport(TimesheetReport):
                     # TOT cell
                     cell = ws.cell(row=rownum, column=2, value='' if tot is None else tot)
                     cell.alignment = centered
+                    cell.border = thin_border
                     if lnum % 2:
                         cell.fill = light_grey_fill
                 current_row = rownum

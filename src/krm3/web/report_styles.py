@@ -1,7 +1,7 @@
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
-header_font = Font(name='Calibri', bold=True, color='FFFFFF')
-header_fill = PatternFill(start_color='4F81BD', end_color='4F81BD', fill_type='solid')
+header_font = Font(name='Calibri', bold=True, color='000000')
+header_fill = PatternFill(start_color='E26B0A', end_color='E26B0A', fill_type='solid')
 header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 centered = Alignment(horizontal='center', vertical='center')
 thin_border = Border(
