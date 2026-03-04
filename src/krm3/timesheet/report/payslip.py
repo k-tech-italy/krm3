@@ -71,7 +71,7 @@ class TimesheetReportOnline(TimesheetReport):
         for title in sorted(sick_days):
             sl_days = sick_days[title]
             row = ReportRow()
-            row.add_cell(_('Sick {title}').format(title=title))
+            row.add_cell(_('Sick {title}').format(title=title) if title != '' else _('Sick'))
             row.add_cell(cell_tot_hh := ReportCell(decimal.Decimal(0)))
             for rkd in resources_report_days:
                 value = rkd.data_sick if rkd in sl_days else ''
