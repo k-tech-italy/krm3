@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from krm3.core.models import Contract, TimeEntry, Resource
+from krm3.core.models import Contract, Resource, TimeEntry
 from krm3.timesheet import utils
 from krm3.utils import i18n
 from krm3.utils.dates import KrmDay, _MaybeDate
@@ -11,6 +11,7 @@ from krm3.utils.numbers import safe_dec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+
     from krm3.core.models import TimesheetSubmission
 
 timeentry_counters = {
@@ -159,6 +160,9 @@ class Krm3Day(KrmDay):
                 day.data_special_leave_reason = None
             day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
             day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
+            day.data_protocol_number = (
+                this_day_time_entry_data[0].get('protocol_number') if this_day_time_entry_data else None
+            )
             day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
             day.data_bank_to = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
 
