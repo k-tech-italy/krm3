@@ -120,7 +120,7 @@ def test_expense_recalculate_reimbursement_with_image(exp_type, reimbursement, r
 
 def test_image_url_returns_none_when_no_file(db):
     expense = ExpenseFactory(image=None)
-    assert expense.image_url is None
+    assert expense.image.url is None
 
 
 def test_image_url_returns_authenticated_url_when_file_exists(db):
@@ -129,7 +129,7 @@ def test_image_url_returns_authenticated_url_when_file_exists(db):
     expense = ExpenseFactory(image=image)
 
     expected_url = reverse('media-auth:expense-image', args=[expense.pk])
-    assert expense.image_url == expected_url
+    assert expense.image.url == expected_url
 
 
 def test_accessible_by_superuser_can_access_all_expenses(db):

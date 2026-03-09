@@ -173,7 +173,7 @@ def test_get_due_hours(date, expected_fixed, expected_unbounded):
 
 def test_document_url_returns_none_when_no_file(db):
     contract = ContractFactory()
-    assert contract.document_url is None
+    assert contract.document.url is None
 
 
 def test_document_url_returns_authenticated_url_when_file_exists(db):
@@ -182,7 +182,7 @@ def test_document_url_returns_authenticated_url_when_file_exists(db):
     contract = ContractFactory(document=document)
 
     expected_url = reverse('media-auth:contract-document', args=[contract.pk])
-    assert contract.document_url == expected_url
+    assert contract.document.url == expected_url
 
 
 def test_accessible_by_superuser_can_access_all_contracts(db):

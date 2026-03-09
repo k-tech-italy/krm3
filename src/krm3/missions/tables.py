@@ -56,7 +56,7 @@ class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
 class MissionExpenseTable(MissionExpenseBaseTable):
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return format_html('<a href="{}"><img src="{}"></a>', record.image_url, static('admin/img/icon-yes.svg'))
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static('admin/img/icon-yes.svg'))
         return format_html('<img src="{}">', static('admin/img/icon-no.svg'))
 
     def render_reimbursement(self, record: Expense) -> str:
@@ -71,7 +71,7 @@ class MissionExpenseTable(MissionExpenseBaseTable):
 
     class Meta:
         model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement', 'image')
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement')
 
 
 class MissionExpenseExportTable(MissionExpenseBaseTable):
@@ -97,7 +97,7 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
 
     class Meta:
         model = Expense
-        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency', 'image')
+        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
 
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
@@ -107,7 +107,7 @@ class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
 
     def render_image(self, record: Expense) -> str:
         if record.image:
-            return format_html('<a href="{}"><img src="{}"></a>', record.image_url, static('admin/img/icon-yes.svg'))
+            return format_html('<a href="{}"><img src="{}"></a>', record.image.url, static('admin/img/icon-yes.svg'))
         return format_html('<img src="{}">', static('admin/img/icon-no.svg'))
 
     def render_mission(self, record: Expense) -> str:
