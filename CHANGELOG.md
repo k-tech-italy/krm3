@@ -1,3 +1,12 @@
+## 3.3.8 (2026-03-10)
+
+### Fix
+
+- **report**: include protocol_number in calendar_data (#260)
+- **excel-report**: change colors and borders (#258)
+- **contacts**: fix feature flag behavior when overridden from the admin (#253)
+- **reimbursment**: Fix image preview in reimbursement overview (#256)
+
 ## 3.3.7 (2026-03-02)
 
 ### Fix
