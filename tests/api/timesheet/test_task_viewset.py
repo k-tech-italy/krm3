@@ -901,7 +901,12 @@ class TestTimeEntryAPICreateView:
             pytest.param([{'day_shift_hours': 3}], 8, id='same_task_partial_fills_to_8'),
             pytest.param([{'day_shift_hours': 10}], 8, id='overtime_same_task_no_change'),
             pytest.param([{'day_shift_hours': 2}, {'leave_hours': 2}], 6, id='task_and_leave'),
+            pytest.param([{'day_shift_hours': 2}, {'rest_hours': 2}], 6, id='task_and_rest'),
             pytest.param([{'leave_hours': 4}], 4, id='leave_half_day'),
+            pytest.param([{'rest_hours': 4}], 4, id='rest_half_day'),
+            pytest.param([{'bank_from': 4}], 4, id='bank_from_half_day'),
+            pytest.param([{'day_shift_hours': 2}, {'bank_from': 4}], 4, id='task_and_bank_from'),
+            pytest.param([{'rest_hours': 2, 'bank_from': 2}], 4, id='rest_and_bank_from'),
             pytest.param([{'day_shift_hours': 2}, {'travel_hours': 4}], 4, id='travel_half_day'),
             pytest.param([{'day_shift_hours': 2}, {'leave_hours': 2, 'rest_hours': 2}], 4, id='leave_rest_task'),
             pytest.param(
@@ -928,7 +933,15 @@ class TestTimeEntryAPICreateView:
         )
         task_1 = TaskFactory(resource=resource, title='Task 1')
 
-        day_entry_keys = {'sick_hours', 'leave_hours', 'rest_hours', 'holiday_hours', 'special_leave_hours'}
+        day_entry_keys = {
+            'sick_hours',
+            'leave_hours',
+            'rest_hours',
+            'holiday_hours',
+            'special_leave_hours',
+            'bank_from',
+            'bank_to',
+        }
         task_entry_hours_keys = {'day_shift_hours', 'night_shift_hours', 'travel_hours'}
 
         for entry_params in time_entries_params:
@@ -1417,7 +1430,9 @@ class TestTimeEntryAPICreateView:
         assert response.status_code == status.HTTP_201_CREATED
 
         should_raise_on_getting_deleted_record = (
-            does_not_raise() if existing_hours_field == 'leave_hours' else pytest.raises(TimeEntry.DoesNotExist)
+            does_not_raise()
+            if existing_hours_field in ('leave_hours', 'rest_hours')
+            else pytest.raises(TimeEntry.DoesNotExist)
         )
         with should_raise_on_getting_deleted_record:
             TimeEntry.objects.get(pk=existing_day_entry_id)
