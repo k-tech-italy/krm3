@@ -5,18 +5,18 @@ from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, cast, override
 
+from constance import config
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
-from django.db.models import QuerySet
-from constance import config
+
+from krm3.utils.dates import KrmDay
 
 from .auth import Resource
-from krm3.utils.dates import KrmDay
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -208,7 +208,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
 
         :return: the filtered queryset.
         """
-        return self.day_entries().filter(leave_hours=0, special_leave_hours=0)
+        return self.day_entries().filter(Q(sick_hours__gt=0) | Q(holiday_hours__gt=0))
 
     def leaves(self) -> Self:
         """Select all leave entries in this queryset.
