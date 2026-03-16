@@ -2,6 +2,7 @@
 name: Test and Security Scan
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - develop
