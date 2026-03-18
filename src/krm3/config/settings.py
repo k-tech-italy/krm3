@@ -130,6 +130,7 @@ MIDDLEWARE = (
     + SOCIAL_MIDDLEWARES  # noqa: F405
     + DDT_MIDDLEWARES  # noqa: F405
     + [
+        'src.krm3.middlewares.language_selection.UserLanguageMiddleware',
         'django.contrib.admindocs.middleware.XViewMiddleware',
         # Third party middlewares.
         'djangorestframework_camel_case.middleware.CamelCaseMiddleWare',
@@ -187,10 +188,10 @@ DATABASES['default']['OPTIONS'] = {'options': '-c search_path=django,public'}
 LANGUAGE_CODE = 'en-uk'
 
 LANGUAGES = [
-    ('en-uk', gettext_lazy('English')),
-    ('it', gettext_lazy('Italian')),
-    ('fr', gettext_lazy('French')),
-    ('pl', gettext_lazy('Polish')),
+    ('en-uk', 'English'),
+    ('it', 'Italiano'),
+    ('fr', 'Français'),
+    ('pl', 'Polski'),
 ]
 
 TIME_ZONE = 'UTC'

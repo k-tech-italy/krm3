@@ -4,6 +4,7 @@ from flags.state import flag_enabled
 from flags.sources import get_flags
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from django.conf import settings
 
 from krm3.config.environ import env
 from krm3.core.models import Resource, UserProfile
@@ -114,3 +115,12 @@ class ResourceSerializer(serializers.ModelSerializer):
         model = Resource
         fields = '__all__'
         depth = 0
+
+
+class PreferredLanguageSerializer(serializers.Serializer):
+    language_code = serializers.ChoiceField(
+        choices=[code for code, _ in settings.LANGUAGES]
+    )
+
+    def validate_language_code(self, value):
+        return value.strip().lower()
