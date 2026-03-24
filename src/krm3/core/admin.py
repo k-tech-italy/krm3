@@ -85,11 +85,10 @@ class ContractAdmin(AdminFiltersMixin, ModelAdmin):
         'country_calendar_code',
         'working_schedule',
         'meal_voucher',
-        'document_link',
+        'document',
     ]
     list_filter = [('resource', AutoCompleteFilter)]
     autocomplete_fields = ['resource']
-    readonly_fields = ['document_link']
 
     formfield_overrides = {
         # Tell Django to use our custom widget for all DateRangeFields in this admin.
@@ -99,13 +98,6 @@ class ContractAdmin(AdminFiltersMixin, ModelAdmin):
     @admin.display(description='Period', ordering='period')
     def get_period(self, obj: Contract) -> str:
         return str(obj)
-
-    @admin.display(description='Document')
-    def document_link(self, obj: Contract) -> str:
-        if obj.document_url:
-            return format_html('<a href="{}">View document</a>', obj.document_url)
-        return '-'
-
 
 @admin.register(ExtraHoliday)
 class ExtraHolidayAdmin(ModelAdmin):

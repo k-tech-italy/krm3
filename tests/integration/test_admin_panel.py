@@ -355,10 +355,13 @@ def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_
     browser.click('//a[@href="/admin/core/expense/"]')
 
     # Check that expense without image shows '-'
-    browser.assert_element('//td[@class="field-image_link" and text()="-"]')
-
-    # Check that expense with image shows 'View' link
-    browser.assert_element('//td[@class="field-image_link"]//a[text()="View"]')
+    browser.assert_element('//td[@class="field-image" and text()="-"]')
+    # Check that expense with image shows the image link
+    browser.assert_element(f'//td[@class="field-image"]//a[text()="{expense_with_image.image.name}"]')
+    # Check that the link href points to the media-auth URL for the expense
+    anchor = browser.find_element(By.XPATH, f'//td[@class="field-image"]//a[text()="{expense_with_image.image.name}"]')
+    assert anchor is not None
+    assert f'/media-auth/expenses/{expense_with_image.pk}' in anchor.get_attribute('href')
 
 
 def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user_with_plain_password):
@@ -446,6 +449,68 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
     # the rembursment is correctly created
     expense.refresh_from_db()
     assert expense.reimbursement is not None
+
+
+def test_admin_create_reimbursement_workflow_mission_with_image(
+        browser: 'AppTestBrowser', admin_user_with_plain_password
+    ):
+    """Test the reimbursement creation workflow starting from the expense list."""
+    from unittest.mock import MagicMock
+    from django.core.files import File
+
+    mission = MissionFactory(number=1, status=Mission.MissionStatus.SUBMITTED, to_date=datetime.date.today())
+
+    # Create expense with image
+    image = MagicMock(spec=File)
+    image.name = 'receipt.jpg'
+    expense = ExpenseFactory(mission=mission)
+    expense.image = image
+    expense.save()
+
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/expense/"]')
+
+    # Select the expense checkbox
+    browser.click(f'//input[@name="_selected_action" and @value="{expense.pk}"]')
+    # Select the "Create reimbursement" action and run it
+    browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+
+    # We should land on the preview page
+    browser.assert_element(
+        '//p[contains(text(), "Are you sure you want to create a reimbursement for the following expenses?")]'
+    )
+    # The image column in the preview table should contain a link to the media-auth URL for the expense
+    browser.assert_element(f'//a[contains(@href, "/media-auth/expenses/{expense.pk}")]')
+
+    # Set the year field to the mission's year (the form defaults to today's year which would fail validation)
+    year_input = browser.find_element(By.XPATH, '//input[@name="year"]')
+    assert year_input is not None
+    year_input.clear()
+    year_input.send_keys(str(mission.year))
+
+    # Submit the preview form to create the reimbursement
+    browser.click('//input[@type="submit"]')
+
+    # We should land on the results page
+    browser.assert_element('//h2[text()="Created following reimbursements"]')
+
+    # Retrieve the created reimbursement id from the expense
+    expense.refresh_from_db()
+    assert expense.reimbursement is not None
+    reimbursement_id = expense.reimbursement.pk
+
+    # The results page should have a link to the reimbursement change page
+    browser.assert_element(f'//a[@href="/admin/core/reimbursement/{reimbursement_id}/change/"]')
+    # And a preview link (rendered as an img with alt="preview") pointing to the overview page
+    browser.assert_element(
+        f'//a[@href="/admin/core/reimbursement/{reimbursement_id}/overview/"]//img[@alt="preview"]'
+    )
+
+    # Click the overview link and verify the expense image link is present there too
+    browser.click(f'//a[@href="/admin/core/reimbursement/{reimbursement_id}/overview/"]//img[@alt="preview"]')
+    browser.assert_element(f'//a[contains(@href, "/media-auth/expenses/{expense.pk}")]')
 
 
 

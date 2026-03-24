@@ -58,9 +58,6 @@ class ContractForm(ModelForm):
     class Meta:
         model = Contract
         fields = '__all__'  # noqa: DJ007
-        widgets = {
-            'document': PrivateMediaFileInput(url_field='document_url'),
-        }
 
 
 class ResourceForm(forms.Form):
