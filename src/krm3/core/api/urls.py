@@ -8,7 +8,8 @@ from .views import (
     ResourceAPIViewSet,
     UserAPIViewSet,
     TimesheetSubmissionAPIViewSet,
-    ContactAPIViewSet, SupportedLanguagesViewSet,
+    ContactAPIViewSet,
+    SupportedLanguagesViewSet,
 )
 
 router = SimpleRouter()
