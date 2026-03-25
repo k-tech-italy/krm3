@@ -9,7 +9,6 @@ from .views import (
     UserAPIViewSet,
     TimesheetSubmissionAPIViewSet,
     ContactAPIViewSet,
-    SupportedLanguagesViewSet,
 )
 
 router = SimpleRouter()
@@ -21,6 +20,5 @@ router.register('client', ClientAPIViewSet, basename='api-client')
 router.register('user', UserAPIViewSet, basename='user')
 router.register('timesheet', TimesheetSubmissionAPIViewSet, basename='api-timesheet-model')
 router.register(r'contacts', ContactAPIViewSet, basename='contacts')
-router.register('supported-languages', SupportedLanguagesViewSet, basename='supported-languages')
 
 urlpatterns = router.urls
