@@ -1,3 +1,13 @@
+## 3.3.9 (2026-03-26)
+
+### Fix
+
+- **timesheet**: prevent deletion of rest and bank hours when logging work (#262)
+- **report**: include protocol_number in calendar_data (#260)
+- **excel-report**: change colors and borders (#258)
+- **contacts**: fix feature flag behavior when overridden from the admin (#253)
+- **reimbursment**: Fix image preview in reimbursement overview (#256)
+
 ## 3.3.8 (2026-03-10)
 
 ### Fix
