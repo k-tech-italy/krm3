@@ -2,7 +2,7 @@ from django.urls import include, path
 from django.views.i18n import set_language
 from rest_framework.routers import SimpleRouter
 
-from krm3.core.api.views import GoogleOAuthView, LoginView
+from krm3.core.api.views import GoogleOAuthView, LoginView, SupportedLanguagesViewSet
 
 router = SimpleRouter()
 
@@ -18,5 +18,7 @@ urlpatterns = [
     path('timesheet/', include(('krm3.timesheet.api.urls', 'timesheet-api'))),
     path("i18n/setlang/", set_language, name="set_language"),
 ]
+
+router.register('info/languages', SupportedLanguagesViewSet, basename='languages')
 
 urlpatterns += router.urls

@@ -27,8 +27,6 @@ if not TESTING:
             """Runtime check for showing debug toolbar."""
             if not _env('DEBUG') or request.path in ignored:
                 return False
-            # use https://bewisse.com/modheader/ to set custom header
-            # key must be `DDT-KEY` (no HTTP_ prefix, no underscores)`
             return flag_enabled("DDT_ENABLED", request=request)
 
         DEBUG_TOOLBAR_CONFIG = {
