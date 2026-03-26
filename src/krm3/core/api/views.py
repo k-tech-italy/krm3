@@ -12,7 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ViewSet
 from rest_framework.pagination import PageNumberPagination
 
 import logging
@@ -339,3 +339,15 @@ class ContactAPIViewSet(ReadOnlyModelViewSet):
             queryset = queryset.filter(is_active=True)
 
         return queryset
+
+
+class SupportedLanguagesViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        from django.conf import settings
+        languages = [
+            {"language_code": code, "language": name}
+            for code, name in settings.LANGUAGES
+        ]
+        return Response(languages)
