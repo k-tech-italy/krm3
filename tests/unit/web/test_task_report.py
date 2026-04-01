@@ -8,9 +8,10 @@ from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from tests._extras.testutils.factories import ContractFactory, SuperUserFactory, TaskFactory, TimeEntryFactory
 from tests.unit.web.test_views import _assert_homepage_content
 
+
 class TestTimesheetTaskReport:
     @pytest.fixture(autouse=True)
-    def set_up_method(self):
+    def setup_task_report_test_data(self):
         self.user = SuperUserFactory()
 
         contract_1 = ContractFactory()
