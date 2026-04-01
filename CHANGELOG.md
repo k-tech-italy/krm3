@@ -1,3 +1,10 @@
+## 3.3.11 (2026-04-01)
+
+### Fix
+
+- **settings**: removing unnecessary src. prefix
+- **timesheet**: prevent deletion of rest and bank hours when logging work (#262)
+
 ## 3.3.10 (2026-04-01)
 
 ### Fix
