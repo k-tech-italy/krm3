@@ -6,7 +6,7 @@ from django.db.models import QuerySet
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework import mixins, permissions, serializers, status, viewsets
+from rest_framework import mixins, permissions, serializers, status, viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.request import Request
@@ -327,6 +327,8 @@ class ContactAPIViewSet(ReadOnlyModelViewSet):
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = ContactPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['first_name', 'last_name']
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
