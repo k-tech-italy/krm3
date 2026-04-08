@@ -1,4 +1,5 @@
 import base64
+import binascii
 import datetime
 import json
 import logging
@@ -6,9 +7,8 @@ import typing
 from pathlib import Path
 from typing import Any, cast, override
 
-import binascii
-import openpyxl
 import markdown
+import openpyxl
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -16,22 +16,22 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Min
-from django.http import HttpRequest, HttpResponse, Http404, HttpResponseBase
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.text import slugify
-from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
+from django.views.generic import TemplateView
 from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
+from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
-from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
 from krm3.web.document_filter import DocumentFilter
 from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
@@ -39,7 +39,10 @@ from krm3.web.report_styles import centered, header_alignment, header_fill, head
 if typing.TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
 
-    from krm3.core.models import Contract, User as UserType
+    from krm3.core.models import (
+        Contract,
+        User as UserType,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +112,7 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         if form.is_valid():
             form.save()
             response = self.get(request, *args, **kwargs)
-            if "preferred_language" in form.cleaned_data:
+            if 'preferred_language' in form.cleaned_data:
                 response.set_cookie('django_language', form.cleaned_data['preferred_language'])
             messages.success(request, _('Profile updated successfully.'))
             # Redirect to the same profile page after successful save
@@ -403,9 +406,11 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         ctx = self._get_base_context()
         context.update(ctx)
+        tasks_only = self.request.GET.get('tasks_only') == '1'
 
         report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
-        context['report_blocks'] = report_blocks.report_html()
+        context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
+        context['tasks_only'] = tasks_only
 
         return context
 
