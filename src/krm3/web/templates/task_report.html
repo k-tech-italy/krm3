@@ -17,6 +17,13 @@
             </div>
             <a href="{% url "task-report-month" next_month %}" class="button">{% translate "Next month" %}</a>
         </div>
+        <div class="flex flex-row justify-center gap-2">
+            {% if tasks_only %}
+                <a href="{{ request.path }}" class="button">Show all entries</a>
+            {% else %}
+                <a href="{{ request.path }}?tasks_only=1" class="button">Show only task entries</a>
+            {% endif %}
+        </div>
         {% for report_block in report_blocks %}
             <div class="report-container">
                 <table class="report-table">
