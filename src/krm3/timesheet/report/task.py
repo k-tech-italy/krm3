@@ -68,7 +68,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
     need = {'extra_holidays'}
 
-    def report_html(self) -> list[ReportBlock]:
+    def report_html(self, tasks_only: bool = False) -> list[ReportBlock]:
         blocks = []
         for resource in self.resources:
             blocks.append(block := ReportBlock(resource))
@@ -86,7 +86,8 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             self._add_task_rows(block, resource)
             self._add_days_per_task_row(block, resource, resources_report_days)
             self._add_timeentry_type_rows(block, resources_report_days)
-            self._add_absence_row(block, resources_report_days)
+            if not tasks_only:
+                self._add_absence_row(block, resources_report_days)
 
         return blocks
 

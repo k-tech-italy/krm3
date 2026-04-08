@@ -5,13 +5,13 @@ from django.urls import reverse
 from freezegun import freeze_time
 
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
-from tests._extras.testutils.factories import SuperUserFactory, TaskFactory, TimeEntryFactory, ContractFactory
+from tests._extras.testutils.factories import ContractFactory, SuperUserFactory, TaskFactory, TimeEntryFactory
 from tests.unit.web.test_views import _assert_homepage_content
 
 
 class TestTimesheetTaskReport:
     @pytest.fixture(autouse=True)
-    def set_up_method(self):
+    def setup_task_report_test_data(self):
         self.user = SuperUserFactory()
 
         contract_1 = ContractFactory()
@@ -171,6 +171,17 @@ class TestTimesheetTaskReport:
         assert absence_row.cells[20].render() == 'F'
         assert absence_row.cells[21].render() == 'M'
         assert absence_row.cells[22].render() == 'L'
+
+    def test_task_filter(self):
+        """Test filtering if non-task entries are hidden"""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html(tasks_only=False)
+        r1_block = next(b for b in blocks if b.resource and b.resource.pk == self.r1.id)
+        assert any(row.cells[0].render() == 'Absences' for row in r1_block.rows)
+
+        blocks = report.report_html(tasks_only=True)
+        r1_block = next(b for b in blocks if b.resource and b.resource.pk == self.r1.id)
+        assert not any(row.cells[0].render() == 'Absences' for row in r1_block.rows)
 
 
 # View tests for task report
