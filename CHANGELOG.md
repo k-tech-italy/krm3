@@ -1,3 +1,10 @@
+## 3.4.0 (2026-04-10)
+
+### Feat
+
+- **report**: add filtering for non-task entries in task report (#269)
+- **contact-api**: add first name and last name filtering (#268)
+
 ## 3.3.11 (2026-04-01)
 
 ### Fix
