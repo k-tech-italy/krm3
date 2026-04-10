@@ -3,12 +3,11 @@ from typing import cast
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login as djlogin, logout as djlogout
 from django.db.models import QuerySet
-from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, permissions, serializers, status, viewsets, filters
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +17,8 @@ from rest_framework.pagination import PageNumberPagination
 import logging
 
 from krm3.core.api.permissions import IsSelfOrReadOnly
-from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer, PreferredLanguageSerializer
+from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer, \
+    PreferredLanguageSerializer, ClientSerializer
 from krm3.core.models import (
     City,
     Client,
@@ -30,6 +30,11 @@ from krm3.core.models import (
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 from krm3.utils.dates import dt
+
+class DefaultPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 20
 
 
 class GoogleOAuthView(APIView):
@@ -279,12 +284,6 @@ class ProjectAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Generi
     queryset = Project.objects.all()
 
 
-class ClientSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Client
-        fields = '__all__'
-
-
 class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ClientSerializer
@@ -317,18 +316,14 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
             ts.delete()
         return super().create(request, *args, **kwargs)
 
-class ContactPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 20
 
 class ContactAPIViewSet(ReadOnlyModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = ContactPagination
+    pagination_class = DefaultPagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ['first_name', 'last_name']
+    search_fields = ['first_name', 'last_name', 'company__name']
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
