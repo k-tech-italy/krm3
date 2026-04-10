@@ -31,7 +31,7 @@ from krm3.core.models import (
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 from krm3.utils.dates import dt
 
-class GenericPagination(PageNumberPagination):
+class DefaultPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 20
@@ -321,7 +321,7 @@ class ContactAPIViewSet(ReadOnlyModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = GenericPagination
+    pagination_class = DefaultPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['first_name', 'last_name', 'company__name']
 
