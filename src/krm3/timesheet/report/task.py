@@ -47,7 +47,7 @@ class TimesheetTaskReport(TimesheetReport):
         resources = super()._get_resources(user)
 
         if self.resource_id:
-            return [r for r in resources if r.id == self.resource_id]
+            return [r for r in resources if r.pk == self.resource_id]
 
         return resources
 

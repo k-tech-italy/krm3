@@ -406,9 +406,9 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx = self._get_base_context()
         context.update(ctx)
         tasks_only = self.request.GET.get('tasks_only') == '1'
-        selected_project = self.request.GET.get('project', '')
-        selected_resource = self.request.GET.get('resource', '')
-        selected_task = self.request.GET.get('task', '')
+        selected_project = self.request.GET.get('project')
+        selected_resource = self.request.GET.get('resource')
+        selected_task = self.request.GET.get('task')
 
         can_filter_all = self.request.user.has_any_perm('core.manage_any_timesheet',
                                                         'core.view_any_timesheet')
@@ -425,10 +425,10 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['selected_task'] = selected_task
 
         report_blocks = TimesheetTaskReportOnline(
-            ctx['start'], ctx['end'], self.request.user,
-            project=selected_project or None,
-            resource=selected_resource or None,
-            task_title=selected_task or None
+            ctx['start'], ctx['end'], cast('UserType', self.request.user),
+            project=int(selected_project) if selected_project else None,
+            resource=int(selected_resource) if selected_resource else None,
+            task_title=int(selected_task) if selected_task else None,
         )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only
