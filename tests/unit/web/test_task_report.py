@@ -183,6 +183,69 @@ class TestTimesheetTaskReport:
         r1_block = next(b for b in blocks if b.resource and b.resource.pk == self.r1.id)
         assert not any(row.cells[0].render() == 'Absences' for row in r1_block.rows)
 
+    def test_project_filter(self):
+        """Test that filtering by project returns only resources and tasks from that project."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user,
+                                           project=self.task_1.project_id)
+        blocks = report.report_html()
+
+        # Should only contain r1 because r2 doesn't have tasks in task_1.project
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        # Check task titles in rows
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_resource_filter(self):
+        """Test that filtering by resource returns only that resource."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user, resource=self.r2.id)
+        blocks = report.report_html()
+
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r2.id
+
+    def test_task_title_filter(self):
+        """Test that filtering by task title returns only tasks with that title."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user, task_title=self.task_1.title)
+        blocks = report.report_html()
+
+        # r1 has task_1 and task_2. r2 has task_3.
+        # If we filter by task_1 title, we should only see r1 and only task_1.
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_combined_project_and_resource_filter(self):
+        """Test combined filtering by project and resource."""
+        report = TimesheetTaskReportOnline(
+            self.start_date, self.end_date, self.user,
+            project=self.task_1.project_id,
+            resource=self.r1.id
+        )
+        blocks = report.report_html()
+
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_combined_filters_no_results(self):
+        """Test combined filtering that should yield no results."""
+        report = TimesheetTaskReportOnline(
+            self.start_date, self.end_date, self.user,
+            project=self.task_1.project_id,
+            resource=self.r2.id
+        )
+        blocks = report.report_html()
+        assert len(blocks) == 0
+
 
 # View tests for task report
 

@@ -27,8 +27,8 @@ from django.views.generic import TemplateView
 from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
+from krm3.core.models import Project, Task, Resource
 from krm3.core.models.documents import ProtectedDocument as Document
-from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
@@ -45,7 +45,6 @@ if typing.TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
-
 
 User = get_user_model()
 
@@ -407,8 +406,30 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx = self._get_base_context()
         context.update(ctx)
         tasks_only = self.request.GET.get('tasks_only') == '1'
+        selected_project = self.request.GET.get('project', '')
+        selected_resource = self.request.GET.get('resource', '')
+        selected_task = self.request.GET.get('task', '')
 
-        report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
+        can_filter_all = self.request.user.has_any_perm('core.manage_any_timesheet',
+                                                        'core.view_any_timesheet')
+        context['can_filter_all'] = can_filter_all
+
+        if can_filter_all:
+            context['projects'] = {'': _('All projects')} | {str(p.id): str(p) for p in Project.objects.all()}
+            context['resources'] = {'': _('All resources')} | {str(r.id): str(r) for r in Resource.objects.all()}
+            task_titles = Task.objects.order_by('title').values_list('title', flat=True).distinct()
+            context['tasks'] = {'': _('All tasks')} | {title: title for title in task_titles}
+
+        context['selected_project'] = selected_project
+        context['selected_resource'] = selected_resource
+        context['selected_task'] = selected_task
+
+        report_blocks = TimesheetTaskReportOnline(
+            ctx['start'], ctx['end'], self.request.user,
+            project=selected_project or None,
+            resource=selected_resource or None,
+            task_title=selected_task or None
+        )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only
 

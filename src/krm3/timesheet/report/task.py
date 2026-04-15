@@ -1,5 +1,7 @@
 import datetime
+from collections.abc import Iterable
 from decimal import Decimal
+from typing import override
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -23,12 +25,31 @@ task_timeentry_key_mapping = {
 class TimesheetTaskReport(TimesheetReport):
     """Task-focused timesheet report that extends the base TimesheetReport."""
 
-    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User) -> None:
-        super().__init__(from_date, to_date, user)
+    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs) -> None:
+        can_filter_all = user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet')
+        self.project_id = kwargs.get('project') if can_filter_all else None
+        self.resource_id = kwargs.get('resource') if can_filter_all else None
+        self.task_title = kwargs.get('task_title') if can_filter_all else None
+        super().__init__(from_date, to_date, user, **kwargs)
 
         self.tasks: dict[int, list[Task]] = {}
         self._load_tasks()
+        if self.project_id or self.task_title:
+            self.resources = [r for r in self.resources if r.id in self.tasks]
         self._enrich_calendars_with_task_data()
+
+    @override
+    def _get_resources(self, user: User, **kwargs) -> Iterable[Resource]:
+        """Fetch the resources for this report.
+
+        Uses the base class to respect permissions, then optionally filters by resource_id.
+        """
+        resources = super()._get_resources(user)
+
+        if self.resource_id:
+            return [r for r in resources if r.id == self.resource_id]
+
+        return resources
 
     def _load_tasks(self) -> None:
         """Load tasks for all resources in the report."""
@@ -37,6 +58,10 @@ class TimesheetTaskReport(TimesheetReport):
         tasks = Task.objects.filter(resource_id__in=resource_ids, start_date__lte=self.to_date).filter(
             Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)
         )
+        if self.project_id:
+            tasks = tasks.filter(project_id=self.project_id)
+        if self.task_title:
+            tasks = tasks.filter(title=self.task_title)
 
         for task in tasks:
             self.tasks.setdefault(task.resource_id, []).append(task)
@@ -131,7 +156,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 row.add_cell(normal(value) if value else '').nwd = rkd.nwd
 
     def _add_days_per_task_row(
-        self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]
+            self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]
     ) -> None:
         """Add a row showing total hours per day from all tasks."""
         resource_tasks = self.tasks.get(resource.id, [])

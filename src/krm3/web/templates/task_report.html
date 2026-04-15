@@ -11,17 +11,55 @@
     {{ block.super }}
     <div class="w-9/10 mx-auto pt-20">
         <div class="flex flex-row justify-between mt-2">
-            <a href="{% url "task-report-month" prev_month %}" class="button">{% translate "Prev month" %}</a>
+            <a href="{% url "task-report-month" prev_month %}{% if can_filter_all %}?project={{ selected_project }}&resource={{ selected_resource }}&task={{ selected_task }}{% endif %}{% if tasks_only %}{% if can_filter_all %}&{% else %}?{% endif %}tasks_only=1{% endif %}" class="button">{% translate "Prev month" %}</a>
             <div class="flex flex-col">
                 <h1 class="title">{% blocktranslate %}Task Report {{ title }}{% endblocktranslate %}</h1>
             </div>
-            <a href="{% url "task-report-month" next_month %}" class="button">{% translate "Next month" %}</a>
+            <a href="{% url "task-report-month" next_month %}{% if can_filter_all %}?project={{ selected_project }}&resource={{ selected_resource }}&task={{ selected_task }}{% endif %}{% if tasks_only %}{% if can_filter_all %}&{% else %}?{% endif %}tasks_only=1{% endif %}" class="button">{% translate "Next month" %}</a>
         </div>
-        <div class="flex flex-row justify-center gap-2">
+        {% if can_filter_all %}
+            <form method="get" action="." class="mb-10 max-w-1/2 mx-auto mt-6 grid grid-cols-1 space-y-2 items-end">
+                <div>
+                    <label for="project" class="block text-sm/6 font-medium">{% translate "Filter for project" %}</label>
+                    <div class="mt-1 grid grid-cols-1">
+                        <select id="project" name="project" autocomplete="project-name">
+                            {% for id, project in projects.items %}
+                                <option value="{{ id }}" {% if id == selected_project %}selected{% endif %}>{{ project }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="resource" class="block text-sm/6 font-medium">{% translate "Filter for resource" %}</label>
+                    <div class="mt-2 grid grid-cols-1">
+                        <select id="resource" name="resource" autocomplete="resource-name">
+                            {% for id, resource in resources.items %}
+                                <option value="{{ id }}" {% if id == selected_resource %}selected{% endif %}>{{ resource }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="task" class="block text-sm/6 font-medium">{% translate "Filter for task" %}</label>
+                    <div class="mt-2 grid grid-cols-1">
+                        <select id="task" name="task" autocomplete="task-name">
+                            {% for id, task in tasks.items %}
+                                <option value="{{ id }}" {% if id == selected_task %}selected{% endif %}>{{ task }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <input type="hidden" name="tasks_only" value="{{ tasks_only|yesno:"1,0" }}">
+                <div>
+                    <button type="submit" class="button w-full mt-2">{% translate "Filter" %}</button>
+                </div>
+            </form>
+        {% endif %}
+        <div class="flex flex-row justify-center gap-2 mb-6 {% if not can_filter_all %}mt-6{% endif %}">
             {% if tasks_only %}
-                <a href="{{ request.path }}" class="button">Show all entries</a>
+                <a href="{{ request.path }}{% if can_filter_all %}?project={{ selected_project }}&resource={{ selected_resource }}&task={{ selected_task }}{% endif %}" class="button">Show all entries</a>
             {% else %}
-                <a href="{{ request.path }}?tasks_only=1" class="button">Show only task entries</a>
+                <a href="{{ request.path }}?tasks_only=1{% if can_filter_all %}&project={{ selected_project }}&resource={{ selected_resource }}&task={{ selected_task }}{% endif %}" class="button">Show only task entries</a>
             {% endif %}
         </div>
         {% for report_block in report_blocks %}
@@ -80,3 +118,16 @@
     </div>
 
 {% endblock body %}
+
+{% block js-frameworks %}
+    {{ block.super }}
+    <script>
+        $(document).ready(function() {
+            $('#project, #resource, #task').select2();
+
+            $('#project, #resource, #task').on('select2:open', function() {
+                $('.select2-results__options').addClass('text-black');
+            });
+        });
+    </script>
+{% endblock js-frameworks %}
