@@ -176,20 +176,20 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                'January': _('January'),
-                'February': _('February'),
-                'March': _('March'),
-                'April': _('April'),
-                'May': _('May'),
-                'June': _('June'),
-                'July': _('July'),
-                'August': _('August'),
-                'September': _('September'),
-                'October': _('October'),
-                'November': _('November'),
-                'December': _('December'),
-            }.get(start_of_month.strftime('%B'), '')
-            + f'{start_of_month.strftime(" %Y")}',
+                         'January': _('January'),
+                         'February': _('February'),
+                         'March': _('March'),
+                         'April': _('April'),
+                         'May': _('May'),
+                         'June': _('June'),
+                         'July': _('July'),
+                         'August': _('August'),
+                         'September': _('September'),
+                         'October': _('October'),
+                         'November': _('November'),
+                         'December': _('December'),
+                     }.get(start_of_month.strftime('%B'), '')
+                     + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -303,7 +303,7 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     template_name = 'report.html'
 
     def get(
-        self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
+            self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
     ) -> HttpResponse:
         self.month = month
         if export:
@@ -335,20 +335,20 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                'January': _('January'),
-                'February': _('February'),
-                'March': _('March'),
-                'April': _('April'),
-                'May': _('May'),
-                'June': _('June'),
-                'July': _('July'),
-                'August': _('August'),
-                'September': _('September'),
-                'October': _('October'),
-                'November': _('November'),
-                'December': _('December'),
-            }.get(start_of_month.strftime('%B'), '')
-            + f'{start_of_month.strftime(" %Y")}',
+                         'January': _('January'),
+                         'February': _('February'),
+                         'March': _('March'),
+                         'April': _('April'),
+                         'May': _('May'),
+                         'June': _('June'),
+                         'July': _('July'),
+                         'August': _('August'),
+                         'September': _('September'),
+                         'October': _('October'),
+                         'November': _('November'),
+                         'December': _('December'),
+                     }.get(start_of_month.strftime('%B'), '')
+                     + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -364,7 +364,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     template_name = 'task_report.html'
 
     def get(
-        self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
+            self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
     ) -> HttpResponse:
         self.month = month
         return super().get(request, *args, **kwargs)
@@ -385,20 +385,20 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             'prev_month': prev_month.strftime('%Y%m'),
             'next_month': next_month.strftime('%Y%m'),
             'title': {
-                'January': _('January'),
-                'February': _('February'),
-                'March': _('March'),
-                'April': _('April'),
-                'May': _('May'),
-                'June': _('June'),
-                'July': _('July'),
-                'August': _('August'),
-                'September': _('September'),
-                'October': _('October'),
-                'November': _('November'),
-                'December': _('December'),
-            }.get(start_of_month.strftime('%B'), '')
-            + f'{start_of_month.strftime(" %Y")}',
+                         'January': _('January'),
+                         'February': _('February'),
+                         'March': _('March'),
+                         'April': _('April'),
+                         'May': _('May'),
+                         'June': _('June'),
+                         'July': _('July'),
+                         'August': _('August'),
+                         'September': _('September'),
+                         'October': _('October'),
+                         'November': _('November'),
+                         'December': _('December'),
+                     }.get(start_of_month.strftime('%B'), '')
+                     + f'{start_of_month.strftime(" %Y")}',
         }
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -415,9 +415,26 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['can_filter_all'] = can_filter_all
 
         if can_filter_all:
-            context['projects'] = {'': _('All projects')} | {str(p.id): str(p) for p in Project.objects.all()}
-            context['resources'] = {'': _('All resources')} | {str(r.id): str(r) for r in Resource.objects.all()}
-            task_titles = Task.objects.order_by('title').values_list('title', flat=True).distinct()
+            # Dynamic filtering for selection choices
+            projects_qs = Project.objects.all()
+            resources_qs = Resource.objects.all()
+            tasks_qs = Task.objects.all()
+
+            if selected_resource:
+                projects_qs = projects_qs.filter(task__resource_id=selected_resource).distinct()
+                tasks_qs = tasks_qs.filter(resource_id=selected_resource)
+            if selected_project:
+                resources_qs = resources_qs.filter(task__project_id=selected_project).distinct()
+                tasks_qs = tasks_qs.filter(project_id=selected_project)
+            if selected_task:
+                projects_qs = projects_qs.filter(task__title=selected_task).distinct()
+                resources_qs = resources_qs.filter(task__title=selected_task).distinct()
+
+            context['projects'] = {'': _('All projects')} | {str(p.id): str(p) for p in projects_qs.order_by('name')}
+            context['resources'] = {'': _('All resources')} | {str(r.id): str(r) for r in
+                                                               resources_qs.order_by('last_name')}
+
+            task_titles = tasks_qs.order_by('title').values_list('title', flat=True).distinct()
             context['tasks'] = {'': _('All tasks')} | {title: title for title in task_titles}
 
         context['selected_project'] = selected_project
@@ -428,7 +445,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             ctx['start'], ctx['end'], cast('UserType', self.request.user),
             project=int(selected_project) if selected_project else None,
             resource=int(selected_resource) if selected_resource else None,
-            task_title=int(selected_task) if selected_task else None,
+            task_title=selected_task if selected_task else None,
         )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only

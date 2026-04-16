@@ -110,7 +110,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
             self._add_task_rows(block, resource)
             self._add_days_per_task_row(block, resource, resources_report_days)
-            self._add_timeentry_type_rows(block, resources_report_days)
+            self._add_timeentry_type_rows(block, resources_report_days, resource)
             if not tasks_only:
                 self._add_absence_row(block, resources_report_days)
 
@@ -129,8 +129,11 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
         return scheduled_working_days, scheduled_working_hours
 
-    def _add_timeentry_type_rows(self, block: ReportBlock, resources_report_days: list[Krm3Day]) -> None:
+    def _add_timeentry_type_rows(self, block: ReportBlock, resources_report_days: list[Krm3Day],
+                                 resource: Resource) -> None:
         """Add rows for different time entry types (night shift, on call, travel)."""
+        resource_task_ids = {t.id for t in self.tasks.get(resource.id, [])}
+
         for key, label in task_timeentry_key_mapping.items():
             row = block.add_row(ReportRow())
             row.add_cell(label)
@@ -139,20 +142,34 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             entry_total_hours = Decimal(0)
 
             for kd in resources_report_days:
-                if not kd.nwd:
-                    value = getattr(kd, f'data_{key}', None)
-                    if value and value > 0:
-                        entry_total_hours += value
-                        scheduled_hours = self._get_min_working_hours(kd)
-                        if scheduled_hours > 0:
-                            hours_ratio = value / Decimal(scheduled_hours)
-                            entry_days += hours_ratio
+                if key in ('night_shift', 'travel'):
+                    day_entries = [
+                        te for te in self.time_entries
+                        if te.resource_id == resource.id and te.date == kd.date and te.task_id in resource_task_ids
+                    ]
+                    value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
+                else:
+                    value = getattr(kd, f'data_{key}', None) or Decimal(0)
+
+                if not kd.nwd and value and value > 0:
+                    entry_total_hours += value
+                    scheduled_hours = self._get_min_working_hours(kd)
+                    if scheduled_hours > 0:
+                        hours_ratio = value / Decimal(scheduled_hours)
+                        entry_days += hours_ratio
 
             row.add_cell(normal(entry_days))
             row.add_cell(normal(entry_total_hours))
 
             for rkd in resources_report_days:
-                value = getattr(rkd, f'data_{key}', None)
+                if key in ('night_shift', 'travel'):
+                    day_entries = [
+                        te for te in self.time_entries
+                        if te.resource_id == resource.id and te.date == rkd.date and te.task_id in resource_task_ids
+                    ]
+                    value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
+                else:
+                    value = getattr(rkd, f'data_{key}', None) or Decimal(0)
                 row.add_cell(normal(value) if value else '').nwd = rkd.nwd
 
     def _add_days_per_task_row(
