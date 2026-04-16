@@ -1,0 +1,64 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      be_image_tag:
+        description: 'Backend version to deploy (e.g. 3.4.0)'
+        required: true
+        type: string
+
+jobs:
+  version-check:
+    name: Verify BE version is on INT
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch INT release.json and compare
+        run: |
+          RELEASE=$(curl -s "https://krm3int.k-tech.it/static/release.json?$(date +%s)")
+          INT_BE=$(echo $RELEASE | jq -r '.be.version')
+          REQ_BE="${{ inputs.be_image_tag }}"
+
+          echo "INT BE version : $INT_BE"
+          echo "Requested version: $REQ_BE"
+
+          HIGHEST=$(printf '%s\n' "$INT_BE" "$REQ_BE" | sort -V | tail -n1)
+
+          if [ "$HIGHEST" != "$INT_BE" ] && [ "$INT_BE" != "$REQ_BE" ]; then
+            echo "Requested version $REQ_BE is higher than INT version $INT_BE — aborting."
+            exit 1
+          fi
+
+          echo "Version $REQ_BE is <= INT version $INT_BE — proceeding."
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: version-check
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      APP_NAME: app_name       # Name of the container and image
+      REGISTRY: registry  # Container registry hostname or prefix
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy BE via Rancher API
+        env:
+          RANCHER_URL: ${{ secrets.RANCHER_URL }}
+          RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
+          RANCHER_CLUSTER: ${{ secrets.RANCHER_CLUSTER_ID }}
+          RANCHER_NAMESPACE: ${{ secrets.RANCHER_NAMESPACE }}
+          RANCHER_WORKLOAD: ${{ secrets.RANCHER_WORKLOAD_NAME }}
+        run: |
+          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" -X PATCH \
+            -H "Authorization: Bearer $RANCHER_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$RANCHER_URL/v1/apps.deployments/$RANCHER_CLUSTER/$RANCHER_NAMESPACE/$RANCHER_WORKLOAD" \
+            -d "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"$APP_NAME\",\"image\":\"$REGISTRY/$APP_NAME:${{ inputs.be_image_tag }}\"}]}}}}")
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            cat response.json
+            exit 1
+          fi
