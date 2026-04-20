@@ -61,6 +61,7 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
     list_filter = [
         ('resource', AutoCompleteFilter),
+        ('task__project', AutoCompleteFilter),
         ('task', AutoCompleteFilter),
         ('date', DateRangeFilter),
         ('day_shift_hours', NumberFilter),
