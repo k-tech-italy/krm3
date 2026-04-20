@@ -29,7 +29,7 @@ class TaskInline(admin.TabularInline):  # noqa: D101
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ProjectForm
-    search_fields = ('name',)
+    search_fields = ('name', 'client__name')
     list_display = ('client', 'name', 'start_date', 'end_date')
     list_filter = (
         ('client', AutoCompleteFilter),
@@ -42,6 +42,11 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     @button(html_attrs=NORMAL)
     def view_tasks(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
         return redirect(reverse('admin:core_task_changelist') + f'?project_id={pk}')
+
+    @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
+    def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
+        url = reverse('admin:core_timeentry_changelist') + f'?task__project__exact={pk}'
+        return HttpResponseRedirect(url)
 
 
 @admin.register(Task)
