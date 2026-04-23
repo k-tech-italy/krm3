@@ -415,20 +415,9 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['can_filter_all'] = can_filter_all
 
         if can_filter_all:
-            # Dynamic filtering for selection choices
             projects_qs = Project.objects.all()
             resources_qs = Resource.objects.all()
             tasks_qs = Task.objects.all()
-
-            if selected_resource:
-                projects_qs = projects_qs.filter(task__resource_id=selected_resource).distinct()
-                tasks_qs = tasks_qs.filter(resource_id=selected_resource)
-            if selected_project:
-                resources_qs = resources_qs.filter(task__project_id=selected_project).distinct()
-                tasks_qs = tasks_qs.filter(project_id=selected_project)
-            if selected_task:
-                projects_qs = projects_qs.filter(task__title=selected_task).distinct()
-                resources_qs = resources_qs.filter(task__title=selected_task).distinct()
 
             context['projects'] = {'': _('All projects')} | {str(p.id): str(p) for p in projects_qs.order_by('name')}
             context['resources'] = {'': _('All resources')} | {str(r.id): str(r) for r in
