@@ -41,29 +41,18 @@ jobs:
     needs: version-check
     runs-on: ubuntu-latest
     environment: production
-    env:
-      APP_NAME: app_name       # Name of the container and image
-      REGISTRY: registry  # Container registry hostname or prefix
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Deploy BE via Rancher API
         env:
-          RANCHER_URL: ${{ secrets.RANCHER_URL }}
+          RANCHER_URL: ${{ vars.RANCHER_URL }}
           RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
-          RANCHER_CLUSTER: ${{ secrets.RANCHER_CLUSTER_ID }}
-          RANCHER_NAMESPACE: ${{ secrets.RANCHER_NAMESPACE }}
-          RANCHER_WORKLOAD: ${{ secrets.RANCHER_WORKLOAD_NAME }}
+          BE_IMAGE_TAG: ${{ inputs.be_image_tag }}
         run: |
-          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" -X PATCH \
-            -H "Authorization: Bearer $RANCHER_TOKEN" \
-            -H "Content-Type: application/json" \
-            "$RANCHER_URL/v1/apps.deployments/$RANCHER_CLUSTER/$RANCHER_NAMESPACE/$RANCHER_WORKLOAD" \
-            -d "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"$APP_NAME\",\"image\":\"$REGISTRY/$APP_NAME:${{ inputs.be_image_tag }}\"}]}}}}")
-
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            cat response.json
-            exit 1
-          fi
+          curl -s -X PUT \
+          -H "Authorization: Bearer $RANCHER_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{\"containers\": [{\"name\": \"krm3\", \"image\": \"ghcr.io/k-tech-italy/krm3:$BE_IMAGE_TAG\"}]}" \
+          "$RANCHER_URL"
