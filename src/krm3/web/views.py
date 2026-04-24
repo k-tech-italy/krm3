@@ -27,8 +27,8 @@ from django.views.generic import TemplateView
 from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
+from krm3.core.models import Project, Resource, Task
 from krm3.core.models.documents import ProtectedDocument as Document
-from krm3.core.models.projects import Project
 from krm3.timesheet.report.availability import AvailabilityReportOnline
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
@@ -45,7 +45,6 @@ if typing.TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
-
 
 User = get_user_model()
 
@@ -407,8 +406,40 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         ctx = self._get_base_context()
         context.update(ctx)
         tasks_only = self.request.GET.get('tasks_only') == '1'
+        selected_project = self.request.GET.get('project')
+        selected_resource = self.request.GET.get('resource')
+        selected_task = self.request.GET.get('task')
 
-        report_blocks = TimesheetTaskReportOnline(ctx['start'], ctx['end'], cast('User', self.request.user))
+        can_filter_all = self.request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet')
+        context['can_filter_all'] = can_filter_all
+
+        if can_filter_all:
+            projects_qs = Project.objects.all()
+            resources_qs = Resource.objects.all()
+            tasks_qs = Task.objects.all()
+
+            context['projects'] = {'': f'{_("All")} ({projects_qs.count()})'} | {
+                str(p.id): str(p) for p in projects_qs.order_by('name')
+            }
+            context['resources'] = {'': f'{_("All")} ({resources_qs.count()})'} | {
+                str(r.id): str(r) for r in resources_qs.order_by('last_name')
+            }
+
+            task_titles = tasks_qs.order_by('title').values_list('title', flat=True).distinct()
+            context['tasks'] = {'': f'{_("All")} ({task_titles.count()})'} | {title: title for title in task_titles}
+
+        context['selected_project'] = selected_project
+        context['selected_resource'] = selected_resource
+        context['selected_task'] = selected_task
+
+        report_blocks = TimesheetTaskReportOnline(
+            ctx['start'],
+            ctx['end'],
+            cast('UserType', self.request.user),
+            project=int(selected_project) if selected_project else None,
+            resource=int(selected_resource) if selected_resource else None,
+            task_title=selected_task if selected_task else None,
+        )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only
 
