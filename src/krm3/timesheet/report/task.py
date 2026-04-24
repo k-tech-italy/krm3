@@ -129,8 +129,9 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
         return scheduled_working_days, scheduled_working_hours
 
-    def _add_timeentry_type_rows(self, block: ReportBlock, resources_report_days: list[Krm3Day],
-                                 resource: Resource) -> None:
+    def _add_timeentry_type_rows(
+        self, block: ReportBlock, resources_report_days: list[Krm3Day], resource: Resource
+    ) -> None:
         """Add rows for different time entry types (night shift, on call, travel)."""
         resource_task_ids = {t.id for t in self.tasks.get(resource.id, [])}
 
@@ -144,7 +145,8 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             for kd in resources_report_days:
                 if key in ('night_shift', 'travel'):
                     day_entries = [
-                        te for te in self.time_entries
+                        te
+                        for te in self.time_entries
                         if te.resource_id == resource.id and te.date == kd.date and te.task_id in resource_task_ids
                     ]
                     value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
@@ -164,7 +166,8 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
             for rkd in resources_report_days:
                 if key in ('night_shift', 'travel'):
                     day_entries = [
-                        te for te in self.time_entries
+                        te
+                        for te in self.time_entries
                         if te.resource_id == resource.id and te.date == rkd.date and te.task_id in resource_task_ids
                     ]
                     value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
@@ -173,7 +176,7 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 row.add_cell(normal(value) if value else '').nwd = rkd.nwd
 
     def _add_days_per_task_row(
-            self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]
+        self, block: ReportBlock, resource: Resource, resources_report_days: list[Krm3Day]
     ) -> None:
         """Add a row showing total hours per day from all tasks."""
         resource_tasks = self.tasks.get(resource.id, [])
