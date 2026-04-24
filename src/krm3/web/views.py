@@ -419,12 +419,13 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             resources_qs = Resource.objects.all()
             tasks_qs = Task.objects.all()
 
-            context['projects'] = {'': _('All projects')} | {str(p.id): str(p) for p in projects_qs.order_by('name')}
-            context['resources'] = {'': _('All resources')} | {str(r.id): str(r) for r in
-                                                               resources_qs.order_by('last_name')}
+            context['projects'] = {'': f"{_('All')} ({projects_qs.count()})"} | {str(p.id): str(p) for p in
+                                                                                 projects_qs.order_by('name')}
+            context['resources'] = {'': f"{_('All')} ({resources_qs.count()})"} | {str(r.id): str(r) for r in
+                                                                                   resources_qs.order_by('last_name')}
 
             task_titles = tasks_qs.order_by('title').values_list('title', flat=True).distinct()
-            context['tasks'] = {'': _('All tasks')} | {title: title for title in task_titles}
+            context['tasks'] = {'': f"{_('All')} ({task_titles.count()})"} | {title: title for title in task_titles}
 
         context['selected_project'] = selected_project
         context['selected_resource'] = selected_resource
