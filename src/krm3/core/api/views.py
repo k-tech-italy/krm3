@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ViewSet, ModelViewSet
 from rest_framework.pagination import PageNumberPagination
 
 import logging
@@ -317,13 +317,14 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 
-class ContactAPIViewSet(ReadOnlyModelViewSet):
+class ContactAPIViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = DefaultPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['first_name', 'last_name', 'company__name']
+    http_method_names = ['get', 'post']
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):

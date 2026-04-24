@@ -63,11 +63,32 @@ class AddressInfoSerializer(serializers.ModelSerializer):
         fields = ('address', 'kind')
 
 class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
-    phones = PhoneInfoSerializer(many=True, read_only=True, source='phoneinfo_set')
-    websites = WebsiteInfoSerializer(many=True, read_only=True, source='websiteinfo_set')
-    emails = EmailInfoSerializer(many=True, read_only=True, source='emailinfo_set')
-    addresses = AddressInfoSerializer(many=True, read_only=True, source='addressinfo_set')
+    phones = PhoneInfoSerializer(many=True, source='phoneinfo_set')
+    websites = WebsiteInfoSerializer(many=True, source='websiteinfo_set')
+    emails = EmailInfoSerializer(many=True, source='emailinfo_set')
+    addresses = AddressInfoSerializer(many=True, source='addressinfo_set')
+
     class Meta:
         model = Contact
         fields = '__all__'
         depth = 2
+
+    def create(self, validated_data):
+        phones_data = validated_data.pop('phoneinfo_set', [])
+        emails_data = validated_data.pop('emailinfo_set', [])
+        websites_data = validated_data.pop('websiteinfo_set', [])
+        addresses_data = validated_data.pop('addressinfo_set', [])
+
+        validated_data['user'] = self.context['request'].user
+        contact = Contact.objects.create(**validated_data)
+
+        for phone in phones_data:
+            PhoneInfo.objects.create(contact=contact, **phone)
+        for email in emails_data:
+            EmailInfo.objects.create(contact=contact, **email)
+        for website in websites_data:
+            WebsiteInfo.objects.create(contact=contact, **website)
+        for address in addresses_data:
+            AddressInfo.objects.create(contact=contact, **address)
+
+        return contact
