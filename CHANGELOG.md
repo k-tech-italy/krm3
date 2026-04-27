@@ -2,8 +2,9 @@
 
 ### Feat
 
-- **report**: add filtering for non-task entries in task report (#269)
-- **contact-api**: add first name and last name filtering (#268)
+- **dev-ops**: add prod release github action
+- **reports**: add filtering by project, resource
+- **UI**: add custom hours to timesheet
 
 ## 3.4.0 (2026-04-10)
 
