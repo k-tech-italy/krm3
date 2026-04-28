@@ -88,9 +88,26 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
+    """Resource model admin."""
     list_display = ('first_name', 'last_name', 'user', 'active', 'preferred_in_report')
     search_fields = ['first_name', 'last_name']
     list_filter = (('active', admin.BooleanFieldListFilter),)
+    actions = ['export_timesheets',]
+
+    @admin.action(description='Export selected timesheets')
+    def export_timesheets(self, request: 'HttpRequest', queryset: 'QuerySet[Resource]') -> 'JsonResponse':
+        """Exports selected timesheets."""
+        try:
+            buffer = TimesheetExporter(queryset).export()
+            response = JsonResponse(buffer)
+            now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            response['Content-Disposition'] = f'attachment; filename="mission-export-{now}.json"'
+            # response['Content-Length'] = buffer.tell()
+
+            return response
+        except Exception as e:  # noqa: BLE001
+            messages.error(request, f'Failed to export timesheets: {e}')
+            capture_exception()
 
 
 @admin.register(Client)

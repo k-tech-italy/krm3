@@ -16,12 +16,13 @@ from django.utils.translation import gettext_lazy as _
 
 from krm3.utils.dates import KrmDay
 
+from ...timesheet.rules import Krm3Day
+from . import Contract
 from .auth import Resource
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
     from django.db.models.base import ModelBase
-
 
 DAYTIME_WORK_HOURS_MAX = 16
 NIGHTTIME_WORK_HOURS_MAX = 8
@@ -250,6 +251,65 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         ):
             return self.all()
         return self.filter(resource__user=user)
+
+
+class DayEntry(models.Model):
+    """A day entry for a Resource under contract."""
+
+    day = models.DateField(help_text=_('Day'))
+    closed = models.BooleanField(default=False, help_text=_('Submitted'))
+    is_holiday = models.BooleanField(default=False, help_text=_('Is Holiday for resource'))
+    holiday_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, help_text=_('Holiday hours'))
+    leave_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, help_text=_('Leave hours'))
+    special_leave_hours = models.DecimalField(
+        max_digits=4, decimal_places=2, default=0.0, help_text=_('Special leave hours')
+    )
+    special_leave_reason = models.ForeignKey(
+        SpecialLeaveReason, on_delete=models.PROTECT, null=True, blank=True, help_text=_('Special leave reason')
+    )
+    bank_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, help_text=_('Bank hours'))
+    sick_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0)
+    protocol_number = models.CharField(null=True, blank=True)
+    due_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, help_text=_('Due hours for the day'))
+    overtime_hours = models.DecimalField(
+        max_digits=4, decimal_places=2, default=0.0, help_text=_('Overtime hours in the day')
+    )
+    meal_voucher = models.PositiveIntegerField(help_text=_('Meal voucher for the day'))
+    rest_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, help_text=_('Rest hours'))
+    comment = models.TextField(null=True, blank=True, help_text=_('Notes'))
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
+    # keep aligned with contract's resource
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, help_text=_('Resource'))
+
+    def fabric(self, resource: Resource, day: Krm3Day | datetime.date, *args, **kwargs):
+        self.day = day.date if isinstance(day, Krm3Day) else day
+        self.closed = False
+        self.is_holiday = False
+        self.holiday_hours = 0.0
+        self.leave_hours = 0.0
+        self.special_leave_hours = 0.0
+        self.special_leave_reason = None
+        self.bank_hours = 0.0
+        self.sick_hours = 0.0
+        self.protocol_number = None
+        self.due_hours = 0.0
+        self.overtime_hours = 0.0
+        self.meal_voucher = 0.0
+        self.rest_hours = 0.0
+        self.comment = None
+        self.resource = kwargs.pop('resource', None)
+        self.contract = kwargs.pop('contract', None)
+
+        if self.resource is None and self.contract:
+            self.resource = self.contract.resource
+        if self.contract is None and self.resource:
+            Contract.objects.get(resource=self.resource, period__in=self.day)
+            self.resource = self.contract.resource
+        return self
+
+    @property
+    def nwd(self):
+        return self.due_hours == 0
 
 
 class TimeEntry(models.Model):

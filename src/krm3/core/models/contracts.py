@@ -13,10 +13,11 @@ from django.urls import reverse
 
 from krm3.core.storage import PrivateMediaStorage
 from krm3.missions.media import contract_directory_path
+from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
-    from krm3.core.models import Task
+    from krm3.core.models import Contract, Task
     from krm3.core.models.auth import User
 
 
@@ -202,3 +203,7 @@ class Contract(models.Model):
         )
 
         return max(Decimal(0), schedule - total_logged_hours)
+
+    def fetch(self, resource: 'Resource', day: Krm3Day | datetime.date) -> "Contract":
+        """Fetch the contract from the resource and day."""
+        return Contract.objects.get(resource=resource, period__in=day.date if isinstance(day, KrmDay) else day)
