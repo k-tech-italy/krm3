@@ -311,6 +311,18 @@ class DayEntry(models.Model):
     def nwd(self):
         return self.due_hours == 0
 
+    @classmethod
+    def get_or_create_from_entries(cls: 'DayEntry', entries: 'QuerySet[TimeEntry] | list[TimeEntry]') -> tuple['DayEntry', bool]:
+        if not isinstance(entries, list):
+            entries = list(entries)
+        if len({te.date for te in entries}):
+            raise RuntimeError(_('TimeEntries must be of same day'))
+        if len(entries) == 0:
+            raise RuntimeError(_('Need at least a TimeEntry'))
+
+
+
+        day_entry, created = DayEntry.objects.get_or_create(day=entries[0], defaults=**cls._calculate_dayentry())
 
 class TimeEntry(models.Model):
     """A timesheet entry."""
