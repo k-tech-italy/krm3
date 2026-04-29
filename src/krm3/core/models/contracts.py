@@ -21,14 +21,14 @@ if TYPE_CHECKING:
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
-    def active_between(self, start: datetime.date, end: datetime.date) -> Self:
+    def active_between(self, start: datetime.date, end: datetime.date, including_end: bool = True) -> Self:
         """Return the contracts valid in the given interval.
 
         :param start: the start of the interval (inclusive).
         :param end: the end of the interval (inclusive).
         :return: the filtered `Contract`s.
         """
-        end = end + datetime.timedelta(days=1)
+        end = end + datetime.timedelta(days=int(including_end))
         return self.filter(period__overlap=(start, end))
 
     def accessible_by(self, user: 'User') -> Self:
