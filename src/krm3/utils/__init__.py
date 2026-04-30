@@ -1,7 +1,7 @@
 from typing import Never
 
 
-def todo(message: str | None) -> Never:  # pragma: no cover
+def todo(message: str | None = None) -> Never:  # pragma: no cover
     """Raise an error for a stubbed out implementation.
 
     This should work like the `todo!` macro in Rust: panic (or, in

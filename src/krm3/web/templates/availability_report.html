@@ -44,28 +44,27 @@
             </div>
         </div>
 
-        {% if report_blocks %}
+        {% if report.processed_data %}
             <div class="report-container">
                 <table class="report-table">
                     <thead>
-                    <tr class="table-header-row">
-                        {% for cell in report_blocks.0.rows.0.cells %}
-                            <td class="{% if forloop.first %}row-header{% else %}text-center workday{% endif %}">
-                                {{ cell.render|linebreaks }}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for row in report_blocks.0.rows|slice:"1:" %}
-                        <tr class="row-data">
-                            {% for cell in row.cells %}
-                                <td class="{% if forloop.first %}row-header{% else %}cell-data{% endif %} {% if cell.nwd %}non-workday{% endif %} text-center">
-                                    {{ cell.render }}
+                        <tr class="table-header-row">
+                            {% for cell in report.processed_data.headers %}
+                                <td class="{% if forloop.first %}row-header{% else %}text-center workday{% endif %}">
+                                    {{ cell | linebreaks }}
                                 </td>
                             {% endfor %}
                         </tr>
-                    {% endfor %}
+                    </thead>
+                    <tbody>
+                        {% for row in report.processed_data %}
+                            <tr class="row-data">
+                                {% for cell in row %}
+                                    <td class="{% if forloop.first %}row-header{% else %}cell-data{% endif %} {% if not cell.is_working_day %}non-workday{% endif %} text-center">
+                                        {{ cell }}
+                                    </td>
+                                {% endfor %}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>

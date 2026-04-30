@@ -10,7 +10,7 @@ from testutils.factories import (
     TimeEntryFactory,
 )
 
-from krm3.reports.availability import _AbsenceKind, AvailabilityReport
+from krm3.reports.availability import Absence, AbsenceKind, AvailabilityReport
 
 
 @pytest.mark.django_db
@@ -28,7 +28,7 @@ class TestComputeAbsences:
             project=None,
         )
         result = report._compute_absences([entry])
-        assert result == [(_AbsenceKind.HOLIDAY, entry.holiday_hours)]
+        assert result == [(AbsenceKind.HOLIDAY, entry.holiday_hours)]
 
     def test_sick(self):
         entry = TimeEntryFactory(
@@ -41,7 +41,7 @@ class TestComputeAbsences:
             project=None,
         )
         result = report._compute_absences([entry])
-        assert result == [(_AbsenceKind.SICK, entry.sick_hours)]
+        assert result == [(AbsenceKind.SICK, entry.sick_hours)]
 
     def test_leave(self):
         entry = TimeEntryFactory(
@@ -54,7 +54,7 @@ class TestComputeAbsences:
             project=None,
         )
         result = report._compute_absences([entry])
-        assert result == [(_AbsenceKind.LEAVE, entry.leave_hours)]
+        assert result == [(AbsenceKind.LEAVE, entry.leave_hours)]
 
     def test_special_leave(self):
         entry = TimeEntryFactory(
@@ -68,7 +68,7 @@ class TestComputeAbsences:
             project=None,
         )
         result = report._compute_absences([entry])
-        assert result == [(_AbsenceKind.SPECIAL_LEAVE, entry.special_leave_hours)]
+        assert result == [(AbsenceKind.SPECIAL_LEAVE, entry.special_leave_hours)]
 
     def test_rest(self):
         entry = TimeEntryFactory(
@@ -81,7 +81,7 @@ class TestComputeAbsences:
             project=None,
         )
         result = report._compute_absences([entry])
-        assert result == [(_AbsenceKind.REST, entry.rest_hours)]
+        assert result == [(AbsenceKind.REST, entry.rest_hours)]
 
     def test_leaves_and_rest_in_one_entry(self):
         entry = TimeEntryFactory(
@@ -98,9 +98,9 @@ class TestComputeAbsences:
         )
         result = report._compute_absences([entry])
         assert result == [
-            (_AbsenceKind.LEAVE, entry.leave_hours),
-            (_AbsenceKind.SPECIAL_LEAVE, entry.special_leave_hours),
-            (_AbsenceKind.REST, entry.rest_hours),
+            (AbsenceKind.LEAVE, entry.leave_hours),
+            (AbsenceKind.SPECIAL_LEAVE, entry.special_leave_hours),
+            (AbsenceKind.REST, entry.rest_hours),
         ]
 
     def test_no_absences(self):
@@ -161,7 +161,7 @@ class TestProcess:
         assert len(dataset) == 2
         assert set(dataset['Resource']) == {resource1.full_name, resource2.full_name}
 
-    def test_dataset_cell_contains_list_of_tuples(self):
+    def test_dataset_cell_collects_absence_data(self):
         resource = ResourceFactory()
         ContractFactory(resource=resource)
         TimeEntryFactory(
@@ -178,9 +178,9 @@ class TestProcess:
 
         row = dataset[0]
         cell = row[1]
-        assert isinstance(cell, list)
-        assert len(cell) == 1
-        assert cell[0] == (_AbsenceKind.HOLIDAY, Decimal(8))
+        assert cell.date == datetime.date(2025, 8, 1)
+        assert cell.resource == resource
+        assert cell.absences == [Absence(AbsenceKind.HOLIDAY, Decimal(8))]
 
     def test_resource_with_no_entries_has_empty_lists(self):
         resource = ResourceFactory()
@@ -193,4 +193,4 @@ class TestProcess:
 
         row = dataset[0]
         cell = row[1]
-        assert cell == []
+        assert cell.absences == []

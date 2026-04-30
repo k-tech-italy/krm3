@@ -3,24 +3,28 @@ from __future__ import annotations
 import datetime
 import json
 from decimal import Decimal
-from typing import Any, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
+import vobject
+from constance import config
 from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from natural_keys import NaturalKeyModel
 from django.db import models
+from django.db.models import Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import AbstractUser
-import vobject
+from natural_keys import NaturalKeyModel
+
+# TODO: from Python 3.13 on, `deprecated` should be imported from `warnings`
+from typing_extensions import deprecated
 
 from krm3.config import settings
 from krm3.utils.dates import KrmCalendar, KrmDay
-from constance import config
 
 if TYPE_CHECKING:
     from datetime import date
+
     from krm3.core.models import Contract
 
 
@@ -209,16 +213,24 @@ class Resource(models.Model):
 
         return days_list
 
-    def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
+    def get_contracts(self, start_day: date, end_day: date | None, including_end: bool = True) -> list[Contract]:
         """Return a list of contracts applicable to the time interval between start_day and end_day."""
         from krm3.core.models import Contract  # noqa: PLC0415
 
         return list(
             Contract.objects.filter(
-                period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
+                period__overlap=(start_day, end_day + datetime.timedelta(days=int(including_end)) if end_day else None),
+                resource=self,
             )
         )
 
+    def get_contract_for_date(self, day: date | KrmDay) -> Contract | None:
+        try:
+            return self.get_contracts(day, day)[0]
+        except IndexError:
+            return None
+
+    @deprecated('Use `get_contract_for_date()` instead')
     def contract_for_date(self, contract_list: 'list[Contract]', day: date | KrmDay) -> 'Contract | None':
         """Select the contract applicable for the given day."""
         for contract in contract_list:
