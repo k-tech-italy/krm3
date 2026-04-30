@@ -28,7 +28,7 @@ DAYTIME_WORK_HOURS_MAX = 16
 NIGHTTIME_WORK_HOURS_MAX = 8
 
 
-class SpecialLeaveReasonQuerySet(models.QuerySet):
+class SpecialLeaveReasonQuerySet(QuerySet):
     def valid_between(self, start_date: datetime.date | None, end_date: datetime.date | None) -> Self:
         match start_date, end_date:
             case None, None:
@@ -67,12 +67,12 @@ class SpecialLeaveReason(models.Model):
 
     @override
     def save(
-        self,
-        *,
-        force_insert: bool | tuple[ModelBase, ...] = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
+            self,
+            *,
+            force_insert: bool | tuple[ModelBase, ...] = False,
+            force_update: bool = False,
+            using: str | None = None,
+            update_fields: Iterable[str] | None = None,
     ) -> None:
         self.full_clean()
         return super().save(
@@ -99,7 +99,7 @@ class TimesheetSubmissionManager(models.Manager):
     """Custom Manager for TimesheetSubmission with utility methods."""
 
     def get_closed_in_period(
-        self, from_date: datetime.date, to_date: datetime.date, resources: Resource | Iterable[Resource]
+            self, from_date: datetime.date, to_date: datetime.date, resources: Resource | Iterable[Resource]
     ) -> QuerySet[TimesheetSubmission]:
         """
         Return all `TimesheetSubmission`s closed within the given date range for the given `resources`.
@@ -141,7 +141,8 @@ class TimesheetSubmission(models.Model):
         return f'{self.period.lower.strftime("%Y-%m-%d")} - {end_dt.strftime("%Y-%m-%d")}'
 
     @override
-    def save(self, *, force_insert: bool = False, force_update: bool = False, using=None, update_fields=None) -> None:  # noqa: D102, ANN001
+    def save(self, *, force_insert: bool = False, force_update: bool = False, using=None,
+             update_fields=None) -> None:  # noqa: D102, ANN001
         # We do not check for constraints as we want to surface the detailed errors from the DB when saving
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
@@ -162,22 +163,22 @@ class TimesheetSubmission(models.Model):
         return TimesheetSerializer(timesheet).data
 
 
-class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
+class TimeEntryQuerySet(QuerySet["TimeEntry"]):
     _TASK_ENTRY_FILTER = (
-        models.Q(day_shift_hours__gt=0)
-        | models.Q(travel_hours__gt=0)
-        | models.Q(night_shift_hours__gt=0)
-        | models.Q(on_call_hours__gt=0)
+            models.Q(day_shift_hours__gt=0)
+            | models.Q(travel_hours__gt=0)
+            | models.Q(night_shift_hours__gt=0)
+            | models.Q(on_call_hours__gt=0)
     )
 
     _DAY_ENTRY_FILTER = (
-        models.Q(sick_hours__gt=0)
-        | models.Q(holiday_hours__gt=0)
-        | models.Q(rest_hours__gt=0)
-        | models.Q(leave_hours__gt=0)
-        | models.Q(special_leave_hours__gt=0)
-        | models.Q(bank_to__gt=0)
-        | models.Q(bank_from__gt=0)
+            models.Q(sick_hours__gt=0)
+            | models.Q(holiday_hours__gt=0)
+            | models.Q(rest_hours__gt=0)
+            | models.Q(leave_hours__gt=0)
+            | models.Q(special_leave_hours__gt=0)
+            | models.Q(bank_to__gt=0)
+            | models.Q(bank_from__gt=0)
     )
 
     _REGULAR_LEAVE_ENTRY_FILTER = models.Q(leave_hours__gt=0)
@@ -247,7 +248,7 @@ class TimeEntryQuerySet(models.QuerySet['TimeEntry']):
         Superuser gets them all.
         """
         if user.is_superuser or user.get_all_permissions().intersection(
-            {'core.manage_any_timesheet', 'core.view_any_timesheet'}
+                {'core.manage_any_timesheet', 'core.view_any_timesheet'}
         ):
             return self.all()
         return self.filter(resource__user=user)
@@ -312,17 +313,58 @@ class DayEntry(models.Model):
         return self.due_hours == 0
 
     @classmethod
-    def get_or_create_from_entries(cls: 'DayEntry', entries: 'QuerySet[TimeEntry] | list[TimeEntry]') -> tuple['DayEntry', bool]:
+    def get_or_create_from_entries(cls: 'DayEntry',
+                                   entries: "QuerySet[TimeEntry] | list[TimeEntry]") -> "list[tuple[DayEntry, bool]]":
+        day_entries, created = cls.objects.get_or_create(day=entries[0], defaults=cls._calculate_dayentry(entries))
+
+        return day_entries, created
+
+    @classmethod
+    def _calculate_dayentry(cls: 'DayEntry', entries: 'QuerySet[TimeEntry] | list[TimeEntry]', force: bool = False) -> dict:
+        """Calculate a dict of values for a day entry from the given time entries.
+
+        Force will force the calculation even if the day entry already exists.
+        """
         if not isinstance(entries, list):
             entries = list(entries)
-        if len({te.date for te in entries}):
-            raise RuntimeError(_('TimeEntries must be of same day'))
+
         if len(entries) == 0:
             raise RuntimeError(_('Need at least a TimeEntry'))
+        if len({te.date for te in entries}) > 1:
+            raise RuntimeError(_('TimeEntries must be of same day'))
+        if len({te.resource_id for te in entries}) > 1:
+            raise RuntimeError(_('TimeEntries must be for same resource'))
+        if not force and len({te.timesheet_id and te.timesheet.closed for te in entries}) \
+                and len({te.day_entry and te.day_entry.closed for te in entries}) > 0:
+            raise RuntimeError(_('TimeEntries must not be submitted already'))
+
+
+        if not created and day_entry.closed:
+            raise RuntimeError(_('Cannot edit closed day entry'))
 
 
 
-        day_entry, created = DayEntry.objects.get_or_create(day=entries[0], defaults=**cls._calculate_dayentry())
+        result = {
+            "day": entries[0].date,
+            "is_holiday": False,
+            "holiday_hours": 0.0,
+            "leave_hours": 0.0,
+            "special_leave_hours": 0.0,
+            "special_leave_reason": None,
+            "bank_hours": 0.0,
+            "sick_hours": 0.0,
+            "protocol_number": None,
+            "due_hours": 0.0,
+            "overtime_hours": 0.0,
+            "meal_voucher": 0.0,
+            "rest_hours": 0.0,
+            "comment": None,
+            "resource_id": entries[0].resource_id,
+            "contract": kwargs.pop('contract', None),
+        }
+
+        return {}
+
 
 class TimeEntry(models.Model):
     """A timesheet entry."""
@@ -348,6 +390,9 @@ class TimeEntry(models.Model):
 
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='time_entries', null=True, blank=True)
+
+    # this will need to be turned into not nullable after migrations
+    day_entry = models.ForeignKey(DayEntry, on_delete=models.CASCADE, null=True, blank=True)
 
     objects = TimeEntryQuerySet.as_manager()
 
@@ -384,12 +429,12 @@ class TimeEntry(models.Model):
 
     @override
     def save(
-        self,
-        *,
-        force_insert: bool | tuple[ModelBase, ...] = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
+            self,
+            *,
+            force_insert: bool | tuple[ModelBase, ...] = False,
+            force_update: bool = False,
+            using: str | None = None,
+            update_fields: Iterable[str] | None = None,
     ) -> None:
         self.full_clean()
         return super().save(
@@ -416,14 +461,14 @@ class TimeEntry(models.Model):
         """
         # NOTE: see `total_task` hours, the same applies here
         return (
-            self.total_task_hours
-            + Decimal(self.leave_hours)
-            + Decimal(self.special_leave_hours)
-            + Decimal(self.sick_hours)
-            + Decimal(self.holiday_hours)
-            + Decimal(self.rest_hours)
-            + Decimal(self.bank_from)
-            - Decimal(self.bank_to)
+                self.total_task_hours
+                + Decimal(self.leave_hours)
+                + Decimal(self.special_leave_hours)
+                + Decimal(self.sick_hours)
+                + Decimal(self.holiday_hours)
+                + Decimal(self.rest_hours)
+                + Decimal(self.bank_from)
+                - Decimal(self.bank_to)
         )
 
     @property
@@ -597,7 +642,7 @@ class TimeEntry(models.Model):
     def _verify_at_most_one_absence(self) -> None:
         is_one_of_the_leave_types = self.is_leave or self.is_special_leave
         has_too_many_day_entry_hours_logged = (
-            len([cond for cond in (self.is_sick_day, self.is_holiday, is_one_of_the_leave_types) if cond]) > 1
+                len([cond for cond in (self.is_sick_day, self.is_holiday, is_one_of_the_leave_types) if cond]) > 1
         )
         if has_too_many_day_entry_hours_logged:
             raise ValidationError(
@@ -621,7 +666,8 @@ class TimeEntry(models.Model):
 
         # we might be overwriting an existing time entry on the same
         # task (even None) - exclude it, as it should no longer count
-        entries_on_same_day = TimeEntry.objects.filter(date=self.date, resource=self.resource).exclude(task=self.task)
+        entries_on_same_day = self.__class__.objects.filter(date=self.date, resource=self.resource).exclude(
+            task=self.task)
 
         total_hours_on_same_day = sum(entry.total_hours for entry in entries_on_same_day) + self.total_hours
         if total_hours_on_same_day > (DAYTIME_WORK_HOURS_MAX + NIGHTTIME_WORK_HOURS_MAX):
@@ -666,10 +712,10 @@ class TimeEntry(models.Model):
         other_entries_on_same_day = all_entries.exclude(task=self.task).exclude(pk=self.pk)
 
         if not (
-            self.does_entry_blocking_overtime_exist_for_same_day
-            or self.is_special_leave
-            or self.is_rest
-            or self.is_leave
+                self.does_entry_blocking_overtime_exist_for_same_day
+                or self.is_special_leave
+                or self.is_rest
+                or self.is_leave
         ):
             return
 
