@@ -426,6 +426,8 @@ class Expense(models.Model):
         if self.payment_type.personal_expense:
             # con immagine
             if self.image:
+                if not self.amount_base:
+                    self.amount_base = self.calculate_base()
                 return self.amount_base
             return 0
         # Company

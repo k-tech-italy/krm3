@@ -51,8 +51,9 @@ jobs:
           RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
           BE_IMAGE_TAG: ${{ inputs.be_image_tag }}
         run: |
-          curl -s -X PUT \
-          -H "Authorization: Bearer $RANCHER_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"containers\": [{\"name\": \"krm3\", \"image\": \"ghcr.io/k-tech-italy/krm3:$BE_IMAGE_TAG\"}]}" \
-          "$RANCHER_URL"
+          curl -sf -X PATCH \
+            -H "Authorization: Bearer $RANCHER_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg img "ghcr.io/k-tech-italy/krm3:${BE_IMAGE_TAG}" \
+              '{containers: [{name: "krm3", image: $img}]}')" \
+            "https://r2.k-tech.it/v3/project/local:p-vnrc7/workloads/deployment:krm3:krm3"
