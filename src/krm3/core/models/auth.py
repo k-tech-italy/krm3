@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import datetime
 import json
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import vobject
 from constance import config
@@ -25,7 +24,7 @@ from krm3.utils.dates import KrmCalendar, KrmDay
 if TYPE_CHECKING:
     from datetime import date
 
-    from krm3.core.models import Contract
+    from krm3.core.models import Contract, ContractQuerySet
 
 
 class UserManager(BaseUserManager):
@@ -218,13 +217,13 @@ class Resource(models.Model):
         from krm3.core.models import Contract  # noqa: PLC0415
 
         return list(
-            Contract.objects.filter(
-                period__overlap=(start_day, end_day + datetime.timedelta(days=int(including_end)) if end_day else None),
-                resource=self,
-            )
+            cast('ContractQuerySet', Contract.objects)
+            .active_between(start_day, end_day, including_end)
+            .filter(resource=self)
         )
 
     def get_contract_for_date(self, day: date | KrmDay) -> Contract | None:
+        day = KrmDay(day).date
         try:
             return self.get_contracts(day, day)[0]
         except IndexError:

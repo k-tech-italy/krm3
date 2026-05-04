@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 from decimal import Decimal
 from typing import TYPE_CHECKING, Self
 
@@ -21,15 +22,25 @@ if TYPE_CHECKING:
 
 
 class ContractQuerySet(models.QuerySet['Contract']):
-    def active_between(self, start: datetime.date, end: datetime.date, including_end: bool = True) -> Self:
+    def active_between(self, start: datetime.date, end: datetime.date | None, including_end: bool = True) -> Self:
         """Return the contracts valid in the given interval.
 
         :param start: the start of the interval (inclusive).
         :param end: the end of the interval (inclusive).
         :return: the filtered `Contract`s.
         """
+        if not end:
+            return self.active_from(start)
         end = end + datetime.timedelta(days=int(including_end))
         return self.filter(period__overlap=(start, end))
+
+    def active_from(self, start: datetime.date) -> Self:
+        """Return the contracts valid from a given `start` date.
+
+        :param start: a `datetime.date`
+        :return: the filtered `Contract`s.
+        """
+        return self.filter(period__overlap=(start, None))
 
     def accessible_by(self, user: 'User') -> Self:
         """Return contracts accessible by the given user.
@@ -46,8 +57,6 @@ class ContractQuerySet(models.QuerySet['Contract']):
             QuerySet of accessible contracts
 
         """
-        import logging
-
         logger = logging.getLogger(__name__)
 
         # Superuser has access to all contracts

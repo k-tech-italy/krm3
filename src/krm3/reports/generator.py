@@ -34,7 +34,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         """
         ...
 
-    def render[RD, F](self, renderer: Renderer[RD, F]) -> F:
+    def render[F](self, renderer: Renderer[RD, F]) -> F:
         """Transform `self.report_data` into a human-readable format.
 
         :param renderer: The transformation `Callable` to apply
@@ -44,14 +44,28 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
 
     @property
     def start(self) -> datetime.date:
+        """The start of the reporting period.
+
+        :return: a `datetime.date`.
+        """
         return self.period[0]
 
     @property
     def end(self) -> datetime.date:
+        """The end of the reporting period.
+
+        :return: a `datetime.date`.
+        """
         return self.period[1]
 
     @property
     def dates(self) -> list[datetime.date]:
+        """All the dates within the reporting period.
+
+        Mainly used for dataset headers.
+
+        :return: a list of `datetime.date` objects.
+        """
         result = []
         current = self.start
         while current < self.end:

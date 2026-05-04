@@ -36,7 +36,7 @@ class Absence(NamedTuple):
         return f'{self.kind.value} {displayed_hours}'.rstrip()
 
 
-@dataclass
+@dataclass(frozen=True)
 class AbsenceReportCell:
     date: datetime.date
     resource: Resource
