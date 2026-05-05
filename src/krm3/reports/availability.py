@@ -51,25 +51,27 @@ class AbsenceReportCell:
 
 
 class AvailabilityReport(ReportGenerator):
+    """The availability report generator."""
+
     @override
     def __init__(self, period: Period, project: str | Project | None) -> None:
         start, end = period
         contracts = cast('ContractQuerySet', Contract.objects).active_between(start, end, including_end=True)
-        resources = (
+        self.resources = (
             Resource.objects.filter(id__in=contracts.values_list('resource_id').distinct())
             .order_by('last_name')
             .prefetch_related('task_set')
+            .distinct()
         )
-        if isinstance(project, str):
-            project = Project.objects.get(id=project)
-        if project:
-            resources = resources.filter(task__project=project)
-        self.resources = resources.distinct()
 
         super().__init__(period, project)
 
     @override
-    def collect(self, project: Project | None) -> TimeEntryQuerySet:
+    def collect(self, project: str | Project | None) -> TimeEntryQuerySet:
+        if isinstance(project, str):
+            project = Project.objects.get(id=project)
+        if project:
+            self.resources = self.resources.filter(task__project=project)
         return cast(
             'TimeEntryQuerySet',
             TimeEntry.objects.filter(
