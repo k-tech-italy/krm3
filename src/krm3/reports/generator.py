@@ -1,6 +1,6 @@
 import abc
-from collections.abc import Callable
 import datetime
+from collections.abc import Callable
 
 import tablib
 
@@ -12,7 +12,32 @@ type Renderer[RD: ProcessedReportData, F] = Callable[[RD], F]
 
 
 class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
+    """ABC for report generation flows.
+
+    Report flows are functional-like pipelines:
+
+    * `collect()` loads the time entries involved in the report;
+    * `process()` aggregates them into a `tablib.Databook` or
+      `tablib.Dataset`
+    * optionally, `render()` applies a rendering callable to the
+      aggregated report data to produce a representation of the latter
+      in a different format.
+
+    For convenience's sake, these flows are wrapped into a class so that
+    subclasses can set up shared state between all steps.
+
+    :param period: the focus date range for the report
+    :param processed_data: the aggregated report data
+    """
+
     def __init__(self, period: Period, *args: P.args, **kwargs: P.kwargs) -> None:
+        """Automatically collect and aggregate report data.
+
+        This is a good place to pre-fetch additional data if needed by
+        both the collection and the aggregation step.
+
+        :param period: the focus date range for the report.
+        """
         self.period = period
         time_entries = self.collect(*args, **kwargs)
         self.processed_data = self.process(time_entries)
@@ -35,7 +60,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         ...
 
     def render[F](self, renderer: Renderer[RD, F]) -> F:
-        """Transform `self.report_data` into a human-readable format.
+        """Transform `self.report_data` into a different format.
 
         :param renderer: The transformation `Callable` to apply
         :return: The result of the transformation
