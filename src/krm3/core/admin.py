@@ -1,19 +1,42 @@
-from adminfilters.autocomplete import AutoCompleteFilter
-from adminfilters.mixin import AdminFiltersMixin
+import datetime
+from datetime import timedelta
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
-from django.contrib import admin
+from adminfilters.autocomplete import AutoCompleteFilter
+from adminfilters.mixin import AdminFiltersMixin
+from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from smart_admin.smart_auth.admin import UserAdmin
 
-from krm3.core.forms import ContractForm
-from krm3.core.models import City, Client, Contract, Country, ExtraHoliday, Resource, UserProfile, \
-    Contact, AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo, Website, Phone, Email, Address
+from krm3.core.forms import ContractForm, ContractTerminationForm
+from krm3.core.models import (
+    Address,
+    AddressInfo,
+    City,
+    Client,
+    Contact,
+    Contract,
+    Country,
+    Email,
+    EmailInfo,
+    ExtraHoliday,
+    Phone,
+    PhoneInfo,
+    Resource,
+    Task,
+    UserProfile,
+    Website,
+    WebsiteInfo,
+)
+from krm3.styles.buttons import DANGEROUS
 
 
 @admin.register(UserProfile)
@@ -76,9 +99,9 @@ class ClientAdmin(ModelAdmin):
 
 
 @admin.register(Contract)
-class ContractAdmin(AdminFiltersMixin, ModelAdmin):
+class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ContractForm
-    search_fields = ['user']
+    search_fields = ['resource__last_name', 'resource__first_name']
     list_display = [
         'resource',
         'get_period',
@@ -105,6 +128,30 @@ class ContractAdmin(AdminFiltersMixin, ModelAdmin):
         if obj.document_url:
             return format_html('<a href="{}">View document</a>', obj.document_url)
         return '-'
+
+    @button(html_attrs=DANGEROUS, visible=lambda btn: not btn.original.period.upper)
+    def terminate(self, request: HttpRequest, pk: str) -> HttpResponse:
+        contract = get_object_or_404(Contract, pk=pk)
+        context = self.get_common_context(request, pk, title='Terminate Contract')
+
+        if request.method == 'POST':
+            form = ContractTerminationForm(request.POST)
+            if form.is_valid():
+                from django.contrib.postgres.fields.ranges import DateRange
+
+                termination_date = form.cleaned_data['termination_date']
+                contract.period = DateRange(contract.period.lower, termination_date + timedelta(days=1))
+                contract.save()
+                updated = Task.objects.filter(resource=contract.resource, end_date__isnull=True).update(
+                    end_date=termination_date
+                )
+                messages.success(request, f'Contract terminated. {updated} task(s) updated.')
+                return redirect('admin:core_contract_changelist')
+        else:
+            form = ContractTerminationForm(initial={'termination_date': datetime.date.today()})
+
+        context['form'] = form
+        return TemplateResponse(request, 'admin/core/contract/terminate.html', context)
 
 
 @admin.register(ExtraHoliday)
@@ -151,9 +198,10 @@ class ContactAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         AddressInfoInline,
     ]
 
-    @button(label="fetch photo")
+    @button(label='fetch photo')
     def fetch_picture(self, request: HttpRequest, contact_id: str) -> None:
         Contact.objects.get(pk=contact_id).fetch_picture()
+
 
 @admin.register(Website)
 class WebsiteAdmin(admin.ModelAdmin):

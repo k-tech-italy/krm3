@@ -2,9 +2,10 @@ import datetime
 import typing
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
-from django.conf import settings
+from django.utils.translation import gettext_lazy as _l
 
 from krm3.core.models import Contract, ProtectedDocument
 from krm3.core.widgets import PrivateMediaFileInput
@@ -49,7 +50,7 @@ class ContractForm(ModelForm):
                 for task in self.instance.get_tasks():
                     task_period = [task.start_date, task.end_date or DATE_INFINITE]
                     if (new_period[0] > old_period[0] and new_period[0] > task_period[0]) or (
-                            new_period[1] < old_period[1] and new_period[1] - datetime.timedelta(days=1) < task_period[1]
+                        new_period[1] < old_period[1] and new_period[1] - datetime.timedelta(days=1) < task_period[1]
                     ):
                         raise ValidationError('Shrinking contract period would leave orphan tasks', code='orphan-tasks')
 
@@ -69,10 +70,12 @@ class ResourceForm(forms.Form):
     preferred_language = forms.ChoiceField(
         choices=settings.LANGUAGES,
         required=False,
-        widget=forms.Select(attrs={
-            "style": "color: black;",
-            "class": "language-select",
-        })
+        widget=forms.Select(
+            attrs={
+                'style': 'color: black;',
+                'class': 'language-select',
+            }
+        ),
     )
 
     def __init__(self, resource: 'Resource', *args: typing.Any, **kwargs: typing.Any) -> None:
@@ -102,3 +105,13 @@ class ProtectedDocumentForm(ModelForm):
         widgets = {
             'document': PrivateMediaFileInput(url_field='file_url'),
         }
+
+
+class ContractTerminationForm(forms.Form):
+    termination_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text=_l(
+            'Actual end date of the contract. Tasks without end date for this resource will be updated to this date.'
+        ),
+        label=_l('Contract end date'),
+    )
