@@ -1,3 +1,9 @@
+## 3.6.0 (2026-05-06)
+
+### Feat
+
+- **Admin**: ContractAdmin button to close contract and tasks. Fix search in contractadmin
+
 ## 3.5.4 (2026-04-28)
 
 ## 3.5.3 (2026-04-28)
