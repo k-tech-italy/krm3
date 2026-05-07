@@ -39,11 +39,11 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         :param period: the focus date range for the report.
         """
         self.period = period
-        time_entries = self.collect(*args, **kwargs)
-        self.processed_data = self.process(time_entries)
+        time_entries = self._collect(*args, **kwargs)
+        self.processed_data = self._process(time_entries)
 
     @abc.abstractmethod
-    def collect(self, *args: P.args, **kwargs: P.kwargs) -> TimeEntryQuerySet:
+    def _collect(self, *args: P.args, **kwargs: P.kwargs) -> TimeEntryQuerySet:
         """Collect the time entries on which the report should be generated.
 
         :return: a Django queryset of `TimeEntry`.
@@ -51,7 +51,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         ...
 
     @abc.abstractmethod
-    def process(self, time_entries: TimeEntryQuerySet) -> RD:
+    def _process(self, time_entries: TimeEntryQuerySet) -> RD:
         """Aggregate the time entry data in order to form a tabular report.
 
         :param time_entries: the input time entries
@@ -60,7 +60,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         ...
 
     def render[F](self, renderer: Renderer[RD, F]) -> F:
-        """Transform `self.report_data` into a different format.
+        """Transform `self.processed_data` into a different format.
 
         :param renderer: The transformation `Callable` to apply
         :return: The result of the transformation
@@ -68,7 +68,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         return renderer(self.processed_data)
 
     @property
-    def start(self) -> datetime.date:
+    def period_start(self) -> datetime.date:
         """The start of the reporting period.
 
         :return: a `datetime.date`.
@@ -76,7 +76,7 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         return self.period[0]
 
     @property
-    def end(self) -> datetime.date:
+    def period_end(self) -> datetime.date:
         """The end of the reporting period.
 
         :return: a `datetime.date`.
@@ -92,8 +92,8 @@ class ReportGenerator[RD: ProcessedReportData, **P](abc.ABC):
         :return: a list of `datetime.date` objects.
         """
         result = []
-        current = self.start
-        while current < self.end:
+        current = self.period_start
+        while current < self.period_end:
             result.append(current)
             current += datetime.timedelta(days=1)
         return result

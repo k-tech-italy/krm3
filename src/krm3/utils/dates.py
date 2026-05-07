@@ -66,6 +66,9 @@ class KrmDay:
         return self.date in get_country_holidays(country_calendar_code=country_calendar_code)
 
     def is_working_day(self, country_calendar_code: str | None = None) -> bool:
+        # NOTE: this was added for forward compatibility, as there are
+        #       plans for report-friendly time entries (`DayEntry`) to
+        #       have an `is_working_day` attribute.
         return not self.is_non_working_day(country_calendar_code)
 
     def is_non_working_day(self, country_calendar_code: str | None = None) -> bool:

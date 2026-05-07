@@ -26,7 +26,13 @@ class ContractQuerySet(models.QuerySet['Contract']):
         """Return the contracts valid in the given interval.
 
         :param start: the start of the interval (inclusive).
-        :param end: the end of the interval (inclusive).
+        :param end: the end of the interval. If `None`, the interval is
+            considered unbounded.
+        :param including_end: whether or not the interval is inclusive
+            at the end. Ignored if `end_day` is `None`. Defaults to
+            `True`. If you are working with intervals coming from
+            Postgres `DateRange`s, you might want to set it to `False`
+            to avoid boilerplate.
         :return: the filtered `Contract`s.
         """
         if not end:

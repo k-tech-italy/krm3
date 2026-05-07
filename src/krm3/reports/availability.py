@@ -67,7 +67,7 @@ class AvailabilityReport(ReportGenerator):
         super().__init__(period, project)
 
     @override
-    def collect(self, project: str | Project | None) -> TimeEntryQuerySet:
+    def _collect(self, project: str | Project | None) -> TimeEntryQuerySet:
         if isinstance(project, str):
             project = Project.objects.get(id=project)
         if project:
@@ -75,12 +75,12 @@ class AvailabilityReport(ReportGenerator):
         return cast(
             'TimeEntryQuerySet',
             TimeEntry.objects.filter(
-                date__gte=self.start, date__lt=self.end, resource__in=self.resources
+                date__gte=self.period_start, date__lt=self.period_end, resource__in=self.resources
             ).select_related('special_leave_reason'),
         )
 
     @override
-    def process(self, time_entries: TimeEntryQuerySet) -> tablib.Dataset:
+    def _process(self, time_entries: TimeEntryQuerySet) -> tablib.Dataset:
         entries_by_key: dict[tuple[int, datetime.date], list[TimeEntry]] = defaultdict(list)
         for entry in time_entries:
             entries_by_key[(entry.resource.id, entry.date)].append(entry)
