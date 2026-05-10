@@ -1,4 +1,4 @@
-# # Timesheet overview
+# Timesheet overview
 ![](./assets/overview.png){ style="width:100%; display:block; margin:auto;" }
 
 1. Task description
