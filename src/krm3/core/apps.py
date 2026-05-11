@@ -7,5 +7,5 @@ class AppConfig(BaseAppConfig):
     def ready(self) -> None:
         super().ready()
 
-        from . import flags as _  # noqa
+        from . import djflags as _  # noqa
         from .api import serializers as _  # noqa
