@@ -1,5 +1,5 @@
 from urllib.request import Request
-from krm3.core.flags import has_group
+from krm3.core.djflags import has_group
 import pytest
 from django.contrib.auth.models import AnonymousUser
 
