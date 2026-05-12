@@ -29,14 +29,18 @@ class ContractForm(ModelForm):
 
     def clean_meal_voucher(self) -> typing.Any:
         value = self.cleaned_data['meal_voucher']
-        if value is None:
+        if value in (None, {}):
             return {}
+        if set(value) != {'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'}:
+            raise ValidationError(_l('Need to specify a value for each day of the week'), code='meal_voucher')
         return value
 
     def clean_working_schedule(self) -> typing.Any:
         value = self.cleaned_data['working_schedule']
-        if value is None:
+        if value in (None, {}):
             return {}
+        if set(value) != {'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'}:
+            raise ValidationError(_l('Need to specify a value for each day of the week'), code='meal_voucher')
         return value
 
     def clean(self) -> dict | None:

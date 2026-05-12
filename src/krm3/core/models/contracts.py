@@ -10,13 +10,16 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 
+from krm3.config import settings
 from krm3.core.storage import PrivateMediaStorage
 from krm3.missions.media import contract_directory_path
+from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import DATE_INFINITE, KrmDay, get_country_holidays
 
 if TYPE_CHECKING:
-    from krm3.core.models import Task
+    from krm3.core.models import Contract, Task, Resource
     from krm3.core.models.auth import User
 
 
@@ -94,6 +97,7 @@ class Contract(models.Model):
         validators=[FileExtensionValidator(['pdf'])],
         help_text='Optional PDF document (PDF files only)',
     )
+    sunday_as_holiday = models.BooleanField(default=True, help_text=_('Sunday always a holiday'))
 
     objects = ContractQuerySet.as_manager()
 
@@ -125,6 +129,20 @@ class Contract(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def period_as_tuple(self) -> tuple:
+        """Return a tuple of the period as a tuple.
+
+        If upper bound is None then Maxdate is used instead.
+        """
+        return self.period.lower, self.period.upper if self.period.upper is not None else datetime.date.max
+
+    def is_holiday(self, day: datetime.date | KrmDay) -> bool:
+        krmday = KrmDay(day)
+        return krmday.is_holiday(
+            self.country_calendar_code if self.country_calendar_code else settings.HOLIDAYS_CALENDAR,
+            include_sundays_as_holiday=self.sunday_as_holiday,
+        )
+
     def clean(self) -> None:
         super().clean()
 
@@ -143,11 +161,9 @@ class Contract(models.Model):
 
     def falls_in(self, day: datetime.date | KrmDay) -> bool:
         """Check if the provided day falls into the contract period."""
-        if isinstance(day, KrmDay):
-            day = day.date
-        if self.period.upper is None:
-            return self.period.lower <= day
-        return self.period.lower <= day < self.period.upper
+        day = KrmDay(day)
+        lower, upper = self.period_as_tuple()
+        return lower <= day < upper
 
     def get_tasks(self) -> list['Task']:
         """Return all tasks worked during this contract."""
@@ -170,7 +186,9 @@ class Contract(models.Model):
     def get_due_hours(self, day: datetime.date | KrmDay) -> Decimal:
         day = KrmDay(day)
         if not self.falls_in(day):
-            return self.get_default_schedule(day)
+            raise RuntimeError(_('Unable to get due hours: date outside contract period'))
+        if self.is_holiday(day):
+            return Decimal(0)
         schedule = self.working_schedule.get(day.day_of_week_short.casefold(), self.get_default_schedule(day))
         return Decimal(schedule)
 
@@ -202,3 +220,7 @@ class Contract(models.Model):
         )
 
         return max(Decimal(0), schedule - total_logged_hours)
+
+    def fetch(self, resource: 'Resource', day: Krm3Day | datetime.date) -> 'Contract':
+        """Fetch the contract from the resource and day."""
+        return Contract.objects.get(resource=resource, period__in=day.date if isinstance(day, KrmDay) else day)

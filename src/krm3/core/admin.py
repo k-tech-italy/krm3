@@ -107,6 +107,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'get_period',
         'country_calendar_code',
         'working_schedule',
+        'sunday_as_holiday',
         'meal_voucher',
         'document_link',
     ]
