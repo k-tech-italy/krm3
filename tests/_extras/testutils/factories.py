@@ -129,6 +129,7 @@ class ContractFactory(DjangoModelFactory):
     resource = SubFactory(ResourceFactory)
     period = (date(2020, 1, 1), None)
     country_calendar_code = settings.HOLIDAYS_CALENDAR
+    sunday_as_holiday = True
 
     class Meta:
         model = 'core.Contract'

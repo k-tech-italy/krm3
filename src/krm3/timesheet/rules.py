@@ -3,7 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from krm3.core.models import Contract, Resource, TimeEntry
 from krm3.timesheet import utils
 from krm3.utils import i18n
 from krm3.utils.dates import KrmDay, _MaybeDate
@@ -11,7 +10,7 @@ from krm3.utils.numbers import safe_dec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-
+    from krm3.core.models import Contract, Resource, TimeEntry
     from krm3.core.models import TimesheetSubmission
 
 timeentry_counters = {
@@ -49,11 +48,11 @@ class Krm3Day(KrmDay):
     def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
-        self.resource: Resource | None = None
+        self.resource: 'Resource | None' = None
         self.data_due_hours = Decimal.from_float(0)
-        self.contract: Contract | None = None
+        self.contract: 'Contract | None' = None
         self.holiday: bool = False
-        self.time_entries: Iterable[TimeEntry] = []
+        self.time_entries: Iterable['TimeEntry'] = []
         self.data_bank = None
         self.data_bank_from = None
         self.data_bank_to = None
@@ -86,7 +85,7 @@ class Krm3Day(KrmDay):
     def day_of_week_short_i18n(self) -> str:
         return i18n.short_day_of_week(self.date)
 
-    def apply(self, time_entries: list[TimeEntry]) -> None:
+    def apply(self, time_entries: list['TimeEntry']) -> None:
         """Compute the krm3day data from the time_entries list."""
         self.time_entries = time_entries
         self.has_data = bool(time_entries)
@@ -105,6 +104,7 @@ class Krm3Day(KrmDay):
         :param submission: the `TimesheetSubmission` to convert
         :return: a lazy sequence of `Krm3Day`s covering the submission's time period
         """
+        from krm3.core.models import Contract, TimeEntry
         timesheet_data = submission.timesheet or {}
 
         # NOTE: there is no point in computing totals from serialized
@@ -185,7 +185,7 @@ class Krm3Day(KrmDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: Iterable[TimeEntry]
+        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: Iterable['TimeEntry']
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 
