@@ -30,7 +30,7 @@ Following rows (see [Definitions](#definitions)): Bank hours, Due hours, Regular
   - Working Day: a day the Resource is expected to work according to its _Working Schedule_ (see following [Definition](#definitions))
   - Working Schedule: the number of hours the Resource is expected to work per week day (set in Resource Contract). [Due Hours calculations](#due-hours) may override this number in a calendar day.
   - Bank hours: A positive number shows the number of bank hours the Resource consumed in the month. A negative number shows the number of bank hours the Resource produced in the month.
-  - Due hours: The number of hours the Resource is expected to work in the day.
+  - Due hours: The number of hours the Resource is expected to work in the day (see [Due Hours calculations](#due-hours)).
   - Regular hours: The number of hours (Day Shift + Night Shift + Travel Hours) the Resource worked in the day up to maximum the expected number of hours (Due Hours).
   - Day shift hours: The number of hours the Resource worked in the day during the Day Shift.
   - Night shift hours: The number of hours the Resource worked in the day during the Night Shift.
@@ -58,7 +58,7 @@ If no Country Calendar is set then the default Country Calendar set for the site
 
 In a calendar day:
 
-- If the Resource has no Contract, OR the Resource is expected to be on holiday (according to the Country Calendar, not if the Resource requested a holiday for the day) then Due Hours = 0
+- If the Resource has no Contract, OR the Resource is expected to be on holiday (according to the Country Calendar, not if the Resource requested a holiday for the day) then Due Hours = 0 (Sundays are considered as Holidays if flag Contract.sunday_as_holiday is True - which is the default).
 
 Else
 

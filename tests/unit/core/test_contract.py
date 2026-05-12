@@ -1,4 +1,5 @@
 import datetime
+import typing
 from datetime import date
 import json
 from unittest.mock import MagicMock
@@ -8,6 +9,8 @@ from constance import test as constance_test
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.urls import reverse
+from psycopg.types.range import DateRange
+
 from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
@@ -22,6 +25,10 @@ from testutils.permissions import add_permissions
 from krm3.core.forms import ContractForm
 from krm3.core.models import Contract
 from krm3.utils.dates import KrmDay
+
+
+if typing.TYPE_CHECKING:
+    from _pytest.raises import RaisesExc
 
 
 @pytest.fixture
@@ -143,32 +150,91 @@ def test_get_tasks(cnum, expected, contracts_and_tasks):
     assert contract.get_tasks() == [contracts_and_tasks['tasks'][x] for x in expected]
 
 
-_default_workdays = ('mon', 'tue', 'wed', 'thu', 'fri')
-_default_schedule = dict.fromkeys(_default_workdays, 8) | dict.fromkeys(('sat', 'sun'), 0)
+@constance_test.override_config(
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7})
+)
+def test_get_due_hours_regular_week():
+    with_schedule = ContractFactory(
+        period=(_dt('2024-01-01'), None),
+        working_schedule={'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6},
+    )
+    without_schedule = ContractFactory(period=(_dt('2024-01-01'), None))
+    for x in range(7):
+        day = KrmDay('2024-05-06') + x  # 6th is a Monday
+        actual = with_schedule.get_due_hours(day)
+        expected = x if x < 6 else 0
+        assert (
+            actual == expected
+        ), f'Unexpected value ({actual} != {expected}, with_schedule) for {day} {day.day_of_week_short}'
+        actual = without_schedule.get_due_hours(day)
+        expected = (x + 1) if x < 6 else 0
+        assert (
+            actual == expected
+        ), f'Unexpected value ({actual} != {expected}, without_schedule) for {day} {day.day_of_week_short}'
 
 
-@constance_test.override_config(DEFAULT_RESOURCE_SCHEDULE=json.dumps(_default_schedule))
+def test_get_due_hours_sundays():
+    contract = ContractFactory(
+        period=(_dt('2023-01-01'), None),
+        working_schedule={'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6},
+    )
+    no_sun_hol = ContractFactory(
+        period=(_dt('2023-01-01'), None),
+        working_schedule={'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6},
+        sunday_as_holiday=False,
+    )
+    assert contract.is_holiday(_dt('2023-01-01')) is True
+    assert contract.get_due_hours(_dt('2023-01-01')) == 0
+    assert no_sun_hol.is_holiday(_dt('2023-01-01')) is True
+    assert no_sun_hol.get_due_hours(_dt('2023-01-01')) == 0
+
+    assert contract.is_holiday(_dt('2023-01-08')) is True
+    assert contract.get_due_hours(_dt('2023-01-08')) == 0
+    assert no_sun_hol.is_holiday(_dt('2023-01-08')) is False
+    assert no_sun_hol.get_due_hours(_dt('2023-01-08')) == 6
+
+
 @pytest.mark.parametrize(
-    ('date', 'expected_fixed', 'expected_unbounded'),
+    'day, expected_fixed, expected_unbounded',
     (
-        pytest.param(datetime.date(2023, 1, 11), 8, 8, id='before_contract_start_working'),
-        pytest.param(datetime.date(2023, 1, 1), 0, 0, id='before_contract_start_non_working'),
-        pytest.param(datetime.date(2024, 1, 1), 4, 4, id='during_contract_working'),
-        pytest.param(datetime.date(2024, 1, 7), 0, 0, id='during_contract_non_working'),
-        pytest.param(datetime.date(2025, 1, 1), 8, 4, id='end_of_fixed_contract_working'),
-        pytest.param(datetime.date(2025, 1, 5), 0, 0, id='end_of_fixed_contract_non_working'),
+        pytest.param(
+            _dt('20230111'),
+            pytest.raises(RuntimeError, match='Unable to get due hours: date outside contract period'),
+            pytest.raises(RuntimeError, match='Unable to get due hours: date outside contract period'),
+            id='before_contract',
+        ),
+        pytest.param(_dt('2024-01-02'), 4, 4, id='during_contract'),
+        pytest.param(_dt('2025-01-31'), 4, 4, id='last_day_in_contract'),
+        pytest.param(
+            _dt('2025-02-01'),
+            pytest.raises(RuntimeError, match='Unable to get due hours: date outside contract period'),
+            1,
+            id='end_of_fixed_contract',
+        ),
     ),
 )
-def test_get_due_hours(date, expected_fixed, expected_unbounded):
-    fixed_period = (datetime.date(2024, 1, 1), datetime.date(2025, 1, 1))
-    unbounded_period = (datetime.date(2024, 1, 1), None)
-    schedule = _default_schedule | dict.fromkeys(_default_workdays, 4)
+def test_get_due_hours_boundaries(
+    day,
+    expected_fixed: 'RaisesExc[RuntimeError] | int',
+    expected_unbounded: 'RaisesExc[RuntimeError] | int',
+):
+    fixed_period = (_dt('2024-01-01'), _dt('2025-02-01'))
+    unbounded_period = (_dt('2024-01-01'), None)
+    schedule = {'mon': 4, 'tue': 4, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 1, 'sun': 0}
 
     fixed_time_contract = ContractFactory(period=fixed_period, working_schedule=schedule)
     unbounded_contract = ContractFactory(period=unbounded_period, working_schedule=schedule)
 
-    assert fixed_time_contract.get_due_hours(date) == expected_fixed
-    assert unbounded_contract.get_due_hours(date) == expected_unbounded
+    if isinstance(expected_fixed, int):
+        assert fixed_time_contract.get_due_hours(day) == expected_fixed
+    else:
+        with expected_fixed:
+            fixed_time_contract.get_due_hours(day)
+    if isinstance(expected_unbounded, int):
+        assert unbounded_contract.get_due_hours(day) == expected_unbounded
+    else:
+        with expected_unbounded:
+            unbounded_contract.get_due_hours(day)
 
 
 def test_document_url_returns_none_when_no_file(db):
@@ -264,3 +330,15 @@ def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
 
     assert result.count() == 0
     assert contract not in result
+
+
+@pytest.mark.parametrize(
+    'period, expected',
+    [
+        pytest.param(DateRange(_dt('20260101'), _dt('20260501')), (_dt('20260101'), _dt('20260501')), id='regular'),
+        pytest.param(DateRange(_dt('20260101'), None), (_dt('20260101'), _dt('99991231')), id='unbounded'),
+    ],
+)
+def test_period_as_tuple(period: DateRange, expected):
+    c = Contract(period=period)
+    assert c.period_as_tuple() == expected
