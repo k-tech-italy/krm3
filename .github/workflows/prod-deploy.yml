@@ -83,4 +83,4 @@ jobs:
               -H "Authorization: Bearer $RANCHER_TOKEN" \
               -H "Content-Type: application/json" \
               -d @- \
-              "https://r2.k-tech.it/v3/pgiroject/local:p-vnrc7/workloads/deployment:krm3:krm3"
+              "https://r2.k-tech.it/v3/project/local:p-vnrc7/workloads/deployment:krm3:krm3"
