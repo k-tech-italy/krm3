@@ -51,9 +51,36 @@ jobs:
           RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
           BE_IMAGE_TAG: ${{ inputs.be_image_tag }}
         run: |
-          curl -sf -X PATCH \
-            -H "Authorization: Bearer $RANCHER_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg img "ghcr.io/k-tech-italy/krm3:${BE_IMAGE_TAG}" \
-              '{containers: [{name: "krm3", image: $img}]}')" \
-            "https://r2.k-tech.it/v3/project/local:p-vnrc7/workloads/deployment:krm3:krm3"
+          curl -s \
+          -H "Authorization: Bearer $RANCHER_TOKEN" \
+          "https://r2.k-tech.it/v3/project/local:p-vnrc7/workloads/deployment:krm3:krm3" \
+          | jq '
+            .containers[0].image = "ghcr.io/k-tech-italy/krm3:3.6.0"
+            | {
+                containers,
+                deploymentConfig,
+                dnsPolicy,
+                fsgid,
+                hostIPC,
+                hostNetwork,
+                hostPID,
+                imagePullSecrets,
+                labels,
+                name,
+                namespaceId,
+                restartPolicy,
+                runAsGroup,
+                scale,
+                scheduling,
+                selector,
+                terminationGracePeriodSeconds,
+                volumes,
+                workloadLabels,
+                workloadAnnotations
+              }
+          ' \
+          | curl -s -X PUT \
+              -H "Authorization: Bearer $RANCHER_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d @- \
+              "https://r2.k-tech.it/v3/pgiroject/local:p-vnrc7/workloads/deployment:krm3:krm3"
