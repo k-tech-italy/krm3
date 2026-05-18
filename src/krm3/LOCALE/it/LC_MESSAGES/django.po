@@ -72,8 +72,8 @@ msgstr "\"data inzio\" `e obbligatoria"
 
 #: src/krm3/core/models/projects.py:73 src/krm3/core/models/projects.py:122
 #: src/krm3/core/models/projects.py:241
-msgid "\"start_date\" must not be later than \"end_date\""
-msgstr "\"data inizio\" non può essere successiva a \"data fine\""
+msgid "End date must be at least one day after start date"
+msgstr "End date must be at least one day after start date"
 
 #: src/krm3/core/models/projects.py:81
 msgid "Open"
@@ -95,8 +95,8 @@ msgstr ""
 "\"{project_name}\" inizia il {project_start_date}"
 
 #: src/krm3/core/models/timesheets.py:85
-msgid "\"from_date\" must not be later than \"to_date\""
-msgstr "\"data da\" non può essere maggiore di \"data a\""
+msgid "End date must be at least one day after start date"
+msgstr "End date must be at least one day after start date"
 
 #: src/krm3/core/models/timesheets.py:119
 #: src/krm3/core/models/timesheets.py:723

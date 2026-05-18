@@ -117,6 +117,7 @@ SITE_ID = 1
 
 MIDDLEWARE = (
     [
+        'krm3.middlewares.timing.TimingMiddleware',
         'django.middleware.security.SecurityMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.middleware.locale.LocaleMiddleware',

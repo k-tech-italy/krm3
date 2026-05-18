@@ -21,7 +21,6 @@ from testutils.factories import (
     GroupFactory,
     MissionFactory,
     ResourceFactory,
-    SuperUserFactory,
     UserFactory,
 )
 from testutils.permissions import add_permissions
@@ -46,47 +45,39 @@ class TestServeExpenseImage:
 
         assert response.status_code == 404
 
-    def test_returns_404_when_expense_has_no_image(self, client, db):
+    def test_returns_404_when_expense_has_no_image(self, admin_client, db):
         """Test 404 when expense exists but has no image (user must have access)."""
-        user = SuperUserFactory()
-        client.login(username=user.username, password='password')
         expense = ExpenseFactory(image=None)
         url = reverse('media-auth:expense-image', args=[expense.pk])
 
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 404
 
-    def test_returns_x_accel_redirect_for_valid_image(self, client, db):
+    def test_returns_x_accel_redirect_for_valid_image(self, admin_client, db):
         """Test valid access by superuser."""
-        user = SuperUserFactory()
-        client.login(username=user.username, password='password')
-
         filename = 'receipt.jpg'
         image = MagicMock(spec=File)
         image.name = filename
         expense = ExpenseFactory(image=image)
 
         url = reverse('media-auth:expense-image', args=[expense.pk])
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 200
         assert 'X-Accel-Redirect' in response
         assert response['X-Accel-Redirect'] == f'{settings.PRIVATE_MEDIA_URL}{expense.image.name}'
         assert response['Content-Disposition'] == f'inline; filename="{expense.image.name.split("/")[-1]}"'
 
-    def test_superuser_can_access_any_expense(self, client, db):
+    def test_superuser_can_access_any_expense(self, admin_client, db):
         """Superuser should have access to any expense."""
-        superuser = SuperUserFactory()
-        client.login(username=superuser.username, password='password')
-
         filename = 'receipt.jpg'
         image = MagicMock(spec=File)
         image.name = filename
         expense = ExpenseFactory(image=image)
 
         url = reverse('media-auth:expense-image', args=[expense.pk])
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 200
         assert 'X-Accel-Redirect' in response
@@ -185,22 +176,17 @@ class TestServeContractDocument:
 
         assert response.status_code == 404
 
-    def test_returns_404_when_contract_has_no_document(self, client, db):
+    def test_returns_404_when_contract_has_no_document(self, admin_client, db):
         """Test 404 when contract exists but has no document (user must have access)."""
-        user = SuperUserFactory()
-        client.login(username=user.username, password='password')
         contract = ContractFactory(document=None)
         url = reverse('media-auth:contract-document', args=[contract.pk])
 
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 404
 
-    def test_returns_x_accel_redirect_for_valid_document(self, client, db):
+    def test_returns_x_accel_redirect_for_valid_document(self, admin_client, db):
         """Test valid access by superuser."""
-        user = SuperUserFactory()
-        client.login(username=user.username, password='password')
-
         filename = 'contract.pdf'
         # Create contract first (without document) so it gets an ID
         contract = ContractFactory(document=None)
@@ -212,18 +198,15 @@ class TestServeContractDocument:
         contract.save()
 
         url = reverse('media-auth:contract-document', args=[contract.pk])
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 200
         assert 'X-Accel-Redirect' in response
         assert response['X-Accel-Redirect'] == f'{settings.PRIVATE_MEDIA_URL}{contract.document.name}'
         assert response['Content-Disposition'] == f'inline; filename="{contract.document.name.split("/")[-1]}"'
 
-    def test_superuser_can_access_any_contract(self, client, db):
+    def test_superuser_can_access_any_contract(self, admin_client, db):
         """Superuser should have access to any contract."""
-        superuser = SuperUserFactory()
-        client.login(username=superuser.username, password='password')
-
         filename = 'contract.pdf'
         contract = ContractFactory(document=None)
         document = MagicMock(spec=File)
@@ -232,7 +215,7 @@ class TestServeContractDocument:
         contract.save()
 
         url = reverse('media-auth:contract-document', args=[contract.pk])
-        response = client.get(url)
+        response = admin_client.get(url)
 
         assert response.status_code == 200
         assert 'X-Accel-Redirect' in response

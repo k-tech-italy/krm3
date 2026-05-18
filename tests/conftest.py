@@ -12,9 +12,8 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
 
 
-def pytest_configure(config):
-    here = Path(__file__).parent
-    sys.path.insert(0, str(here / '_extras'))
+here = Path(__file__).parent
+sys.path.insert(0, str(here / "_extras"))
 
 
 @pytest.fixture
@@ -131,11 +130,12 @@ def staff_user(db):
 # This admin_user_with_plain_password has the _password attribute set (plaintext),
 # unlike the default Django fixture admin_user.
 # Useful for Selenium login where the raw password is needed.
-@pytest.fixture
-def admin_user_with_plain_password(db):
-    from testutils.factories import UserFactory
 
-    return UserFactory(is_superuser=True, is_staff=True)
+@pytest.fixture
+def admin_client(admin_user, client):
+    res = client.login(username='admin', password='password')
+    assert res is True
+    return client
 
 
 @pytest.fixture
