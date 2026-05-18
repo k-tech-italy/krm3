@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from django.urls import reverse
 from django_webtest import DjangoTestApp
-from testutils.factories import DocumentFactory, DocumentTagFactory, ResourceFactory, SuperUserFactory
+from testutils.factories import DocumentFactory, DocumentTagFactory, ResourceFactory
 from webtest import Upload
 
 from krm3.documents.admin import Krm3DocumentAdmin
@@ -20,9 +20,8 @@ def models_cleanup(self_cleaning_add):
 
 
 @pytest.fixture
-def app(django_app_factory: 'MixinWithInstanceVariables') -> DjangoTestApp:
+def app(admin_user, django_app_factory: 'MixinWithInstanceVariables') -> DjangoTestApp:
     django_app = django_app_factory(csrf_checks=False)
-    admin_user = SuperUserFactory(username='superuser')
     django_app.set_user(admin_user)
     django_app._user = admin_user
     return django_app

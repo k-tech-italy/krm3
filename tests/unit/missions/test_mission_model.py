@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from django.core.exceptions import ValidationError
-
-from krm3.utils.dates import dt
+from testutils.date_utils import _dt
 
 if TYPE_CHECKING:
     from krm3.core.models import Mission
@@ -53,19 +52,19 @@ def test_mission_status_transitions(number, status, expectation):
     'from_date, to_date, expectation',  # noqa: PT007
     (
         pytest.param(
-            dt('2023-11-03'),
-            dt('2023-11-02'),
+            _dt('2023-11-03'),
+            _dt('2023-11-02'),
             pytest.raises(ValidationError, match='to_date must be > from_date'),
             id='prev-day',
         ),
         pytest.param(
-            dt('2023-12-01'),
-            dt('2023-11-02'),
+            _dt('2023-12-01'),
+            _dt('2023-11-02'),
             pytest.raises(ValidationError, match='to_date must be > from_date'),
             id='prev-month',
         ),
-        pytest.param(dt('2023-11-02'), dt('2023-11-02'), does_not_raise(), id='same-day'),
-        pytest.param(dt('2023-10-20'), dt('2023-11-02'), does_not_raise(), id='following-month'),
+        pytest.param(_dt('2023-11-02'), _dt('2023-11-02'), does_not_raise(), id='same-day'),
+        pytest.param(_dt('2023-10-20'), _dt('2023-11-02'), does_not_raise(), id='following-month'),
     ),
 )
 def test_missions_validation(from_date, to_date, expectation):
@@ -90,14 +89,14 @@ def test_calculate_number():
     assert Mission.calculate_number(None, 2023) == 1
 
     mission: Mission = MissionFactory(
-        number=2, status=Mission.MissionStatus.SUBMITTED, from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+        number=2, status=Mission.MissionStatus.SUBMITTED, from_date=_dt('2023-11-03'), to_date=_dt('2023-12-31')
     )
 
     assert Mission.calculate_number(None, 2023) == 1
     assert Mission.calculate_number(mission.id, 2023) == 1
 
     mission2 = MissionFactory(
-        number=1, status=Mission.MissionStatus.SUBMITTED, from_date=dt('2023-11-03'), to_date=dt('2023-12-31')
+        number=1, status=Mission.MissionStatus.SUBMITTED, from_date=_dt('2023-11-03'), to_date=_dt('2023-12-31')
     )
 
     assert Mission.calculate_number(None, 2023) == 3

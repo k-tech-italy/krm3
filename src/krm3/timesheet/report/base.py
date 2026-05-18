@@ -10,9 +10,10 @@ from constance import config
 from django.utils.translation import gettext_lazy as _
 
 from krm3.config import settings
-from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday
+from krm3.core.models import Contract, ExtraHoliday, Resource, TaskEntry, TimesheetSubmission
 from krm3.timesheet.rules import Krm3Day
-from krm3.utils.dates import KrmDay, get_country_holidays
+from ktcalendars import KTDay
+
 
 if TYPE_CHECKING:
     from krm3.core.models import User as UserType
@@ -48,10 +49,10 @@ class TimesheetReport:
 
         self.valid_contracts = Contract.objects.active_between(from_date, to_date)  # pyright: ignore
         self.resources = self._get_resources(user, **kwargs)
-
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
+        self.country_codes = {str(settings.HOLIDAYS_CALENDAR)}
 
-        self.time_entries = self._get_time_entries()
+        self.task_entries = self._get_task_entries()
 
         # loading submissions up front, no matter the flags passed in
         # `need`, allows us to access all the pre-computed data in their
@@ -59,10 +60,6 @@ class TimesheetReport:
         self.submissions = TimesheetSubmission.objects.get_closed_in_period(
             self.from_date, self.to_date, resources=self.resources
         )
-        # TODO: get rid of this, only collect submissions
-        self.submission_periods = self._get_submission_period_data()
-
-        self.country_codes = {str(settings.HOLIDAYS_CALENDAR)}
 
         self.resource_contracts: dict[int, list[Contract]] = {}
         for contract in self.valid_contracts:
@@ -70,7 +67,7 @@ class TimesheetReport:
             if contract.country_calendar_code and contract.country_calendar_code not in self.country_codes:
                 self.country_codes.add(contract.country_calendar_code)
 
-        self.extra_holidays = self._get_extra_holidays() if 'extra_holidays' in self.need else {}
+        # self.extra_holidays = self._get_extra_holidays() if 'extra_holidays' in self.need else {}  # noqa: ERA001
         self._holiday_cache = {}
 
         self.calendars = self._get_calendars()
@@ -81,23 +78,23 @@ class TimesheetReport:
             return [*Resource.objects.filter(pk__in=active_resource_ids)]
         return [user.get_resource()]
 
-    def _get_holiday(self, day: KrmDay, country_calendar_code: str) -> bool:
-        """Return whether the day is holiday."""
-        if res := self._holiday_cache.get((day.date, country_calendar_code)):
-            return res
-        if (eh := self.extra_holidays.get(day)) and (
-            country_calendar_code in eh or country_calendar_code.split('-')[0] in eh
-        ):
-            hol = True
-        else:
-            cal = get_country_holidays(country_calendar_code=country_calendar_code)
-            hol = not cal.is_working_day(day.date)
-        return self._holiday_cache.setdefault((day.date, country_calendar_code), hol)
+    # def _get_holiday(self, day: KTDay, country_calendar_code: str) -> bool:  # noqa: ERA001
+    #     """Return whether the day is holiday."""  # noqa: ERA001
+    #     if res := self._holiday_cache.get((day.date, country_calendar_code)):  # noqa: ERA001
+    #         return res  # noqa: ERA001
+    #     if (eh := self.extra_holidays.get(day)) and (  # noqa: ERA001
+    #         country_calendar_code in eh or country_calendar_code.split('-')[0] in eh  # noqa: ERA001
+    #     ):  # noqa: ERA001
+    #         hol = True  # noqa: ERA001
+    #     else:  # noqa: ERA001
+    #         cal = get_country_holidays(country_calendar_code=country_calendar_code)  # noqa: ERA001
+    #         hol = not cal.is_working_day(day.date)  # noqa: ERA001
+    #     return self._holiday_cache.setdefault((day.date, country_calendar_code), hol)  # noqa: ERA001
 
     def _get_calendars(self) -> dict[int, list[Krm3Day]]:
-        """Return the dict of KrmDay in the interval for the resource id.
+        """Return the dict of Krm3Day in the interval for the resource id.
 
-        The KrmDay is enriched with:
+        The KTDay is enriched with:
         - min_working_hours: the float min number of working hours expected by the resource in the day
         - is_holiday: is overridden with a bool
         """
@@ -109,7 +106,7 @@ class TimesheetReport:
             if resource_id not in calendar_data:
                 calendar_data[resource_id] = list(Krm3Day(self.from_date, resource=resource).range_to(self.to_date))
 
-            for calendar_day in KrmDay(self.from_date).range_to(self.to_date):
+            for calendar_day in KTDay(self.from_date).range_to(self.to_date):
                 # XXX: highly inefficient!
                 if found := [day for day in calendar_data[resource_id] if day.date == calendar_day.date]:
                     # NOTE: submission periods for the same resource are
@@ -134,7 +131,7 @@ class TimesheetReport:
                 day.nwd = day.contract is None or day.holiday or min_working_hours == 0
                 if not day.nwd:
                     day.data_due_hours = Decimal(min_working_hours)
-                day.apply([te for te in self.time_entries if te.resource.pk == resource_id and te.date == day.date])
+                day.apply([te for te in self.task_entries if te.resource.pk == resource_id and te.date == day.date])
 
         return calendar_data
 
@@ -151,11 +148,13 @@ class TimesheetReport:
             schedule = self.default_schedule
         return schedule[kd.day_of_week_short.lower()]
 
-    def _get_time_entries(self) -> list[TimeEntry]:
-        """Return a list of time entries, preloading their special leave reason if any."""
+    def _get_task_entries(self) -> list[TaskEntry]:
+        """Return a list of task entries, preloading their special leave reason if any."""
         return list(
-            TimeEntry.objects.select_related('special_leave_reason').filter(
-                date__gte=self.from_date, date__lte=self.to_date, resource__in=self.resources
+            TaskEntry.objects.select_related('day_entry', 'day_entry__special_leave_reason').filter(
+                day_entry__day__gte=self.from_date,
+                day_entry__day__lte=self.to_date,
+                day_entry__resource__in=self.resources,
             )
         )
 
@@ -165,7 +164,7 @@ class TimesheetReport:
             submission_data[ts.resource.pk].append((ts.period.lower, ts.period.upper))
         return submission_data
 
-    def _get_extra_holidays(self) -> dict[KrmDay, list[str]]:
+    def _get_extra_holidays(self) -> dict[KTDay, list[str]]:
         """Retrieve the extra holidays for the given country codes."""
         short_codes = {x.split('-')[0] for x in self.country_codes}
         result = {}
@@ -176,7 +175,7 @@ class TimesheetReport:
             )
         )
         for eh in extra_holidays:
-            for kd in KrmDay(eh.period.lower).range_to(eh.period.upper - datetime.timedelta(days=1)):
+            for kd in KTDay(eh.period.lower).range_to(eh.period.upper - datetime.timedelta(days=1)):
                 result.setdefault(kd, []).extend(eh.country_codes)
         return result
 

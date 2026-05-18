@@ -17,15 +17,16 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
+from .geo import City
+from .auth import Resource
+from .projects import Project
+
 from krm3.core.storage import PrivateMediaStorage
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
 from krm3.utils.queryset import ActiveManagerMixin
 
-from .auth import Resource
-from .geo import City
-from .projects import Project
 
 if typing.TYPE_CHECKING:
     from krm3.core.models.auth import User
@@ -95,7 +96,7 @@ class Mission(models.Model):
         update_fields: list[str] | None = None,
     ) -> None:
         self.full_clean()
-        super().save(force_insert, force_update, using, update_fields)
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
     def clean(self) -> None:
         if (self.number and self.status == Mission.MissionStatus.DRAFT) or (
@@ -288,50 +289,6 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
         ):
             return self.all()
         return self.filter(mission__resource__user_id=user.pk)
-
-    def accessible_by(self, user: 'User') -> models.QuerySet['Expense']:
-        """Return expenses accessible by the given user.
-
-        An expense is accessible if:
-        1. User is superuser, OR
-        2. User has 'view_any_expense' or 'manage_any_expense' permission, OR
-        3. The expense's mission resource matches the user's resource
-
-        Args:
-            user: The user to check access for
-
-        Returns:
-            QuerySet of accessible expenses
-
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        # Superuser has access to all expenses
-        if user.is_superuser:
-            return self.all()
-
-        # Check if user has the any-expense permissions
-        if user.get_all_permissions().intersection({'core.view_any_expense', 'core.manage_any_expense'}):
-            return self.all()
-
-        # Filter by user's own resource
-        try:
-            if user_resource := user.get_resource():
-                return self.filter(mission__resource=user_resource)
-            # User has no resource
-            logger.warning(
-                f'User {user.username} (id={user.id}) does not have an associated resource. '  # type: ignore[attr-defined]
-                'No expense access granted.'
-            )
-            return self.none()
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                f'Error getting resource for user {user.username} (id={user.id}). '  # type: ignore[attr-defined]
-                f'No expense access granted. Error: {e}'
-            )
-            return self.none()
 
 
 class Expense(models.Model):

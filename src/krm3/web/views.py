@@ -204,7 +204,7 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['projects'] = projects
         context['selected_project'] = selected_project
         report_blocks = AvailabilityReportOnline(
-            ctx['start'], ctx['end'], cast('UserType', self.request.user), project_param
+            ctx['start'], ctx['end'], cast('UserType', self.request.user), project_param,
         )
         context['report_blocks'] = report_blocks.report_html()
 
@@ -248,7 +248,7 @@ def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpRes
             current_row += 2
 
         holidays = []
-        overlapping_contracts: 'list[Contract]' = resource.get_contracts(min(data['days']).date, max(data['days']).date)
+        overlapping_contracts: 'list[Contract]' = resource.get_contract_map(min(data['days']).date, max(data['days']).date)
 
         for day in data['days']:
             contract = resource.contract_for_date(overlapping_contracts, day)

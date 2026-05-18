@@ -65,7 +65,8 @@ def _get_object_with_permission_check(
 
     # Try to get it through accessible_by
     try:
-        return model_class.objects.accessible_by(user).get(pk=pk)
+        fx = getattr(model_class.objects, 'accessible_by', None) or getattr(model_class.objects, 'filter_acl')
+        return fx(user).get(pk=pk)
     except model_class.DoesNotExist:
         raise PermissionDenied("You don't have permission to access this file.")
 
