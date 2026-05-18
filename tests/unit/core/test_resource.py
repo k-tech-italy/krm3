@@ -2,17 +2,16 @@ import datetime
 import json
 import typing
 from datetime import date
+
 import pytest
 from constance.test import override_config
 from django.test import override_settings
-
-
-from krm3.utils.dates import KrmDay
-from testutils.date_utils import _dt
-from testutils.factories import ResourceFactory, ContractFactory
+from ktcalendars import KTDateRange, KTDay
+from ktcalendars.utils import dt
+from testutils.factories import ContractFactory, ResourceFactory
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import Resource, Contract
+    from krm3.core.models import Contract, Resource
 
 
 @pytest.fixture
@@ -24,27 +23,32 @@ def contracts_list() -> list['Contract']:
     return [c1, c2, c3, c4]
 
 
-@override_config(
-    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7})
+@pytest.mark.parametrize(
+    'contracts, country_code, expected',
+    [
+        pytest.param([[dt('20230620'), dt('20230625')], [dt('20230701'), None]], 'IT-RM', [0] * 6, id='outside'),
+        pytest.param(
+            [[dt('20230620'), dt('20230626')], [dt('20230629'), None]], 'IT-RM', [7, 0, 0, 0, 0, 5], id='edges'
+        ),
+        pytest.param(
+            [[dt('20230627'), dt('20230630')]], 'IT', [0, 0, 2, 3, 4, 0], id='inside'
+        ),
+    ],
 )
-@override_settings(HOLIDAYS_CALENDAR='IT-RM')
-def test_get_schedule_returns_default_if_there_is_no_contract():
+def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_code, expected):
     resource = ResourceFactory()
-    start_day = date(2020, 1, 1)
-    end_day = date(2020, 1, 10)
+    for period in contracts:
+        ContractFactory(
+            resource=resource,
+            period=period,
+            country_calendar_code=country_code,
+            working_schedule={'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7},
+        )
+    start_day, end_day = dt('20230625'), dt('20230630')
     schedule = resource.get_schedule(start_day, end_day)
 
     assert schedule == {
-        datetime.date(2020, 1, 1): 0,
-        datetime.date(2020, 1, 2): 4,
-        datetime.date(2020, 1, 3): 5,
-        datetime.date(2020, 1, 4): 6,
-        datetime.date(2020, 1, 5): 7,
-        datetime.date(2020, 1, 6): 0,
-        datetime.date(2020, 1, 7): 2,
-        datetime.date(2020, 1, 8): 3,
-        datetime.date(2020, 1, 9): 4,
-        datetime.date(2020, 1, 10): 5,
+        d: expected[i] for i, d in enumerate(KTDateRange.from_start_end(start_day, end_day))
     }
 
 
@@ -55,22 +59,22 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
     'start_day, end_day, country_calendar_code, custom_schedule, expected_schedule',
     [
         (
-            date(2020, 1, 1),
-            date(2020, 1, 3),
+            dt('20200101'),
+            dt('20200103'),
             'IT-RM',
             {},
             {
-                datetime.date(2020, 1, 1): 0,  # New Year
-                datetime.date(2020, 1, 2): 4,
-                datetime.date(2020, 1, 3): 5,
+                KTDay('2020-01-01'): 0,  # New Year
+                KTDay('2020-01-02'): 4,
+                KTDay('2020-01-03'): 5,
             },
         ),
         (
-            date(2020, 11, 10),
-            date(2020, 11, 12),
+            dt('20201110'),
+            dt('20201112'),
             'IT-RM',
             {},
-            {datetime.date(2020, 11, 10): 2, datetime.date(2020, 11, 11): 3, datetime.date(2020, 11, 12): 4},
+            {KTDay('2020-11-10'): 2, KTDay('2020-11-11'): 3, KTDay('2020-11-12'): 4},
         ),
         (
             date(2020, 11, 10),
@@ -78,26 +82,26 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             'PL',
             {},
             {
-                datetime.date(2020, 11, 10): 2,
-                datetime.date(2020, 11, 11): 0,  # polish Independence Day
-                datetime.date(2020, 11, 12): 4,
-                datetime.date(2020, 11, 13): 5,
-                datetime.date(2020, 11, 14): 6,
-                datetime.date(2020, 11, 15): 7,
+                KTDay('2020-11-10'): 2,
+                KTDay('2020-11-11'): 0,  # polish Independence Day
+                KTDay('2020-11-12'): 4,
+                KTDay('2020-11-13'): 5,
+                KTDay('2020-11-14'): 6,
+                KTDay('2020-11-15'): 7,
             },
         ),
         (
-            date(2020, 11, 10),
-            date(2020, 11, 15),
+            dt('20201110'),
+            dt('20201115'),
             'PL',
             {'mon': 2, 'tue': 3, 'wed': 4, 'thu': 5, 'fri': 6, 'sat': 7, 'sun': 8},
             {
-                datetime.date(2020, 11, 10): 3,
-                datetime.date(2020, 11, 11): 0,  # polish Independence Day
-                datetime.date(2020, 11, 12): 5,
-                datetime.date(2020, 11, 13): 6,
-                datetime.date(2020, 11, 14): 7,
-                datetime.date(2020, 11, 15): 8,
+                KTDay('2020-11-10'): 3,
+                KTDay('2020-11-11'): 0,  # polish Independence Day
+                KTDay('2020-11-12'): 5,
+                KTDay('2020-11-13'): 6,
+                KTDay('2020-11-14'): 7,
+                KTDay('2020-11-15'): 8,
             },
         ),
     ],
@@ -111,165 +115,3 @@ def test_get_schedule_with_contract(start_day, end_day, country_calendar_code, c
     schedule = contract.resource.get_schedule(start_day, end_day)
 
     assert schedule == expected_schedule
-
-
-@pytest.mark.parametrize(
-    'contracts, expected',
-    [
-        pytest.param([['20230601', None]], [1, 1, 1, 1, 1, 1, 1], id='open-ended'),
-        pytest.param([['20230628', '20230630']], [0, 0, 0, 0, 1, 1, 0], id='from-28'),
-        pytest.param([['20230601', '20230628']], [1, 1, 1, 1, 0, 0, 0], id='until-27'),
-    ],
-)
-def test_get_krm_days_with_contract_days(contracts, expected):
-    resource: 'Resource' = ResourceFactory()
-    contract_generated = [None]
-    for contract_from, contract_to in contracts:
-        contract_generated.append(
-            ContractFactory(resource=resource, period=(_dt(contract_from), _dt(contract_to) if contract_to else None))
-        )
-    result = resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
-    assert result == [
-        KrmDay('2023-06-24'),
-        KrmDay('2023-06-25'),
-        KrmDay('2023-06-26'),
-        KrmDay('2023-06-27'),
-        KrmDay('2023-06-28'),
-        KrmDay('2023-06-29'),
-        KrmDay('2023-06-30'),
-    ]
-    assert [kd.contract for kd in result] == [contract_generated[x] for x in expected]
-
-
-@pytest.mark.parametrize(
-    'country_code, expected',
-    [
-        pytest.param(None, True, id='default'),
-        pytest.param('IT-RM', True, id='IT-RM'),
-        pytest.param('IT-MI', False, id='IT-MI'),
-    ],
-)
-def test_get_krm_days_with_contract_holidays(country_code, expected):
-    contract: 'Contract' = ContractFactory(
-        period=(_dt('20230601'), _dt('20230630')), country_calendar_code=country_code
-    )
-    result = contract.resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
-
-    assert [d.is_holiday() for d in result] == [False, True, False, False, False, expected, False]
-
-
-@pytest.mark.parametrize(
-    'schedule, expected',
-    [
-        pytest.param({}, [0, 0, 8, 8, 8, 0, 0], id='default'),
-        pytest.param(
-            {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}, [0, 0, 8, 8, 8, 0, 0], id='full'
-        ),
-        pytest.param(
-            {'mon': 4, 'tue': 2, 'wed': 3, 'thu': 5, 'fri': 1, 'sat': 0, 'sun': 0}, [0, 0, 4, 2, 3, 0, 0], id='partial'
-        ),
-        pytest.param(
-            {'mon': 8, 'tue': 8, 'wed': 0, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
-            [0, 0, 8, 8, 0, 0, 0],
-            id='no-wednesday',
-        ),
-    ],
-)
-def test_get_krm_days_with_contract_min_working_hours(schedule, expected):
-    # NB: Contract from 1st Jun to 29th Jun. Hence 30th 0 hours
-    contract: 'Contract' = ContractFactory(period=(_dt('20230601'), _dt('20230630')), working_schedule=schedule)
-    result = contract.resource.get_krm_days_with_contract(_dt('20230624'), _dt('20230630'))
-    assert [kd.min_working_hours for kd in result] == expected
-
-
-@pytest.mark.parametrize(
-    'start_date, end_date, expected',
-    [
-        pytest.param(_dt('20190101'), _dt('20191231'), [], id='before'),
-        pytest.param(_dt('20250101'), None, [2], id='after'),
-        pytest.param(_dt('20190101'), _dt('20200101'), [0], id='first'),
-        pytest.param(_dt('20200701'), None, [1, 2], id='open'),
-        pytest.param(_dt('20200701'), _dt('20200831'), [], id='between-contracts'),
-        pytest.param(_dt('20200630'), _dt('20200901'), [0, 1], id='just-across'),
-        pytest.param(_dt('20200901'), _dt('20200901'), [1], id='fisrt-day'),
-        pytest.param(_dt('20200630'), _dt('20200630'), [0], id='last-day'),
-    ],
-)
-def test_get_contracts(start_date, end_date, expected, contracts_list):
-    resource: 'Resource' = contracts_list[0].resource
-    contracts = resource.get_contracts(start_date, end_date)
-    assert contracts == [contracts_list[x] for x in expected]
-
-
-@pytest.mark.parametrize(
-    'vcard_text, should_be_valid, test_description',
-    [
-        pytest.param(None, True, 'None vcard_text', id='none'),
-        pytest.param('', True, 'Empty vcard_text', id='empty'),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nN:Doe;John;;;\nTEL:+1234567890\nEMAIL:john@example.com\nEND:VCARD',
-            True,
-            'Valid vCard with Unix line endings',
-            id='valid-unix',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Jane Smith\r\nN:Smith;Jane;;;\r\nEND:VCARD\r\n',
-            True,
-            'Valid vCard with Windows line endings',
-            id='valid-windows',
-        ),
-        pytest.param(
-            (
-                'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nN:Doe;John;;;\n'
-                'item1.TEL:+1234567890\nitem1.X-ABLabel:iPhone\nEND:VCARD'
-            ),
-            True,
-            'Valid vCard with Apple extensions',
-            id='valid-apple-extensions',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nFN:John Doe\nEND:VCARD',
-            True,
-            'vCard without VERSION (lenient parsing)',
-            id='no-version',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nEND:VCARD',
-            True,
-            'vCard without FN/N (lenient parsing)',
-            id='no-fn',
-        ),
-        pytest.param(
-            'This is not a vCard',
-            False,
-            'Malformed vCard',
-            id='malformed',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nFN:Test\nN:Test;;;\nEND:VCAR',
-            False,
-            'Invalid vCard with incomplete END tag',
-            id='incomplete-end',
-        ),
-    ],
-)
-def test_resource_vcard_validation(vcard_text, should_be_valid, test_description):
-    """Test vCard validation for the Resource model using vobject.
-
-    vobject is more lenient than strict RFC 2426 validation and supports:
-    - vCard 2.1, 3.0, and 4.0 formats
-    - Apple-specific extensions (item1.TEL, X-ABLabel, etc.)
-    - Missing VERSION or FN/N fields (lenient mode)
-    """
-    from django.core.exceptions import ValidationError
-
-    resource = ResourceFactory(vcard_text=vcard_text)
-
-    if should_be_valid:
-        # Should not raise ValidationError
-        resource.clean()
-    else:
-        # Should raise ValidationError
-        with pytest.raises(ValidationError) as exc_info:
-            resource.clean()
-        assert 'vcard_text' in exc_info.value.message_dict

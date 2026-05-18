@@ -70,7 +70,7 @@ msgstr ""
 
 #: src/krm3/core/models/projects.py:73 src/krm3/core/models/projects.py:122
 #: src/krm3/core/models/projects.py:248
-msgid "\"start_date\" must not be later than \"end_date\""
+msgid "End date must be at least one day after start date"
 msgstr ""
 
 #: src/krm3/core/models/projects.py:81
@@ -94,7 +94,7 @@ msgid ""
 msgstr ""
 
 #: src/krm3/core/models/timesheets.py:85
-msgid "\"from_date\" must not be later than \"to_date\""
+msgid "End date must be at least one day after start date"
 msgstr ""
 
 #: src/krm3/core/models/timesheets.py:119

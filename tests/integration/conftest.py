@@ -1,7 +1,7 @@
 import datetime
 import os
+import signal
 import subprocess
-import typing
 from pathlib import Path
 from typing import Generator
 
@@ -9,30 +9,10 @@ import pytest
 from seleniumbase import config as sb_config
 from seleniumbase.core import session_helper
 
+import typing
+
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppSeleniumTC
-
-
-@pytest.fixture(autouse=True, scope='session')
-def _build_frontend():
-    frontend_dir = Path(__file__).parent.parent.parent / 'krm3-fe'
-    dist_dir = frontend_dir / 'dist'
-    if dist_dir.exists():
-        return
-
-    env = {
-        'KRM3_NODE_ENV': 'development',
-        'KRM3_GENERATE_SOURCEMAP': 'true',
-        'KRM3_HTTPS': 'true',
-        'KRM3_FE_API_BASE_URL': '',
-        'PATH': os.environ.get('PATH'),
-    }
-
-    try:
-        subprocess.run(['yarn', 'build'], capture_output=True, check=True, cwd=frontend_dir, env=env)
-    except subprocess.CalledProcessError as e:
-        pytest.exit(f'failed with error:\n{e.stderr}', returncode=e.returncode)
-
 
 @pytest.fixture
 def browser(live_server, request) -> Generator['AppSeleniumTC', None, None]:

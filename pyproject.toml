@@ -83,7 +83,9 @@ dependencies = [
     "python-magic>=0.4.27",
     "pdfminer>=20191125",
     "pypdf>=6.4.0",
-    "urllib3>=2.6.3",  # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
+    "urllib3>=2.6.3", # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
+    "pyrefly>=0.60.0",
+    "ktcalendars[psycopg]>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -106,8 +108,6 @@ dev = [
     "pydocstyle>=6.3.0",
     "pytest-cov>=6.1.1",
     "pytest-django>=4.11.1",
-    "pytest-dotenv>=0.5.2",
-    "pytest-env>=1.1.5",
     "pytest-param>=0.1.1",
     "pytest-race>=0.2.0",
     "pytest-seleniumbase>=4.37.10",
@@ -191,3 +191,8 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
+
+[tool.pyrefly]
+search-path = ["tests/_extras"]
+infer-with-first-use = false
+permissive-ignores = true

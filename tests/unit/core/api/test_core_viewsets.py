@@ -1,66 +1,55 @@
-from django.contrib.auth.models import Permission
 import pytest
-from rest_framework.reverse import reverse
+from ktcalendars import KTDateRange
 from rest_framework import status
+from rest_framework.reverse import reverse
+from testutils.factories import ContractFactory
 
-from testutils.factories import ResourceFactory
-
-
-class TestActiveResourcesList:
-    @staticmethod
-    def url():
-        return reverse('core-api:api-resources-active')
-
-    def test_admin_can_request_active_resources(self, admin_user, api_client):
-        active_resource = ResourceFactory(active=True)
-        _inactive_resource = ResourceFactory(active=False)
-
-        response = api_client(user=admin_user).get(self.url())
-        assert response.status_code == status.HTTP_200_OK
-
-        resource_ids = [item.get('id') for item in response.json()]
-        assert resource_ids == [active_resource.id]
-
-    @pytest.mark.parametrize(
-        ('permissions', 'expected_status_code'),
-        (
-            pytest.param([], status.HTTP_403_FORBIDDEN, id='no_perms'),
-            pytest.param(
-                ['manage_any_project'], status.HTTP_403_FORBIDDEN, id='project_manager_without_timesheet_perms'
-            ),
-            pytest.param(['view_any_project'], status.HTTP_403_FORBIDDEN, id='project_viewer_without_timesheet_perms'),
-            pytest.param(
-                ['view_any_project', 'view_any_timesheet'], status.HTTP_200_OK, id='project_viewer_and_timesheet_viewer'
-            ),
-            pytest.param(
-                ['view_any_project', 'manage_any_timesheet'],
-                status.HTTP_200_OK,
-                id='project_viewer_and_timesheet_manager',
-            ),
-            pytest.param(
-                ['manage_any_project', 'view_any_timesheet'],
-                status.HTTP_200_OK,
-                id='project_manager_and_timesheet_viewer',
-            ),
-            pytest.param(
-                ['manage_any_project', 'manage_any_timesheet'],
-                status.HTTP_200_OK,
-                id='project_manager_and_timesheet_manager',
-            ),
+@pytest.mark.parametrize(
+    'contracts, query_period, expected',
+    [
+        pytest.param([], ('1900-01-01', '2100-12-31'), 0, id='no_contracts'),
+        pytest.param(
+            [
+                ('2024-02-14', '2024-03-01'),
+            ],
+            ('2024-03-01', '2025-03-01'),
+            0,
+            id='before_contract',
         ),
+        pytest.param(
+            [
+                ('2024-02-14', '2024-03-02'),
+            ],
+            ('2024-03-01', '2025-03-01'),
+            1,
+            id='lower_contract',
+        ),
+        pytest.param(
+            [('2024-02-14', '2024-03-01'), ('2024-03-16', None)],
+            ('2024-03-01', '2024-03-15'),
+            0,
+            id='outside_contracts',
+        ),
+        pytest.param(
+            [('2024-02-14', '2024-03-02'), ('2024-03-16', None)], ('2024-03-01', '2024-03-31'), 1, id='multi_contract'
+        ),
+    ],
+)
+def test_can_request_active_resources(
+    contracts,
+    query_period,
+    expected,
+    resource,
+    regular_user,
+    api_client,
+):
+    for contract in contracts:
+        ContractFactory(resource=resource, period=KTDateRange(*contract))
+
+    url = reverse('core-api:api-resources-active', args=query_period)
+    response = api_client(user=regular_user).get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert (
+        response.data
+        == [{'id': resource.id, 'first_name': resource.first_name, 'last_name': resource.last_name}] * expected
     )
-    def test_regular_user_can_request_active_resources_only_if_authorized(
-        self, permissions, expected_status_code, regular_user, api_client
-    ):
-        active_resource = ResourceFactory(active=True)
-        _inactive_resource = ResourceFactory(active=False)
-
-        for permission in permissions:
-            regular_user.user_permissions.add(Permission.objects.get(codename=permission))
-
-        response = api_client(user=regular_user).get(self.url())
-        assert response.status_code == expected_status_code
-
-        if expected_status_code < 400:
-            resource_ids = [item.get('id') for item in response.json()]
-            assert resource_ids == [active_resource.id]

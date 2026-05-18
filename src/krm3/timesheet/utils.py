@@ -9,16 +9,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-def verify_time_entries_from_same_day(time_entries: Iterable[TimeEntry]) -> None:
-    """Check that all time entries belong to the same day, raise otherwise.
-
-    :param time_entries: the time entries to check
-    :raises ValueError: when not all time entries have the same `date`.
-    """
-    if len({entry.date for entry in time_entries}) > 1:
-        raise ValueError('Time entries must belong to the same day.')
-
-
 def worked_hours(time_entries: Iterable[TimeEntry]) -> Decimal:
     """Return the total of all the given time entries' task hours."""
     bank_from = sum(entry.bank_from or 0 for entry in time_entries)
@@ -48,8 +38,6 @@ def regular_hours(time_entries: Iterable[TimeEntry], due_hours: Decimal) -> Deci
     :param due_hours: the hours the resource is supposed to work
     :return: the total "regular" hours.
     """
-    verify_time_entries_from_same_day(time_entries)
-
     return min(hours, due_hours) if (hours := worked_hours(time_entries)) else None
 
 
@@ -72,8 +60,6 @@ def overtime(time_entries: Iterable[TimeEntry], due_hours: Decimal) -> Decimal |
     :param due_hours: the threshold for overtime
     :return: the overtime in hours, or `None` if overtime does not apply.
     """
-    verify_time_entries_from_same_day(time_entries)
-
     if special_hours(time_entries) > 0:
         return None
 
