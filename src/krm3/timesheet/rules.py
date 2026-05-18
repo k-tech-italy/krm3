@@ -5,27 +5,14 @@ from typing import TYPE_CHECKING, Any
 
 from krm3.timesheet import utils
 from krm3.utils import i18n
-from krm3.utils.dates import KrmDay, _MaybeDate
+from krm3.utils.dates import KrmDay
 from krm3.utils.numbers import safe_dec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from krm3.core.models import Contract, Resource, TimeEntry
     from krm3.core.models import TimesheetSubmission
-
-timeentry_counters = {
-    'bank': 'Banca ore',
-    'day_shift': 'Ore ordinarie',
-    'night_shift': 'Ore notturne',
-    'on_call': 'Reperibilità',
-    'travel': 'Viaggio',
-    'holiday': 'Ferie',
-    'leave': 'Permessi',
-    'rest': 'Riposo',
-    'sick': 'Malattia',
-    'overtime': 'Ore straordinarie',
-    'meal_voucher': 'Buoni pasto',
-}
+    from krm3.types.krmdates import KrmDayType
 
 te_calc_map = {
     'bank_to': 'bank_to',
@@ -45,14 +32,14 @@ te_calc_map = {
 
 
 class Krm3Day(KrmDay):
-    def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
+    def __init__(self, day: KrmDayType = None, **kwargs) -> None:
         self.lang: str = 'IT'
         super().__init__(day, **kwargs)
         self.resource: 'Resource | None' = None
         self.data_due_hours = Decimal.from_float(0)
         self.contract: 'Contract | None' = None
         self.holiday: bool = False
-        self.time_entries: Iterable['TimeEntry'] = []
+        self.time_entries: 'Iterable[TimeEntry]' = []
         self.data_bank = None
         self.data_bank_from = None
         self.data_bank_to = None
@@ -104,7 +91,7 @@ class Krm3Day(KrmDay):
         :param submission: the `TimesheetSubmission` to convert
         :return: a lazy sequence of `Krm3Day`s covering the submission's time period
         """
-        from krm3.core.models import Contract, TimeEntry
+        from krm3.core.models import Contract, TaskEntry
         timesheet_data = submission.timesheet or {}
 
         # NOTE: there is no point in computing totals from serialized
@@ -185,13 +172,12 @@ class Krm3Day(KrmDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: Iterable['TimeEntry']
+        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: 'Iterable[TimeEntry]'
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 
         NB: time entries must be of same day.
         """
-        utils.verify_time_entries_from_same_day(time_entries)
         base: dict[str, Any] = {
             'bank_to': None,
             'bank_from': None,

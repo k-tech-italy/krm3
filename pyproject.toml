@@ -83,7 +83,8 @@ dependencies = [
     "python-magic>=0.4.27",
     "pdfminer>=20191125",
     "pypdf>=6.4.0",
-    "urllib3>=2.6.3",  # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
+    "urllib3>=2.6.3", # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
+    "pyrefly>=0.60.0",
 ]
 
 [project.optional-dependencies]
@@ -191,3 +192,8 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
+
+[tool.pyrefly]
+search-path = ["tests/_extras"]
+infer-with-first-use = false
+permissive-ignores = true

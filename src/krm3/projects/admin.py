@@ -4,20 +4,22 @@ from typing import cast
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
-from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.contrib.admin.widgets import AdminDateWidget
+from django.contrib.postgres.fields import DateRangeField
+from django.contrib.postgres.forms import RangeWidget
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 
 from krm3.core.models import Project, Task
-from krm3.projects.forms import TaskForm, ProjectForm
 from krm3.styles.buttons import NORMAL
 
 if typing.TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
+
     from krm3.core.models.auth import User
 
 
@@ -28,16 +30,21 @@ class TaskInline(admin.TabularInline):  # noqa: D101
 
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    from krm3.projects.forms import ProjectForm
+
     form = ProjectForm
     search_fields = ('name', 'client__name')
-    list_display = ('client', 'name', 'start_date', 'end_date')
+    list_display = ('client', 'name', 'period')
     list_filter = (
         ('client', AutoCompleteFilter),
-        ('start_date', DateFilter.factory(title='from YYYY-MM-DD')),
-        ('end_date', DateFilter.factory(title='to YYYY-MM-DD')),
     )
     autocomplete_fields = ['client']
     inlines = [TaskInline]
+
+    formfield_overrides = {
+        # Tell Django to use our custom widget for all DateRangeFields in this admin.
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+    }
 
     @button(html_attrs=NORMAL)
     def view_tasks(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
@@ -45,18 +52,20 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
-        url = reverse('admin:core_timeentry_changelist') + f'?task__project__exact={pk}'
+        url = reverse('admin:core_taskentry_changelist') + f'?task__project__exact={pk}'
         return HttpResponseRedirect(url)
 
 
 @admin.register(Task)
 class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
+    from krm3.projects.forms import TaskForm
+
     class Media:
         css = {
             'all': ('admin/required_field.css',),
         }
     form = TaskForm
-    list_display = ('project', 'title', 'resource', 'basket_title', 'start_date', 'end_date')
+    list_display = ('project', 'title', 'resource', 'basket_title', 'period')
     search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket_title')
     list_filter = [
         ('project', AutoCompleteFilter),
@@ -65,11 +74,16 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     ]
     autocomplete_fields = ['project', 'resource']
 
+    formfield_overrides = {
+        # Tell Django to use our custom widget for all DateRangeFields in this admin.
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+    }
+
     def get_fieldsets(self, request: 'HttpRequest', obj: Task = ...) -> typing.Iterable:
         fieldsets = [
             (
                 None,
-                {'fields': (('title', 'project', 'resource'), ('start_date', 'end_date'), ('basket_title', 'color'))},
+                {'fields': (('title', 'project', 'resource'), ('period'), ('basket_title', 'color'))},
             ),
         ]
         user = cast('User', request.user)
@@ -89,7 +103,7 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             ret['title'] = source.title
             ret['project'] = source.project
             ret['basket_title'] = source.basket_title
-            ret['start_date'] = source.start_date
+            ret['period'] = source.period
             ret['work_price'] = source.work_price
         else:
             pk = ret.pop('project_id', None)
@@ -109,5 +123,5 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
-        url = reverse('admin:core_timeentry_changelist') + f'?task_id={pk}'
+        url = reverse('admin:core_taskentry_changelist') + f'?task_id={pk}'
         return HttpResponseRedirect(url)

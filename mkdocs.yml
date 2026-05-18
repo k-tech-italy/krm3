@@ -127,57 +127,7 @@ plugins:
   - tags
 
 watch:
-  - docs/
+  - docs
 
 hooks:
   - docs/_hooks/hooks.py
-
-nav:
-  - Home: index.md
-  - Missions:
-      - Overview: missions/index.md
-  - Examples:
-      - Blocks: examples/blocks.md
-      - Tagged: examples/tagged.md
-  - Glossary:
-      - glossary/index.md
-      - Terms:
-          - BankOfHours: glossary/terms/BankOfHours.md
-          - BaseCurrency: glossary/terms/BaseCurrency.md
-          - ClosedEntry: glossary/terms/ClosedEntry.md
-          - Contract: glossary/terms/Contract.md
-          - DayEntry: glossary/terms/DayEntry.md
-          - Expense: glossary/terms/Expense.md
-          - ExpenseCategory: glossary/terms/ExpenseCategory.md
-          - ExtraHoliday: glossary/terms/ExtraHoliday.md
-          - Mission: glossary/terms/Mission.md
-          - OpenEntry: glossary/terms/OpenEntry.md
-          - PaymentType: glossary/terms/PaymentType.md
-          - Reimbursement: glossary/terms/Reimbursement.md
-          - Resource: glossary/terms/Resource.md
-          - TaskEntry: glossary/terms/TaskEntry.md
-          - TimeEntry: glossary/terms/TimeEntry.md
-          - TimesheetSubmission: glossary/terms/TimesheetSubmission.md
-  - Guide:
-      - For Users:
-          - Introduzione: guides/users/index.md
-          - Timesheet:
-            - Overview: guides/users/timesheet_overview.md
-            - How to add hours to the task: guides/users/add.md
-            - How to remove hours from the task: guides/users/remove.md
-            - How to remove hours from the day: guides/users/remove_from_day.md
-            - How to add Day Entry as Holiday, Sick Day, Leave, Rest: guides/users/entry.md
-            - How to submit Timesheet : guides/users/submit.md
-            - How to add Bank Hours : guides/users/bank_hours.md
-            - Report: guides/users/timesheet_report.md
-          - Availability : guides/users/availability.md
-      - For Developers:
-          - Introduzione: guides/developers/index.md
-          - How to bump a new BE version: guides/developers/bump.md
-          - How to create a commit: guides/developers/commit.md
-          - How to calculate overtime: guides/developers/overtime.md
-          - Hot to deploy in develop environment: guides/developers/pipeline.md
-  - Wiki:
-      - Release workflow: wiki/ReleaseWorkflow.md
-  - License: license.md
-  - Tags: tags.md

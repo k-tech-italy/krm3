@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 import freezegun
 import pytest
 
-from krm3.utils.dates import KrmDay, dt, KrmCalendar
+from krm3.utils.dates import KrmDay, KrmCalendar
 from testutils.date_utils import _dt
 
 
@@ -13,7 +13,7 @@ class TestKrmDay:
     @pytest.mark.parametrize(
         'krm_day, prop, expected',
         [
-            ('2025-06-02', 'date', dt('2025-06-02')),
+            ('2025-06-02', 'date', _dt('2025-06-02')),
             ('2025-06-02', 'day', 2),
             ('2025-06-02', 'month', 6),
             ('2025-06-02', 'year', 2025),
@@ -94,7 +94,7 @@ class TestKrmDay:
         assert hash(KrmDay('2025-06-02')) == 20250602
 
     def test_range_to(self):
-        assert list(KrmDay('2024-02-28').range_to(datetime.date(2024, 3, 1))) == [
+        assert list(KrmDay('2024-02-28').range_to(_dt('2024-03-01'))) == [
             KrmDay('2024-02-28'),
             KrmDay('2024-02-29'),
             KrmDay('2024-03-01'),
@@ -110,7 +110,7 @@ class TestKrmDay:
         assert KrmDay() == KrmDay('2025-03-02')
 
     def test_init(self):
-        assert KrmDay('2025-06-02') == KrmDay(dt('2025-06-02'))
+        assert KrmDay('2025-06-02') == KrmDay(_dt('2025-06-02'))
         assert KrmDay('2025-06-02') == KrmDay(KrmDay('2025-06-02'))
 
     def test_is_holiday(self):

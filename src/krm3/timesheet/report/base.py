@@ -10,7 +10,7 @@ from constance import config
 from django.utils.translation import gettext_lazy as _
 
 from krm3.config import settings
-from krm3.core.models import Contract, Resource, TimeEntry, TimesheetSubmission, ExtraHoliday
+from krm3.core.models import Contract, ExtraHoliday, Resource, TaskEntry, TimesheetSubmission
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.dates import KrmDay, get_country_holidays
 
@@ -48,21 +48,13 @@ class TimesheetReport:
 
         self.valid_contracts = Contract.objects.active_between(from_date, to_date)  # pyright: ignore
         self.resources = self._get_resources(user, **kwargs)
-
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
 
-        self.time_entries = self._get_time_entries()
 
-        # loading submissions up front, no matter the flags passed in
-        # `need`, allows us to access all the pre-computed data in their
-        # `timesheet` json field
-        self.submissions = TimesheetSubmission.objects.get_closed_in_period(
-            self.from_date, self.to_date, resources=self.resources
-        )
-        # TODO: get rid of this, only collect submissions
-        self.submission_periods = self._get_submission_period_data()
 
-        self.country_codes = {str(settings.HOLIDAYS_CALENDAR)}
+
+        self.task_entries = self._get_task_entries()
+
 
         self.resource_contracts: dict[int, list[Contract]] = {}
         for contract in self.valid_contracts:
@@ -95,7 +87,7 @@ class TimesheetReport:
         return self._holiday_cache.setdefault((day.date, country_calendar_code), hol)
 
     def _get_calendars(self) -> dict[int, list[Krm3Day]]:
-        """Return the dict of KrmDay in the interval for the resource id.
+        """Return the dict of Krm3Day in the interval for the resource id.
 
         The KrmDay is enriched with:
         - min_working_hours: the float min number of working hours expected by the resource in the day
@@ -134,7 +126,7 @@ class TimesheetReport:
                 day.nwd = day.contract is None or day.holiday or min_working_hours == 0
                 if not day.nwd:
                     day.data_due_hours = Decimal(min_working_hours)
-                day.apply([te for te in self.time_entries if te.resource.pk == resource_id and te.date == day.date])
+                day.apply([te for te in self.task_entries if te.resource.pk == resource_id and te.date == day.date])
 
         return calendar_data
 
@@ -151,11 +143,13 @@ class TimesheetReport:
             schedule = self.default_schedule
         return schedule[kd.day_of_week_short.lower()]
 
-    def _get_time_entries(self) -> list[TimeEntry]:
-        """Return a list of time entries, preloading their special leave reason if any."""
+    def _get_task_entries(self) -> list[TaskEntry]:
+        """Return a list of task entries, preloading their special leave reason if any."""
         return list(
-            TimeEntry.objects.select_related('special_leave_reason').filter(
-                date__gte=self.from_date, date__lte=self.to_date, resource__in=self.resources
+            TaskEntry.objects.select_related('day_entry', 'day_entry__special_leave_reason').filter(
+                day_entry__day__gte=self.from_date,
+                day_entry__day__lte=self.to_date,
+                day_entry__resource__in=self.resources,
             )
         )
 

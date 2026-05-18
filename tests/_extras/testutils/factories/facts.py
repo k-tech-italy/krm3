@@ -1,0 +1,487 @@
+from datetime import date, timedelta
+
+import factory
+from dateutil.relativedelta import relativedelta
+from django.contrib.auth.models import Group
+from factory import Faker, Sequence, SubFactory
+from factory.django import DjangoModelFactory
+from factory.fuzzy import FuzzyDecimal
+
+from krm3.config import settings
+from krm3.core.models import Contract
+from krm3.currencies.models import Currency
+from krm3.utils.dates import KrmDateRange, KrmDay
+
+from .base import AutoRegisterModelFactory
+
+factories_registry = {}
+
+
+class UserFactory(DjangoModelFactory):
+    username = Sequence(lambda n: 'User %02d' % n)
+    email = Sequence(lambda n: 'u%02d@example.com' % n)
+    password = factory.PostGenerationMethodCall('set_password', 'password')
+
+    @classmethod
+    def _after_postgeneration(cls, instance, create, results=None):
+        super()._after_postgeneration(instance, create, results)
+        instance._password = 'password'
+
+    class Meta:
+        model = 'core.User'
+        django_get_or_create = ('username',)
+
+
+class UserProfileFactory(DjangoModelFactory):
+    user = SubFactory(UserFactory)
+    picture = Sequence(lambda n: 'picture%02d.jpg' % n)
+
+    class Meta:
+        model = 'core.UserProfile'
+
+
+class SuperUserFactory(UserFactory):
+    username = Sequence(lambda n: 'superuser%03d@example.com' % n)
+    email = Sequence(lambda n: 'superuser%03d@example.com' % n)
+    is_superuser = True
+    is_staff = True
+    is_active = True
+
+
+class GroupFactory(DjangoModelFactory):
+    name = Sequence(lambda n: 'Group %02d' % n)
+
+    class Meta:
+        model = Group
+        django_get_or_create = ('name',)
+
+
+class CountryFactory(DjangoModelFactory):
+    name = Faker('country')
+
+    class Meta:
+        model = 'core.Country'
+        django_get_or_create = ('name',)
+
+
+class CityFactory(DjangoModelFactory):
+    name = Sequence(lambda n: f'Country {n + 1}')
+    country = SubFactory(CountryFactory)
+
+    class Meta:
+        model = 'core.City'
+
+
+class CurrencyFactory(DjangoModelFactory):
+    iso3 = Sequence(lambda n: str(n + 1))
+    title = Sequence(lambda n: str(n + 1))
+    symbol = Sequence(lambda n: str(n + 1))
+    base = 100
+
+    class Meta:
+        model = 'currencies.Currency'
+        django_get_or_create = ('iso3',)
+
+
+class ResourceFactory(DjangoModelFactory):
+    first_name = Faker('first_name')
+    last_name = Faker('last_name')
+    user = SubFactory(UserFactory)
+    preferred_in_report = True
+    preferred_language = 'en-uk'
+
+    class Meta:
+        model = 'core.Resource'
+        django_get_or_create = ('user', )
+
+
+class ContractFactory(AutoRegisterModelFactory[Contract]):
+    resource = SubFactory(ResourceFactory)
+    period = (date(2020, 1, 1), None)
+    country_calendar_code = settings.HOLIDAYS_CALENDAR
+    sunday_as_holiday = True
+
+    class Meta:
+        model = 'core.Contract'
+        django_get_or_create = ('resource', 'period')
+
+
+class ExtraHolidayFactory(DjangoModelFactory):
+    period = Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
+    country_codes = [settings.HOLIDAYS_CALENDAR]
+    reason = 'King coronation'
+
+    class Meta:
+        model = 'core.ExtraHoliday'
+
+
+class ClientFactory(DjangoModelFactory):
+    name = Faker('company')
+    picture = Faker('url')
+
+    class Meta:
+        model = 'core.Client'
+        django_get_or_create = ('name',)
+
+
+class ProjectFactory(DjangoModelFactory):
+    name = Faker('job')
+    client = SubFactory(ClientFactory)
+    period = (date(2020, 1, 1), None)
+
+    class Meta:
+        model = 'core.Project'
+        django_get_or_create = ('name',)
+
+
+class MissionFactory(DjangoModelFactory):
+    number = Sequence(lambda n: n + 1)
+    from_date = Faker(
+        'date_between_dates', date_start=date.fromisoformat('2020-01-01'), date_end=date.fromisoformat('2020-10-01')
+    )
+    to_date = factory.LazyAttribute(lambda obj: obj.from_date + relativedelta(days=5))
+
+    project = SubFactory(ProjectFactory)
+    city = SubFactory(CityFactory)
+    resource = SubFactory(ResourceFactory)
+    default_currency = factory.Iterator(Currency.objects.all())
+    year = factory.LazyAttribute(lambda obj: obj.from_date.year)
+    status = 'SUBMITTED'
+
+    class Meta:
+        model = 'core.Mission'
+
+
+class ExpenseCategoryFactory(DjangoModelFactory):
+    title = Sequence(lambda n: n + 1)
+
+    class Meta:
+        model = 'core.ExpenseCategory'
+
+
+class PaymentCategoryFactory(DjangoModelFactory):
+    title = Sequence(lambda n: n + 1)
+
+    class Meta:
+        model = 'core.PaymentCategory'
+
+
+class DocumentTypeFactory(DjangoModelFactory):
+    title = Sequence(lambda n: f'DT {n + 1}')
+
+    class Meta:
+        model = 'core.DocumentType'
+
+
+class ExpenseFactory(DjangoModelFactory):
+    mission = SubFactory(MissionFactory)
+    amount_currency = FuzzyDecimal(0.5, 170)
+    day = factory.LazyAttribute(lambda obj: obj.mission.from_date)
+    currency = SubFactory(CurrencyFactory)
+    category = SubFactory(ExpenseCategoryFactory)
+    payment_type = SubFactory(PaymentCategoryFactory)
+    document_type = SubFactory(DocumentTypeFactory)
+    amount_base = factory.LazyAttribute(lambda o: o.amount_currency)
+    amount_reimbursement = factory.LazyAttribute(lambda o: o.amount_currency if o.payment_type.personal_expense else 0)
+
+    class Meta:
+        model = 'core.Expense'
+
+
+class RateFactory(DjangoModelFactory):
+    day = Faker(
+        'date_between_dates',
+        date_start=date(2020, 1, 1),
+        date_end=date(2022, 12, 31),
+    )
+
+    class Meta:
+        model = 'currencies.Rate'
+
+
+class ReimbursementFactory(DjangoModelFactory):
+    title = Sequence(lambda n: f'Tit {n + 1}')
+    year = 2024
+    month = 'April'
+    resource = SubFactory(ResourceFactory)
+
+    class Meta:
+        model = 'core.Reimbursement'
+
+
+class POFactory(DjangoModelFactory):
+    ref = Sequence(lambda n: f'Ext_{n + 1:04}')
+    project = SubFactory(ProjectFactory)
+    period = factory.LazyFunction(
+        lambda: (factory.fuzzy.FuzzyDate(date(2022, 1, 1), date.today() - timedelta(days=60)).fuzz(), None)
+    )
+
+    class Meta:
+        model = 'core.PO'
+
+
+class BasketFactory(DjangoModelFactory):
+    title = Faker('sentence', nb_words=3)
+    initial_capacity = FuzzyDecimal(100, 5000)
+    po = SubFactory(POFactory)
+
+    class Meta:
+        model = 'core.Basket'
+
+
+class TaskFactory(DjangoModelFactory):
+    title = Faker('sentence', nb_words=3)
+    work_price = Faker('random_int', min=100, max=1000)
+    project = SubFactory(ProjectFactory)
+    resource = SubFactory(ResourceFactory)
+    period = factory.LazyAttribute(lambda obj: obj.project.period)
+
+    class Meta:
+        model = 'core.Task'
+        django_get_or_create = ('title', 'project', 'resource')
+
+    @classmethod
+    def _create(
+        cls, model_class, *args, contract: 'Contract | bool | None' = None, **kwargs
+    ) -> 'Task':
+        """Create a contract if required."""
+        manager = cls._get_manager(model_class)
+        if isinstance(contract, bool) and contract:
+            ContractFactory(resource=kwargs['resource'], period=KrmDateRange(kwargs['period']))
+        elif contract:
+            period = KrmDateRange(kwargs.get('period', contract.period))
+
+            if 'start_date' in kwargs:
+                period.lower = KrmDay(kwargs.get('start_date')).day
+            if 'end_date' in kwargs:
+                end_date = kwargs.get('end_date')
+                period.upper = (KrmDay(end_date) + 1).day if end_date else None
+            kwargs['resource'] = contract.resource
+        return manager.create(*args, **kwargs)
+
+
+def generate_month_period(start_date, offset):
+    start_dt = start_date + relativedelta(months=offset)
+    end_dt = start_dt + relativedelta(months=1)
+    return start_dt, end_dt
+
+
+class TimesheetSubmissionFactory(DjangoModelFactory):
+    period = Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
+    resource = SubFactory(ResourceFactory)
+
+    class Meta:
+        model = 'core.TimesheetSubmission'
+
+
+class DayEntryFactory(DjangoModelFactory):
+    day = Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
+    contract = factory.LazyAttribute(lambda o: ContractFactory(resource=o.resource))
+    resource = SubFactory(ResourceFactory)
+
+    class Meta:
+        model = 'core.DayEntry'
+
+
+class TaskEntryFactory(DjangoModelFactory):
+    day_shift_hours = Faker('random_int', min=1, max=8)
+
+    class Meta:
+        model = 'core.TaskEntry'
+
+    @classmethod
+    def _create(
+        cls,
+        model_class,
+        /,
+        resource: "Resource | None" = None,
+        date: date | bool | None = None,
+        day_entry: 'DayEntry | bool | None' = None,
+        task: 'Task | None' = None,
+        **kwargs,
+    ) -> 'Task':
+        """Create a contract if required."""
+        if day_entry and date:
+            raise NotImplementedError
+
+        manager = cls._get_manager(model_class)
+
+        resource = resource or (task.resource if task else None) or ResourceFactory()
+
+        if day_entry:
+            if isinstance(day_entry, bool) and day_entry:
+                kwargs['day_entry'] = DayEntryFactory(resource=resource)
+            else:
+                kwargs['day_entry'] = day_entry
+        elif date:
+            if isinstance(date, bool):
+                kwargs['day_entry'] = DayEntryFactory(
+                    resource=resource,
+                    day=Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
+                )
+            else:
+                kwargs['day_entry'] = DayEntryFactory(resource=resource, day=date)
+
+        kwargs['task'] = task if task else TaskFactory(resource=resource)
+
+        return manager.create(**kwargs)
+
+
+class InvoiceFactory(DjangoModelFactory):
+    number = Sequence(lambda n: f'Inv_{n + 1:04}')
+
+    class Meta:
+        model = 'core.Invoice'
+
+
+class InvoiceEntryFactory(DjangoModelFactory):
+    amount = Faker('random_int', min=10, max=100)
+    basket = SubFactory(BasketFactory)
+    invoice = SubFactory(InvoiceFactory)
+
+    class Meta:
+        model = 'core.InvoiceEntry'
+
+
+class SpecialLeaveReasonFactory(DjangoModelFactory):
+    title = Faker('sentence', nb_words=4)
+
+    class Meta:
+        model = 'core.SpecialLeaveReason'
+        django_get_or_create = ('title',)
+
+
+# Django Simple DMS Factories
+class DocumentFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.ProtectedDocument'
+
+    document = factory.django.FileField(filename='test_document.txt', data=b'test content')
+    admin = factory.SubFactory(UserFactory)
+
+
+class DocumentTagFactory(DjangoModelFactory):
+    class Meta:
+        model = 'django_simple_dms.DocumentTag'
+
+    title = factory.Sequence(lambda n: f'tag{n}')
+
+
+class DocumentGrantFactory(DjangoModelFactory):
+    class Meta:
+        model = 'django_simple_dms.DocumentGrant'
+
+    user = factory.SubFactory(UserFactory)
+    document = factory.SubFactory(DocumentFactory)
+    granted_permissions = ['R']
+
+
+class PhoneFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.Phone'
+
+    number = factory.Sequence(lambda n: f'+4811111{n:04d}')
+
+
+class EmailFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.Email'
+
+    address = factory.Faker('email')
+
+
+class AddressFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.Address'
+
+    address = factory.Faker('address')
+
+
+class WebsiteFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.Website'
+
+    url = factory.Faker('url')
+
+
+class ContactFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.Contact'
+        skip_postgeneration_save = True
+
+    first_name = Faker('first_name')
+    last_name = Faker('last_name')
+    tax_id = Faker('text')
+    picture = Faker('url')
+    internal_notes = Faker('text')
+    user = None
+    is_active = True
+    company = factory.SubFactory(ClientFactory)
+    job_title = factory.Sequence(lambda n: f'Job_{n}')
+
+    @factory.post_generation
+    def phones(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                PhoneInfoFactory(contact=self)
+
+    @factory.post_generation
+    def emails(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                EmailInfoFactory(contact=self)
+
+    @factory.post_generation
+    def addresses(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                AddressInfoFactory(contact=self)
+
+    @factory.post_generation
+    def websites(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                WebsiteInfoFactory(contact=self)
+
+
+class PhoneInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.PhoneInfo'
+
+    phone = factory.SubFactory(PhoneFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')
+
+
+class WebsiteInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.WebsiteInfo'
+
+    website = factory.SubFactory(WebsiteFactory)
+    contact = factory.SubFactory(ContactFactory)
+
+
+class AddressInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.AddressInfo'
+
+    address = factory.SubFactory(AddressFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')
+
+
+class EmailInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = 'core.EmailInfo'
+
+    email = factory.SubFactory(EmailFactory)
+    contact = factory.SubFactory(ContactFactory)
+    kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')

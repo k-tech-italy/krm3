@@ -25,23 +25,36 @@ Each Resource table is organised as follows:
 
 Following rows (see [Definitions](#definitions)): Bank hours, Due hours, Regular hours, Day shift hours, Night shift hours, On Call, Travel, Holiday, Leave, Sick, Rest, Overtime, Meal Voucher
 
-# Definitions
-
+# General Definitions
   - Working Day: a day the Resource is expected to work according to its _Working Schedule_ (see following [Definition](#definitions))
   - Working Schedule: the number of hours the Resource is expected to work per week day (set in Resource Contract). [Due Hours calculations](#due-hours) may override this number in a calendar day.
-  - Bank hours: A positive number shows the number of bank hours the Resource consumed in the month. A negative number shows the number of bank hours the Resource produced in the month.
-  - Due hours: The number of hours the Resource is expected to work in the day (see [Due Hours calculations](#due-hours)).
-  - Regular hours: The number of hours (Day Shift + Night Shift + Travel Hours) the Resource worked in the day up to maximum the expected number of hours (Due Hours).
-  - Day shift hours: The number of hours the Resource worked in the day during the Day Shift.
-  - Night shift hours: The number of hours the Resource worked in the day during the Night Shift.
-  - On Call: The number of hours the Resource was on call in the day.
-  - Travel: The number of hours the Resource travelled in the day.
-  - Holiday: The number of hours (equivalent to the expected Due Hours) the Resource was on holiday in the day.
-  - Leave: The number of hours the Resource was on leave in the day.
-  - Sick: The number of hours (equivalent to the expected Due Hours) the Resource was sick in the day.
-  - Rest: The number of hours the Resource was on rest in the day.
-  - Meal Voucher: 1 if the meal voucher was earned by the Resource in the day (see [Overtime Calculations](#overtime)).
-  - Overtime: The number of hours the Resource earned as overtime in the day (see [Meal Voucher Calculations](#meal-voucher)).
+
+# Definitions for each calendar Day
+
+## Regular fields:
+
+- Bank hours: A positive number shows the number of bank hours the Resource produced (deposits). A negative number shows the number of bank hours the Resource consumed (withdrawals).
+- Due hours: The number of hours the Resource is expected to work in the day (see [Due Hours calculations](#due-hours)).
+- Travel: The number of hours the Resource travelled in the day (denormalised from TaskEntry children).
+- Day shift hours: The number of hours the Resource worked in the day during the Day Shift (denormalised from TaskEntry children).
+- Night shift hours: The number of hours the Resource worked in the day during the Night Shift (denormalised from TaskEntry children).
+- On Call: The number of hours the Resource was on call in the day (denormalised from TaskEntry children).
+- Leave: The number of hours the Resource was on leave in the day.
+- Special leave: The number of hours the Resource was on Special Leave in the day.
+- Special leave Reason: The number of hours the Resource was on Special Leave in the day.
+- Protocol Number: The protocol number for the Sick day
+- Sick: The number of hours (equivalent to the expected Due Hours) the Resource was sick in the day.
+- Rest: The number of hours the Resource was on rest in the day.
+- Overtime: The number of hours the Resource earned as overtime in the day (see [Meal Voucher Calculations](#meal-voucher)).
+- Meal Voucher: 1 if the meal voucher was earned by the Resource in the day (see [Overtime Calculations](#overtime)).
+  
+## Calculated properties:
+
+- Holiday hours: The number of hours (equivalent to the expected Due Hours) the Resource was on holiday in the day.
+- Worked hours: A property calculated as the sum of Day Shift + Night Shift + Travel Hours recorded in the TaskEntries
+- Regular hours: A field representing the Resource _Worked hours_ + the bank daily balance up to maximum the expected number of hours (Due Hours).
+- Remaining hours: The number of hours the Resource is expected to work in the day (Due Hours) minus the number of hours the Resource worked in the day, or 0 if the Resource worked more than the expected number of hours (Due Hours).
+- Worked hours: 
 
 # Rules
 
@@ -49,10 +62,11 @@ Following rows (see [Definitions](#definitions)): Bank hours, Due hours, Regular
 
 # Calculations
 
-## Country Calendar
+## Is Holiday
 
 To determine if a day is a holiday for a Resource a Country Calendar Code can be set in the Contract.
 If no Country Calendar is set then the default Country Calendar set for the site is used.
+The resource contract has also an option to consider if Sundays are to be considered holiday days: there may be the case of contracts of resources that are doing shifts and the sunday is to be considered a regular day.
 
 ## Due Hours
 
@@ -71,4 +85,5 @@ If such value is 0 or negative then the _Overtime_ value is 0.
 
 ## Meal Voucher
 
-To earn a meal voucher, the Resource must work at least it _Due hours_ multiplied by a "Meal Voucher Threshold" (set in the Resource Contract "Meal voucher" field or defaulting to the site default, generally 6 hours Mon-Fri).
+To earn a meal voucher, the Resource must have the "meal_voucher" schedule set in the Contract and
+must have worked in the day (_Day shift hours_ + _Night shift hours_ + _Travel_) at least the threshold specified in the schedule for the day.

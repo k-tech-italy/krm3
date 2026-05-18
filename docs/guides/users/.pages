@@ -1,7 +1,13 @@
 title: User Guide
-arrange:
+nav:
   - index.md
-  - add.md
-  - remove.md
-  - entry.md
-  - submit.md
+  - Timesheet:
+    - timesheet_overview.md
+    - add.md
+    - remove.md
+    - remove_from_day.md
+    - entry.md
+    - submit.md
+    - bank_hours.md
+    - timesheet_report.md
+  - availability.md

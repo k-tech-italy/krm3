@@ -12,9 +12,8 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
 
 
-def pytest_configure(config):
-    here = Path(__file__).parent
-    sys.path.insert(0, str(here / '_extras'))
+here = Path(__file__).parent
+sys.path.insert(0, str(here / "_extras"))
 
 
 @pytest.fixture

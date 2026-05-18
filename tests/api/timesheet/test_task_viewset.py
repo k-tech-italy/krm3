@@ -12,6 +12,8 @@ from django.contrib.auth.models import Permission
 from django.core import exceptions
 from rest_framework import status
 from rest_framework.reverse import reverse
+
+from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
     ExtraHolidayFactory,
@@ -19,12 +21,10 @@ from testutils.factories import (
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
-    TimeEntryFactory,
+    TaskEntryFactory,
     TimesheetSubmissionFactory,
     UserFactory,
 )
-
-from krm3.core.models import TimeEntry
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
@@ -134,7 +134,7 @@ class TestTaskAPIListView:
     )
     @pytest.mark.parametrize(
         'task_end_date',
-        (pytest.param(datetime.date(2024, 12, 31), id='known_end'), pytest.param(None, id='open_ended')),
+        (pytest.param(_dt('2024-12-31'), id='known_end'), pytest.param(None, id='open_ended')),
     )
     def test_returns_valid_time_entry_data(
         self,
@@ -143,12 +143,12 @@ class TestTaskAPIListView:
         api_client,
         timesheet_api_staff_user,
     ):
-        project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
+        project = ProjectFactory(start_date=_dt('2022-01-01'))
 
-        task_start_date = datetime.date(2023, 1, 1)
+        task_start_date = _dt('2023-01-01')
 
-        time_entry_start_date = datetime.date(2024, 1, 1)
-        time_entry_end_date = datetime.date(2024, 1, 7)
+        time_entry_start_date = _dt('2024-01-01')
+        time_entry_end_date = _dt('2024-01-07')
 
         resource: Resource = ResourceFactory()
         task: 'Task' = TaskFactory(
@@ -156,22 +156,22 @@ class TestTaskAPIListView:
         )
 
         def _make_time_entry(**kwargs):
-            return TimeEntryFactory(task=kwargs.pop('task', task), resource=resource, **kwargs)
+            return TaskEntryFactory(task=kwargs.pop('task', task), resource=resource, **kwargs)
 
-        date_within_range = datetime.date(2024, 1, 3)
+        date_within_range = _dt('2024-01-03')
 
-        _early_time_entry = _make_time_entry(date=datetime.date(2023, 7, 1), comment='Too early')
-        _late_time_entry = _make_time_entry(date=datetime.date(2024, 7, 1), comment='Too late')
+        _early_time_entry = _make_time_entry(date=_dt('2023-07-01'), comment='Too early')
+        _late_time_entry = _make_time_entry(date=_dt('2024-07-01'), comment='Too late')
         task_entry_within_range = _make_time_entry(date=date_within_range, day_shift_hours=1, comment='Within range')
         day_entry_within_range = _make_time_entry(
             date=date_within_range, task=None, day_shift_hours=0, leave_hours=2, comment='Within range (day)'
         )
         # Timesheets are assigned to closed entry via 'link_entries' - Timesheet post-save signal
         TimesheetSubmissionFactory(
-            resource=resource, closed=True, period=((datetime.date(2024, 1, 3), datetime.date(2024, 1, 5)))
+            resource=resource, closed=True, period=((_dt('2024-01-03'), _dt('2024-01-05')))
         )
         TimesheetSubmissionFactory(
-            resource=resource, closed=False, period=((datetime.date(2024, 1, 5), datetime.date(2024, 1, 7)))
+            resource=resource, closed=False, period=((_dt('2024-01-05'), _dt('2024-01-07')))
         )
 
         api_data = {
@@ -417,8 +417,8 @@ class TestTaskAPIListView:
         ), 'check that for the task, a staff user receives a URL'
 
     def test_schedule_with_contract(self, admin_user, api_client):
-        start_date = datetime.date(2020, 5, 1)
-        end_date = datetime.date(2020, 5, 9)
+        start_date = _dt('2020-05-01')
+        end_date = _dt('2020-05-09')
         contract = ContractFactory(
             country_calendar_code='PL',
             period=(start_date, end_date + datetime.timedelta(days=1)),
@@ -453,11 +453,11 @@ class TestTaskAPIListView:
         }
 
     def test_schedule_with_multiple_contracts(self, admin_user, api_client):
-        start_date = datetime.date(2020, 5, 1)
-        end_date = datetime.date(2020, 5, 9)
+        start_date = _dt('2020-05-01')
+        end_date = _dt('2020-05-09')
         contract_1 = ContractFactory(
             country_calendar_code='PL',
-            period=(datetime.date(2020, 5, 1), datetime.date(2020, 5, 4)),
+            period=(_dt('2020-05-01'), _dt('2020-05-04')),
             working_schedule={
                 'mon': 2,
                 'tue': 2,
@@ -470,7 +470,7 @@ class TestTaskAPIListView:
         )
         ContractFactory(
             country_calendar_code='PL',
-            period=(datetime.date(2020, 5, 4), datetime.date(2020, 5, 10)),
+            period=(_dt('2020-05-04'), _dt('2020-05-10')),
             resource=contract_1.resource,
             working_schedule={
                 'mon': 4,
@@ -506,7 +506,7 @@ class TestTaskAPIListView:
         'extra_holiday_dates, expected_schedule',
         [
             (
-                [{'start_date': datetime.date(2020, 5, 2), 'end_date': datetime.date(2020, 5, 3)}],
+                [{'start_date': _dt('2020-05-02'), 'end_date': _dt('2020-05-03')}],
                 {
                     '2020-05-01': 0,
                     '2020-05-02': 0,
@@ -521,7 +521,7 @@ class TestTaskAPIListView:
                 },
             ),
             (
-                [{'start_date': datetime.date(2020, 5, 8), 'end_date': datetime.date(2020, 5, 10)}],
+                [{'start_date': _dt('2020-05-08'), 'end_date': _dt('2020-05-10')}],
                 {
                     '2020-05-01': 0,
                     '2020-05-02': 8,
@@ -537,8 +537,8 @@ class TestTaskAPIListView:
             ),
             (
                 [
-                    {'start_date': datetime.date(2020, 5, 1), 'end_date': datetime.date(2020, 5, 1)},
-                    {'start_date': datetime.date(2020, 5, 5), 'end_date': datetime.date(2020, 5, 6)},
+                    {'start_date': _dt('2020-05-01'), 'end_date': _dt('2020-05-01')},
+                    {'start_date': _dt('2020-05-05'), 'end_date': _dt('2020-05-06')},
                 ],
                 {
                     '2020-05-01': 0,
@@ -561,8 +561,8 @@ class TestTaskAPIListView:
                 period=(date['start_date'], date['end_date'] + datetime.timedelta(days=1)), country_codes=['PL']
             )
 
-        start_date = datetime.date(2020, 5, 1)
-        end_date = datetime.date(2020, 5, 10)
+        start_date = _dt('2020-05-01')
+        end_date = _dt('2020-05-10')
         contract = ContractFactory(
             country_calendar_code='PL',
             period=(start_date, end_date + datetime.timedelta(days=1)),
@@ -588,47 +588,47 @@ class TestTaskAPIListView:
         assert response.json()['schedule'] == expected_schedule
 
     def test_picks_only_ongoing_tasks(self, admin_user, api_client):
-        project = ProjectFactory(start_date=datetime.date(2022, 1, 1))
+        project = ProjectFactory(start_date=_dt('2022-01-01'))
 
-        time_entry_start_date = datetime.date(2024, 1, 1)
-        time_entry_end_date = datetime.date(2024, 1, 7)
+        time_entry_start_date = _dt('2024-01-01')
+        time_entry_end_date = _dt('2024-01-07')
 
         resource: 'Resource' = ResourceFactory()
 
         _expired_task = TaskFactory(
             resource=resource,
             project=project,
-            start_date=datetime.date(2022, 1, 1),
-            end_date=datetime.date(2023, 12, 31),
+            start_date=_dt('2022-01-01'),
+            end_date=_dt('2023-12-31'),
         )
         # NOTE: tasks expiring within the given range are considered ongoing
         expiring_task = TaskFactory(
             resource=resource,
-            start_date=datetime.date(2023, 1, 1),
-            end_date=datetime.date(2024, 1, 3),
+            start_date=_dt('2023-01-01'),
+            end_date=_dt('2024-01-03'),
             project=_expired_task.project,
         )
         ongoing_task = TaskFactory(
             resource=resource,
-            start_date=datetime.date(2023, 1, 1),
-            end_date=datetime.date(2024, 12, 31),
+            start_date=_dt('2023-01-01'),
+            end_date=_dt('2024-12-31'),
             project=_expired_task.project,
         )
         # NOTE: tasks starting within the given range are considered ongoing
         starting_midweek_task = TaskFactory(
             resource=resource,
-            start_date=datetime.date(2024, 1, 4),
-            end_date=datetime.date(2025, 12, 31),
+            start_date=_dt('2024-01-04'),
+            end_date=_dt('2025-12-31'),
             project=_expired_task.project,
         )
         _future_task = TaskFactory(
             resource=resource,
-            start_date=datetime.date(2032, 1, 1),
-            end_date=datetime.date(2033, 12, 31),
+            start_date=_dt('2032-01-01'),
+            end_date=_dt('2033-12-31'),
             project=_expired_task.project,
         )
         open_ended_task = TaskFactory(
-            resource=resource, start_date=datetime.date(2022, 1, 1), end_date=None, project=_expired_task.project
+            resource=resource, start_date=_dt('2022-01-01'), end_date=None, project=_expired_task.project
         )
 
         response = api_client(user=admin_user).get(
@@ -648,8 +648,8 @@ class TestTaskAPIListView:
         user_resource = ResourceFactory()
         other_user_resource = ResourceFactory()
 
-        start_date = datetime.date(2024, 1, 1)
-        end_date = datetime.date(2025, 1, 1)
+        start_date = _dt('2024-01-01')
+        end_date = _dt('2025-01-01')
 
         project = ProjectFactory(start_date=start_date)
 
@@ -719,8 +719,8 @@ class TestTaskAPIListView:
         for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
-        start_date = datetime.date(2024, 1, 1)
-        end_date = datetime.date(2025, 1, 1)
+        start_date = _dt('2024-01-01')
+        end_date = _dt('2025-01-01')
 
         project = ProjectFactory(start_date=start_date)
         user_task = TaskFactory(resource=user_resource, project=project, start_date=start_date, end_date=end_date)
@@ -878,7 +878,7 @@ class TestTimeEntryAPICreateView:
     )
     def test_accepts_special_leave_only_if_reason_is_valid(self, dates, expected_status_code, api_client, admin_user):
         resource = ResourceFactory()
-        reason = SpecialLeaveReasonFactory(from_date=datetime.date(2024, 1, 1), to_date=datetime.date(2024, 1, 31))
+        reason = SpecialLeaveReasonFactory(from_date=_dt('2024-01-01'), to_date=_dt('2024-01-31'))
         time_entry_data = {
             'dates': dates,
             'dayShiftHours': 0,
@@ -949,10 +949,10 @@ class TestTimeEntryAPICreateView:
             task_params = {k: v for k, v in entry_params.items() if k in task_entry_hours_keys}
 
             if day_params:
-                TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **day_params)
+                TaskEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **day_params)
 
             if task_params:
-                TimeEntryFactory(resource=resource, date=date_obj, task=task_1, **task_params)
+                TaskEntryFactory(resource=resource, date=date_obj, task=task_1, **task_params)
 
         time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
@@ -984,7 +984,7 @@ class TestTimeEntryAPICreateView:
         )
         task_1 = TaskFactory(resource=resource, title='Task 1')
 
-        TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **time_entries_params)
+        TaskEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **time_entries_params)
 
         time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
@@ -1043,13 +1043,13 @@ class TestTimeEntryAPICreateView:
             task_params = {k: v for k, v in entry_params.items() if k in task_entry_hours_keys}
 
             if day_params:
-                TimeEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **day_params)
+                TaskEntryFactory(resource=resource, date=date_obj, task=None, day_shift_hours=0, **day_params)
 
             if task_params:
-                TimeEntryFactory(resource=resource, date=date_obj, task=task_1, **task_params)
+                TaskEntryFactory(resource=resource, date=date_obj, task=task_1, **task_params)
 
         for task_entries_params in other_task_entries_params:
-            TimeEntryFactory(resource=resource, date=date_obj, task=task_2, **task_entries_params)
+            TaskEntryFactory(resource=resource, date=date_obj, task=task_2, **task_entries_params)
 
         time_entry_data = {'dates': [date_str], 'taskId': task_1.pk, 'resourceId': resource.pk, 'autofill': True}
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
@@ -1213,9 +1213,9 @@ class TestTimeEntryAPICreateView:
         assert set(instances.values_list('date', flat=True)) == {datetime.date(2024, 1, day) for day in range(8, 13)}
 
     def test_rejects_new_time_entries_summing_up_to_more_than_24_hours(self, admin_user, api_client):
-        today = datetime.date(2024, 1, 1)
+        today = _dt('2024-01-01')
         resource = ResourceFactory()
-        start_date = datetime.date(2023, 1, 1)
+        start_date = _dt('2023-01-01')
 
         project = ProjectFactory(start_date=start_date)
         first_task = TaskFactory(
@@ -1223,20 +1223,20 @@ class TestTimeEntryAPICreateView:
             resource=resource,
             project=project,
             start_date=start_date,
-            end_date=datetime.date(2025, 12, 31),
+            end_date=_dt('2025-12-31'),
         )
         second_task = TaskFactory(
             title='Second',
             resource=resource,
             project=project,
-            start_date=datetime.date(2023, 1, 1),
-            end_date=datetime.date(2025, 12, 31),
+            start_date=_dt('2023-01-01'),
+            end_date=_dt('2025-12-31'),
         )
 
         # we made some work on the first task
-        TimeEntryFactory(resource=resource, task=first_task, date=today, day_shift_hours=6)
+        TaskEntryFactory(resource=resource, task=first_task, date=today, day_shift_hours=6)
         # ... but had to do lots of night time work on the second
-        TimeEntryFactory(resource=resource, task=second_task, date=today, day_shift_hours=2, night_shift_hours=6)
+        TaskEntryFactory(resource=resource, task=second_task, date=today, day_shift_hours=2, night_shift_hours=6)
 
         # to hell with it, let's log some paid leave to get back at the
         # company! Take that, company! :^)
@@ -1258,12 +1258,12 @@ class TestTimeEntryAPICreateView:
 
         Single task case.
         """
-        today = datetime.date(2024, 1, 1)
+        today = _dt('2024-01-01')
         resource = ResourceFactory()
         task = TaskFactory(resource=resource)
 
         # we made a mistake and inadvertently saved too many hours... oops :^)
-        _wrong_time_entry = TimeEntryFactory(resource=resource, task=task, date=today, day_shift_hours=16)
+        _wrong_time_entry = TaskEntryFactory(resource=resource, task=task, date=today, day_shift_hours=16)
 
         # let's correct it
         response = api_client(user=admin_user).post(
@@ -1323,8 +1323,8 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 2)
-        existing_day_entry = TimeEntryFactory(resource=resource, date=target_date, sick_hours=8, day_shift_hours=0)
+        target_date = _dt('2024-01-02')
+        existing_day_entry = TaskEntryFactory(resource=resource, date=target_date, sick_hours=8, day_shift_hours=0)
 
         data = {
             'dates': [target_date.isoformat()],
@@ -1350,10 +1350,10 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 2)
+        target_date = _dt('2024-01-02')
         target_task = TaskFactory(title='target', resource=resource)
         other_task = TaskFactory(title='other', resource=resource)
-        existing_entry_on_target_task = TimeEntryFactory(
+        existing_entry_on_target_task = TaskEntryFactory(
             resource=resource, date=target_date, task=target_task, day_shift_hours=4
         )
 
@@ -1384,9 +1384,9 @@ class TestTimeEntryAPICreateView:
         self, hours_key, hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 2)
+        target_date = _dt('2024-01-02')
         task = TaskFactory(title='Should end up without task entries', resource=resource)
-        existing_task_entry = TimeEntryFactory(resource=resource, date=target_date, task=task, day_shift_hours=4)
+        existing_task_entry = TaskEntryFactory(resource=resource, date=target_date, task=task, day_shift_hours=4)
         existing_task_entry_id = existing_task_entry.pk
 
         data = {
@@ -1415,9 +1415,9 @@ class TestTimeEntryAPICreateView:
         self, hours_key, existing_hours_field, admin_user, api_client
     ):
         resource = ResourceFactory()
-        target_date = datetime.date(2024, 1, 2)
+        target_date = _dt('2024-01-02')
 
-        existing_day_entry = TimeEntryFactory(
+        existing_day_entry = TaskEntryFactory(
             resource=resource, date=target_date, day_shift_hours=0, **{existing_hours_field: 4}
         )
         existing_day_entry_id = existing_day_entry.pk
@@ -1555,6 +1555,7 @@ class TestTimeEntryAPICreateView:
         assert str(expected_event_payload) in message
 
 
+
 class TestTimeEntryClearAPIAction:
     @staticmethod
     def url():
@@ -1565,28 +1566,28 @@ class TestTimeEntryClearAPIAction:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_rejects_time_entry_ids_not_in_a_list(self, admin_user, api_client):
-        entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory())
+        entry = TaskEntryFactory(day_shift_hours=8, day_entry=True)
         response = api_client(user=admin_user).post(self.url(), data={'ids': entry.id}, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_rejects_deletion_of_closed_time_entries(self, admin_user, api_client):
-        open_entry = TimeEntryFactory(day_shift_hours=8, task=TaskFactory(), date=datetime.date(2020, 6, 1))
+        open_entry = TaskEntryFactory(day_shift_hours=8, date=_dt('2020-06-01'))
 
         TimesheetSubmissionFactory(
-            resource=open_entry.task.resource, period=(datetime.date(2020, 4, 1), datetime.date(2020, 5, 1))
+            resource=open_entry.task.resource, period=(_dt('2020-04-01'), _dt('2020-05-01'))
         )
         # Timesheet is being assigned to closed entry via 'link_to_timesheet' - Timeentry pre-save signal
         with pytest.raises(exceptions.ValidationError, match='Cannot modify time entries for submitted timesheets'):
-            TimeEntryFactory(
+            TaskEntryFactory(
                 resource=open_entry.task.resource,
                 day_shift_hours=8,
                 task=TaskFactory(),
-                date=datetime.date(2020, 4, 15),
+                date=_dt('2020-04-15'),
             )
 
     def test_admin_can_clear_any_time_entry(self, admin_user, api_client):
-        day_entry = TimeEntryFactory(date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8)
-        task_entry = TimeEntryFactory(date=datetime.date(2024, 1, 2), day_shift_hours=8, task=TaskFactory())
+        day_entry = TaskEntryFactory(date=_dt('2024-01-01'), day_shift_hours=0, sick_hours=8)
+        task_entry = TaskEntryFactory(date=_dt('2024-01-02'), day_shift_hours=8, task=TaskFactory())
         assert TimeEntry.objects.exists()
         response = api_client(user=admin_user).post(
             self.url(), data={'ids': [day_entry.pk, task_entry.pk]}, format='json'
@@ -1633,11 +1634,11 @@ class TestTimeEntryClearAPIAction:
         for permission in permissions:
             regular_user.user_permissions.add(Permission.objects.get(codename=permission))
 
-        entry = TimeEntryFactory(
-            date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8, resource=user_resource
+        entry = TaskEntryFactory(
+            date=_dt('2024-01-01'), day_shift_hours=0, sick_hours=8, resource=user_resource
         )
-        other_entry = TimeEntryFactory(
-            date=datetime.date(2024, 1, 1), day_shift_hours=0, sick_hours=8, resource=other_user_resource
+        other_entry = TaskEntryFactory(
+            date=_dt('2024-01-01'), day_shift_hours=0, sick_hours=8, resource=other_user_resource
         )
 
         response = api_client(user=regular_user).post(
@@ -1658,31 +1659,31 @@ class TestSpecialLeaveReasonViewSet:
         return reverse('timesheet-api:api-special-leave-reason-list')
 
     def test_returns_valid_reasons_in_limited_interval(self, admin_user, api_client):
-        interval_start = datetime.date(2024, 1, 1)
-        interval_end = datetime.date(2024, 1, 31)
+        interval_start = _dt('2024-01-01')
+        interval_end = _dt('2024-01-31')
 
         # this one is obvious
         always_valid = SpecialLeaveReasonFactory(title='always')
         # starts before our interval's start and doesn't end? it's ok
-        valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
+        valid_since_earlier_date = SpecialLeaveReasonFactory(title='since 1990', from_date=_dt('1900-01-01'))
         # this validity period fully contains our interval, so it's valid
         encompassing_interval = SpecialLeaveReasonFactory(
-            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+            title='definitely valid', from_date=_dt('2010-01-01'), to_date=_dt('2030-01-01')
         )
         # on the other hand, we don't want this one, as we can accept
         # the reason only in a part of our interval
         _fully_contained_within_interval = SpecialLeaveReasonFactory(
-            title='contained', from_date=datetime.date(2024, 1, 10), to_date=datetime.date(2024, 1, 15)
+            title='contained', from_date=_dt('2024-01-10'), to_date=_dt('2024-01-15')
         )
         # not expired yet, still good
-        valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        valid_until_future_date = SpecialLeaveReasonFactory(title='until 2030', to_date=_dt('2030-01-01'))
         # not started, we don't want it
-        _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=datetime.date(2027, 1, 1))
+        _not_valid_yet = SpecialLeaveReasonFactory(title='not valid yet', from_date=_dt('2027-01-01'))
         # throw it away, it's long expired
-        _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=datetime.date(2018, 1, 1))
+        _expired = SpecialLeaveReasonFactory(title='stale and moldy', to_date=_dt('2018-01-01'))
         # partial overlap, we don't want it - see above
-        _expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=datetime.date(2024, 1, 5))
-        _starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=datetime.date(2024, 1, 25))
+        _expiring_within_interval = SpecialLeaveReasonFactory(title='expiring', to_date=_dt('2024-01-05'))
+        _starting_within_interval = SpecialLeaveReasonFactory(title='starting', from_date=_dt('2024-01-25'))
 
         response = api_client(user=admin_user).get(
             self.url(), data={'from': interval_start.isoformat(), 'to': interval_end.isoformat()}
@@ -1698,10 +1699,10 @@ class TestSpecialLeaveReasonViewSet:
 
     def test_returns_all_reasons_if_no_interval_provided(self, admin_user, api_client):
         always_valid = SpecialLeaveReasonFactory(title='always')
-        with_start_date = SpecialLeaveReasonFactory(title='since 1990', from_date=datetime.date(1990, 1, 1))
-        with_end_date = SpecialLeaveReasonFactory(title='until 2030', to_date=datetime.date(2030, 1, 1))
+        with_start_date = SpecialLeaveReasonFactory(title='since 1990', from_date=_dt('1900-01-01'))
+        with_end_date = SpecialLeaveReasonFactory(title='until 2030', to_date=_dt('2030-01-01'))
         limited_validity_period = SpecialLeaveReasonFactory(
-            title='definitely valid', from_date=datetime.date(2010, 1, 1), to_date=datetime.date(2030, 1, 1)
+            title='definitely valid', from_date=_dt('2010-01-01'), to_date=_dt('2030-01-01')
         )
 
         response = api_client(user=admin_user).get(self.url())

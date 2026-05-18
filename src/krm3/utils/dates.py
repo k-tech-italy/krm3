@@ -1,34 +1,36 @@
 from __future__ import annotations
 
 import datetime
+import typing
 from calendar import Calendar
 from typing import Iterator, Self, override
 
 import holidays
 from dateutil.relativedelta import MO, SU, relativedelta
+from django.utils.translation import gettext_lazy as _
+from psycopg.types.range import DateRange, Range, T
 
 from krm3.config.environ import env
 
-
-type _Date = KrmDay | datetime.date | str
-type _MaybeDate = _Date | None
-
-
-def dt(dat: str) -> datetime.date:
-    """Parse a YYYY-MM-DD string."""
-    return datetime.datetime.strptime(dat, '%Y-%m-%d').date()
+if typing.TYPE_CHECKING:
+    from krm3.types.krmdates import KrmDayType, MaybeKrmDayType, PeriodType
 
 
 class KrmDay:
-    def __init__(self, day: _MaybeDate = None, **kwargs) -> None:
+    max = datetime.date.max
+
+    def __init__(self, day: MaybeKrmDayType = None, **kwargs) -> None:
         if day is None:
             day = datetime.date.today()
         if isinstance(day, KrmDay):
-            self.date = day.date
+            self.date: datetime.date = day.date
         elif isinstance(day, datetime.date):
-            self.date = day
+            self.date: datetime.date = day
         else:
-            self.date = dt(day)
+            if len(day) == 10:
+                self.date: datetime.date = datetime.datetime.strptime(day, '%Y-%m-%d').date()
+            else:
+                self.date: datetime.date = datetime.datetime.strptime(day, '%Y%m%d').date()
         self.__dict__.update(kwargs)
 
     @property
@@ -52,7 +54,7 @@ class KrmDay:
         return self.date.isocalendar()[1]
 
     def is_extra_holiday(self, country_calendar_code: str) -> bool:
-        from krm3.core.models import ExtraHoliday
+        from krm3.core.models import ExtraHoliday  # noqa: PLC0415
 
         extra_holidays = ExtraHoliday.objects.filter(
             period__contains=self.date, country_codes__contains=[country_calendar_code]
@@ -184,7 +186,7 @@ class KrmCalendar(Calendar):
         for x in super().itermonthdays(year, month):
             yield KrmDay(datetime.date(year, month, x)) if x else None
 
-    def iter_dates(self, from_date: _Date, to_date: _Date) -> Iterator[KrmDay]:
+    def iter_dates(self, from_date: KrmDayType, to_date: KrmDayType) -> Iterator[KrmDay]:
         """Iterate over all dates between from_date and to_date."""
         start = KrmDay(from_date)
         end = KrmDay(to_date)
@@ -195,12 +197,12 @@ class KrmCalendar(Calendar):
         for i in range(delta_days + 1):
             yield KrmDay(start.date + datetime.timedelta(days=i))
 
-    def get_work_days(self, from_date: _Date, to_date: _Date) -> list[KrmDay]:
+    def get_work_days(self, from_date: KrmDayType, to_date: KrmDayType) -> list[KrmDay]:
         days_between = self.iter_dates(from_date, to_date)
 
         return [day for day in days_between if not day.is_non_working_day()]
 
-    def week_for(self, date: _MaybeDate = None) -> tuple[KrmDay, KrmDay]:
+    def week_for(self, date: MaybeKrmDayType = None) -> tuple[KrmDay, KrmDay]:
         """Return the start and end date of the week for the given date.
 
         If no date is given, the current date is used.
@@ -229,4 +231,126 @@ def get_country_holidays(country_calendar_code: str = None) -> holidays.HolidayB
     return cal
 
 
+# Using 9999-09-09 allows to use +1 day unline datetime.date.max
 DATE_INFINITE = datetime.date(9999, 9, 9)
+
+
+class KrmDateRange(DateRange):
+    """A specialised version of DateRange.
+
+    It also accepts:
+      - a DateRange
+      - KrmDay | str as boundaries
+
+    NB: Regardless of the bounds specified when saving the data, PostgreSQL always returns a range in a canonical form
+        that includes the lower bound and excludes the upper bound, that is [)
+        See https://docs.djangoproject.com/en/6.0/ref/contrib/postgres/fields/#daterangefield
+    """
+
+    def __init__(self, lower: T | None = None, upper: T | None = None, bounds: str = '[)', empty: bool = False) -> None:
+        if isinstance(lower, Range):
+            lower, upper, bounds, empty = lower.lower, lower.upper, lower.bounds, lower.isempty
+        else:
+            if isinstance(lower, (tuple, list)):
+                lower, upper = lower
+            lower, upper = KrmDay(lower).date if lower else None, KrmDay(upper).date if upper else None
+        super().__init__(lower, upper, bounds, empty)
+        if lower is not None and upper is not None and lower > upper:
+            raise ValueError(_('Lower bound must be smaller than upper bound'))
+
+    @staticmethod
+    def from_start_end(start_date: MaybeKrmDayType, end_date: MaybeKrmDayType):
+        """Build a KrmDateRange from a start and end date (included)."""
+        # upper = (KrmDay(end_date) + 1).date if end_date else None
+        return KrmDateRange(lower=start_date, upper=end_date, bounds='[]')
+
+    def fully_lt(self, other: PeriodType) -> bool:
+        """Return True if the given date range is fully before than the other."""
+        other = KrmDateRange(other).as_dates()
+        return (self.upper or datetime.date.max) <= other.lower
+
+    def fully_gt(self, other: PeriodType) -> bool:
+        """Return True if the given date range is fully after than the other."""
+        other = KrmDateRange(other).as_dates()
+        return (self.lower or datetime.date.min) >= other.upper
+
+    def startsbefore(self, other: PeriodType) -> bool:
+        """Return True if the given date range start date is before the other's."""
+        other = KrmDateRange(other).as_dates()
+        return (self.lower or datetime.date.min) < other.lower
+
+    def startsafter(self, other: PeriodType) -> bool:
+        """Return True if the given date range start date is after the other's."""
+        other = KrmDateRange(other).as_dates()
+        return (self.lower or datetime.date.min) > other.lower
+
+    def endsbefore(self, other: PeriodType) -> bool:
+        """Return True if the given date range end date is before the other's."""
+        other = KrmDateRange(other).as_dates()
+        return (self.upper or datetime.date.max) < other.upper
+
+    def endsafter(self, other: DateRange) -> bool:
+        """Return True if the given date range end date is after the other's."""
+        other = KrmDateRange(other).as_dates()
+        return (self.upper or datetime.date.max) > other.upper
+
+    def precedes(self, other: DateRange) -> bool:
+        """Return True if the given date range is adjacent and precedes the other."""
+        other = KrmDateRange(other).as_dates()
+        return (self.upper or datetime.date.max) == other.lower
+
+    def follows(self, other: DateRange) -> bool:
+        """Return True if the given date range is adjacent and precedes the other."""
+        other = KrmDateRange(other).as_dates()
+        return (self.lower or datetime.date.min) == other.upper
+
+    def as_dates(self) -> KrmDateRange:
+        """Return the object as a PG DateRange replacing infinite boundaries with datetime.date.min/max."""
+        return KrmDateRange(self.lower or datetime.date.min, self.upper or datetime.date.max, self.bounds, self.isempty)
+
+    def contains(self, other: DateRange) -> bool:
+        """Check if range contains other range."""
+        other = KrmDateRange(other).as_dates()
+        period = self.as_dates()
+        return period.lower <= other.lower and period.upper >= other.upper
+
+    def contained_by(self, other: DateRange) -> bool:
+        """Check if range is contained by other range."""
+        other = KrmDateRange(other).as_dates()
+        period = self.as_dates()
+        return period.lower >= other.lower and period.upper <= other.upper
+
+    def overlap(self, other: DateRange) -> bool:
+        """Check if range is overlapping other range."""
+        other = KrmDateRange(other).as_dates()
+        period = self.as_dates()
+        return other.lower <= period.lower <= other.upper or period.lower <= other.upper <= period.upper
+
+    def adjacent_to(self, other: DateRange) -> bool:
+        """Check if range is adjacent to other range (touches at a boundary without overlapping)."""
+        return self.precedes(other) or self.follows(other)
+
+    @property
+    def boundaries(self) -> tuple[datetime.date | None, datetime.date | None]:
+        """Return the range's boundaries."""
+        return self.lower, self.upper
+
+    def __contains__(self, x: T) -> bool:
+        """Accept dates and KrmDay compatible x."""
+        return super().__contains__(KrmDay(x).date)
+
+    def __iter__(self) -> Iterator[KrmDay]:
+        """Return a KrmDay iterator over the days in the range.
+
+        Return TypeError for unbounded ranges.
+        """
+        if self.lower in [None, datetime.date.min] or self.upper in [None, datetime.date.max]:
+            raise TypeError(_('Cannot iterate over unbounded range'))
+        dt = KrmDay(self.lower)
+        for x in range((self.upper - self.lower).days):
+            yield dt + x
+
+    def __str__(self) -> str:
+        res = f'[{self.lower:%Y-%m-%d}:' if self.lower not in [None, datetime.date.min] else '(...:'
+        res += f'{self.upper:%Y-%m-%d})' if self.upper not in [None, datetime.date.max] else '...)'
+        return res

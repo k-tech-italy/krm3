@@ -1,0 +1,253 @@
+import datetime
+
+import pytest
+from django.urls import reverse
+from freezegun import freeze_time
+from testutils.date_utils import _dt
+from testutils.factories import ContractFactory, SuperUserFactory, TaskEntryFactory, DayEntryFactory, TaskFactory
+from testutils.web import _assert_homepage_content
+
+from krm3.timesheet.report.task import TimesheetTaskReportOnline
+
+
+class TestTimesheetTaskReport:
+    @pytest.fixture(autouse=True)
+    def setup_task_report_test_data(self):
+        self.user = SuperUserFactory()
+
+        contract_1 = ContractFactory()
+        contract_2 = ContractFactory()
+
+        self.r1 = contract_1.resource
+        self.r2 = contract_2.resource
+
+        self.task_1 = TaskFactory(period=(_dt('2025-06-15'), _dt('2025-07-31')), resource=self.r1)
+
+        self.task_2 = TaskFactory(period=(_dt('2025-06-05'), _dt('2025-06-11')), resource=self.r1)
+
+        self.task_3 = TaskFactory(period=(_dt('2025-06-05'), _dt('2025-07-11')), resource=self.r2)
+
+        TaskEntryFactory(
+            day_entry=DayEntryFactory(day=_dt('2025-06-16')),
+            day_shift_hours=6,
+            night_shift_hours=2,
+            task=self.task_1,
+            resource=self.r1,
+        )
+        TaskEntryFactory(
+            day_entry=DayEntryFactory(day=_dt('2025-06-17')),
+            day_shift_hours=7,
+            night_shift_hours=2,
+            task=self.task_1,
+            resource=self.r1,
+        )
+        TaskEntryFactory(day_entry=DayEntryFactory(day=_dt('2025-06-25')), day_shift_hours=0, travel_hours=5, task=self.task_1, resource=self.r1)
+        TaskEntryFactory(day_entry=DayEntryFactory(day=_dt('2025-06-22')), day_shift_hours=0, on_call_hours=5, task=self.task_1, resource=self.r1)
+        TaskEntryFactory(day_entry=DayEntryFactory(day=_dt('2025-06-22')), day_shift_hours=0, on_call_hours=3, task=self.task_2, resource=self.r1)
+        TaskEntryFactory(day_entry=DayEntryFactory(day=_dt('2025-06-23')), day_shift_hours=0, on_call_hours=4, task=self.task_2, resource=self.r1)
+        TaskEntryFactory(
+            day_entry=DayEntryFactory(day=_dt('2025-06-17')),
+            day_shift_hours=5,
+            night_shift_hours=3,
+            task=self.task_2,
+            resource=self.r1,
+        )
+        DayEntryFactory(day=_dt('2025-06-18'), asked_holiday=True, resource=self.r1)
+        DayEntryFactory(day=_dt('2025-06-19'), is_sick=True, resource=self.r1)
+        DayEntryFactory(day=_dt('2025-06-20'), leave_hours=3, resource=self.r1)
+
+        self.start_date = _dt('2025-06-01')
+        self.end_date = _dt('2025-06-30')
+
+    def test_header_data(self):
+        """Test header row contains correct summary data."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html()
+
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
+        resource1_block = matching_blocks[0]
+        assert resource1_block is not None
+
+        header_row = resource1_block.rows[0]
+        working_days = header_row.cells[0].render()
+        assert working_days == '20'
+
+        total_hours = header_row.cells[1].render()
+        assert total_hours == '160'
+
+    def test_task_rows_exist(self):
+        """Test that task rows are created for resources with tasks."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html()
+
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
+        resource1_block = matching_blocks[0]
+        assert resource1_block is not None
+
+        def has_expected_task_title(row):
+            return row.cells[0].render() == str(self.task_1)
+
+        assert any(has_expected_task_title(row) for row in resource1_block.rows[1:])
+
+    def test_task_hours_calculation(self):
+        """Test that task hours are calculated correctly."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html()
+
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
+        resource1_block = matching_blocks[0]
+        assert resource1_block is not None
+
+        task1_row = None
+        for row in resource1_block.rows[1:]:
+            if row.cells[0].render() == str(self.task_1):
+                task1_row = row
+                break
+
+        assert task1_row is not None
+
+        total_hours_cell = task1_row.cells[2].render()
+        assert total_hours_cell == '22'
+
+    def test_tot_per_giorno_row(self):
+        """Test that 'Tot per Giorno' row sums task hours correctly."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html()
+
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
+        resource1_block = matching_blocks[0]
+        assert resource1_block is not None
+
+        tot_row = None
+        for row in resource1_block.rows:
+            if row.cells[0].render() == 'Total per day':
+                tot_row = row
+                break
+
+        assert tot_row is not None
+
+        total_hours_cell = tot_row.cells[2].render()
+        assert total_hours_cell == '30'
+
+    def test_absence_row(self):
+        """Test that absence row exists and shows correct markers."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html()
+
+        matching_blocks = [b for b in blocks if b.resource and b.resource.pk == self.r1.id]
+        resource1_block = matching_blocks[0]
+        assert resource1_block is not None
+
+        absence_row = None
+        for row in resource1_block.rows:
+            if row.cells[0].render() == 'Absences':
+                absence_row = row
+                break
+
+        assert absence_row is not None
+        assert absence_row.cells[20].render() == 'F'
+        assert absence_row.cells[21].render() == 'M'
+        assert absence_row.cells[22].render() == 'L'
+
+    def test_task_filter(self):
+        """Test filtering if non-task entries are hidden"""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user)
+        blocks = report.report_html(tasks_only=False)
+        r1_block = next(b for b in blocks if b.resource and b.resource.pk == self.r1.id)
+        assert any(row.cells[0].render() == 'Absences' for row in r1_block.rows)
+
+        blocks = report.report_html(tasks_only=True)
+        r1_block = next(b for b in blocks if b.resource and b.resource.pk == self.r1.id)
+        assert not any(row.cells[0].render() == 'Absences' for row in r1_block.rows)
+
+    def test_project_filter(self):
+        """Test that filtering by project returns only resources and tasks from that project."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user, project=self.task_1.project_id)
+        blocks = report.report_html()
+
+        # Should only contain r1 because r2 doesn't have tasks in task_1.project
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        # Check task titles in rows
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_resource_filter(self):
+        """Test that filtering by resource returns only that resource."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user, resource=self.r2.id)
+        blocks = report.report_html()
+
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r2.id
+
+    def test_task_title_filter(self):
+        """Test that filtering by task title returns only tasks with that title."""
+        report = TimesheetTaskReportOnline(self.start_date, self.end_date, self.user, task_title=self.task_1.title)
+        blocks = report.report_html()
+
+        # r1 has task_1 and task_2. r2 has task_3.
+        # If we filter by task_1 title, we should only see r1 and only task_1.
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_combined_project_and_resource_filter(self):
+        """Test combined filtering by project and resource."""
+        report = TimesheetTaskReportOnline(
+            self.start_date, self.end_date, self.user, project=self.task_1.project_id, resource=self.r1.id
+        )
+        blocks = report.report_html()
+
+        assert len(blocks) == 1
+        assert blocks[0].resource.id == self.r1.id
+
+        all_row_labels = [row.cells[0].render() for row in blocks[0].rows]
+        assert str(self.task_1) in all_row_labels
+        assert str(self.task_2) not in all_row_labels
+
+    def test_combined_filters_no_results(self):
+        """Test combined filtering that should yield no results."""
+        report = TimesheetTaskReportOnline(
+            self.start_date, self.end_date, self.user, project=self.task_1.project_id, resource=self.r2.id
+        )
+        blocks = report.report_html()
+        assert len(blocks) == 0
+
+
+# View tests for task report
+
+
+@freeze_time('2025-08-22')
+def test_task_report_view_current_month(client):
+    SuperUserFactory(username='user00', password='pass123')
+    task = TaskFactory()
+    TaskEntryFactory(resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task)
+    client.login(username='user00', password='pass123')
+    url = reverse('task_report')
+    response = client.get(url)
+    _assert_homepage_content(response)
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert '<h1 class="title">Task Report August 2025</h1>' in content
+
+
+@freeze_time('2025-08-22')
+@pytest.mark.parametrize(
+    'month, expected_result',
+    [
+        pytest.param('202509', 'Task Report September 2025', id='next_month'),
+        pytest.param('202507', 'Task Report July 2025', id='previous_month'),
+    ],
+)
+def test_task_report_view_next_previous_month(client, month, expected_result):
+    SuperUserFactory(username='user00', password='pass123')
+    client.login(username='user00', password='pass123')
+    response = client.get(reverse('task-report-month', args=[month]))
+    _assert_homepage_content(response)
+    assert response.status_code == 200
+    assert expected_result in response.content.decode()

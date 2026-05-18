@@ -1,4 +1,5 @@
 import datetime
+import typing
 from datetime import timedelta
 
 from admin_extra_buttons.decorators import button
@@ -10,13 +11,14 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm, ContractTerminationForm
+from krm3.core.impexp import TimesheetExporter
 from krm3.core.models import (
     Address,
     AddressInfo,
@@ -36,7 +38,12 @@ from krm3.core.models import (
     Website,
     WebsiteInfo,
 )
+from krm3.sentry import capture_exception
 from krm3.styles.buttons import DANGEROUS
+
+if  typing.TYPE_CHECKING:
+    from django.db.models import QuerySet
+    from django.http import HttpRequest
 
 
 @admin.register(UserProfile)
@@ -88,9 +95,26 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
-    list_display = ('first_name', 'last_name', 'user', 'active', 'preferred_in_report')
+    """Resource model admin."""
+
+    list_display = ('first_name', 'last_name', 'user', 'preferred_in_report')
     search_fields = ['first_name', 'last_name']
-    list_filter = (('active', admin.BooleanFieldListFilter),)
+    actions = ['export_timesheets']
+
+    @admin.action(description='Export selected timesheets')
+    def export_timesheets(self, request: 'HttpRequest', queryset: 'QuerySet[Resource]') -> 'JsonResponse':
+        """Export selected timesheets."""
+        try:
+            buffer = TimesheetExporter(queryset).export()
+            response = JsonResponse(buffer)
+            now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            response['Content-Disposition'] = f'attachment; filename="mission-export-{now}.json"'
+            # response['Content-Length'] = buffer.tell()
+
+            return response
+        except Exception as e:  # noqa: BLE001
+            messages.error(request, f'Failed to export timesheets: {e}')
+            capture_exception()
 
 
 @admin.register(Client)
@@ -109,6 +133,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'working_schedule',
         'sunday_as_holiday',
         'meal_voucher',
+        'sunday_as_holiday',
         'document_link',
     ]
     list_filter = [('resource', AutoCompleteFilter)]
@@ -131,7 +156,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return '-'
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: not btn.original.period.upper)
-    def terminate(self, request: HttpRequest, pk: str) -> HttpResponse:
+    def terminate(self, request: 'HttpRequest', pk: str) -> HttpResponse:
         contract = get_object_or_404(Contract, pk=pk)
         context = self.get_common_context(request, pk, title='Terminate Contract')
 
@@ -199,8 +224,8 @@ class ContactAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         AddressInfoInline,
     ]
 
-    @button(label='fetch photo')
-    def fetch_picture(self, request: HttpRequest, contact_id: str) -> None:
+    @button(label="fetch photo")
+    def fetch_picture(self, request: 'HttpRequest', contact_id: str) -> None:
         Contact.objects.get(pk=contact_id).fetch_picture()
 
 

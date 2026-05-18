@@ -30,7 +30,7 @@ class DocumentFilter:  # pragma: no cover
     Supports nested AND/OR filter groups and field-specific operators:
     - filename: icontains, exact, istartswith, iendswith
     - upload_date: exact, gte, lte, between
-    - reference_period: overlaps, contains, contained_by
+    - reference_period: overlap, contains, contained_by
     - tags: contains_all, contains_any, exact (placeholder for future M2M)
 
     Example usage:
@@ -330,7 +330,7 @@ class DocumentFilter:  # pragma: no cover
             date_range = DateRange(start_date, end_date, bounds='[]')
 
             match operator:
-                case 'overlaps':
+                case 'overlap':
                     return Q(reference_period__overlap=date_range)
                 case 'contains':
                     return Q(reference_period__contains=date_range)
@@ -339,7 +339,7 @@ class DocumentFilter:  # pragma: no cover
                 case _:
                     raise ValueError(
                         f"Unsupported operator '{operator}' for reference_period field. "
-                        f"Expected one of: overlaps, contains, contained_by"
+                        f"Expected one of: overlap, contains, contained_by"
                     )
         except (ValueError, TypeError) as e:
             # Only catch date parsing errors, not our operator validation ValueError

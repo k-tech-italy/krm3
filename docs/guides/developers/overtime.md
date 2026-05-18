@@ -4,6 +4,11 @@
 This document describes how overtime hours are calculated for time entries.
 
 ## Business Rules
+
+### Untracked overtime
+
+Overtime is always 0 if Contract.overtime is False.
+
 ### Fields that prevent overtime
 Overtime cannot be calculated when any of the following fields have non-zero values:
 

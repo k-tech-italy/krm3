@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth.models import Permission
 
-from testutils.factories import TimeEntryFactory, ResourceFactory, TaskFactory
+from testutils.factories import TaskEntryFactory, ResourceFactory, TaskFactory
 
 
 @pytest.mark.parametrize(
@@ -14,15 +14,18 @@ from testutils.factories import TimeEntryFactory, ResourceFactory, TaskFactory
     ],
 )
 def test_user_can_manage_own_timesheets(user, perm, expected, admin_user, regular_user):
-    user_time_entry = TimeEntryFactory(resource=ResourceFactory(user=regular_user), task=TaskFactory())
-    admin_time_entry = TimeEntryFactory(resource=ResourceFactory(user=admin_user), task=TaskFactory())
+    regular_resource = ResourceFactory(user=regular_user)
+    admin_resource = ResourceFactory(user=admin_user)
+
+    user_time_entry = TaskEntryFactory(resource=regular_resource, day_entry=True)
+    admin_time_entry = TaskEntryFactory(resource=admin_resource, day_entry=True)
     user = admin_user if user == 'admin' else regular_user
     if perm:
         user.user_permissions.add(Permission.objects.get(codename=perm))
 
-    from krm3.core.models import TimeEntry
+    from krm3.core.models import TaskEntry
 
-    entries = set(TimeEntry.objects.filter_acl(user=user).all())
+    entries = set(TaskEntry.objects.filter_acl(user=user).all())
     assert entries == {user_time_entry, admin_time_entry} if expected == 'all' else {user_time_entry}
 
 
@@ -36,8 +39,8 @@ def test_user_can_manage_own_timesheets(user, perm, expected, admin_user, regula
     ],
 )
 def test_user_can_access_own_tasks(user, perm, expected, admin_user, regular_user):
-    user_task = TaskFactory(resource=ResourceFactory(user=regular_user))
-    admin_task = TaskFactory(resource=ResourceFactory(user=admin_user))
+    user_task = TaskFactory(resource=ResourceFactory(user=regular_user), contract=True)
+    admin_task = TaskFactory(resource=ResourceFactory(user=admin_user), contract=True)
     user = admin_user if user == 'admin' else regular_user
     if perm:
         user.user_permissions.add(Permission.objects.get(codename=perm))

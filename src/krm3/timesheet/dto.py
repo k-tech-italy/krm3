@@ -10,8 +10,9 @@ from django.contrib.postgres.fields import ranges
 from krm3.core.models.auth import Resource, User
 from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task, TaskQuerySet
-from krm3.core.models.timesheets import TimeEntry, TimeEntryQuerySet
+from krm3.core.models.timesheets import TaskEntry, TaskEntriesQuerySet, DayEntry, DayEntriesQuerySet
 from krm3.utils.dates import KrmCalendar
+from dateutil.relativedelta import relativedelta
 
 if typing.TYPE_CHECKING:
     from krm3.config.fragments.constance import ConstanceTyping
@@ -20,31 +21,36 @@ if typing.TYPE_CHECKING:
 class TimesheetDTO:
     def __init__(self, requested_by: User | None = None) -> None:
         self.tasks = TaskQuerySet().none()
-        self.time_entries = TimeEntryQuerySet().none()
+        self.day_entries = DayEntriesQuerySet().none()
         self.requested_by = requested_by
         self.resource = None
-        self.schedule = {}
         self.timesheet_colors = {}
         self.bank_hours = 0.0
         self.contracts = Contract.objects.none()
 
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         """Fetch the resource timesheet for a specific date interval."""
-        task_qs = Task.objects.filter_acl(self.requested_by) if self.requested_by else Task.objects.all()
-        self.tasks = task_qs.active_between(start_date, end_date).assigned_to(resource=resource)
-        te_qs = TimeEntry.objects.filter_acl(self.requested_by) if self.requested_by else TimeEntry.objects.all()
-        self.time_entries = te_qs.filter(resource=resource, date__range=(start_date, end_date))
+        upper = end_date + relativedelta(days=1)
+        self.tasks = Task.objects.filter(period__overlap=(start_date, upper)).assigned_to(
+            resource=resource
+        )
+        if self.requested_by:
+            self.tasks = self.tasks.filter_acl(user=self.requested_by)
+
+        self.day_entries = DayEntry.objects.filter(
+            day__gte=start_date, day__lte=end_date
+        ).prefetch_related('taskentry_set').select_related('contract')
+        if self.requested_by:
+            self.day_entries = self.day_entries.filter_acl(user=self.requested_by)
 
         self.contracts = Contract.objects.filter(
-            resource=resource, period__overlap=ranges.DateRange(start_date, end_date)
+            resource=resource, period__overlap=ranges.DateRange(start_date, upper)
         )
+        if self.requested_by:
+            self.contracts = self.contracts.filter_acl(user=self.requested_by)
 
-        calendar = KrmCalendar()
-
-        self.days = calendar.iter_dates(start_date, end_date)
+        self.days = list(KrmCalendar().iter_dates(start_date, end_date))
         self.resource = resource
-
-        self.schedule = resource.get_schedule(start_date, end_date)
 
         conf: ConstanceTyping = config
         self.timesheet_colors.update(
@@ -58,6 +64,6 @@ class TimesheetDTO:
             }
         )
 
-        self.bank_hours = resource.get_bank_hours_balance()
+        self.bank_hours = resource.get_bank_hours_balance(at=end_date)
 
         return self

@@ -1,7 +1,9 @@
 
-# # Welcome to KRM3 for User
+# KRM3 User Documentation
 
-See the Glossary for a list of common KRM3 terminology
+See the [Glossary](./glossary/index.md) for a list of common KRM3 terminology
+
+Read First: Key Concepts
 
 Welcome to the KRM3 employee page of K-Tech and Singlewave companies.
 

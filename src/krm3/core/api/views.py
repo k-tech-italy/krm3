@@ -1,7 +1,6 @@
 import logging
 from typing import Any, cast
 
-from dateutil.relativedelta import relativedelta
 from django.contrib.auth import (
     authenticate,
     login as djlogin,
@@ -24,6 +23,7 @@ from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
     PreferredLanguageSerializer,
+    ResourceBriefSerializer,
     ResourceSerializer,
     UserSerializer,
 )
@@ -38,7 +38,8 @@ from krm3.core.models import (
     User,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
-from krm3.utils.dates import dt
+from krm3.utils.dates import KrmDay, KrmDateRange
+
 
 
 class DefaultPagination(PageNumberPagination):
@@ -212,13 +213,15 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     serializer_class = ResourceSerializer
     queryset = Resource.objects.order_by('last_name', 'first_name')
 
-    @action(methods=['get'], detail=False)
-    def active(self, request: Request) -> Response:
-        user = cast('User', request.user)
-        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        active_resources = self.get_queryset().filter(active=True)
-        serializer = ResourceSerializer(active_resources, many=True)
+    @action(
+        methods=['get'],
+        detail=False,
+        url_path=r'active/(?P<date_from>[^/]+)?/(?P<date_to>[^/]+)?',
+    )
+    def active(self, request: Request, date_from: str | None = None, date_to: str | None = None) -> Response:
+        range = KrmDateRange.from_start_end(date_from, date_to).boundaries
+        active_resources = self.get_queryset().active_between(*range)
+        serializer = ResourceBriefSerializer(active_resources, many=True)
         return Response(serializer.data)
 
     @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
@@ -303,7 +306,7 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     def create(self, request: Request, *args, **kwargs) -> Response:
         """Create a new Timesheet submission or replace an existing opened one."""
         period = request.data['period'][:]
-        period[1] = (dt(period[1]) + relativedelta(days=1)).strftime('%Y-%m-%d')
+        period[1] = str(KrmDay(period[1]) + 1)
         ts = TimesheetSubmission.objects.filter(
             resource_id=request.data['resource'], period=period, closed=False
         ).first()
@@ -345,8 +348,10 @@ class TitleChoicesViewSet(ViewSet):
 class SupportedLanguagesViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def list(self, request: Request) -> Response:
+    def list(self, request):
         from django.conf import settings
-
-        languages = [{'language_code': code, 'language': name} for code, name in settings.LANGUAGES]
+        languages = [
+            {"language_code": code, "language": name}
+            for code, name in settings.LANGUAGES
+        ]
         return Response(languages)

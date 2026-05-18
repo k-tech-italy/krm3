@@ -2,17 +2,17 @@ import datetime
 import json
 import typing
 from datetime import date
+
 import pytest
 from constance.test import override_config
 from django.test import override_settings
-
-
-from krm3.utils.dates import KrmDay
 from testutils.date_utils import _dt
-from testutils.factories import ResourceFactory, ContractFactory
+from testutils.factories import ContractFactory, ResourceFactory
+
+from krm3.utils.dates import KrmDay, KrmDateRange
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import Resource, Contract
+    from krm3.core.models import Contract, Resource
 
 
 @pytest.fixture
@@ -35,16 +35,16 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
     schedule = resource.get_schedule(start_day, end_day)
 
     assert schedule == {
-        datetime.date(2020, 1, 1): 0,
-        datetime.date(2020, 1, 2): 4,
-        datetime.date(2020, 1, 3): 5,
-        datetime.date(2020, 1, 4): 6,
-        datetime.date(2020, 1, 5): 7,
-        datetime.date(2020, 1, 6): 0,
-        datetime.date(2020, 1, 7): 2,
-        datetime.date(2020, 1, 8): 3,
-        datetime.date(2020, 1, 9): 4,
-        datetime.date(2020, 1, 10): 5,
+        _dt('2020-01-01'): 0,
+        _dt('2020-01-02'): 4,
+        _dt('2020-01-03'): 5,
+        _dt('2020-01-04'): 6,
+        _dt('2020-01-05'): 7,
+        _dt('2020-01-06'): 0,
+        _dt('2020-01-07'): 2,
+        _dt('2020-01-08'): 3,
+        _dt('2020-01-09'): 4,
+        _dt('2020-01-10'): 5,
     }
 
 
@@ -60,9 +60,9 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             'IT-RM',
             {},
             {
-                datetime.date(2020, 1, 1): 0,  # New Year
-                datetime.date(2020, 1, 2): 4,
-                datetime.date(2020, 1, 3): 5,
+                _dt('2020-01-01'): 0,  # New Year
+                _dt('2020-01-02'): 4,
+                _dt('2020-01-03'): 5,
             },
         ),
         (
@@ -70,7 +70,7 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             date(2020, 11, 12),
             'IT-RM',
             {},
-            {datetime.date(2020, 11, 10): 2, datetime.date(2020, 11, 11): 3, datetime.date(2020, 11, 12): 4},
+            {_dt('2020-11-10'): 2, _dt('2020-11-11'): 3, _dt('2020-11-12'): 4},
         ),
         (
             date(2020, 11, 10),
@@ -78,12 +78,12 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             'PL',
             {},
             {
-                datetime.date(2020, 11, 10): 2,
-                datetime.date(2020, 11, 11): 0,  # polish Independence Day
-                datetime.date(2020, 11, 12): 4,
-                datetime.date(2020, 11, 13): 5,
-                datetime.date(2020, 11, 14): 6,
-                datetime.date(2020, 11, 15): 7,
+                _dt('2020-11-10'): 2,
+                _dt('2020-11-11'): 0,  # polish Independence Day
+                _dt('2020-11-12'): 4,
+                _dt('2020-11-13'): 5,
+                _dt('2020-11-14'): 6,
+                _dt('2020-11-15'): 7,
             },
         ),
         (
@@ -92,12 +92,12 @@ def test_get_schedule_returns_default_if_there_is_no_contract():
             'PL',
             {'mon': 2, 'tue': 3, 'wed': 4, 'thu': 5, 'fri': 6, 'sat': 7, 'sun': 8},
             {
-                datetime.date(2020, 11, 10): 3,
-                datetime.date(2020, 11, 11): 0,  # polish Independence Day
-                datetime.date(2020, 11, 12): 5,
-                datetime.date(2020, 11, 13): 6,
-                datetime.date(2020, 11, 14): 7,
-                datetime.date(2020, 11, 15): 8,
+                _dt('2020-11-10'): 3,
+                _dt('2020-11-11'): 0,  # polish Independence Day
+                _dt('2020-11-12'): 5,
+                _dt('2020-11-13'): 6,
+                _dt('2020-11-14'): 7,
+                _dt('2020-11-15'): 8,
             },
         ),
     ],
@@ -198,78 +198,5 @@ def test_get_krm_days_with_contract_min_working_hours(schedule, expected):
 def test_get_contracts(start_date, end_date, expected, contracts_list):
     resource: 'Resource' = contracts_list[0].resource
     contracts = resource.get_contracts(start_date, end_date)
-    assert contracts == [contracts_list[x] for x in expected]
-
-
-@pytest.mark.parametrize(
-    'vcard_text, should_be_valid, test_description',
-    [
-        pytest.param(None, True, 'None vcard_text', id='none'),
-        pytest.param('', True, 'Empty vcard_text', id='empty'),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nN:Doe;John;;;\nTEL:+1234567890\nEMAIL:john@example.com\nEND:VCARD',
-            True,
-            'Valid vCard with Unix line endings',
-            id='valid-unix',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Jane Smith\r\nN:Smith;Jane;;;\r\nEND:VCARD\r\n',
-            True,
-            'Valid vCard with Windows line endings',
-            id='valid-windows',
-        ),
-        pytest.param(
-            (
-                'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nN:Doe;John;;;\n'
-                'item1.TEL:+1234567890\nitem1.X-ABLabel:iPhone\nEND:VCARD'
-            ),
-            True,
-            'Valid vCard with Apple extensions',
-            id='valid-apple-extensions',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nFN:John Doe\nEND:VCARD',
-            True,
-            'vCard without VERSION (lenient parsing)',
-            id='no-version',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nEND:VCARD',
-            True,
-            'vCard without FN/N (lenient parsing)',
-            id='no-fn',
-        ),
-        pytest.param(
-            'This is not a vCard',
-            False,
-            'Malformed vCard',
-            id='malformed',
-        ),
-        pytest.param(
-            'BEGIN:VCARD\nVERSION:3.0\nFN:Test\nN:Test;;;\nEND:VCAR',
-            False,
-            'Invalid vCard with incomplete END tag',
-            id='incomplete-end',
-        ),
-    ],
-)
-def test_resource_vcard_validation(vcard_text, should_be_valid, test_description):
-    """Test vCard validation for the Resource model using vobject.
-
-    vobject is more lenient than strict RFC 2426 validation and supports:
-    - vCard 2.1, 3.0, and 4.0 formats
-    - Apple-specific extensions (item1.TEL, X-ABLabel, etc.)
-    - Missing VERSION or FN/N fields (lenient mode)
-    """
-    from django.core.exceptions import ValidationError
-
-    resource = ResourceFactory(vcard_text=vcard_text)
-
-    if should_be_valid:
-        # Should not raise ValidationError
-        resource.clean()
-    else:
-        # Should raise ValidationError
-        with pytest.raises(ValidationError) as exc_info:
-            resource.clean()
-        assert 'vcard_text' in exc_info.value.message_dict
+    KrmDateRange()
+    assert contracts == {KrmDateRange(contracts_list[x].period): contracts_list[x] for x in expected}

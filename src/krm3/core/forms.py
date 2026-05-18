@@ -4,10 +4,11 @@ import typing
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.forms import ModelForm
 from django.utils.translation import gettext_lazy as _l
 
-from krm3.core.models import Contract, ProtectedDocument
+from krm3.core.models import Contract, ProtectedDocument, DayEntry
 from krm3.core.widgets import PrivateMediaFileInput
 from krm3.utils.dates import DATE_INFINITE
 
@@ -51,13 +52,9 @@ class ContractForm(ModelForm):
 
             # check if interval becomes smaller
             if new_period[1] < old_period[1] or new_period[0] > old_period[0]:
-                for task in self.instance.get_tasks():
-                    task_period = [task.start_date, task.end_date or DATE_INFINITE]
-                    if (new_period[0] > old_period[0] and new_period[0] > task_period[0]) or (
-                        new_period[1] < old_period[1] and new_period[1] - datetime.timedelta(days=1) < task_period[1]
-                    ):
-                        raise ValidationError('Shrinking contract period would leave orphan tasks', code='orphan-tasks')
-
+                boundaries = self.instance.period_as_tuple()
+                if self.instance.dayentry_set.filter(Q(day_lt=boundaries[0]) | Q(day_gte=boundaries[1])).exists():
+                    raise ValidationError('Shrinking contract period would leave orphan tasks', code='orphan-tasks')
         return ret
 
     class Meta:

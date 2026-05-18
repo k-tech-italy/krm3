@@ -1,3 +1,6 @@
 nav:
-  - API: api.md
-  - Build: build.md
+  - index.md
+  - Contributing: contributing
+  - overtime.md
+  - pipeline.md
+  - Design: design

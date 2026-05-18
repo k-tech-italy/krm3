@@ -2,10 +2,9 @@ import typing
 
 import pytest
 from rest_framework.reverse import reverse
-from testutils.date_utils import _dt
-from testutils.factories import TaskFactory, TimeEntryFactory
 
-from krm3.core.models import TimeEntry
+from testutils.date_utils import _dt
+from testutils.factories import TaskFactory, TaskEntryFactory
 
 if typing.TYPE_CHECKING:
     from krm3.core.models.projects import Task
@@ -13,8 +12,8 @@ if typing.TYPE_CHECKING:
 
 @pytest.fixture
 def scenario_time_entries(resources):
-    t1 = TaskFactory(resource=resources['admin'])
-    t2 = TaskFactory(resource=resources['regular'])  # other resource
+    t1 = TaskFactory(resource=resources['admin'], contract=True)
+    t2 = TaskFactory(resource=resources['regular'], contract=True)  # other resource
     return {
         'resources': resources,
         'tasks': {
@@ -22,13 +21,13 @@ def scenario_time_entries(resources):
             't2': t2,
         },
         'time_entries': {
-            1: TimeEntryFactory(resource=resources['admin'], date=_dt('20250824'), task=t1, day_shift_hours=2),
-            2: TimeEntryFactory(resource=resources['admin'], date=_dt('20250825'), task=t1, day_shift_hours=2),
-            3: TimeEntryFactory(resource=resources['admin'], date=_dt('20250826'), task=t1, day_shift_hours=2),
-            4: TimeEntryFactory(resource=resources['admin'], date=_dt('20250827'), task=t1, day_shift_hours=2),
-            5: TimeEntryFactory(resource=resources['admin'], date=_dt('20250828'), task=t1, day_shift_hours=2),
-            6: TimeEntryFactory(resource=resources['admin'], date=_dt('20250829'), task=t1, day_shift_hours=2),
-            7: TimeEntryFactory(resource=resources['regular'], date=_dt('20250827'), task=t2, day_shift_hours=2),
+            1: TaskEntryFactory(resource=resources['admin'], date=_dt('20250824'), task=t1, day_shift_hours=2),
+            2: TaskEntryFactory(resource=resources['admin'], date=_dt('20250825'), task=t1, day_shift_hours=2),
+            3: TaskEntryFactory(resource=resources['admin'], date=_dt('20250826'), task=t1, day_shift_hours=2),
+            4: TaskEntryFactory(resource=resources['admin'], date=_dt('20250827'), task=t1, day_shift_hours=2),
+            5: TaskEntryFactory(resource=resources['admin'], date=_dt('20250828'), task=t1, day_shift_hours=2),
+            6: TaskEntryFactory(resource=resources['admin'], date=_dt('20250829'), task=t1, day_shift_hours=2),
+            7: TaskEntryFactory(resource=resources['regular'], date=_dt('20250827'), task=t2, day_shift_hours=2),
         },
     }
 
@@ -44,7 +43,7 @@ def scenario_time_entries(resources):
 )
 def test_time_entry_can_list(usr: str, num: int, scenario_time_entries, api_client):
     requestor = scenario_time_entries['resources'][usr].user
-    url = reverse('timesheet-api:api-time-entry-list')
+    url = reverse('timesheet-api:api-task-entry-list')
     response = api_client(user=requestor).get(url)
     assert response.status_code == 200, response.data.get('detail')
     assert response.data['count'] == num
@@ -152,7 +151,10 @@ def test_time_entry_update_locked_by_timesheet(
     from krm3.core.models import TimesheetSubmission  # noqa: PLC0415
 
     pk = scenario_time_entries['time_entries'][1].id
-    url = reverse('timesheet-api:api-time-entry-detail', kwargs={'pk': pk})
+    url = reverse(
+        'timesheet-api:api-time-entry-detail',
+        kwargs={'pk': pk}
+    )
 
     task: 'Task' = scenario_time_entries['tasks']['t1']
     TimesheetSubmission.objects.create(period=['2025-08-24', '2025-08-31'], resource=task.resource, closed=closed)

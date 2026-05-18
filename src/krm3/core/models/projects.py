@@ -1,23 +1,52 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Self, override, Iterable
 
+from typing import TYPE_CHECKING, Iterable, Self, override
+
+from django.contrib.postgres.fields import DateRangeField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
 
+
+from ...utils.dates import KrmDateRange
 from .auth import Resource
 from .contacts import Client
-from .timesheets import TimeEntry
 
 if TYPE_CHECKING:
     import datetime
-    from django.db.models.base import ModelBase
     from decimal import Decimal
-    from krm3.core.models.auth import User
-    from krm3.core.models import Project, Task, Mission, InvoiceEntry
 
+    from django.db.models.base import ModelBase
     from django.db.models.fields.related_descriptors import RelatedManager
+
+    from krm3.core.models import InvoiceEntry, Mission, TaskEntry
+    from krm3.core.models.auth import User
+
+
+class PeriodBoundCheckerMixin:
+    def save(
+        self,
+        *,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+
+    def check_period_bounds(self):
+        if self.period:
+            if self.period.lower is None:
+                raise ValidationError(_('"start_date" is required'), code='required')
+
+            if self.period.upper and (self.period.lower >= self.period.upper):
+                raise ValidationError(_('End date must be at least one day after start date'), code='invalid_date_interval')
+
+    def clean(self) -> None:
+        self.check_period_bounds()
+        return super().clean()
 
 
 class ProjectManager(NaturalKeyModelManager):
@@ -31,11 +60,10 @@ class ProjectManager(NaturalKeyModelManager):
         return self.filter(mission__resource__profile__user=user)
 
 
-class Project(NaturalKeyModel):
+class Project(PeriodBoundCheckerMixin, NaturalKeyModel):
     name = models.CharField(max_length=80, unique=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     metadata = models.JSONField(default=dict, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
 
@@ -52,27 +80,6 @@ class Project(NaturalKeyModel):
     def __str__(self) -> str:
         return str(self.name)
 
-    @override
-    def save(
-        self,
-        *,
-        force_insert: bool = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
-    ) -> None:
-        self.full_clean()
-        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
-
-    @override
-    def clean(self) -> None:
-        if self.start_date is None:
-            raise ValidationError(_('"start_date" is required'), code='required')
-
-        if self.end_date and (self.start_date > self.end_date):
-            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
-        return super().clean()
-
     def is_accessible(self, user: User) -> bool:
         return user.can_manage_or_view_any_project() or self.mission_set.filter(resource__profile__user=user).exists()
 
@@ -82,16 +89,15 @@ class POState(models.TextChoices):
     CLOSED = 'CLOSED', _('Closed')
 
 
-class PO(models.Model):
+class PO(PeriodBoundCheckerMixin, models.Model):
     """A PO for a project."""
 
     ref = models.CharField(max_length=50)
     is_billable = models.BooleanField(default=True)
     state = models.TextField(choices=POState, default=POState.OPEN)  # pyright: ignore[reportArgumentType]
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
 
     class Meta:
         constraints = (models.UniqueConstraint(fields=('ref', 'project'), name='unique_ref_project_in_po'),)
@@ -101,26 +107,6 @@ class PO(models.Model):
     @override
     def __str__(self) -> str:
         return self.ref
-
-    @override
-    def save(
-        self,
-        *,
-        force_insert: bool | tuple[ModelBase, ...] = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
-    ) -> None:
-        self.full_clean()
-        return super().save(
-            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
-        )
-
-    @override
-    def clean(self) -> None:
-        if self.end_date and self.start_date > self.end_date:
-            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
-        return super().clean()
 
 
 class Basket(models.Model):
@@ -161,17 +147,14 @@ class Basket(models.Model):
 
         :return: the computed capacity
         """
-        time_entries = TimeEntry.objects.open().filter(task__in=self.tasks())  # pyright: ignore
+        from krm3.core.models import TaskEntry
+
+        time_entries = TaskEntry.objects.open().filter(task__in=self.tasks())  # pyright: ignore
         logged_hours = sum(entry.total_task_hours for entry in time_entries)
         return self.current_capacity() - logged_hours
 
 
 class TaskQuerySet(models.QuerySet['Task']):
-    def active_between(self, range_start: datetime.date, range_end: datetime.date) -> Self:
-        return self.filter(start_date__lte=range_end).filter(
-            models.Q(end_date=None) | models.Q(end_date__gte=range_start)
-        )
-
     def assigned_to(self, resource: Resource | int) -> Self:
         return self.filter(resource=resource)
 
@@ -187,14 +170,13 @@ class TaskQuerySet(models.QuerySet['Task']):
         return self.filter(resource__user=user)
 
 
-class Task(models.Model):
+class Task(PeriodBoundCheckerMixin, models.Model):
     """A task assigned to a resource."""
 
     title = models.CharField(max_length=200)
     basket_title = models.CharField(max_length=200, null=True, blank=True)
     color = models.CharField(null=True, blank=True)
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
+    period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     # TODO: make prices currency-aware
     work_price = models.DecimalField(max_digits=10, decimal_places=2)
     on_call_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
@@ -208,7 +190,7 @@ class Task(models.Model):
     objects = TaskQuerySet.as_manager()
 
     if TYPE_CHECKING:
-        time_entries: RelatedManager[TimeEntry]
+        time_entries: RelatedManager[TaskEntry]
 
     class Meta:
         ordering = ['project__name', 'title']
@@ -221,41 +203,12 @@ class Task(models.Model):
     def __str__(self) -> str:
         return f'{self.project}: {self.title}'
 
-    @override
-    def save(
-        self,
-        *,
-        force_insert: bool | tuple[ModelBase, ...] = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
-    ) -> None:
-        self.full_clean()
-        return super().save(
-            force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields
-        )
-
-    @override
     def clean(self) -> None:
-        if self.end_date and self.start_date > self.end_date:
-            raise ValidationError(_('"start_date" must not be later than "end_date"'), code='invalid_date_interval')
-        try:
-            project = self.project
-        except Project.DoesNotExist:
-            project = None
-        if project and self.start_date and self.project.start_date and self.start_date < self.project.start_date:
-            raise ValidationError(
-                _(
-                    'A task must not start before its related project - '
-                    'task "{task_title}" is supposed to start on {task_start_date}, '
-                    'but related project "{project_name}" starts on {project_start_date}'
-                ).format(
-                    task_title=self.title,
-                    task_start_date=self.start_date.isoformat(),
-                    project_name=self.project.name,
-                    project_start_date=self.project.start_date.isoformat(),
-                ),
-                code='task_starting_before_project',
-            )
+        super().clean()
+        if self.resource and self.period:
+            from krm3.core.models import Contract
 
-        return super().clean()
+            try:
+                Contract.objects.by_day_range(self.resource, self.period.lower, self.period.upper)
+            except ValueError:
+                raise ValidationError(_('Missing contract cover for the range {}').format(KrmDateRange(self.period)))

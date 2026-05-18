@@ -7,7 +7,8 @@ router = routers.SimpleRouter()
 
 router.register('', api_views.TimesheetAPIViewSet, basename='api-timesheet')
 
-router.register('time-entry', api_views.TimeEntryAPIViewSet, basename='api-time-entry')
+router.register('tay-entry', api_views.DayEntryAPIViewSet, basename='api-day-entry')
+router.register('task-entry', api_views.TaskEntryAPIViewSet, basename='api-task-entry')
 router.register('special-leave-reason', api_views.SpecialLeaveReasonViewSet, basename='api-special-leave-reason')
 
 urlpatterns = router.urls

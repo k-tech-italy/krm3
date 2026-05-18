@@ -2,11 +2,11 @@ import pytest
 from django.shortcuts import reverse
 from django.utils.text import slugify
 
+from testutils.date_utils import _dt
 from testutils.factories import ProjectFactory
 from testutils.mappings import map_mission_status
 
 from krm3.missions.forms import MissionAdminForm
-from krm3.utils.dates import dt
 
 
 @pytest.mark.parametrize(
@@ -68,8 +68,8 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
         'project': project,
         'city': city,
         'resource': resource,
-        'from_date': mission.from_date if mission and same_year else dt('2000-01-01'),
-        'to_date': mission.from_date if mission and same_year else dt('2000-01-01'),
+        'from_date': mission.from_date if mission and same_year else _dt('2000-01-01'),
+        'to_date': mission.from_date if mission and same_year else _dt('2000-01-01'),
         'status': map_mission_status(this_status),
     }
     form = MissionAdminForm(base)
