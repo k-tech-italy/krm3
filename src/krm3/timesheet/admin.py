@@ -12,7 +12,7 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TimeEntry, TimesheetSubmission, Resource
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, Resource, DayEntry
 from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
 from django import forms
@@ -26,6 +26,10 @@ class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
     search_fields = ('ref', 'state', 'project')
     list_filter = [('project', AutoCompleteFilter)]
 
+    formfield_overrides = {
+        # Tell Django to use our custom widget for all DateRangeFields in this admin.
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+    }
 
 @admin.register(Basket)
 class BasketAdmin(admin.ModelAdmin):
@@ -51,54 +55,57 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
-        url = reverse('admin:core_timeentry_changelist') + f'?timesheet_id={pk}'
+        url = reverse('admin:core_TaskEntry_changelist') + f'?timesheet_id={pk}'
         return HttpResponseRedirect(url)
 
 
-@admin.register(TimeEntry)
-class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
-    list_display = ('date', 'get_resource', 'get_task', 'get_timesheet', 'holiday_hours', 'sick_hours')
+
+class ResourceAdminMixin:
+    @admin.display(description='Resource', ordering='resource')
+    def get_resource(self, obj: TaskEntry) -> str:
+        resource = self._resource_accessor(obj)
+        url = reverse('admin:core_resource_change', args=[resource.id])
+        return format_html('<a href="{}">{}</a>', url, str(resource))
+
+
+@admin.register(DayEntry)
+class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
+    _resource_accessor = lambda adminmodel, obj: obj.resource
+
+    list_display = ('day', 'get_resource', 'asked_holiday', 'is_sick')
 
     list_filter = [
         ('resource', AutoCompleteFilter),
-        ('task__project', AutoCompleteFilter),
-        ('task', AutoCompleteFilter),
-        ('date', DateRangeFilter),
-        ('day_shift_hours', NumberFilter),
-        ('night_shift_hours', NumberFilter),
-        ('travel_hours', NumberFilter),
-        ('rest_hours', NumberFilter),
-        ('on_call_hours', NumberFilter),
+        ('day', DateRangeFilter),
         ('special_leave_hours', NumberFilter),
+        ('rest_hours', NumberFilter),
         ('leave_hours', NumberFilter),
-        ('sick_hours', NumberFilter),
-        ('holiday_hours', NumberFilter),
-        ('bank_from', NumberFilter),
-        ('bank_to', NumberFilter),
+        # ('holiday_hours', NumberFilter),
+        ('bank', NumberFilter),
     ]
-    list_select_related = ('task__project', 'resource', 'timesheet')
+    list_select_related = ('resource', 'timesheet')
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet[TimeEntry]:
-        qs = TimeEntry.objects.all()
+    def get_queryset(self, request: HttpRequest) -> QuerySet[TaskEntry]:
+        qs = DayEntry.objects.all()
         if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return qs
         return qs.filter(resource__user=request.user)
 
-    def has_view_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+    def has_view_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_change_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+    def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_perm('core.manage_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_delete_permission(self, request: HttpRequest, obj: TimeEntry | None = None) -> bool:
+    def has_delete_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_perm('core.manage_any_timesheet'):
@@ -110,25 +117,51 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             return True
         return super().has_add_permission(request)
 
-    def get_form(self, request: HttpRequest, obj: TimeEntry | None = None, **kwargs) -> type[forms.ModelForm]:
-        form = super().get_form(request, obj, **kwargs)
 
-        is_add_view = obj is None
-        user = request.user
+@admin.register(TaskEntry)
+class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
+    _resource_accessor = lambda adminmodel, obj: obj.day_entry.resource
 
-        if not user.has_perm('core.manage_any_timesheet'):
-            try:
-                resource = Resource.objects.get(user=user)
-                if is_add_view:
-                    if 'resource' in form.base_fields:
-                        form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
-                else:
-                    pass
-            except Resource.DoesNotExist:
-                if is_add_view and 'resource' in form.base_fields:
-                    form.base_fields['resource'].queryset = Resource.objects.none()
+    list_display = ('get_day', 'get_resource', 'get_task')
 
-        return form
+    list_filter = [
+        ('task__project', AutoCompleteFilter),
+        ('task', AutoCompleteFilter),
+        ('day_entry__day', DateRangeFilter),
+        ('day_shift_hours', NumberFilter),
+        ('night_shift_hours', NumberFilter),
+        ('travel_hours', NumberFilter),
+        ('on_call_hours', NumberFilter),
+
+    ]
+    list_select_related = ('task__project', 'day_entry__resource', 'timesheet')
+
+    def get_queryset(self, request):
+        requestor = request.user
+        qs = super().get_queryset(request).select_related('day_entry')
+        if not requestor.has_perm('core.manage_any_timesheet'):
+            qs = qs.filter(day_entry__resource__user=requestor)
+        return qs
+
+    # def get_form(self, request: HttpRequest, obj: TaskEntry | None = None, **kwargs) -> type[forms.ModelForm]:
+    #     form = super().get_form(request, obj, **kwargs)
+    #
+    #     is_add_view = obj is None
+    #     user = request.user
+    #
+    #     if not user.has_perm('core.manage_any_timesheet'):
+    #         try:
+    #             resource = Resource.objects.get(user=user)
+    #             if is_add_view:
+    #                 if 'resource' in form.base_fields:
+    #                     form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
+    #             else:
+    #                 pass
+    #         except Resource.DoesNotExist:
+    #             if is_add_view and 'resource' in form.base_fields:
+    #                 form.base_fields['resource'].queryset = Resource.objects.none()
+    #
+    #     return form
 
     @button(html_attrs=NORMAL)
     def report(self, _request: HttpRequest) -> HttpResponseRedirect:
@@ -143,18 +176,18 @@ class TimeEntryAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
         obj = self.model.objects.get(pk=pk)
         return HttpResponseRedirect(reverse('admin:core_task_change', args=[obj.task_id]))
 
-    @admin.display(description='Timesheet', ordering='timesheet')
-    def get_timesheet(self, obj: TimeEntry) -> str:
-        url = reverse('admin:core_timesheetsubmission_change', args=[obj.timesheet_id])
-        return format_html('<a href="{}">{}</a>', url, str(obj.timesheet))
+    @admin.display(description='DayEntry', ordering='day_entry')
+    def get_day(self, obj: TaskEntry) -> str:
+        url = reverse('admin:core_dayentry_change', args=[obj.day_entry_id])
+        return format_html('<a href="{}">{}</a>', url, obj.day_entry.day.strftime('%Y-%m-%d'))
 
-    @admin.display(description='Resource', ordering='resource')
-    def get_resource(self, obj: TimeEntry) -> str:
-        url = reverse('admin:core_resource_change', args=[obj.resource_id])
-        return format_html('<a href="{}">{}</a>', url, str(obj.resource))
+    @admin.display(description='Timesheet', ordering='timesheet')
+    def get_timesheet(self, obj: TaskEntry) -> str:
+        url = reverse('admin:core_timesheetsubmission_change', args=[obj.day_entry.timesheet_id])
+        return format_html('<a href="{}">{}</a>', url, str(obj.day_entry.timesheet))
 
     @admin.display(description='Task', ordering='task')
-    def get_task(self, obj: TimeEntry) -> str:
+    def get_task(self, obj: TaskEntry) -> str:
         url = reverse('admin:core_task_change', args=[obj.task_id])
         return format_html('<a href="{}">{}</a>', url, str(obj.task))
 

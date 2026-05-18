@@ -117,6 +117,13 @@ class ResourceSerializer(serializers.ModelSerializer):
         depth = 0
 
 
+class ResourceBriefSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resource
+        fields = 'id', 'first_name', 'last_name'
+        depth = 0
+
+
 class PreferredLanguageSerializer(serializers.Serializer):
     language_code = serializers.ChoiceField(
         choices=[code for code, _ in settings.LANGUAGES]

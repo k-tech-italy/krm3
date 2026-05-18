@@ -1,26 +1,30 @@
 from __future__ import annotations
 
 import datetime
-import json
-from decimal import Decimal
-from typing import Any, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
+import vobject
 from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from natural_keys import NaturalKeyModel
 from django.db import models
+from django.db.models import F, Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import AbstractUser
-import vobject
+from ktcalendars import KTDateRange, KTDay
+from natural_keys import NaturalKeyModel
+from psycopg.types.range import DateRange
 
 from krm3.config import settings
-from krm3.utils.dates import KrmCalendar, KrmDay
-from constance import config
+from krm3.utils.db.postgresql.funcs import DateRangeIntersection
+from krm3.utils.numbers import safe_dec
 
 if TYPE_CHECKING:
     from datetime import date
+    from decimal import Decimal as D  # noqa: N817
+
+    from ktcalendars.types import KTDayType
+
     from krm3.core.models import Contract
 
 
@@ -100,6 +104,21 @@ class UserProfile(NaturalKeyModel):
         return cls.objects.create(user=user)
 
 
+class ResourceQuerySet(models.QuerySet['Resource']):
+    def active_between(self, start: datetime.date, end: datetime.date | None = None) -> Self:
+        """Return the contracts valid in the given interval.
+
+        :param start: the start of the interval (inclusive).
+        :param end: the end of the interval (inclusive).
+        :return: the filtered `Contract`s.
+        """
+        if isinstance(start, DateRange):
+            period = start
+        else:
+            period = KTDateRange.from_start_end(start, end)
+        return self.filter(contract__period__overlap=period).distinct()
+
+
 class Resource(models.Model):
     """A person, e.g. an employee or external contractor."""
 
@@ -107,11 +126,12 @@ class Resource(models.Model):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    active = models.BooleanField(default=True)
     preferred_in_report = models.BooleanField(default=True)
     vcard_text = models.TextField(null=True, blank=True)
     fiscal_code = models.CharField(max_length=25, null=True, blank=True, unique=True)
     preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
+
+    objects = ResourceQuerySet.as_manager()
 
     class Meta:
         ordering = ['last_name', 'first_name']
@@ -152,7 +172,7 @@ class Resource(models.Model):
             # Catch any other unexpected errors
             raise ValidationError({'vcard_text': f'Error parsing vCard: {str(e)}'}) from e
 
-    def scheduled_working_hours_for_day(self, day: KrmDay) -> float:
+    def scheduled_working_hours_for_day(self, day: KTDay) -> float:
         """Scheduled number of hours a resource should work each day.
 
         :return: scheduled number of hours.
@@ -160,92 +180,70 @@ class Resource(models.Model):
         from krm3.core.models import Contract  # noqa: PLC0415
 
         contract = Contract.objects.filter(resource=self, period__contains=day.date).first()
-        return self._get_min_working_hours(contract, day)
+        return contract.get_due_hours(day)
 
-    def _get_min_working_hours(self, contract: Contract | None, day: KrmDay) -> float:
-        """Return the minimum working hours for a given day."""
-        if contract and contract.working_schedule:
-            schedule = contract.working_schedule
-        else:
-            schedule = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
-        if contract and contract.country_calendar_code:
-            country_calendar_code = contract.country_calendar_code
-        else:
-            country_calendar_code = settings.HOLIDAYS_CALENDAR
+    def get_contract_map(self, start_day: date, end_day: date, with_blanks: bool = True) -> dict[KTDateRange, Contract]:
+        """Return a dict of {KTDateRange(period): contracts} applicable to the time interval.
 
-        min_working_hours = schedule[day.day_of_week_short.lower()]
-        if day.is_holiday(country_calendar_code, False):
-            min_working_hours = 0
-        return min_working_hours
+        The period in the KrmDateRange(period) is the actual intersection of the contract's period with the requested
+        date range.
 
-    def get_krm_days_with_contract(self, start_day: date, end_day: date) -> list[KrmDay]:
-        """Return a list of Krm days tailored for the resource contract/schedule.
-
-        Attributes added to KRM Day:
-        - contract: The contract for the day if available
-        - min_working_hours: the minimum working hours for the day (Result is based on resource calendar and schedule)
-        - is_holiday (overridden method. Result is contract country calendar aware)
+        If with_blanks is True, the gap periods are filled with `period: None`.
         """
-        days_list = list(KrmCalendar().iter_dates(start_day, end_day))
-        contracts = self.get_contracts(start_day, end_day)
-
-        for kd in days_list:
-            kd.contract = None
-            kd.min_working_hours = 0
-
-            country_calendar_code = settings.HOLIDAYS_CALENDAR
-            for contract in contracts:
-                if contract.falls_in(kd.date):
-                    kd.contract = contract
-                    kd.min_working_hours = self._get_min_working_hours(contract, kd)
-                    if contract.country_calendar_code:
-                        country_calendar_code = contract.country_calendar_code
-                    break
-
-            if kd.is_holiday(country_calendar_code, True):
-                kd.is_holiday = lambda *args, **kwargs: True
-            else:
-                kd.is_holiday = lambda *args, **kwargs: False
-
-        return days_list
-
-    def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
-        """Return a list of contracts applicable to the time interval between start_day and end_day."""
         from krm3.core.models import Contract  # noqa: PLC0415
 
-        return list(
-            Contract.objects.filter(
-                period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
-            )
+        # NB: end date workaround may change with fixed versions of ktcalendars
+        search_range = KTDateRange.from_start_end(start_day, end_day if end_day != datetime.date.max else None)
+        contracts = (
+            Contract.objects.filter(period__overlap=search_range, resource=self)
+            .annotate(intersection=DateRangeIntersection(F('period'), search_range))
+            .order_by('period')
         )
+        contracts = {KTDateRange(c.intersection): c for c in contracts}
 
-    def contract_for_date(self, contract_list: 'list[Contract]', day: date | KrmDay) -> 'Contract | None':
-        """Select the contract applicable for the given day."""
-        for contract in contract_list:
-            if contract.falls_in(day):
-                return contract
-        return None
+        if with_blanks:
+            gaps = KTDateRange.gaps(contracts.keys(), start_day, end_day)
+            contracts.update(dict.fromkeys(gaps, None))
+        return contracts
+
+    def has_contract_cover(self, start_day: date, end_day: date, partial: bool = False, atomic: bool = False) -> bool:
+        """Return True if there is contract coverage for the given date range.
+
+        If partial is False then the whole period must be covered by contracts.
+        If atomic is True then one and only one Contract must cover the period.
+        """
+        contracts = sorted(self.get_contract_map(start_day, end_day, with_blanks=False).keys())
+        if len(contracts) == 0:
+            return False
+        if partial is False and len(KTDateRange.gaps(contracts, start_day, end_day)) > 0:
+            return False
+        if atomic and len(contracts) >= 1:
+            return False
+        if partial:
+            return True
+        return (contracts[0].as_dates()[0], contracts[-1].as_dates()[1]) == (start_day, end_day or datetime.date.max)
 
     def get_schedule(self, start_day: date, end_day: date) -> dict[date, float]:
-        calendar = KrmCalendar()
-        days = list(calendar.iter_dates(start_day, end_day))
+        contracts = self.get_contract_map(start_day, end_day, with_blanks=True)
 
-        for day in days:
-            day.min_working_hours = self.scheduled_working_hours_for_day(day)
+        result = {}
+        for period, contract in contracts.items():
+            for day in period:
+                if contract is None:
+                    result[day] = 0.0
+                else:
+                    result[day] = contract.get_due_hours(day)
+        return result
 
-        return {day.date: day.min_working_hours for day in days}
-
-    def get_bank_hours_balance(self) -> Decimal:
+    # TODO: this method will last longer and longer. Fix it
+    def get_bank_hours_balance(self, at: KTDayType) -> D:
         """Calculate bank hours balance from all time entries."""
-        from krm3.core.models import TimeEntry  # noqa: PLC0415
+        from krm3.core.models import DayEntry  # noqa: PLC0415
 
-        queryset = TimeEntry.objects.filter(resource=self)
-        result = queryset.aggregate(total_deposits=Sum('bank_to'), total_withdrawals=Sum('bank_from'))
+        at = KTDay(at).date
+        bank = DayEntry.objects.filter(resource=self, day__lte=at).aggregate(total_bank=Sum('bank'))
 
-        deposits = result['total_deposits'] or Decimal(0)
-        withdrawals = result['total_withdrawals'] or Decimal(0)
-
-        return deposits - withdrawals
+        return safe_dec(bank['total_bank'])
 
 
 @receiver(post_save, sender=User)

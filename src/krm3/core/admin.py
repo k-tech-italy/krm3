@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import datetime
-from datetime import timedelta
+import typing
 
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
@@ -10,13 +12,15 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
+from ktcalendars import KTDateRange
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm, ContractTerminationForm
+from krm3.core.impexp import TimesheetExporter
 from krm3.core.models import (
     Address,
     AddressInfo,
@@ -36,7 +40,13 @@ from krm3.core.models import (
     Website,
     WebsiteInfo,
 )
-from krm3.styles.buttons import DANGEROUS
+from krm3.sentry import capture_exception
+from krm3.styles.buttons import DANGEROUS, NORMAL
+
+if typing.TYPE_CHECKING:
+    from django.contrib.admin.options import _ModelT
+    from django.db.models import QuerySet
+    from django.http import HttpRequest
 
 
 @admin.register(UserProfile)
@@ -88,9 +98,26 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(ModelAdmin):
-    list_display = ('first_name', 'last_name', 'user', 'active', 'preferred_in_report')
+    """Resource model admin."""
+
+    list_display = ('first_name', 'last_name', 'user', 'preferred_in_report')
     search_fields = ['first_name', 'last_name']
-    list_filter = (('active', admin.BooleanFieldListFilter),)
+    actions = ['export_timesheets']
+
+    @admin.action(description='Export selected timesheets')
+    def export_timesheets(self, request: 'HttpRequest', queryset: 'QuerySet[Resource]') -> 'JsonResponse':
+        """Export selected timesheets."""
+        try:
+            buffer = TimesheetExporter(queryset).export()
+            response = JsonResponse(buffer)
+            now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            response['Content-Disposition'] = f'attachment; filename="mission-export-{now}.json"'
+            # response['Content-Length'] = buffer.tell()  # noqa: ERA001
+
+            return response
+        except Exception as e:  # noqa: BLE001
+            messages.error(request, f'Failed to export timesheets: {e}')
+            capture_exception()
 
 
 @admin.register(Client)
@@ -109,6 +136,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'working_schedule',
         'sunday_as_holiday',
         'meal_voucher',
+        'sunday_as_holiday',
         'document_link',
     ]
     list_filter = [('resource', AutoCompleteFilter)]
@@ -131,17 +159,15 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         return '-'
 
     @button(html_attrs=DANGEROUS, visible=lambda btn: not btn.original.period.upper)
-    def terminate(self, request: HttpRequest, pk: str) -> HttpResponse:
+    def terminate(self, request: 'HttpRequest', pk: str) -> HttpResponse:
         contract = get_object_or_404(Contract, pk=pk)
         context = self.get_common_context(request, pk, title='Terminate Contract')
 
         if request.method == 'POST':
             form = ContractTerminationForm(request.POST)
             if form.is_valid():
-                from django.contrib.postgres.fields.ranges import DateRange
-
                 termination_date = form.cleaned_data['termination_date']
-                contract.period = DateRange(contract.period.lower, termination_date + timedelta(days=1))
+                contract.period = KTDateRange.from_start_end(contract.period.lower, termination_date)
                 contract.save()
                 updated = Task.objects.filter(resource=contract.resource, end_date__isnull=True).update(
                     end_date=termination_date
@@ -156,7 +182,9 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 
 @admin.register(ExtraHoliday)
-class ExtraHolidayAdmin(ModelAdmin):
+class ExtraHolidayAdmin(ExtraButtonsMixin, ModelAdmin):
+    """Extra Holidays are deprecated until further development."""
+
     list_display = ('get_period', 'country_codes', 'reason')
 
     formfield_overrides = {
@@ -166,6 +194,20 @@ class ExtraHolidayAdmin(ModelAdmin):
     @admin.display(description='Period', ordering='period')
     def get_period(self, obj: ExtraHoliday) -> str:
         return str(obj)
+
+    @button(html_attrs=NORMAL, label='Reset resolve cache')
+    def reset_resolve_cache(self, request: 'HttpRequest') -> None:
+        # extra_holidays.clear()  # noqa: ERA001
+        messages.success(request, 'ExtraHoliday resolve cache has been reset.')
+
+    def has_delete_permission(self, request: HttpRequest, obj: _ModelT | None = ...) -> bool:
+        return False
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: _ModelT | None = ...) -> bool:
+        return False
 
 
 class WebsiteInfoInline(admin.TabularInline):
@@ -200,7 +242,7 @@ class ContactAdmin(ExtraButtonsMixin, admin.ModelAdmin):
     ]
 
     @button(label='fetch photo')
-    def fetch_picture(self, request: HttpRequest, contact_id: str) -> None:
+    def fetch_picture(self, request: 'HttpRequest', contact_id: str) -> None:
         Contact.objects.get(pk=contact_id).fetch_picture()
 
 
