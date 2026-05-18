@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import nullcontext as does_not_raise
 from datetime import date, timedelta
 from decimal import Decimal
@@ -14,15 +16,14 @@ from testutils.factories import (
     PaymentCategoryFactory,
     ReimbursementFactory,
     ResourceFactory,
-    SuperUserFactory,
     UserFactory,
 )
 from testutils.permissions import add_permissions
 
-from krm3.core.models import Expense
 from krm3.missions.api.serializers.expense import ExpenseCreateSerializer
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.forms import ExpenseAdminForm
+from krm3.core.models import Expense
 
 
 def test_expense_manager(expense):
@@ -134,13 +135,12 @@ def test_image_url_returns_authenticated_url_when_file_exists(db):
     assert expense.image_url == expected_url
 
 
-def test_accessible_by_superuser_can_access_all_expenses(db):
+def test_accessible_by_superuser_can_access_all_expenses(admin_user):
     """Superuser should have access to all expenses."""
-    superuser = SuperUserFactory()
     expense1 = ExpenseFactory()
     expense2 = ExpenseFactory()
 
-    result = Expense.objects.accessible_by(superuser)
+    result = Expense.objects.filter_acl(admin_user)
 
     assert expense1 in result
     assert expense2 in result
@@ -154,7 +154,7 @@ def test_accessible_by_user_with_view_any_expense_permission(db):
     expense1 = ExpenseFactory()
     expense2 = ExpenseFactory()
 
-    result = Expense.objects.accessible_by(user)
+    result = Expense.objects.filter_acl(user)
 
     assert expense1 in result
     assert expense2 in result
@@ -168,7 +168,7 @@ def test_accessible_by_user_with_manage_any_expense_permission(db):
     expense1 = ExpenseFactory()
     expense2 = ExpenseFactory()
 
-    result = Expense.objects.accessible_by(user)
+    result = Expense.objects.filter_acl(user)
 
     assert expense1 in result
     assert expense2 in result
@@ -182,7 +182,7 @@ def test_accessible_by_user_with_matching_resource(db):
     own_expense = ExpenseFactory(mission=mission)
     other_expense = ExpenseFactory()  # Different resource via different mission
 
-    result = Expense.objects.accessible_by(user)
+    result = Expense.objects.filter_acl(user)
 
     assert own_expense in result
     assert other_expense not in result
@@ -194,7 +194,7 @@ def test_accessible_by_user_without_resource_returns_empty(db):
     # User has no resource associated
     expense = ExpenseFactory()
 
-    result = Expense.objects.accessible_by(user)
+    result = Expense.objects.filter_acl(user)
 
     assert result.count() == 0
     assert expense not in result
@@ -210,7 +210,7 @@ def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
 
     monkeypatch.setattr(user, 'get_resource', raise_exception)
 
-    result = Expense.objects.accessible_by(user)
+    result = Expense.objects.filter_acl(user)
 
     assert result.count() == 0
     assert expense not in result

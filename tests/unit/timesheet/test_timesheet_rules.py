@@ -1,15 +1,15 @@
+import datetime
 from collections.abc import Iterator
 from dataclasses import dataclass
-import datetime
 from decimal import Decimal
 
-from krm3.core.models import SpecialLeaveReason
 import pytest
 import tablib
+from testutils.date_utils import _dt
 from testutils.factories import SpecialLeaveReasonFactory
 
+from krm3.core.models import SpecialLeaveReason
 from krm3.timesheet.rules import TimesheetRule
-from krm3.utils.dates import dt
 from krm3.utils.numbers import safe_dec as to_decimal
 
 # Mock TimeEntry model
@@ -104,7 +104,7 @@ def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
         else:
             special_leave_reason = None
         time_entry = TimeEntryMock(
-            date=dt('2020-04-13'),
+            date=_dt('2020-04-13'),
             special_leave_reason=special_leave_reason,
             protocol_number=scenario['n. prot.'] if scenario['n. prot.'] else None,
             bank_from=to_decimal(scenario['bank_from (prelevo)'])

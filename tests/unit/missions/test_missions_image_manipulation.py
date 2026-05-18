@@ -12,6 +12,8 @@ def test_image_cleaning(expense):
     expected = hashlib.sha256(expected).hexdigest()
 
     obtained = clean_image(str(Path(__file__).parent / 'examples/original.jpg'))
+    # TO write expected: cv2.imwrite(str(Path(__file__).parent / 'examples/expected.jpg'), obtained)
+
     is_success, buffer = cv2.imencode('.jpg', obtained)
     io_buf = BytesIO(buffer)
     obtained = hashlib.sha256(io_buf.getbuffer()).hexdigest()

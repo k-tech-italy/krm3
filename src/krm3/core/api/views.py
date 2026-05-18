@@ -1,3 +1,4 @@
+
 import logging
 from typing import Any, cast
 
@@ -10,6 +11,7 @@ from django.contrib.auth import (
 from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from ktcalendars import KTDay
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -24,6 +26,7 @@ from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
     PreferredLanguageSerializer,
+    ResourceBriefSerializer,
     ResourceSerializer,
     UserSerializer,
 )
@@ -38,8 +41,6 @@ from krm3.core.models import (
     User,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
-from krm3.utils.dates import dt
-
 
 class DefaultPagination(PageNumberPagination):
     page_size = 20
@@ -212,13 +213,21 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     serializer_class = ResourceSerializer
     queryset = Resource.objects.order_by('last_name', 'first_name')
 
-    @action(methods=['get'], detail=False)
-    def active(self, request: Request) -> Response:
-        user = cast('User', request.user)
-        if not user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        active_resources = self.get_queryset().filter(active=True)
-        serializer = ResourceSerializer(active_resources, many=True)
+    @action(
+        methods=['get'],
+        detail=False,
+        url_path=r'active/(?P<date_from>[^/]+)?/(?P<date_to>[^/]+)?',
+    )
+    def active(self, request: Request, date_from: str | None = None, date_to: str | None = None) -> Response:
+        if date_from in (None, '') and date_to in (None, ''):
+            date_from, date_to = (
+                (KTDay() - relativedelta(months=-1)).date.replace(day=1),
+                (KTDay() - relativedelta(months=2)).date.replace(day=1) - relativedelta(days=1),
+            )
+        elif date_from in (None, '') or date_to in (None, ''):
+            raise ValueError('From/to dates must be not None if either provided')
+        active_resources = self.get_queryset().active_between(date_from, date_to)
+        serializer = ResourceBriefSerializer(active_resources, many=True)
         return Response(serializer.data)
 
     @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
@@ -303,7 +312,7 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     def create(self, request: Request, *args, **kwargs) -> Response:
         """Create a new Timesheet submission or replace an existing opened one."""
         period = request.data['period'][:]
-        period[1] = (dt(period[1]) + relativedelta(days=1)).strftime('%Y-%m-%d')
+        period[1] = str(KTDay(period[1]) + 1)
         ts = TimesheetSubmission.objects.filter(
             resource_id=request.data['resource'], period=period, closed=False
         ).first()

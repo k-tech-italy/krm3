@@ -5,7 +5,7 @@ from typing import override, TYPE_CHECKING
 from django.db.backends.postgresql.psycopg_any import DateRange  # pyright: ignore
 from rangefilter.filters import DateRangeFilter
 
-from krm3.utils.dates import KrmDay
+from ktcalendars import KTDay
 
 if TYPE_CHECKING:
     from django.db.models import Model, QuerySet
@@ -36,7 +36,7 @@ class DateRangeFilterBase(DateRangeFilter):
 
         upper = self.form.cleaned_data.get(self.lookup_kwarg_lte)
         if upper is not None:
-            upper = (KrmDay(upper) + 1).date.strftime('%Y-%m-%d')
+            upper = (KTDay(upper) + 1).date.strftime('%Y-%m-%d')
 
         return queryset.filter(**{f'{self.field_path}__{self.method}': DateRange(lower, upper)})
 
