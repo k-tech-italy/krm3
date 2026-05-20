@@ -2,10 +2,10 @@ import typing
 
 import pytest
 from rest_framework.reverse import reverse
-
-from krm3.core.models import TimeEntry
 from testutils.date_utils import _dt
 from testutils.factories import TaskFactory, TimeEntryFactory
+
+from krm3.core.models import TimeEntry
 
 if typing.TYPE_CHECKING:
     from krm3.core.models.projects import Task
@@ -152,10 +152,7 @@ def test_time_entry_update_locked_by_timesheet(
     from krm3.core.models import TimesheetSubmission  # noqa: PLC0415
 
     pk = scenario_time_entries['time_entries'][1].id
-    url = reverse(
-        'timesheet-api:api-time-entry-detail',
-        kwargs={'pk': pk}
-    )
+    url = reverse('timesheet-api:api-time-entry-detail', kwargs={'pk': pk})
 
     task: 'Task' = scenario_time_entries['tasks']['t1']
     TimesheetSubmission.objects.create(period=['2025-08-24', '2025-08-31'], resource=task.resource, closed=closed)
