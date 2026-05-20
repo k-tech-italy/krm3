@@ -196,6 +196,7 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     entry_tile_1 = browser.wait_for_element_visible('xpath', '//div[contains(@id, "Mon Jun 02")]')
     browser.click_and_release(entry_tile_1)
 
+    browser.find_element('//*[contains(text(), "More")]', timeout=10)
     browser.click('//*[contains(text(), "More")]')
 
     browser.fill('//input[@id="daytime-input"]', '14')
@@ -204,7 +205,9 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     entry_tile_2 = browser.find_elements('xpath', '//div[starts-with(@id, "Mon Jun 02")]')[1]
     browser.click_and_release(entry_tile_2)
 
+    browser.find_element('//*[contains(text(), "More")]', timeout=10)
     browser.click('//*[contains(text(), "More")]')
+    browser.find_element('//input[@id="daytime-input"]', timeout=10)
     browser.fill('//input[@id="daytime-input"]', '13')
 
     browser.click('//*[contains(text(), "Save")]')

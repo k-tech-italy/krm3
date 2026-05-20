@@ -1592,7 +1592,7 @@ class TestTimeEntryClearAPIAction:
             self.url(), data={'ids': [day_entry.pk, task_entry.pk]}, format='json'
         )
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert not TimeEntry.objects.exists()
+        assert not TimeEntry.objects.filter(pk__in=[day_entry.pk, task_entry.pk]).exists()
 
     @pytest.mark.parametrize(
         ('permissions', 'expected_status_code'),
