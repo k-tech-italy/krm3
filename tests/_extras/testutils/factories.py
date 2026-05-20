@@ -10,17 +10,17 @@ from factory.fuzzy import FuzzyDecimal
 
 from krm3.config import settings
 from krm3.core.models import (
-    User,
-    Phone,
-    Email,
     Address,
-    Website,
-    PhoneInfo,
-    WebsiteInfo,
     AddressInfo,
-    EmailInfo,
     Contact,
+    Email,
+    EmailInfo,
+    Phone,
+    PhoneInfo,
+    User,
     UserProfile,
+    Website,
+    WebsiteInfo,
 )
 from krm3.currencies.models import Currency
 
@@ -265,7 +265,6 @@ class TaskFactory(DjangoModelFactory):
 
     class Meta:
         model = 'core.Task'
-        django_get_or_create = ('title', 'project', 'resource')
 
 
 def generate_month_period(start_date, offset):
