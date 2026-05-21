@@ -11,7 +11,7 @@ on:
       - test/**
 
   pull_request:
-    types: [ synchronize, opened, reopened, ready_for_review ]
+    types: [synchronize, opened, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,16 +39,16 @@ jobs:
       run_tests: ${{ steps.changes.outputs.run_tests }}
       version: ${{ steps.changes.outputs.version }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
 
-    - id: changes
-      name: Check for file changes
-      uses: dorny/paths-filter@0bc4621a3135347011ad047f9ecf449bf72ce2bd   # v3.0.0
-      with:
-        base: ${{ github.ref }}
-        token: ${{ github.token }}
-        filters: .github/file-filters.yml
+      - id: changes
+        name: Check for file changes
+        uses: dorny/paths-filter@0bc4621a3135347011ad047f9ecf449bf72ce2bd # v3.0.0
+        with:
+          base: ${{ github.ref }}
+          token: ${{ github.token }}
+          filters: .github/file-filters.yml
 
   test:
     needs: [changes]
@@ -63,7 +63,7 @@ jobs:
       redis:
         image: redis
         ports:
-        - 16379:6379
+          - 16379:6379
       db:
         image: postgres:16
         env:
@@ -71,7 +71,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USERNAME: postgres
         ports:
-        - 15432:5432
+          - 15432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -86,94 +86,131 @@ jobs:
       KRM3_LOCAL_DEVELOPMENT: "True"
       RUNNER_TOOL_CACHE: /tmp/
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
 
-    - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v6
-      with:
-        version: latest
-        enable-cache: true
-        prune-cache: false
-        cache-local-path: ./uv-cache
-        cache-dependency-glob: |
-          **/pyproject.toml
-          **/uv.lock
-        python-version: 3.12.1
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+          enable-cache: true
+          prune-cache: false
+          cache-local-path: ./uv-cache
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+          python-version: 3.12.1
 
-    - name: Restore cached vEnv
-      id: cache-venv-restore
-      uses: actions/cache/restore@v4
-      with:
-        path: |
-          ./uv-cache
-          ./tox
-        key: ${{ runner.os }}-venv-3.12
+      - name: Restore cached vEnv
+        id: cache-venv-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ./uv-cache
+            ./tox
+          key: ${{ runner.os }}-venv-3.12
 
-    - name: Install dependencies
-      run: uv sync --cache-dir ./uv-cache --frozen
+      - name: Install dependencies
+        run: uv sync --cache-dir ./uv-cache --frozen
 
-    - name: Save vEnv
-      id: cache-venv-save
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ./uv-cache
-          ./tox
-        key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
+      - name: Save vEnv
+        id: cache-venv-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ./uv-cache
+            ./tox
+          key: ${{ steps.cache-venv-restore.outputs.cache-primary-key }}
 
-    - name: Init Frontend Submodule
-      run: cd krm3-fe && git submodule update --init
+      - name: Build static folder
+        run: uv venv --clear && uv run make release && uv run manage.py collectstatic
 
-    - name: Build static folder
-      run: uv venv --clear && uv run make release && uv run manage.py collectstatic
+      - name: Install yarn
+        run: cd krm3-fe && npm install -g yarn && yarn install
 
-    - name: Install yarn
-      run: cd krm3-fe && npm install -g yarn && yarn install
+      - name: Build frontend
+        run: cd krm3-fe && yarn build
 
-    - name: Run Test suite
-      run: uv run tox -e tests
+      - name: Generate requirements
+        run: |
+          mkdir -p dist
+          uv export --no-dev --no-emit-project --group image --format requirements-txt > dist/image-requirements.txt
+          uv export --no-emit-project --group dev --format requirements-txt --prune opencv-python > dist/test-requirements.txt
 
-    - name: Move the release.json file into the FE folder
-      run: cp src/krm3/core/static/release.json krm3-fe/dist
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Upload built frontend
-      uses: actions/upload-artifact@v4
-      with:
-        name: built-frontend
-        path: |
-          krm3-fe/dist/
-          retention-days: 1
-          if-no-files-found: warn
+      - name: Build test Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          load: true
+          target: test
+          tags: krm3:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Show code coverage report
-      run: uv run coverage report
+      - name: Run Test suite
+        run: |
+          set +e
+          docker run --name krm3-test --network host \
+            -v "$(pwd)/tests:/code/tests:ro" \
+            -v "$(pwd)/krm3-fe:/code/krm3-fe:ro" \
+            -e KRM3_DATABASE_URL="$KRM3_DATABASE_URL" \
+            -e KRM3_ALLOWED_HOSTS="$KRM3_ALLOWED_HOSTS" \
+            -e KRM3_LOCAL_DEVELOPMENT="$KRM3_LOCAL_DEVELOPMENT" \
+            -e SECRET_KEY="super-secret-key-just-for-testing" \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            -e DJANGO_SETTINGS_MODULE=krm3.config.settings \
+            krm3:test \
+            bash -c 'pytest tests -n auto -rw --create-db --cov=krm3 --cov-report=xml:/code/coverage.xml --cov-report=term --junit-xml=/code/junit.xml -o junit_family=legacy -vv --headless -m "not selenium or selenium" --chromium-arg="--no-sandbox,--disable-dev-shm-usage"; PYTEST_EXIT=$?; coverage report; exit $PYTEST_EXIT'
+          TEST_EXIT=$?
+          docker cp krm3-test:/code/coverage.xml ./coverage.xml 2>/dev/null || true
+          docker cp krm3-test:/code/junit.xml ./junit.xml 2>/dev/null || true
+          docker cp krm3-test:/code/latest_logs ./latest_logs 2>/dev/null || true
+          docker rm krm3-test
+          exit $TEST_EXIT
 
-    - name: Archive selenium results
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: selenium-log-report
-        path: latest_logs
-        retention-days: 5
+      - name: Move the release.json file into the FE folder
+        run: cp src/krm3/core/static/release.json krm3-fe/dist
 
-    - name: Upload test results to Codecov
-      uses: codecov/test-results-action@v1
-      if: always()
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload built frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-frontend
+          path: |
+            krm3-fe/dist/
+            retention-days: 1
+            if-no-files-found: warn
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      continue-on-error: true
-      with:
-        env_vars: OS,PYTHON
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: false
-        name: codecov-${{env.GITHUB_REF_NAME}}
+      - name: Archive selenium results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: selenium-log-report
+          path: latest_logs
+          retention-days: 5
+
+      - name: Upload test results to Codecov
+        uses: codecov/test-results-action@v1
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: false
+          name: codecov-${{env.GITHUB_REF_NAME}}
 
   build:
     needs: [changes, test]
@@ -185,30 +222,30 @@ jobs:
     outputs:
       version: ${{ steps.build.outputs.version }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
 
-    - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v6
-      with:
-        version: latest
-        enable-cache: true
-        prune-cache: false
-        cache-local-path: ./uv-cache
-        cache-dependency-glob: |
-          **/pyproject.toml
-          **/uv.lock
-        python-version: 3.12.1
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+          enable-cache: true
+          prune-cache: false
+          cache-local-path: ./uv-cache
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+          python-version: 3.12.1
 
-    - name: Download built frontend
-      uses: actions/download-artifact@v4
-      with:
-        name: built-frontend
-        path: krm3-fe/dist/
+      - name: Download built frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: built-frontend
+          path: krm3-fe/dist/
 
-    - name: build
-      id: build
-      run: |
+      - name: build
+        id: build
+        run: |
           VERSION=$( uvx --with hatch-vcs hatchling metadata version )
           COMMIT_SHA=$(git rev-parse "$GITHUB_SHA")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -220,42 +257,42 @@ jobs:
           uv run manage.py tailwind install
           uv run manage.py tailwind build
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ github.repository }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver: docker-container
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
-    - name: Build Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: docker/Dockerfile
-        push: false
-        target: final
-        build-args: |
-          BASE_IMAGE=${{ steps.build.outputs.version }}
-          DOCKER_REGISTRY=local
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
-          ghcr.io/${{ github.repository }}:latest
-        labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=docker,dest=/tmp/image.tar
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          target: final
+          build-args: |
+            BASE_IMAGE=${{ steps.build.outputs.version }}
+            DOCKER_REGISTRY=local
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.build.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=/tmp/image.tar
 
-    - name: Upload Docker image artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp/image.tar
-        retention-days: 1
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+          retention-days: 1
 
   security-scan:
-    needs: [ changes, build ]
+    needs: [changes, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -264,46 +301,46 @@ jobs:
     outputs:
       scan_result: ${{ steps.scan.outcome }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download Docker image
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: /tmp/
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/
 
-    - name: Load Docker image
-      id: load
-      run: |
-        docker load --input /tmp/image.tar
-        docker image ls -a
-        # Get the actual image name from the loaded images
-        IMAGE_NAME=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "ghcr.io/${{ github.repository }}" | head -1)
-        echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
-        echo "Loaded image: $IMAGE_NAME"
+      - name: Load Docker image
+        id: load
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a
+          # Get the actual image name from the loaded images
+          IMAGE_NAME=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "ghcr.io/${{ github.repository }}" | head -1)
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Loaded image: $IMAGE_NAME"
 
-    - name: Run Trivy vulnerability scanner
-      id: scan
-      uses: aquasecurity/trivy-action@master
-      continue-on-error: true
-      with:
-        image-ref: '${{ steps.load.outputs.image_name }}'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL, HIGH'
-        exit-code: '1'
+      - name: Run Trivy vulnerability scanner
+        id: scan
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: "${{ steps.load.outputs.image_name }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL, HIGH"
+          exit-code: "1"
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
 
-    - name: Upload Trivy scan results as artifact
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: trivy-scan-results
-        path: trivy-results.sarif
-        retention-days: 30
+      - name: Upload Trivy scan results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-scan-results
+          path: trivy-results.sarif
+          retention-days: 30
