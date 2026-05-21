@@ -128,6 +128,7 @@ release:  registrylogin  ## For manual release
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			-v "`pwd`/../tests:/code/tests:ro" \
 			-v "`pwd`/../src:/code/src:ro" \
+			-v "`pwd`/../krm3-fe:/code/krm3-fe:ro" \
 			${RUN_OPTIONS} \
 			${DOCKER_IMAGE_FULLNAME}-test \
 			${CMD}
@@ -149,7 +150,7 @@ test: ## run 'django-admin check --deploy' into container
 	RUN_OPTIONS=-it CMD='uwsgi' $(MAKE) .run
 
 test-coverage: ## Run tests with coverage report
-	@RUN_OPTIONS=-it CMD='pytest --create-db --cov=krm3 --cov-report=html --cov-report=term --ignore=tests/integration/test_gui_auth.py' $(MAKE) .run-test
+	@RUN_OPTIONS=-it CMD='pytest --create-db --cov=krm3 --cov-report=html --cov-report=term --chromium-arg="--no-sandbox,--disable-dev-shm-usage" -m "not selenium or selenium"' $(MAKE) .run-test
 
 stack:  ## run containder with both web/celery services
 	RUN_OPTIONS=-it CMD='stack' $(MAKE) .run
