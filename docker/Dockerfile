@@ -93,6 +93,19 @@ CMD ["stack"]
 # --- Stage 3: Test stage ---
 FROM final AS test
 USER root
+WORKDIR /code
+
 COPY dist/test-requirements.txt ./
 RUN pip install --no-cache-dir -r test-requirements.txt
+
+RUN apt-get update && apt-get install -y --no-install-suggests --no-install-recommends \
+    chromium gettext \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV BROWSERCMD=/usr/bin/chromium
+
+COPY --chown=krm3:ktech src /code/src
+RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages -i .tox -i .venv
+
+ENV PYTHONPATH=/code/src
 USER krm3
