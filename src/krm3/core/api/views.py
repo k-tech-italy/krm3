@@ -1,35 +1,45 @@
-from typing import cast
+import logging
+from typing import Any, cast
 
 from dateutil.relativedelta import relativedelta
-from django.contrib.auth import authenticate, login as djlogin, logout as djlogout
+from django.contrib.auth import (
+    authenticate,
+    login as djlogin,
+    logout as djlogout,
+)
 from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework import mixins, permissions, serializers, status, viewsets, filters
+from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet, ViewSet, ModelViewSet
-from rest_framework.pagination import PageNumberPagination
-
-import logging
+from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 
 from krm3.core.api.permissions import IsSelfOrReadOnly
-from krm3.core.api.serializers import UserSerializer, ResourceSerializer, ContactSerializer, \
-    PreferredLanguageSerializer, ClientSerializer
+from krm3.core.api.serializers import (
+    ClientSerializer,
+    ContactSerializer,
+    PreferredLanguageSerializer,
+    ResourceSerializer,
+    UserSerializer,
+)
 from krm3.core.models import (
     City,
     Client,
+    Contact,
     Country,
     Project,
     Resource,
+    TimesheetSubmission,
     User,
-    TimesheetSubmission, Contact,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 from krm3.utils.dates import dt
+
 
 class DefaultPagination(PageNumberPagination):
     page_size = 20
@@ -54,9 +64,10 @@ class GoogleOAuthView(APIView):
 
         Frontend calls this with: GET /api/v1/o/google-oauth2/?redirect_uri=http://localhost:8000/login
         """
-        from social_django.utils import load_backend, load_strategy
         import base64
         import json
+
+        from social_django.utils import load_backend, load_strategy
 
         # Get the frontend redirect URI (where Google should redirect after auth)
         redirect_uri = request.query_params.get('redirect_uri')
@@ -70,10 +81,7 @@ class GoogleOAuthView(APIView):
 
         # Store redirect_uri in the state parameter (base64 encoded)
         # This way it survives across page reloads/new sessions
-        state_data = {
-            'redirect_uri': redirect_uri,
-            'state': oauth_backend.state_token()
-        }
+        state_data = {'redirect_uri': redirect_uri, 'state': oauth_backend.state_token()}
         encoded_state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
         request.session['google-oauth2_state'] = encoded_state
         request.session.save()
@@ -90,17 +98,15 @@ class GoogleOAuthView(APIView):
 
         Frontend sends: POST /api/v1/o/google-oauth2/ with state and code in the body
         """
-        from social_django.utils import load_backend, load_strategy
         import base64
         import json
+
+        from social_django.utils import load_backend, load_strategy
 
         # Get the state from the request (this is our base64-encoded state)
         encoded_state = request.data.get('state') or request.POST.get('state')
         if not encoded_state:
-            return Response(
-                {'error': 'State parameter is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'State parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Decode the state to get the redirect_uri and original OAuth state
         try:
@@ -108,19 +114,13 @@ class GoogleOAuthView(APIView):
             redirect_uri = state_data.get('redirect_uri')
             state_data.get('state')
         except Exception:
-            logging.exception("Failed to decode OAuth state parameter.")
-            return Response(
-                {'error': 'Failed to decode state.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            logging.exception('Failed to decode OAuth state parameter.')
+            return Response({'error': 'Failed to decode state.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Verify against stored state in session
         stored_state = request.session.get('google-oauth2_state')
         if stored_state and stored_state != encoded_state:
-            return Response(
-                {'error': 'State mismatch. Possible CSRF attack.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'State mismatch. Possible CSRF attack.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Load the OAuth backend with the SAME redirect URI we used in GET
         # This is critical - Google requires the redirect_uri to match exactly
@@ -140,10 +140,9 @@ class GoogleOAuthView(APIView):
                 del request.session['google-oauth2_state']
                 request.session.save()
 
-            return Response({
-                'detail': 'Login successful',
-                'user': UserSerializer(user, context={'request': request}).data
-            })
+            return Response(
+                {'detail': 'Login successful', 'user': UserSerializer(user, context={'request': request}).data}
+            )
 
         return Response({'error': 'Authentication failed'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -184,15 +183,11 @@ class LoginView(APIView):
             # Log the user in via Django session
             djlogin(request, user)
 
-            return Response({
-                'detail': 'Login successful',
-                'user': UserSerializer(user, context={'request': request}).data
-            })
+            return Response(
+                {'detail': 'Login successful', 'user': UserSerializer(user, context={'request': request}).data}
+            )
 
-        return Response(
-            {'detail': 'Invalid username or password'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        return Response({'detail': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
@@ -227,7 +222,7 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
         return Response(serializer.data)
 
     @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
-    def preferred_language(self, request: Request, pk) -> Response:
+    def preferred_language(self, request: Request) -> Response:
         resource = self.get_object()
 
         if request.method == 'PATCH':
@@ -242,7 +237,7 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
 
         return Response(resource.preferred_language, status=status.HTTP_200_OK)
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[Any]:
         if self.action == 'preferred_language':
             return [IsAuthenticated(), IsSelfOrReadOnly()]
         return super().get_permissions()
@@ -338,14 +333,23 @@ class ContactAPIViewSet(ModelViewSet):
 
         return queryset
 
+    def perform_create(self, serializer: 'ContactSerializer') -> None:
+        serializer.save(user=self.request.user)
+
+
+class TitleChoicesViewSet(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request: Request) -> Response:
+        titles = [{'value': value, 'label': label} for value, label in Contact.TITLE_CHOICES]
+        return Response(titles)
+
 
 class SupportedLanguagesViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def list(self, request):
+    def list(self, request: Request) -> Response:
         from django.conf import settings
-        languages = [
-            {"language_code": code, "language": name}
-            for code, name in settings.LANGUAGES
-        ]
+
+        languages = [{'language_code': code, 'language': name} for code, name in settings.LANGUAGES]
         return Response(languages)

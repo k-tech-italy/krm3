@@ -1,8 +1,7 @@
-from natural_keys import NaturalKeyModel
 from django.db import models
+from natural_keys import NaturalKeyModel
 
 from krm3.config import settings
-
 
 
 class Client(NaturalKeyModel):
@@ -14,6 +13,7 @@ class Client(NaturalKeyModel):
 
     class Meta:
         ordering = ['name']
+
 
 class Website(models.Model):
     url = models.URLField(unique=True)
@@ -48,7 +48,7 @@ class WebsiteInfo(models.Model):
     website = models.ForeignKey(Website, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return f"{self.contact} - {self.website}"
+        return f'{self.contact} - {self.website}'
 
 
 class PhoneInfo(models.Model):
@@ -57,7 +57,7 @@ class PhoneInfo(models.Model):
     kind = models.CharField(max_length=80, null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"{self.contact} - {self.phone}"
+        return f'{self.contact} - {self.phone}'
 
 
 class EmailInfo(models.Model):
@@ -66,7 +66,7 @@ class EmailInfo(models.Model):
     kind = models.CharField(max_length=80, null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"{self.contact} - {self.email}"
+        return f'{self.contact} - {self.email}'
 
 
 class AddressInfo(models.Model):
@@ -75,24 +75,27 @@ class AddressInfo(models.Model):
     kind = models.CharField(max_length=80, null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"{self.contact} - {self.address}"
+        return f'{self.contact} - {self.address}'
 
 
 class Contact(models.Model):
-
+    TITLE_CHOICES = [
+        ('doctor', 'Doctor'),
+        ('madam', 'Madam'),
+        ('miss', 'Miss'),
+        ('mister', 'Mister'),
+        ('mrs', 'Mrs'),
+        ('professor', 'Professor'),
+    ]
     first_name = models.CharField(max_length=80)
     last_name = models.CharField(max_length=80)
     tax_id = models.CharField(null=True, blank=True)
-    job_title = models.CharField(max_length=80)
+    job_title = models.CharField(max_length=80, blank=True)
+    title = models.CharField(max_length=15, blank=True, choices=TITLE_CHOICES)
     picture = models.TextField(null=True, blank=True, help_text='Picture URL')
     internal_notes = models.TextField(null=True, blank=True)
     company = models.ForeignKey(Client, null=True, blank=True, on_delete=models.SET_NULL)
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     websites = models.ManyToManyField(
         Website,
@@ -116,7 +119,7 @@ class Contact(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f'{self.first_name} {self.last_name}'
 
     def fetch_picture(self) -> None:
         if self.user and self.user.profile and self.user.profile.picture:

@@ -1,6 +1,7 @@
+import pytest
 from django.contrib.auth.models import Permission
 from django.urls import reverse
-
+from rest_framework import status
 from testutils.factories import ContactFactory
 
 
@@ -9,10 +10,11 @@ def test_admin_can_see_all_contacts(admin_client, admin_user):
     ContactFactory()
     response = admin_client.get(reverse('core-api:contacts-list'))
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()['count'] == 2
     assert len(response.json()['results']) == 2
+
 
 def test_user_with_perm_can_see_all_contacts(api_client, regular_user):
     ContactFactory(user=regular_user)
@@ -22,10 +24,11 @@ def test_user_with_perm_can_see_all_contacts(api_client, regular_user):
 
     response = api_client(regular_user).get(reverse('core-api:contacts-list'))
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()['count'] == 2
     assert len(response.json()['results']) == 2
+
 
 def test_user_without_perm_can_see_only_his_own_contacts(api_client, regular_user):
     ContactFactory(user=regular_user)
@@ -33,16 +36,17 @@ def test_user_without_perm_can_see_only_his_own_contacts(api_client, regular_use
 
     response = api_client(regular_user).get(reverse('core-api:contacts-list'))
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()['count'] == 1
     assert len(response.json()['results']) == 1
+
 
 def test_response_structure_empty_m2m_fields(admin_client):
     contact = ContactFactory()
     response = admin_client.get(reverse('core-api:contacts-list'))
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     results = response.json()['results'][0]
 
@@ -53,11 +57,10 @@ def test_response_structure_empty_m2m_fields(admin_client):
     assert results['jobTitle'] == contact.job_title
     assert results['company']['name'] == contact.company.name
     assert results['company']['picture'] == contact.company.picture
-
-    results['phones'] = []
-    results['websites'] = []
-    results['emails'] = []
-    results['addresses'] = []
+    assert results['phones'] == []
+    assert results['emails'] == []
+    assert results['addresses'] == []
+    assert results['websites'] == []
 
 
 def test_response_structure_with_m2m_fields(admin_client):
@@ -65,7 +68,7 @@ def test_response_structure_with_m2m_fields(admin_client):
     contact = ContactFactory(phones=1, emails=2, addresses=3, websites=4)
     response = admin_client.get(reverse('core-api:contacts-list'))
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     results = response.json()['results'][0]
 
@@ -93,8 +96,147 @@ def test_can_filter_active_contacts(admin_client):
 
     response = admin_client.get(reverse('core-api:contacts-list'), {'active': 'true'})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     assert response.json()['count'] == 1
     assert len(response.json()['results']) == 1
     assert response.json()['results'][0]['isActive'] is True
+
+
+@pytest.mark.parametrize('usr', ['admin', 'regular'], ids=['admin_can_create', 'regular_can_create'])
+def test_create_contact(usr, api_client, admin_user, regular_user):
+    user = admin_user if usr == 'admin' else regular_user
+    response = api_client(user).post(
+        reverse('core-api:contacts-list'),
+        data={
+            'first_name': 'New',
+            'last_name': 'Contact',
+            'phones': [{'number': '+1234567890'}],
+            'emails': [{'address': 'email@example.com'}],
+            'addresses': [{'address': '123 Main St'}],
+            'websites': [{'url': 'www.example.com'}],
+        },
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data['firstName'] == 'New'
+    assert data['lastName'] == 'Contact'
+    assert data['phones'][0]['number'] == '+1234567890'
+    assert data['emails'][0]['address'] == 'email@example.com'
+    assert data['addresses'][0]['address'] == '123 Main St'
+    assert data['websites'][0]['url'] == 'www.example.com'
+
+
+def test_create_contact_minimal(admin_client):
+    response = admin_client.post(
+        reverse('core-api:contacts-list'),
+        data={'first_name': 'Jane', 'last_name': 'Smith', 'phones': [], 'emails': []},
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data['firstName'] == 'Jane'
+    assert data['lastName'] == 'Smith'
+    assert data['phones'] == []
+    assert data['emails'] == []
+    assert data['addresses'] == []
+    assert data['websites'] == []
+
+
+def test_user_can_create_multiple_contacts(api_client, regular_user):
+    response1 = api_client(regular_user).post(
+        reverse('core-api:contacts-list'),
+        data={'first_name': 'First', 'last_name': 'Contact', 'phones': [], 'emails': []},
+        content_type='application/json',
+    )
+    response2 = api_client(regular_user).post(
+        reverse('core-api:contacts-list'),
+        data={'first_name': 'Second', 'last_name': 'Contact', 'phones': [], 'emails': []},
+        content_type='application/json',
+    )
+    assert response1.status_code == status.HTTP_201_CREATED
+    assert response2.status_code == status.HTTP_201_CREATED
+    assert response1.json()['id'] != response2.json()['id']
+
+
+@pytest.mark.parametrize(
+    'payload, field',
+    [
+        pytest.param(
+            {'first_name': '', 'last_name': 'Doe', 'phones': [], 'emails': []},
+            'firstName',
+            id='empty_first_name',
+        ),
+        pytest.param(
+            {'first_name': 'John', 'last_name': '', 'phones': [], 'emails': []},
+            'lastName',
+            id='empty_last_name',
+        ),
+    ],
+)
+def test_create_contact_required_fields(payload, field, admin_client):
+    response = admin_client.post(
+        reverse('core-api:contacts-list'),
+        data=payload,
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert field in response.json()
+
+
+@pytest.mark.parametrize(
+    'title, expected_status',
+    [
+        pytest.param('doctor', status.HTTP_201_CREATED, id='valid_doctor'),
+        pytest.param('mrs', status.HTTP_201_CREATED, id='valid_mrs'),
+        pytest.param('invalid', status.HTTP_400_BAD_REQUEST, id='invalid_title'),
+    ],
+)
+def test_create_contact_title_validation(title, expected_status, admin_client):
+    response = admin_client.post(
+        reverse('core-api:contacts-list'),
+        data={'first_name': 'John', 'last_name': 'Doe', 'title': title, 'phones': [], 'emails': []},
+        content_type='application/json',
+    )
+    assert response.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    'phone_number, expected_status',
+    [
+        pytest.param('abc', status.HTTP_400_BAD_REQUEST, id='letters_only'),
+        pytest.param('phone123', status.HTTP_400_BAD_REQUEST, id='letters_and_digits'),
+        pytest.param('!@#$%', status.HTTP_400_BAD_REQUEST, id='special_chars'),
+        pytest.param('+1234567890', status.HTTP_201_CREATED, id='plus_prefix'),
+        pytest.param('1234567890', status.HTTP_201_CREATED, id='digits_only'),
+        pytest.param('+1 234 567 890', status.HTTP_201_CREATED, id='with_spaces'),
+        pytest.param('+1-234-567-890', status.HTTP_201_CREATED, id='with_dashes'),
+    ],
+)
+def test_create_contact_phone_validation(phone_number, expected_status, admin_client):
+    response = admin_client.post(
+        reverse('core-api:contacts-list'),
+        data={
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'phones': [{'number': phone_number}],
+            'emails': [],
+        },
+        content_type='application/json',
+    )
+    assert response.status_code == expected_status
+
+
+def test_titles_endpoint_returns_all_choices(admin_client):
+    response = admin_client.get(reverse('core-api:titles-list'))
+    assert response.status_code == status.HTTP_200_OK
+    titles = response.json()
+    assert titles == [
+        {'value': 'doctor', 'label': 'Doctor'},
+        {'value': 'madam', 'label': 'Madam'},
+        {'value': 'miss', 'label': 'Miss'},
+        {'value': 'mister', 'label': 'Mister'},
+        {'value': 'mrs', 'label': 'Mrs'},
+        {'value': 'professor', 'label': 'Professor'},
+    ]

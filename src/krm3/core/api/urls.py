@@ -3,12 +3,13 @@ from rest_framework.routers import SimpleRouter
 from .views import (
     CityAPIViewSet,
     ClientAPIViewSet,
+    ContactAPIViewSet,
     CountryAPIViewSet,
     ProjectAPIViewSet,
     ResourceAPIViewSet,
-    UserAPIViewSet,
     TimesheetSubmissionAPIViewSet,
-    ContactAPIViewSet,
+    TitleChoicesViewSet,
+    UserAPIViewSet,
 )
 
 router = SimpleRouter()
@@ -20,5 +21,6 @@ router.register('client', ClientAPIViewSet, basename='api-client')
 router.register('user', UserAPIViewSet, basename='user')
 router.register('timesheet', TimesheetSubmissionAPIViewSet, basename='api-timesheet-model')
 router.register(r'contacts', ContactAPIViewSet, basename='contacts')
+router.register('titles', TitleChoicesViewSet, basename='titles')
 
 urlpatterns = router.urls
