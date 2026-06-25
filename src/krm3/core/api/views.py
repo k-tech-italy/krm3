@@ -222,7 +222,7 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
         return Response(serializer.data)
 
     @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
-    def preferred_language(self, request: Request) -> Response:
+    def preferred_language(self, request: Request, pk: str) -> Response:
         resource = self.get_object()
 
         if request.method == 'PATCH':
@@ -327,8 +327,7 @@ class ContactAPIViewSet(ModelViewSet):
         else:
             queryset = Contact.objects.filter(user=self.request.user)
 
-        active = self.request.query_params.get('active')
-        if active:
+        if self.request.query_params.get('active'):
             queryset = queryset.filter(is_active=True)
 
         return queryset
@@ -341,7 +340,7 @@ class TitleChoicesViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self, request: Request) -> Response:
-        titles = [{'value': value, 'label': label} for value, label in Contact.TITLE_CHOICES]
+        titles = [{'value': value, 'label': label} for value, label in Contact.TitleChoices.choices]
         return Response(titles)
 
 
