@@ -79,19 +79,19 @@ class AddressInfo(models.Model):
 
 
 class Contact(models.Model):
-    TITLE_CHOICES = [
-        ('doctor', 'Doctor'),
-        ('madam', 'Madam'),
-        ('miss', 'Miss'),
-        ('mister', 'Mister'),
-        ('mrs', 'Mrs'),
-        ('professor', 'Professor'),
-    ]
+    class TitleChoices(models.TextChoices):
+        DOCTOR = 'doctor', 'Doctor'
+        MADAM = 'madam', 'Madam'
+        MISS = 'miss', 'Miss'
+        MISTER = 'mister', 'Mister'
+        MRS = 'mrs', 'Mrs'
+        PROFESSOR = 'professor', 'Professor'
+
     first_name = models.CharField(max_length=80)
     last_name = models.CharField(max_length=80)
     tax_id = models.CharField(null=True, blank=True)
     job_title = models.CharField(max_length=80, blank=True)
-    title = models.CharField(max_length=15, blank=True, choices=TITLE_CHOICES)
+    title = models.CharField(max_length=15, blank=True, choices=TitleChoices.choices)
     picture = models.TextField(null=True, blank=True, help_text='Picture URL')
     internal_notes = models.TextField(null=True, blank=True)
     company = models.ForeignKey(Client, null=True, blank=True, on_delete=models.SET_NULL)
