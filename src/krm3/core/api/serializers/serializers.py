@@ -57,7 +57,9 @@ class PhoneInfoSerializer(serializers.ModelSerializer):
         source='phone.number',
         validators=[
             RegexValidator(
-                regex=r'^[+\d\s-]+$', message='Phone number must contain only digits, +, spaces, or hyphens.'
+                regex=r'^\+?\d[\d\s-]*$',
+                message='Phone number must start with a digit and can contain only digits, spaces, or hyphens. \
+                Optional + sign allowed only at the start.',
             )
         ],
     )
@@ -67,10 +69,10 @@ class PhoneInfoSerializer(serializers.ModelSerializer):
         fields = ('number', 'kind')
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
-        ret = super().to_internal_value(data)
-        if 'phone' in ret:
-            ret['number'] = ret.pop('phone')['number']
-        return ret
+        value = super().to_internal_value(data)
+        if 'phone' in value:
+            value['number'] = value.pop('phone')['number']
+        return value
 
 
 class WebsiteInfoSerializer(serializers.ModelSerializer):
@@ -81,10 +83,10 @@ class WebsiteInfoSerializer(serializers.ModelSerializer):
         fields = ('url',)
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
-        ret = super().to_internal_value(data)
-        if 'website' in ret:
-            ret['url'] = ret.pop('website')['url']
-        return ret
+        value = super().to_internal_value(data)
+        if 'website' in value:
+            value['url'] = value.pop('website')['url']
+        return value
 
 
 class EmailInfoSerializer(serializers.ModelSerializer):
@@ -95,10 +97,10 @@ class EmailInfoSerializer(serializers.ModelSerializer):
         fields = ('address', 'kind')
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
-        ret = super().to_internal_value(data)
-        if 'email' in ret:
-            ret['address'] = ret.pop('email')['address']
-        return ret
+        value = super().to_internal_value(data)
+        if 'email' in value:
+            value['address'] = value.pop('email')['address']
+        return value
 
 
 class AddressInfoSerializer(serializers.ModelSerializer):
@@ -109,10 +111,10 @@ class AddressInfoSerializer(serializers.ModelSerializer):
         fields = ('address', 'kind')
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
-        ret = super().to_internal_value(data)
-        if 'address' in ret:
-            ret['address'] = ret.pop('address')['address']
-        return ret
+        value = super().to_internal_value(data)
+        if 'address' in value:
+            value['address'] = value.pop('address')['address']
+        return value
 
 
 class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
