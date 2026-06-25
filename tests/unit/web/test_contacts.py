@@ -210,3 +210,36 @@ def test_titles_endpoint_returns_all_choices(admin_client):
     titles = response.json()
     expected = [{'value': choice.value, 'label': choice.label} for choice in Contact.TitleChoices]
     assert titles == expected
+
+
+def test_patch_contact_deactivates(admin_client):
+    contact = ContactFactory(is_active=True)
+    response = admin_client.patch(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+        data={'isActive': False},
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['isActive'] is False
+    contact.refresh_from_db()
+    assert contact.is_active is False
+
+
+def test_patch_contact_activates(admin_client):
+    contact = ContactFactory(is_active=False)
+    response = admin_client.patch(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+        data={'isActive': True},
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['isActive'] is True
+    contact.refresh_from_db()
+    assert contact.is_active is True
+
+
+def test_delete_contact(admin_client):
+    contact = ContactFactory()
+    response = admin_client.delete(reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}))
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not Contact.objects.filter(pk=contact.pk).exists()
