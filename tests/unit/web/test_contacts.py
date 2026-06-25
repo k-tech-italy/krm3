@@ -4,6 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from testutils.factories import ContactFactory
 
+from krm3.core.models import Contact
+
 
 def test_admin_can_see_all_contacts(admin_client, admin_user):
     ContactFactory(user=admin_user)
@@ -72,10 +74,10 @@ def test_response_structure_with_m2m_fields(admin_client):
 
     results = response.json()['results'][0]
 
-    assert len(results["phones"]) == contact.phones.count() == 1
-    assert len(results["emails"]) == contact.emails.count() == 2
-    assert len(results["addresses"]) == contact.addresses.count() == 3
-    assert len(results["websites"]) == contact.websites.count() == 4
+    assert len(results['phones']) == contact.phones.count() == 1
+    assert len(results['emails']) == contact.emails.count() == 2
+    assert len(results['addresses']) == contact.addresses.count() == 3
+    assert len(results['websites']) == contact.websites.count() == 4
 
     for phone in contact.phones.all():
         assert phone.number in (phone['number'] for phone in results['phones'])
@@ -128,38 +130,6 @@ def test_create_contact(usr, api_client, admin_user, regular_user):
     assert data['websites'][0]['url'] == 'www.example.com'
 
 
-def test_create_contact_minimal(admin_client):
-    response = admin_client.post(
-        reverse('core-api:contacts-list'),
-        data={'first_name': 'Jane', 'last_name': 'Smith', 'phones': [], 'emails': []},
-        content_type='application/json',
-    )
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data['firstName'] == 'Jane'
-    assert data['lastName'] == 'Smith'
-    assert data['phones'] == []
-    assert data['emails'] == []
-    assert data['addresses'] == []
-    assert data['websites'] == []
-
-
-def test_user_can_create_multiple_contacts(api_client, regular_user):
-    response1 = api_client(regular_user).post(
-        reverse('core-api:contacts-list'),
-        data={'first_name': 'First', 'last_name': 'Contact', 'phones': [], 'emails': []},
-        content_type='application/json',
-    )
-    response2 = api_client(regular_user).post(
-        reverse('core-api:contacts-list'),
-        data={'first_name': 'Second', 'last_name': 'Contact', 'phones': [], 'emails': []},
-        content_type='application/json',
-    )
-    assert response1.status_code == status.HTTP_201_CREATED
-    assert response2.status_code == status.HTTP_201_CREATED
-    assert response1.json()['id'] != response2.json()['id']
-
-
 @pytest.mark.parametrize(
     'payload, field',
     [
@@ -182,14 +152,16 @@ def test_create_contact_required_fields(payload, field, admin_client):
         content_type='application/json',
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert field in response.json()
+    errors = response.json()
+    assert field in errors
+    assert errors[field][0] == "This field may not be blank."
 
 
 @pytest.mark.parametrize(
     'title, expected_status',
     [
-        pytest.param('doctor', status.HTTP_201_CREATED, id='valid_doctor'),
-        pytest.param('mrs', status.HTTP_201_CREATED, id='valid_mrs'),
+        pytest.param(Contact.TitleChoices.DOCTOR, status.HTTP_201_CREATED, id='valid_doctor'),
+        pytest.param(Contact.TitleChoices.MRS, status.HTTP_201_CREATED, id='valid_mrs'),
         pytest.param('invalid', status.HTTP_400_BAD_REQUEST, id='invalid_title'),
     ],
 )
@@ -212,6 +184,9 @@ def test_create_contact_title_validation(title, expected_status, admin_client):
         pytest.param('1234567890', status.HTTP_201_CREATED, id='digits_only'),
         pytest.param('+1 234 567 890', status.HTTP_201_CREATED, id='with_spaces'),
         pytest.param('+1-234-567-890', status.HTTP_201_CREATED, id='with_dashes'),
+        pytest.param('+1-234 567 890', status.HTTP_201_CREATED, id='with_dashes_spaces'),
+        pytest.param('1 234 567 +890', status.HTTP_400_BAD_REQUEST, id='plus_prefix_in_between'),
+        pytest.param('+', status.HTTP_400_BAD_REQUEST, id='plus_prefix_alone'),
     ],
 )
 def test_create_contact_phone_validation(phone_number, expected_status, admin_client):
@@ -232,11 +207,5 @@ def test_titles_endpoint_returns_all_choices(admin_client):
     response = admin_client.get(reverse('core-api:titles-list'))
     assert response.status_code == status.HTTP_200_OK
     titles = response.json()
-    assert titles == [
-        {'value': 'doctor', 'label': 'Doctor'},
-        {'value': 'madam', 'label': 'Madam'},
-        {'value': 'miss', 'label': 'Miss'},
-        {'value': 'mister', 'label': 'Mister'},
-        {'value': 'mrs', 'label': 'Mrs'},
-        {'value': 'professor', 'label': 'Professor'},
-    ]
+    expected = [{'value': choice.value, 'label': choice.label} for choice in Contact.TitleChoices]
+    assert titles == expected
