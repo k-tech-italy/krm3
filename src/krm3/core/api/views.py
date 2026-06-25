@@ -319,7 +319,7 @@ class ContactAPIViewSet(ModelViewSet):
     pagination_class = DefaultPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['first_name', 'last_name', 'company__name']
-    http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete']
 
     def get_queryset(self) -> QuerySet[Contact]:
         if self.request.user.is_superuser or self.request.user.has_perm('core.view_contact'):
@@ -334,6 +334,12 @@ class ContactAPIViewSet(ModelViewSet):
 
     def perform_create(self, serializer: 'ContactSerializer') -> None:
         serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer: 'ContactSerializer') -> None:
+        serializer.save()
+
+    def perform_destroy(self, instance: Contact) -> None:
+        instance.delete()
 
 
 class TitleChoicesViewSet(ViewSet):
