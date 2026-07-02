@@ -154,7 +154,7 @@ def test_create_contact_required_fields(payload, field, admin_client):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     errors = response.json()
     assert field in errors
-    assert errors[field][0] == "This field may not be blank."
+    assert errors[field][0] == 'This field may not be blank.'
 
 
 @pytest.mark.parametrize(
@@ -185,6 +185,7 @@ def test_create_contact_title_validation(title, expected_status, admin_client):
         pytest.param('+1 234 567 890', status.HTTP_201_CREATED, id='with_spaces'),
         pytest.param('+1-234-567-890', status.HTTP_201_CREATED, id='with_dashes'),
         pytest.param('+1-234 567 890', status.HTTP_201_CREATED, id='with_dashes_spaces'),
+        pytest.param('++++++++1-234 567 890', status.HTTP_400_BAD_REQUEST, id='too_many_pluses'),
         pytest.param('1 234 567 +890', status.HTTP_400_BAD_REQUEST, id='plus_prefix_in_between'),
         pytest.param('+', status.HTTP_400_BAD_REQUEST, id='plus_prefix_alone'),
     ],
