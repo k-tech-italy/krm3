@@ -243,3 +243,62 @@ def test_delete_contact(admin_client):
     response = admin_client.delete(reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}))
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not Contact.objects.filter(pk=contact.pk).exists()
+
+
+def test_patch_contact_preserves_related_data(admin_client):
+    contact = ContactFactory(phones=1, emails=1, addresses=1, websites=1, is_active=True)
+    response = admin_client.patch(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+        data={'isActive': False},
+        content_type='application/json',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['isActive'] is False
+    contact.refresh_from_db()
+    assert contact.is_active is False
+    assert contact.phones.count() == 1
+    assert contact.emails.count() == 1
+    assert contact.addresses.count() == 1
+    assert contact.websites.count() == 1
+
+
+def test_patch_contact_updates_related_data(admin_client):
+    contact = ContactFactory(phones=2, emails=2, addresses=2, websites=2)
+
+    phone = contact.phones.first()
+    email = contact.emails.first()
+    address = contact.addresses.first()
+    website = contact.websites.first()
+
+    response = admin_client.patch(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+        data={
+            'phones': [
+                {'number': phone.number, 'kind': 'updated'},
+                {'number': '+000000000', 'kind': 'new'},
+            ],
+            'emails': [
+                {'address': email.address, 'kind': 'updated'},
+                {'address': 'new@example.com', 'kind': 'new'},
+            ],
+            'addresses': [
+                {'address': address.address, 'kind': 'updated'},
+                {'address': 'New Address', 'kind': 'new'},
+            ],
+            'websites': [
+                {'url': website.url},
+                {'url': 'https://new.example.com'},
+            ],
+        },
+        content_type='application/json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+
+    assert data['firstName'] == contact.first_name
+
+    assert len(data['phones']) == 2
+    assert len(data['emails']) == 2
+    assert len(data['addresses']) == 2
+    assert len(data['websites']) == 2
