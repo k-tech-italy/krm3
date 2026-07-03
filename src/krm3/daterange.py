@@ -1,71 +1,81 @@
-import datetime
-import typing
-from django.db.backends.postgresql.psycopg_any import DateRange
+from __future__ import annotations
+
+from typing import override, TYPE_CHECKING
+
+from django.db.backends.postgresql.psycopg_any import DateRange  # pyright: ignore
 from rangefilter.filters import DateRangeFilter
 
 from krm3.utils.dates import KrmDay
 
-if typing.TYPE_CHECKING:
-    from django.db.models import QuerySet
+if TYPE_CHECKING:
+    import datetime
+    from django.db.models import Model, QuerySet
     from django.http import HttpRequest
 
 
 class DateRangeFilterBase(DateRangeFilter):
     """Base class for DateRangeFilter."""
 
-    method: str = None
+    method: str = ''
 
-    def __init__(self, field, request, params, model, model_admin, field_path) -> None:  # noqa: ANN001, PLR0913
+    @override
+    def __init__(self, field, request, params, model: type[Model], model_admin, field_path) -> None:  # noqa: ANN001, PLR0913
         super().__init__(field, request, params, model, model_admin, field_path)
-        self.title = f'{self.field_path} ({self.method})'
+        self.title = f'{self.field_path} ({self.method or "none"})'
 
-    def queryset(self, request: 'HttpRequest', queryset: 'QuerySet') -> 'QuerySet':
-        """Return queryset."""
-        if self.form.is_valid():
-            validated_data = dict(self.form.cleaned_data.items())
-            if validated_data:
-                lower, upper = self._make_query_filter(request, validated_data)
-                lower = lower.strftime('%Y-%m-%d')
-                upper = (KrmDay(upper) + 1).date.strftime('%Y-%m-%d')
-                return queryset.filter(**{f'{self.field_path}__{self.method}': DateRange(lower, upper)})
-        return queryset
+    @override
+    def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
+        if not self.form.is_valid():
+            return queryset
 
-    def _make_query_filter(self, request: 'HttpRequest', validated_data: dict) -> tuple[datetime.date, datetime.date]:
-        date_value_lower = validated_data.get(self.lookup_kwarg_gte, None)
-        date_value_upper = validated_data.get(self.lookup_kwarg_lte, None)
+        if not self.form.cleaned_data:
+            return queryset
 
-        if date_value_lower or date_value_upper:
-            if date_value_upper is None:
-                date_value_upper = date_value_lower
-            elif date_value_lower is None:
-                date_value_lower = date_value_upper
+        lower, upper = self._make_query_filter()
+        if lower is not None:
+            lower = lower.strftime('%Y-%m-%d')
+        if upper is not None:
+            upper = (KrmDay(upper) + 1).date.strftime('%Y-%m-%d')
+        return queryset.filter(**{f'{self.field_path}__{self.method}': DateRange(lower, upper)})
+
+    def _make_query_filter(self) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
+        date_value_lower = self.form.cleaned_data.get(self.lookup_kwarg_gte)
+        date_value_upper = self.form.cleaned_data.get(self.lookup_kwarg_lte)
 
         return date_value_lower, date_value_upper
 
 
 class DateRangeOverlapFilter(DateRangeFilterBase):
-    method : str = 'overlap'
+    method: str = 'overlap'
+
 
 class DateRangeContainedByFilter(DateRangeFilterBase):
-    method : str = 'contained_by'
+    method: str = 'contained_by'
+
 
 class DateRangeContainsFilter(DateRangeFilterBase):
-    method : str = 'contains'
+    method: str = 'contains'
+
 
 class DateRangeFullyLtFilter(DateRangeFilterBase):
-    method : str = 'fully_lt'
+    method: str = 'fully_lt'
+
 
 class DateRangeFullyGtFilter(DateRangeFilterBase):
-    method : str = 'fully_gt'
+    method: str = 'fully_gt'
+
 
 class DateRangeNotLtFilter(DateRangeFilterBase):
-    method : str = 'not_lt'
+    method: str = 'not_lt'
+
 
 class DateRangeNotGtFilter(DateRangeFilterBase):
-    method : str = 'not_gt'
+    method: str = 'not_gt'
+
 
 class DateRangeAdjacentToFilter(DateRangeFilterBase):
-    method : str = 'adjacent_to'
+    method: str = 'adjacent_to'
+
 
 __all__ = [
     'DateRangeOverlapFilter',
