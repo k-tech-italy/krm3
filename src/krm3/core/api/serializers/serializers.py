@@ -2,6 +2,7 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
+from django.db import transaction
 from rest_framework import serializers
 
 from krm3.core.models import (
@@ -134,41 +135,47 @@ class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
         websites_data = validated_data.pop('websiteinfo_set', [])
         addresses_data = validated_data.pop('addressinfo_set', [])
 
-        contact = Contact.objects.create(**validated_data)
+        with transaction.atomic():
+            contact = Contact.objects.create(**validated_data)
 
-        for phone in phones_data:
-            phone_obj, _ = Phone.objects.get_or_create(number=phone['number'])
-            PhoneInfo.objects.create(contact=contact, phone=phone_obj, kind=phone.get('kind'))
-        for email in emails_data:
-            email_obj, _ = Email.objects.get_or_create(address=email['address'])
-            EmailInfo.objects.create(contact=contact, email=email_obj, kind=email.get('kind'))
-        for website in websites_data:
-            website_obj, _ = Website.objects.get_or_create(url=website['url'])
-            WebsiteInfo.objects.create(contact=contact, website=website_obj)
-        for address in addresses_data:
-            address_obj, _ = Address.objects.get_or_create(address=address['address'])
-            AddressInfo.objects.create(contact=contact, address=address_obj, kind=address.get('kind'))
+            for phone in phones_data:
+                phone_obj, _ = Phone.objects.get_or_create(number=phone['number'])
+                PhoneInfo.objects.create(contact=contact, phone=phone_obj, kind=phone.get('kind'))
+            for email in emails_data:
+                email_obj, _ = Email.objects.get_or_create(address=email['address'])
+                EmailInfo.objects.create(contact=contact, email=email_obj, kind=email.get('kind'))
+            for website in websites_data:
+                website_obj, _ = Website.objects.get_or_create(url=website['url'])
+                WebsiteInfo.objects.create(contact=contact, website=website_obj)
+            for address in addresses_data:
+                address_obj, _ = Address.objects.get_or_create(address=address['address'])
+                AddressInfo.objects.create(contact=contact, address=address_obj, kind=address.get('kind'))
 
         return contact
 
     def update(self, instance: Contact, validated_data: dict[str, Any]) -> Contact:
-        phones_data = validated_data.pop('phoneinfo_set', [])
-        emails_data = validated_data.pop('emailinfo_set', [])
-        websites_data = validated_data.pop('websiteinfo_set', [])
-        addresses_data = validated_data.pop('addressinfo_set', [])
+        phones_data = validated_data.pop('phoneinfo_set', None)
+        emails_data = validated_data.pop('emailinfo_set', None)
+        websites_data = validated_data.pop('websiteinfo_set', None)
+        addresses_data = validated_data.pop('addressinfo_set', None)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        self._update_related_phones(instance, phones_data)
-        self._update_related_emails(instance, emails_data)
-        self._update_related_websites(instance, websites_data)
-        self._update_related_addresses(instance, addresses_data)
+            if phones_data is not None:
+                self._update_related_phones(instance, phones_data)
+            if emails_data is not None:
+                self._update_related_emails(instance, emails_data)
+            if websites_data is not None:
+                self._update_related_websites(instance, websites_data)
+            if addresses_data is not None:
+                self._update_related_addresses(instance, addresses_data)
 
         return instance
 
-    def _update_related_phones(self, contact, phones_data):
+    def _update_related_phones(self, contact: Contact, phones_data: list[dict[str, Any]]) -> None:
         existing = {phone_info.phone.number: phone_info for phone_info in contact.phoneinfo_set.all()}
         submitted = {phone['number']: phone for phone in phones_data}
 
@@ -184,7 +191,7 @@ class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
                 phone_obj, _ = Phone.objects.get_or_create(number=number)
                 PhoneInfo.objects.create(contact=contact, phone=phone_obj, kind=phone.get('kind'))
 
-    def _update_related_emails(self, contact, emails_data):
+    def _update_related_emails(self, contact: Contact, emails_data: list[dict[str, Any]]) -> None:
         existing = {email_info.email.address: email_info for email_info in contact.emailinfo_set.all()}
         submitted = {email['address']: email for email in emails_data}
 
@@ -200,7 +207,7 @@ class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
                 email_obj, _ = Email.objects.get_or_create(address=address)
                 EmailInfo.objects.create(contact=contact, email=email_obj, kind=email.get('kind'))
 
-    def _update_related_websites(self, contact, websites_data):
+    def _update_related_websites(self, contact: Contact, websites_data: list[dict[str, Any]]) -> None:
         existing = {website_info.website.url: website_info for website_info in contact.websiteinfo_set.all()}
         submitted = {website['url']: website for website in websites_data}
 
@@ -208,14 +215,14 @@ class ContactSerializer(metaclass=ModelDefaultSerializerMetaclass):
             if url not in submitted:
                 website_info.delete()
 
-        for url, website in submitted.items():
+        for url in submitted:
             if url in existing:
                 pass
             else:
                 website_obj, _ = Website.objects.get_or_create(url=url)
                 WebsiteInfo.objects.create(contact=contact, website=website_obj)
 
-    def _update_related_addresses(self, contact, addresses_data):
+    def _update_related_addresses(self, contact: Contact, addresses_data: list[dict[str, Any]]) -> None:
         existing = {address_info.address.address: address_info for address_info in contact.addressinfo_set.all()}
         submitted = {address['address']: address for address in addresses_data}
 
