@@ -1,27 +1,30 @@
 from __future__ import annotations
 
-import datetime
 import json
 from decimal import Decimal
-from typing import Any, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self, cast
 
+import vobject
+from constance import config
 from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from natural_keys import NaturalKeyModel
 from django.db import models
+from django.db.models import Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import AbstractUser
-import vobject
+from natural_keys import NaturalKeyModel
+
+# TODO: from Python 3.13 on, `deprecated` should be imported from `warnings`
+from typing_extensions import deprecated
 
 from krm3.config import settings
 from krm3.utils.dates import KrmCalendar, KrmDay
-from constance import config
 
 if TYPE_CHECKING:
     from datetime import date
-    from krm3.core.models import Contract
+
+    from krm3.core.models import Contract, ContractQuerySet
 
 
 class UserManager(BaseUserManager):
@@ -209,16 +212,46 @@ class Resource(models.Model):
 
         return days_list
 
-    def get_contracts(self, start_day: date, end_day: date) -> list[Contract]:
-        """Return a list of contracts applicable to the time interval between start_day and end_day."""
-        from krm3.core.models import Contract  # noqa: PLC0415
+    def get_contracts(self, start_day: date, end_day: date | None, including_end: bool = True) -> list[Contract]:
+        """Return this resource's contracts valid during a given interval.
+
+        The contracts are returned as a list, not a queryset.
+
+        :param start_day: the start of the focus interval
+        :param end_day: the end of the focus interval. If `None`,
+            the interval is considered unbounded.
+        :param including_end: whether or not the interval is inclusive
+            at the end. Ignored if `end_day` is `None`. Defaults to
+            `True`. If you are working with intervals coming from
+            Postgres `DateRange`s, you might want to set it to `False`
+            to avoid boilerplate.
+        :return: a list of contracts
+        """
+        from krm3.core.models import Contract  # noqa: PLC0415 - workaround for circular import
 
         return list(
-            Contract.objects.filter(
-                period__overlap=(start_day, end_day + datetime.timedelta(days=1) if end_day else None), resource=self
-            )
+            cast('ContractQuerySet', Contract.objects)
+            .active_between(start_day, end_day, including_end)
+            .filter(resource=self)
         )
 
+    def get_contract_for_date(self, day: date | KrmDay) -> Contract | None:
+        """Return the contract this resource had on the given `day`.
+
+        :param day: the focus date
+        :return: a contract, or `None` if not found.
+        """
+        day = KrmDay(day).date
+        try:
+            # get the contract in the single-day interval containing the
+            # focus day.
+            # contracts never overlap due to business rules, so we are
+            # guaranteed to find at most one contract in a given day
+            return self.get_contracts(day, day)[0]
+        except IndexError:
+            return None
+
+    @deprecated('Use `get_contract_for_date()` instead')
     def contract_for_date(self, contract_list: 'list[Contract]', day: date | KrmDay) -> 'Contract | None':
         """Select the contract applicable for the given day."""
         for contract in contract_list:

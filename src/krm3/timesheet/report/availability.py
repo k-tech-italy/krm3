@@ -1,5 +1,5 @@
-from collections.abc import Iterable
 import datetime
+from collections.abc import Iterable
 from decimal import Decimal
 from enum import Enum
 from typing import override  # noqa: N817
@@ -7,6 +7,7 @@ from typing import override  # noqa: N817
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from typing_extensions import deprecated
 
 from krm3.core.models import Project, Resource
 from krm3.timesheet.report.base import TimesheetReport
@@ -23,13 +24,11 @@ class AbsenceType(Enum):
     SPECIAL_LEAVE = _('SL')
     REST = _('R')
 
-ABSENCE_SHOW_HOURS = {
-    AbsenceType.LEAVE,
-    AbsenceType.SPECIAL_LEAVE,
-    AbsenceType.REST
-}
+
+ABSENCE_SHOW_HOURS = {AbsenceType.LEAVE, AbsenceType.SPECIAL_LEAVE, AbsenceType.REST}
 
 
+@deprecated('Use `krm3.reports.availability.AvailabilityReport` instead.')
 class AvailabilityReport(TimesheetReport):
     def __init__(
         self, from_date: datetime.date, to_date: datetime.date, user: User, project: str | None = None
@@ -78,7 +77,8 @@ class AvailabilityReport(TimesheetReport):
 
                 if te.special_leave_hours and te.special_leave_hours > 0:
                     absences[AbsenceType.SPECIAL_LEAVE] = absences.get(AbsenceType.SPECIAL_LEAVE, Decimal(0)) + Decimal(
-                        te.special_leave_hours)
+                        te.special_leave_hours
+                    )
 
                 if te.rest_hours and te.rest_hours > 0:
                     absences[AbsenceType.REST] = absences.get(AbsenceType.REST, Decimal(0)) + Decimal(te.rest_hours)
@@ -87,6 +87,7 @@ class AvailabilityReport(TimesheetReport):
         kd.absence_hours = sum(absences.values()) if absences else Decimal(0)
 
 
+@deprecated('Use `krm3.reports.availability.AvailabilityReport` instead.')
 class AvailabilityReportOnline(AvailabilityReport):
     """Online HTML report for availability/absences."""
 
@@ -115,7 +116,7 @@ class AvailabilityReportOnline(AvailabilityReport):
             resource_days = self.calendars[resource.id]
             for kd in resource_days:
                 cell_value = ''
-                #Adding absence characters to report
+                # Adding absence characters to report
                 if kd.absences:
                     parts = []
                     for absence_type in AbsenceType:
@@ -126,7 +127,7 @@ class AvailabilityReportOnline(AvailabilityReport):
                             else:
                                 parts.append(absence_type.value)
 
-                    cell_value = ', '.join(map(str,parts))
+                    cell_value = ', '.join(map(str, parts))
 
                 cell = resource_row.add_cell(cell_value)
                 cell.nwd = kd.nwd

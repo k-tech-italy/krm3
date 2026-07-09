@@ -29,7 +29,7 @@ from django_simple_dms.models import DocumentTag
 from krm3.core.forms import ResourceForm
 from krm3.core.models import Project, Resource, Task
 from krm3.core.models.documents import ProtectedDocument as Document
-from krm3.timesheet.report.availability import AvailabilityReportOnline
+from krm3.reports.availability import AvailabilityReport
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
@@ -198,15 +198,11 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context.update(ctx)
 
         selected_project = self.request.GET.get('project', '')
-        project_param = selected_project if selected_project else None
 
         projects = {'': _('All projects')} | dict(Project.objects.values_list('id', 'name'))
         context['projects'] = projects
         context['selected_project'] = selected_project
-        report_blocks = AvailabilityReportOnline(
-            ctx['start'], ctx['end'], cast('UserType', self.request.user), project_param
-        )
-        context['report_blocks'] = report_blocks.report_html()
+        context['report'] = AvailabilityReport((ctx['start'], ctx['end']), selected_project or None)
 
         return context
 
