@@ -49,9 +49,8 @@ Squash work-in-progress commits before merging if needed.
 
 ## Releases and deployment
 
-- Do not bump the version or update the changelog yourself. The release manager prepares the release PR from develop to master.
-- Merging to master automatically deploys to the krm3int integration environment.
-- Production deployments are performed manually by maintainers.
+- **Do not bump the version or update the changelog yourself.** The release manager prepares the release PR from `develop` to `master`.
+- Releases and deployments are handled by the maintainers.
 
 ## Code of conduct
 
