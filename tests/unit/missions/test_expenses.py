@@ -3,6 +3,8 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
 
+from django.test import RequestFactory
+
 import pytest
 import responses
 from django.core.files import File
@@ -19,8 +21,11 @@ from testutils.factories import (
 )
 from testutils.permissions import add_permissions
 
+from krm3.missions.admin.expenses import ExpenseAdmin
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.core.models import Expense
+from krm3.missions.tables import ExpenseTableMixin
+from krm3.utils.rates import update_rates
 
 
 def test_expense_manager(expense):
@@ -212,3 +217,99 @@ def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
 
     assert result.count() == 0
     assert expense not in result
+
+
+@responses.activate
+@pytest.mark.django_db
+def test_update_rates_calculates_all_expenses_same_day(mock_rate_provider):
+    """Expenses sharing the same day must all get amount_base and amount_reimbursement."""
+    day = date(2026, 5, 15)
+    gbp = CurrencyFactory(iso3='GBP')
+    mock_rate_provider(day, 'EUR,GBP,USD', {'EUR': 0.92172, 'GBP': 0.77373, 'USD': 1})
+
+    expense_a = ExpenseFactory(
+        day=day, amount_currency=Decimal('17.10'), currency=gbp,
+        amount_base=None, amount_reimbursement=None,
+    )
+    expense_b = ExpenseFactory(
+        day=day, amount_currency=Decimal('10.10'), currency=gbp,
+        amount_base=None, amount_reimbursement=None,
+    )
+
+    request = RequestFactory().get('/')
+    update_rates(request, Expense.objects.filter(pk__in=[expense_a.pk, expense_b.pk]))
+
+    expense_a.refresh_from_db()
+    expense_b.refresh_from_db()
+
+    assert expense_a.amount_base is not None, 'First expense on same day should have amount_base'
+    assert expense_b.amount_base is not None, 'Second expense on same day should have amount_base'
+    assert expense_a.amount_reimbursement is not None
+    assert expense_b.amount_reimbursement is not None
+    assert expense_a.amount_base != expense_b.amount_base
+
+
+@responses.activate
+@pytest.mark.django_db
+def test_update_rates_calculates_expenses_different_days(mock_rate_provider):
+    """Expenses on different days must all get amount_base calculated."""
+    day_a = date(2026, 5, 15)
+    day_b = date(2026, 6, 4)
+    gbp = CurrencyFactory(iso3='GBP')
+    mock_rate_provider(day_a, 'EUR,GBP,USD', {'EUR': 0.92172, 'GBP': 0.77373, 'USD': 1})
+    mock_rate_provider(day_b, 'EUR,GBP,USD', {'EUR': 0.92172, 'GBP': 0.80, 'USD': 1})
+
+    expense_a = ExpenseFactory(
+        day=day_a, amount_currency=Decimal('24.50'), currency=gbp,
+        amount_base=None, amount_reimbursement=None,
+    )
+    expense_b = ExpenseFactory(
+        day=day_b, amount_currency=Decimal('19.55'), currency=gbp,
+        amount_base=None, amount_reimbursement=None,
+    )
+
+    request = RequestFactory().get('/')
+    update_rates(request, Expense.objects.filter(pk__in=[expense_a.pk, expense_b.pk]))
+
+    expense_a.refresh_from_db()
+    expense_b.refresh_from_db()
+
+    assert expense_a.amount_base is not None
+    assert expense_b.amount_base is not None
+    assert expense_a.amount_reimbursement is not None
+    assert expense_b.amount_reimbursement is not None
+
+
+@pytest.mark.django_db
+class TestDisplayNoneHandling:
+    """Render methods must not display the string 'None' for null amounts."""
+
+    def test_render_amount_base_none(self):
+        result = ExpenseTableMixin.render_amount_base(None)
+        assert result != 'None'
+        assert 'None' not in str(result)
+
+    def test_render_amount_reimbursement_none(self):
+        result = ExpenseTableMixin.render_amount_reimbursement(None)
+        assert result != 'None'
+        assert 'None' not in str(result)
+
+    def test_render_amount_base_with_value(self):
+        result = ExpenseTableMixin.render_amount_base(Decimal('17.10'))
+        assert '17.10' in str(result)
+
+    def test_render_amount_reimbursement_with_value(self):
+        result = ExpenseTableMixin.render_amount_reimbursement(Decimal('17.10'))
+        assert result == Decimal('17.10')
+
+    def test_colored_amount_base_none(self):
+        expense = MagicMock()
+        expense.amount_base = None
+        result = ExpenseAdmin.colored_amount_base(None, expense)
+        assert 'None' not in str(result)
+
+    def test_colored_amount_reimbursement_none(self):
+        expense = MagicMock()
+        expense.amount_reimbursement = None
+        result = ExpenseAdmin.colored_amount_reimbursement(None, expense)
+        assert 'None' not in str(result)

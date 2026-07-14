@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from pyoxr import OXRError
@@ -15,23 +17,23 @@ if typing.TYPE_CHECKING:
     from django.http import HttpRequest
 
 
-def update_rates(request: 'HttpRequest', qs: 'QuerySet[Expense]') -> None:
+def update_rates(request: HttpRequest, qs: QuerySet[Expense]) -> None:
     rates_dict = {}
     future_days = []
     try:
         for expense in qs:
-            if expense.day in rates_dict:
-                rate = rates_dict[expense.day]
-            elif expense.day > datetime.today().date():
+            if expense.day > datetime.today().date():
                 future_days.append(expense.day)
-            else:
-                rate = rates_dict.setdefault(expense.day, Rate.for_date(expense.day))
-                expense.amount_base = rate.convert(expense.amount_currency, from_currency=expense.currency)
-                if expense.amount_reimbursement is None:
-                    expense.amount_reimbursement = expense.get_reimbursement_amount()
-                expense.save()
+                continue
+            if expense.day not in rates_dict:
+                rates_dict[expense.day] = Rate.for_date(expense.day)
+            rate = rates_dict[expense.day]
+            expense.amount_base = rate.convert(expense.amount_currency, from_currency=expense.currency)
+            if expense.amount_reimbursement is None:
+                expense.amount_reimbursement = expense.get_reimbursement_amount()
+            expense.save()
     except OXRError as e:
-        raise RateConversionError(e)
+        raise RateConversionError(e) from e
     if future_days:
         message = (
             f'It was impossible to apply rate conversions for the following future days:'

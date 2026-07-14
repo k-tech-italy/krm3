@@ -372,7 +372,7 @@ def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user
     browser.click('//button[@title="Run the selected action"]')
     browser.find_elements(
         By.XPATH,
-        '//td[@class="field-colored_amount_reimbursement" and contains(text(), "None")]',
+        '//td[@class="field-colored_amount_reimbursement" and contains(text(), "--")]',
     )
     expense.refresh_from_db()
     assert expense.amount_reimbursement is None

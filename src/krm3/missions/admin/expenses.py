@@ -1,8 +1,8 @@
-import decimal
 import os
 import re
 import shutil
 import typing
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -143,17 +143,22 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     @admin.display(description='Amt. reimbursement', ordering='amount_reimbursement')
     def colored_amount_reimbursement(self, obj: Expense) -> str:
-        if (value := obj.amount_reimbursement) and obj.amount_reimbursement < decimal.Decimal(0):
+        if obj.amount_reimbursement is None:
+            return '--'
+        if obj.amount_reimbursement < Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
-            value *= decimal.Decimal(-1)
+            value = obj.amount_reimbursement * Decimal(-1)
         else:
             cell_html = '%s'
+            value = obj.amount_reimbursement
 
         # for below line, you may consider using 'format_html', instead of python's string formatting
         return format_html(cell_html % value)
 
     def colored_amount_base(self, obj: Expense) -> str:
-        if obj.amount_base and obj.amount_base < decimal.Decimal(0):
+        if obj.amount_base is None:
+            return '--'
+        if obj.amount_base < Decimal(0):
             cell_html = '<span style="color: red;">%s</span>'
         else:
             cell_html = '%s'

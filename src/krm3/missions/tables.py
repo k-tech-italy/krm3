@@ -1,4 +1,3 @@
-import decimal
 from datetime import datetime
 from decimal import Decimal
 
@@ -15,14 +14,15 @@ class ExpenseTableMixin:
     attachment = tables.Column(empty_values=())
 
     def render_amount_currency(self, record: Expense) -> str:
-        value = f'{record.amount_currency} {record.currency.iso3}'
-        return format_html(value)
+        return format_html('%s %s', record.amount_currency, record.currency.iso3)
 
     @classmethod
     def render_amount_base(cls, value: Decimal) -> Decimal | str:
         if getattr(cls, 'export', False) is True:
             return value
-        if value and value < decimal.Decimal(0):
+        if value is None:
+            return '--'
+        if value < Decimal(0):
             value = f'{value} {settings.BASE_CURRENCY}'
             return format_html('<span style="color: red;">{}</span>', value)
         return f'{value} {settings.BASE_CURRENCY}'
@@ -31,7 +31,9 @@ class ExpenseTableMixin:
     def render_amount_reimbursement(cls, value: Decimal) -> Decimal | str:
         if getattr(cls, 'export', False) is True:
             return value
-        if value and value < decimal.Decimal(0):
+        if value is None:
+            return '--'
+        if value < Decimal(0):
             return format_html('<span style="color: red;">{}</span>', value)
         return value
 
