@@ -12,6 +12,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
@@ -333,12 +334,18 @@ class ContactAPIViewSet(ModelViewSet):
         return queryset
 
     def perform_create(self, serializer: 'ContactSerializer') -> None:
+        if not self.request.user.has_perm('core.add_contact'):
+            raise PermissionDenied
         serializer.save(user=self.request.user)
 
     def perform_update(self, serializer: 'ContactSerializer') -> None:
+        if not self.request.user.has_perm('core.change_contact'):
+            raise PermissionDenied
         serializer.save()
 
     def perform_destroy(self, instance: Contact) -> None:
+        if not self.request.user.has_perm('core.delete_contact'):
+            raise PermissionDenied
         instance.delete()
 
 

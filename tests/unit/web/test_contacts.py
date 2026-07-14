@@ -105,10 +105,8 @@ def test_can_filter_active_contacts(admin_client):
     assert response.json()['results'][0]['isActive'] is True
 
 
-@pytest.mark.parametrize('usr', ['admin', 'regular'], ids=['admin_can_create', 'regular_can_create'])
-def test_create_contact(usr, api_client, admin_user, regular_user):
-    user = admin_user if usr == 'admin' else regular_user
-    response = api_client(user).post(
+def test_create_contact(api_client, admin_user):
+    response = api_client(admin_user).post(
         reverse('core-api:contacts-list'),
         data={
             'first_name': 'New',
@@ -302,3 +300,61 @@ def test_patch_contact_updates_related_data(admin_client):
     assert len(data['emails']) == 2
     assert len(data['addresses']) == 2
     assert len(data['websites']) == 2
+
+
+@pytest.mark.parametrize(
+    ('permission', 'expected'),
+    [
+        pytest.param('add_contact', status.HTTP_201_CREATED, id='user_with_perm_create'),
+        pytest.param(None, status.HTTP_403_FORBIDDEN, id='user_without_perm_create'),
+    ],
+)
+def test_create_contact_permissions(permission, expected, regular_user, api_client):
+    if permission:
+        regular_user.user_permissions.add(Permission.objects.get(codename=permission))
+
+    response = api_client(regular_user).get(reverse('core-api:contacts-list'))
+    response = api_client(regular_user).post(
+        reverse('core-api:contacts-list'),
+        data={'first_name': 'John', 'last_name': 'Doe', 'phones': [], 'emails': []},
+        content_type='application/json',
+    )
+    assert response.status_code == expected
+
+
+@pytest.mark.parametrize(
+    ('permission', 'expected'),
+    [
+        pytest.param('change_contact', status.HTTP_200_OK, id='user_with_perm_change'),
+        pytest.param(None, status.HTTP_403_FORBIDDEN, id='user_without_perm_change'),
+    ],
+)
+def test_edit_contact_permissions(permission, expected, regular_user, api_client):
+    if permission:
+        regular_user.user_permissions.add(Permission.objects.get(codename=permission))
+
+    contact = ContactFactory(user=regular_user)
+    response = api_client(regular_user).patch(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+        data={'jobTitle': 'Updated'},
+        content_type='application/json',
+    )
+    assert response.status_code == expected
+
+
+@pytest.mark.parametrize(
+    ('permission', 'expected'),
+    [
+        pytest.param('delete_contact', status.HTTP_204_NO_CONTENT, id='user_with_perm_delete'),
+        pytest.param(None, status.HTTP_403_FORBIDDEN, id='user_without_perm_delete'),
+    ],
+)
+def test_delete_contact_permissions(permission, expected, regular_user, api_client):
+    if permission:
+        regular_user.user_permissions.add(Permission.objects.get(codename=permission))
+
+    contact = ContactFactory(user=regular_user)
+    response = api_client(regular_user).delete(
+        reverse('core-api:contacts-detail', kwargs={'pk': contact.pk}),
+    )
+    assert response.status_code == expected
