@@ -12,9 +12,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -316,7 +315,7 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
 class ContactAPIViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [DjangoModelPermissions]
     pagination_class = DefaultPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['first_name', 'last_name', 'company__name']
@@ -327,26 +326,12 @@ class ContactAPIViewSet(ModelViewSet):
             queryset = Contact.objects.all()
         else:
             queryset = Contact.objects.filter(user=self.request.user)
-
         if self.request.query_params.get('active'):
             queryset = queryset.filter(is_active=True)
-
         return queryset
 
     def perform_create(self, serializer: 'ContactSerializer') -> None:
-        if not self.request.user.has_perm('core.add_contact'):
-            raise PermissionDenied
         serializer.save(user=self.request.user)
-
-    def perform_update(self, serializer: 'ContactSerializer') -> None:
-        if not self.request.user.has_perm('core.change_contact'):
-            raise PermissionDenied
-        serializer.save()
-
-    def perform_destroy(self, instance: Contact) -> None:
-        if not self.request.user.has_perm('core.delete_contact'):
-            raise PermissionDenied
-        instance.delete()
 
 
 class TitleChoicesViewSet(ViewSet):
