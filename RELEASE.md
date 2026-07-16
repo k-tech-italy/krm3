@@ -3,14 +3,14 @@
 This document outlines the release process for KRM3, which involves the following key steps:
 
 1.  **Development**: All changes are made in feature branches and merged into the `develop` branch via Pull Requests.
-2.  **Build and Publish**: The workflow (to be triggered manually on `develop` branch) will:
-  - Bump the version via Commitizen
-  - Perform a commit (on Develop)
+2. Bump the version
   - Build the frontend
-  - Create a Docker image and push it to the GitHub Container Registry.
-3. **Manual Approval**: The workflow pauses for manual approval before deploying to the development environment.
-4. **Development Deployment**: After approval, the new version is automatically deployed to the `krm3int` development Kubernetes cluster.
-5. **Production Deployment**: Production deployment currently require updating the Workload image version on Rancher and redeploy.
+  - Perform `cz bump` (Commitizen)
+  - Perform a commit (on Develop)
+3. Create PR develop -> master. The **Build and Deploy** workflow will be triggered automatically and will create a Docker image and push it to the GitHub Container Registry.
+4. **Manual Approval**: The workflow pauses for manual approval before deploying to the development environment.
+5. **Development Deployment**: After approval, the new version is automatically deployed to the `krm3int` development Kubernetes cluster.
+6. **Production Deployment**: Production deployment require manual trigger of Github action **Deploy to Production**
 
 # Release Process
 
@@ -31,11 +31,11 @@ KRM3 follows a structured release process that ensures code quality through peer
 
 The release flow follows these stages:
 1. **Development** → Feature branches merged to `develop` via Pull Requests
-2. **Version Bump** → Automated version bump using Commitizen
-3. **Build & Publish** → Docker image published to GitHub Container Registry
+2. **Version Bump** → Manually on the `develop` branch: build the frontend, run `cz bump` (Commitizen), and commit
+3. **Build & Publish** → Merge `develop` into `master`: the **Build and Deploy** workflow builds and publishes the Docker image to GitHub Container Registry
 4. **Manual Approval** → Wait for manual approval in GitHub Actions
 5. **Development Deployment (krm3int)** → Automated deployment to development Kubernetes cluster after approval
-6. **Production Deployment** → Completely manual process (requires DevOps/Team Leader)
+6. **Production Deployment** → Production deployment require manual trigger of Github action **Deploy to Production**
 
 ## Prerequisites
 
@@ -67,34 +67,35 @@ git push origin feature/my-feature
 - Address any feedback
 - Once approved, merge the PR into `develop`
 
-### 3. Trigger Release Workflow
+### 3. Bump the Version
 
-After the PR is merged into `develop`, manually trigger the deployment workflow:
+Once the changes are on `develop`, prepare the release locally on the `develop` branch:
 
-1. Go to the [Actions tab](https://github.com/k-tech-italy/krm3/actions) in GitHub
-2. Select the **Build and Deploy** workflow
-3. Click **Run workflow**
-4. Select the `develop` branch
-5. Click **Run workflow**
+1. Build the frontend
+2. Run `cz bump` (Commitizen) to determine and apply the new version
+3. Commit the bump and push it (with tags) to `develop`
 
-This will initiate the automated release process.
+### 4. Merge to `master`
+
+Create a Pull Request from `develop` to `master` and merge it. Merging to `master` automatically triggers the **Build and Deploy** workflow, which builds the Docker image, pushes it to the GitHub Container Registry, and — after manual approval — deploys to the krm3int development environment.
 
 ## Deployment Stages
 
-### Stage 1: Version Bump (Automated)
+### Stage 1: Version Bump (Manual)
 
-The workflow automatically:
-- Runs `cz bump --yes` to analyze commits and determine the new version
-- Updates version in:
-  - [pyproject.toml](pyproject.toml#L3)
-  - [src/krm3/__init__.py](src/krm3/__init__.py)
-  - [docker/Makefile](docker/Makefile)
-  - [src/krm3/config/fragments/serviceworker.js](src/krm3/config/fragments/serviceworker.js)
-- Updates [CHANGELOG.md](CHANGELOG.md) with changes since version 1.5.32
-- Creates a git tag with the new version
-- Pushes the bump commit and tags to `develop`
-- Merges `develop` into `master` (temporarely disabled)
-- Pushes `master` (temporarely disabled)
+On the `develop` branch, before merging to `master`:
+- Build the frontend
+- Run `cz bump` to analyze commits and determine the new version, which:
+  - Updates version in:
+    - [pyproject.toml](pyproject.toml#L3)
+    - [src/krm3/__init__.py](src/krm3/__init__.py)
+    - [docker/Makefile](docker/Makefile)
+    - [src/krm3/config/fragments/serviceworker.js](src/krm3/config/fragments/serviceworker.js)
+  - Updates [CHANGELOG.md](CHANGELOG.md) with changes since version 1.5.32
+  - Creates a git tag with the new version
+- Commit the bump and push the commit and tags to `develop`
+
+> The following stages run automatically in the **Build and Deploy** workflow, which is triggered when `develop` is merged into `master`.
 
 ### Stage 2: Frontend Build (Automated)
 
@@ -136,18 +137,17 @@ After manual approval, the workflow automatically:
 
 **Important**: This deployment is **only to the krm3int development environment**. This is the final step of the automated pipeline.
 
-### Stage 6: Production Deployment (Completely Manual)
+### Stage 6: Production Deployment (Manual)
 
-**The automated workflow does NOT deploy to production.** Production deployment is a completely separate manual process:
+**The Build and Deploy workflow does NOT deploy to production.** Production deployment is triggered separately and manually via the **Deploy to Production** GitHub action:
 
-1. After verifying the deployment works correctly in krm3int development environment
-2. Contact a member of the **DevOps team** or the **Development Team Leader**
-3. Provide them with:
-   - The new version number
-   - Confirmation that krm3int testing is complete
-4. The DevOps team or Team Leader will manually perform the production deployment using their own tools and procedures
+1. After verifying the deployment works correctly in the krm3int development environment
+2. Manually trigger the **Deploy to Production** workflow:
+   - Go to the [Actions tab](https://github.com/k-tech-italy/krm3/actions)
+   - Select the **Deploy to Production** workflow
+   - Click **Run workflow** and provide the backend version to deploy (e.g. `3.4.0`)
 
-**Note**: There is no automated production deployment in this pipeline.
+**Note**: Production is never deployed automatically by the Build and Deploy pipeline; it always requires the manual **Deploy to Production** trigger.
 
 ## Workflow Details
 
@@ -157,7 +157,7 @@ The complete workflow is defined in [.github/workflows/deploy.yml](.github/workf
 
 ### Jobs Overview
 
-1. **`bump`**: Version bumping and git operations
+1. **`validate`**: Validates the version in `pyproject.toml` against the container registry (ensures it is new and greater than the latest published)
 2. **`build-frontend`**: Frontend compilation and artifact creation
 3. **`build-and-push`**: Docker image creation and registry push
 4. **`release`**: Manual approval gate + deployment to krm3int development environment via Rancher API
