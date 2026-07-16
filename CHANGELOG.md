@@ -1,3 +1,21 @@
+## 3.7.0 (2026-07-16)
+
+### Feat
+
+- **contacts**: restrict contact actions based on permissions
+- **contacts**: atomic create/update and related data tests
+- **contacts**: update Contact model and add endpoints
+- **Contract**: Adding sunday_as_holidy flag and some utility methods. Aligned test with new behaviour
+
+### Fix
+
+- **contacts**: update phone number validation and add contact titles enum
+- **import**: Fixes #620 Module name clash krm3.flags
+
+### Refactor
+
+- **ContactAPIViewSet**: use DjangoModelPermissions for ContactAPIViewSet
+
 ## 3.6.0 (2026-05-06)
 
 ### Feat
