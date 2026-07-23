@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import itertools
 import typing
 from decimal import Decimal
@@ -16,16 +17,15 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
-from .geo import City
-from .auth import Resource
-from .projects import Project
-
 from krm3.core.storage import PrivateMediaStorage
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
 from krm3.utils.queryset import ActiveManagerMixin
 
+from .auth import Resource
+from .geo import City
+from .projects import Project
 
 if typing.TYPE_CHECKING:
     from krm3.core.models.auth import User
@@ -305,6 +305,7 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
 
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         # Superuser has access to all expenses
@@ -321,14 +322,14 @@ class ExpenseManager(ActiveManagerMixin, models.Manager):
                 return self.filter(mission__resource=user_resource)
             # User has no resource
             logger.warning(
-                f"User {user.username} (id={user.id}) does not have an associated resource. "  # type: ignore[attr-defined]
-                "No expense access granted."
+                f'User {user.username} (id={user.id}) does not have an associated resource. '  # type: ignore[attr-defined]
+                'No expense access granted.'
             )
             return self.none()
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                f"Error getting resource for user {user.username} (id={user.id}). "  # type: ignore[attr-defined]
-                f"No expense access granted. Error: {e}"
+                f'Error getting resource for user {user.username} (id={user.id}). '  # type: ignore[attr-defined]
+                f'No expense access granted. Error: {e}'
             )
             return self.none()
 
@@ -369,6 +370,20 @@ class Expense(models.Model):
 
     def __str__(self) -> str:
         return f'{self.day}, {self.amount_currency} for {self.category}'
+
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: list[str] | None = None,
+    ) -> None:
+        self.full_clean()
+        super().save(force_insert, force_update, using, update_fields)
+
+    def clean(self) -> None:
+        if self.day and self.day > datetime.date.today():
+            raise ValidationError({'day': _('You cannot make expenses for the future')})
 
     def get_updated_millis(self) -> int:
         return int(self.modified_ts.timestamp() * 1000)

@@ -65,7 +65,7 @@ class MissionAdminForm(forms.ModelForm):
 
 
 class ExpenseAdminForm(forms.ModelForm):
-    def clean(self) -> dict[str, typing.Any]:
+    def clean(self) -> dict[str, typing.Any] | None:
         ret = super().clean()
 
         if not self.cleaned_data.get('currency') and (mission := self.cleaned_data['mission']):
