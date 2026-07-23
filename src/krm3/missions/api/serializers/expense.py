@@ -1,12 +1,15 @@
+import typing
+
 from cryptography.fernet import InvalidToken
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 
-def token_validator(value):
+def token_validator(value: str) -> None:
     try:
         settings.FERNET_KEY.decrypt(f'gAAAAA{value}').decode()
     except InvalidToken:
@@ -43,6 +46,16 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
 
 
 class ExpenseCreateSerializer(serializers.ModelSerializer):
+    def validate(self, attrs: dict[str, typing.Any]) -> dict[str, typing.Any]:
+        instance = self.instance or Expense()
+        for attr, value in attrs.items():
+            setattr(instance, attr, value)
+        try:
+            instance.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict)
+        return attrs
+
     class Meta:
         model = Expense
         fields = (
@@ -69,7 +82,7 @@ class ExpenseRetrieveSerializer(serializers.ModelSerializer):
     otp = serializers.SerializerMethodField()
 
     @staticmethod
-    def get_otp(obj: Expense):  # noqa: D102
+    def get_otp(obj: Expense) -> object:  # noqa: D102
         return obj.get_otp()
 
     class Meta:

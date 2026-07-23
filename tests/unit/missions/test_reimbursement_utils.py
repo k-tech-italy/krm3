@@ -1,10 +1,10 @@
 from decimal import Decimal
 
 import pytest
-
 from testutils.factories import ExpenseFactory
+
 from krm3.core.models import Expense
-from krm3.missions.utilities import calculate_reimbursement_summaries, ReimbursementSummaryEnum
+from krm3.missions.utilities import ReimbursementSummaryEnum, calculate_reimbursement_summaries
 
 
 @pytest.fixture
@@ -12,8 +12,8 @@ def dataset(request, categories):
     match request.getfixturevalue('scenario'):
         case 'all_personal':
             for category, payment_type, currency, base, reimbursement in [
-                ['alloggio', 'personal', 1.1, 1.1, 1.1],
-                ['alloggio', 'personal', 2.0, 2.4, 2.4],
+                ['alloggio', 'personal', Decimal('1.1'), Decimal('1.1'), Decimal('1.1')],
+                ['alloggio', 'personal', Decimal('2.0'), Decimal('2.4'), Decimal('2.4')],
             ]:
                 ExpenseFactory(
                     category=categories.expenses[category],
@@ -34,8 +34,8 @@ def dataset(request, categories):
             }
         case 'partial_personal':
             for category, payment_type, currency, base, reimbursement in [
-                ['alloggio', 'personal', 1.1, 1.1, 1.1],
-                ['alloggio', 'personal', 2.0, 2.4, 0.5],
+                ['alloggio', 'personal', Decimal('1.1'), Decimal('1.1'), Decimal('1.1')],
+                ['alloggio', 'personal', Decimal('2.0'), Decimal('2.4'), Decimal('0.5')],
             ]:
                 ExpenseFactory(
                     category=categories.expenses[category],
@@ -56,15 +56,15 @@ def dataset(request, categories):
             }
         case 'mixed':
             for category, payment_type, currency, base, reimbursement in [
-                ['rappresentanza', 'personal', 1.1, 1.1, 1.1],
-                ['rappresentanza', 'personal', 2.0, 2.4, 0.5],
-                ['alloggio', 'personal', 1.1, 1.1, 1.1],
-                ['alloggio', 'company', 10, 10.1, -5.4],
-                ['alloggio', 'personal', 2.0, 2.4, 0.5],
-                ['vitto', 'company', 2.0, 2.4, 0],
-                ['forfait.alloggio', 'company.wire', 1.1, 1.1, 0],
-                ['forfait.treno', 'personal', 2.0, 2.4, 0.5],
-                ['viaggio', 'company.cca', 1.1, 1.3, 0],
+                ['rappresentanza', 'personal', Decimal('1.1'), Decimal('1.1'), Decimal('1.1')],
+                ['rappresentanza', 'personal', Decimal('2.0'), Decimal('2.4'), Decimal('0.5')],
+                ['alloggio', 'personal', Decimal('1.1'), Decimal('1.1'), Decimal('1.1')],
+                ['alloggio', 'company', 10, Decimal('10.1'), Decimal('-5.4')],
+                ['alloggio', 'personal', Decimal('2.0'), Decimal('2.4'), Decimal('0.5')],
+                ['vitto', 'company', Decimal('2.0'), Decimal('2.4'), 0],
+                ['forfait.alloggio', 'company.wire', Decimal('1.1'), Decimal('1.1'), 0],
+                ['forfait.treno', 'personal', Decimal('2.0'), Decimal('2.4'), Decimal('0.5')],
+                ['viaggio', 'company.cca', Decimal('1.1'), Decimal('1.3'), 0],
             ]:
                 ExpenseFactory(
                     category=categories.expenses[category],

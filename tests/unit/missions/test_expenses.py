@@ -1,5 +1,5 @@
 from contextlib import nullcontext as does_not_raise
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
 
@@ -19,8 +19,10 @@ from testutils.factories import (
 )
 from testutils.permissions import add_permissions
 
-from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.core.models import Expense
+from krm3.missions.api.serializers.expense import ExpenseCreateSerializer
+from krm3.missions.exceptions import AlreadyReimbursed
+from krm3.missions.forms import ExpenseAdminForm
 
 
 def test_expense_manager(expense):
@@ -204,7 +206,7 @@ def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
     expense = ExpenseFactory()
 
     def raise_exception():
-        raise RuntimeError("Database error")
+        raise RuntimeError('Database error')
 
     monkeypatch.setattr(user, 'get_resource', raise_exception)
 
@@ -212,3 +214,37 @@ def test_accessible_by_get_resource_exception_returns_empty(db, monkeypatch):
 
     assert result.count() == 0
     assert expense not in result
+
+
+def test_expense_admin_form_rejects_future_day(db):
+    expense = ExpenseFactory()
+    form = ExpenseAdminForm(
+        data={
+            'mission': expense.mission_id,
+            'day': date.today() + timedelta(days=1),
+            'amount_currency': expense.amount_currency,
+            'category': expense.category_id,
+            'document_type': expense.document_type_id,
+            'payment_type': expense.payment_type_id,
+            'currency': expense.currency_id,
+        }
+    )
+    assert not form.is_valid()
+    assert 'day' in form.errors
+
+
+def test_expense_serializer_rejects_future_day(db):
+    expense = ExpenseFactory()
+    serializer = ExpenseCreateSerializer(
+        data={
+            'mission': expense.mission_id,
+            'day': (date.today() + timedelta(days=1)).isoformat(),
+            'amount_currency': expense.amount_currency,
+            'category': expense.category_id,
+            'document_type': expense.document_type_id,
+            'payment_type': expense.payment_type_id,
+            'currency': expense.currency_id,
+        }
+    )
+    assert not serializer.is_valid()
+    assert 'day' in serializer.errors
