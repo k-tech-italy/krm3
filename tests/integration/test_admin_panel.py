@@ -1,28 +1,28 @@
-import json
-import time
 import datetime
+import json
 import os
 import tempfile
-
-from freezegun import freeze_time
-from constance.test import override_config
-from krm3.core.models.missions import Mission
-import pytest
-
+import time
 import typing
 
+import pytest
+from constance.test import override_config
+from django.contrib.auth.models import Permission
+from freezegun import freeze_time
 from selenium.webdriver.common.by import By
 from testutils.factories import (
-    TaskFactory,
-    TimeEntryFactory,
+    ContractFactory,
+    ExpenseFactory,
+    MissionFactory,
+    ReimbursementFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
-    MissionFactory,
-    ExpenseFactory,
-    ReimbursementFactory,
-    ContractFactory,
+    TaskFactory,
+    TimeEntryFactory,
+    TimesheetSubmissionFactory,
 )
-from django.contrib.auth.models import Permission
+
+from krm3.core.models.missions import Mission
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
@@ -336,6 +336,7 @@ def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user_with_plain_p
 def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_with_plain_password):
     """Test that the expense list displays image link when image exists and '-' when not."""
     from unittest.mock import MagicMock
+
     from django.core.files import File
 
     mission = MissionFactory(number=1, status=Mission.MissionStatus.SUBMITTED, to_date=datetime.date.today())
@@ -429,7 +430,7 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
         mission=mission,
         amount_reimbursement=100,
     )
-    expense.image = "fake_image.jpg"
+    expense.image = 'fake_image.jpg'
     expense.save()
     browser.admin_user = admin_user_with_plain_password
     browser.login()
@@ -446,7 +447,6 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
     # the rembursment is correctly created
     expense.refresh_from_db()
     assert expense.reimbursement is not None
-
 
 
 def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user_with_plain_password):
@@ -495,3 +495,57 @@ def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_
 
     finally:
         os.unlink(tmp_file_path)
+
+
+@pytest.fixture
+def submissions():
+    return {
+        'january': TimesheetSubmissionFactory(
+            period=(datetime.date(2026, 1, 1), datetime.date(2026, 2, 1)),
+            closed=True,
+        ),
+        'february': TimesheetSubmissionFactory(
+            period=(datetime.date(2026, 2, 1), datetime.date(2026, 3, 1)),
+            closed=True,
+        ),
+        'march': TimesheetSubmissionFactory(
+            period=(datetime.date(2026, 3, 1), datetime.date(2026, 4, 1)),
+            closed=True,
+        ),
+        'mid_month': TimesheetSubmissionFactory(
+            period=(datetime.date(2026, 3, 15), datetime.date(2026, 4, 16)),
+            resource=ResourceFactory(),
+            closed=True,
+        ),
+    }
+
+
+@pytest.mark.parametrize(
+    ('lower_bound', 'upper_bound', 'expected_submissions'),
+    [
+        pytest.param('2026-01-01', '2026-02-01', 2, id='lower_upper_bound'),
+        pytest.param('2026-01-02', '', 4, id='lower_bound'),
+        pytest.param('', '2026-03-01', 3, id='upper_bound'),
+        pytest.param('2025-01-01', '2025-02-01', 0, id='out_of_bound'),
+        pytest.param('', '', 4, id='no_bound'),
+        pytest.param('random', 'string', 4, id='wrong_date'),
+    ],
+)
+def test_timesheet_submission_date_range_filter(
+    lower_bound,
+    upper_bound,
+    expected_submissions,
+    browser: 'AppTestBrowser',
+    admin_user_with_plain_password,
+    submissions,
+):
+    browser.admin_user = admin_user_with_plain_password
+    browser.login()
+    browser.click('//a[@href="/admin/core/timesheetsubmission/"]')
+    lower_bound_period = browser.find_element(By.XPATH, '//input[@name="period__range__gte"]')
+    upper_bound_period = browser.find_element(By.XPATH, '//input[@name="period__range__lte"]')
+    lower_bound_period.send_keys(lower_bound)
+    upper_bound_period.send_keys(upper_bound)
+    browser.click('//input[@type="submit" and @value="Search"]')
+    table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
+    assert len(table_rows) == expected_submissions
