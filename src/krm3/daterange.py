@@ -8,13 +8,12 @@ from rangefilter.filters import DateRangeFilter
 from krm3.utils.dates import KrmDay
 
 if TYPE_CHECKING:
-    import datetime
     from django.db.models import Model, QuerySet
     from django.http import HttpRequest
 
 
 class DateRangeFilterBase(DateRangeFilter):
-    """Base class for DateRangeFilter."""
+    """Base class for custom filters based on date ranges."""
 
     method: str = ''
 
@@ -31,18 +30,15 @@ class DateRangeFilterBase(DateRangeFilter):
         if not self.form.cleaned_data:
             return queryset
 
-        lower, upper = self._make_query_filter()
+        lower = self.form.cleaned_data.get(self.lookup_kwarg_gte)
         if lower is not None:
             lower = lower.strftime('%Y-%m-%d')
+
+        upper = self.form.cleaned_data.get(self.lookup_kwarg_lte)
         if upper is not None:
             upper = (KrmDay(upper) + 1).date.strftime('%Y-%m-%d')
+
         return queryset.filter(**{f'{self.field_path}__{self.method}': DateRange(lower, upper)})
-
-    def _make_query_filter(self) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
-        date_value_lower = self.form.cleaned_data.get(self.lookup_kwarg_gte)
-        date_value_upper = self.form.cleaned_data.get(self.lookup_kwarg_lte)
-
-        return date_value_lower, date_value_upper
 
 
 class DateRangeOverlapFilter(DateRangeFilterBase):
