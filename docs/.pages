@@ -1,0 +1,9 @@
+nav:
+  - Home: index.md
+  - Missions: missions
+  - Examples: examples
+  - Glossary: glossary
+  - Guide: guides
+  - Wiki: wiki
+  - License: license.md
+  - Tags: tags.md
