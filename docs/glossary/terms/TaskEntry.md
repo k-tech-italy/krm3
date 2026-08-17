@@ -8,7 +8,7 @@ terms:
 
 # TaskEntry
 
-_Django Model: core.TimeEntry_
+_Django Model: core.TaskEntry_
 
 TaskEntry is a <glossary:TimeEntry> with a specified Task and it represents work on a particular task (e.g., shift, travel, on-call duty).
 
@@ -17,13 +17,3 @@ TaskEntry is a <glossary:TimeEntry> with a specified Task and it represents work
 - night shift hours
 - travel hours
 - on call hours
-
-### TaskEntry **cannot** include:
-- holiday hours
-- sick hours
-- leave hours (general time off)
-- special leave hours (time off with a specified reason)
-- rest hours
-- bank to hours
-- bank from hours
-(These hours belong to a <glossary:DayEntry>.)

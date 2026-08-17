@@ -8,20 +8,20 @@ terms:
 
 # DayEntry
 
-_Django Model: core.TimeEntry_
+_Django Model: core.DayEntry_
 
-DayEntry is <glossary:TimeEntry> without specified Task and it's affecting all day (ie. Holiday, Sick day, Leave...).
-### DayEntry may include:
-- holiday hours
-- sick hours
-- leave hours (general time off)
-- special leave hours (time off with a specified reason)
-- rest hours
-- bank to hours
-- bank from hours
-### DayEntry **cannot** include:
-- day shift hours
-- night shift hours
-- travel hours
-- on call hours
-(These hours belong to a <glossary:TaskEntry>.)
+DayEntry is the record of the Resource's activities in a day.
+
+In contains task-agnostic data like:
+
+- `is_holiday`: if the day is holiday according to the <glossary:Resource>'s calendar
+- `is_sick`: if the <glossary:Resource> called in sick.
+- `holiday_hours`: Hours of holiday leave.
+- `leave_hours`: Hours of general leave.
+- `special_leave_hours`: Hours of special leave.
+- `special_leave_reason`: The reason for special leave.
+- `last_modified`: When the entry was last modified.
+- `timesheet`: The <glossary:TimesheetSubmission> this entry belongs to.
+- `bank`: Hours deposited or withdrawn to/from <glossary:BankOfHours>
+
+It also contains the summaries for the <glossary:TaskEntry> data for the day

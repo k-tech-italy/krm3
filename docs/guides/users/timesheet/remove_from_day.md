@@ -2,13 +2,13 @@
 
 Select days from which you want to delete hours
 
-![Day selection](./assets/day-selection.png){ style="width:40%; display:block; margin:auto;" }
+![Day selection](../assets/day-selection.png){ style="width:40%; display:block; margin:auto;" }
 
 ## # How to delete every logged hours from selected days
 
 To delete every logged hours from selected days you should click 'Clear Day'. It will delete not only day entries(holidays, leaves etc.), but also task entries!
 
-![Remove hours](./assets/day-edit.png){ style="width:60%; display:block; margin:auto;" }
+![Remove hours](../assets/day-edit.png){ style="width:60%; display:block; margin:auto;" }
 
 ## # How to remove only leave, special leave, rest
 

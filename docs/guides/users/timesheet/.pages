@@ -1,0 +1,11 @@
+title: Timesheet
+nav:
+  - timesheet_overview.md
+  - add.md
+  - remove.md
+  - remove_from_day.md
+  - entry.md
+  - submit.md
+  - bank_hours.md
+  - timesheet_report.md
+  - rules.md

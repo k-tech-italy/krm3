@@ -1,7 +1,5 @@
 title: User Guide
-arrange:
+nav:
   - index.md
-  - add.md
-  - remove.md
-  - entry.md
-  - submit.md
+  - timesheet
+  - availability.md
