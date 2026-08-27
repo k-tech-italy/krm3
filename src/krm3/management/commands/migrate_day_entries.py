@@ -9,7 +9,7 @@ from django.db.models import Min
 
 from krm3.core.contracts import ContractSolver
 from krm3.core.models import Contract
-from krm3.utils.dates import KrmDateRange
+from ktcalendars import KTDateRange
 
 
 def _inject_task_entry_fields() -> tuple[models.Model, models.Model]:
@@ -74,7 +74,7 @@ def migrate_time_entries():
 
     timesheets = {}
     for ts in TimesheetSubmission.objects.all():
-        for d in KrmDateRange(ts.period):
+        for d in KTDateRange(ts.period):
             timesheets[(d.date, ts.resource_id)] = ts
 
     # Silencing the cleans
