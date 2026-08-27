@@ -279,6 +279,10 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         """Return True if the day is a non-working day."""
         return self.is_holiday or self.due_hours == 0
 
+    def get_ktday(self) -> KTDay:
+       return self.contract.get_ktday(self.day)
+
+
     def reset(self, full: bool = False, **kwargs) -> None:
         """
         Reset the day entry to initial values except for Contract, Resource, Comment, and day, that are left unchanged.
@@ -444,6 +448,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
                 _('You cannot log more than one kind of non-task hours in a day'),
                 code='multiple_absence_kind',
             )
+
 
 
 class TaskEntry(CleanValidatorsMixin, models.Model):
