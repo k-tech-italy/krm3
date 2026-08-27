@@ -2,12 +2,10 @@ import typing
 from datetime import date
 from typing import Iterable
 
-from dateutil.relativedelta import relativedelta
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from ktcalendars import KTDay
 
 from krm3.core.models import Resource
-from ktcalendars import KTDay, KTDateRange
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract, DayEntry, Task, TaskEntry
@@ -21,7 +19,7 @@ class DayEntryProcessor:
         self.resource: Resource = resource
         self.contract: Contract = contract or Contract.objects.by_day(resource, self.day)
         if not self.contract:
-            raise ValueError(_('No contract found for {} on {}').formate(resource, self.day))
+            raise ValueError(_('No contract found for {} on {}').format(resource, self.day))
 
     def build_day(
         self, task_entries: 'Iterable[TaskEntry | dict] | None' = None, reset: bool = False, **kwargs
@@ -38,7 +36,9 @@ class DayEntryProcessor:
         task_entries = task_entries or []
 
         day_entry, created = DayEntry.objects.get_or_create(
-            day=self.day, contract=self.contract, defaults={'resource': self.resource},
+            day=self.day,
+            contract=self.contract,
+            defaults={'resource': self.resource},
         )
         if not reset and not created:
             raise RuntimeError(_('DayEntry already exists'))
@@ -55,7 +55,9 @@ class DayEntryProcessor:
                 task_entries_list.append(task_entry_values)
             else:
                 # _build_task will check task is compatible
-                task_entries_list.append(self._build_task(day_entry=day_entry, task=task_entry_values.pop('task', None), **task_entry_values))
+                task_entries_list.append(
+                    self._build_task(day_entry=day_entry, task=task_entry_values.pop('task', None), **task_entry_values)
+                )
 
         day_entry.refresh(task_entries_list)
         day_entry.save()
