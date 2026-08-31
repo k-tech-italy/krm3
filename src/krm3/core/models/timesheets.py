@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal as D  # noqa: N817
 from textwrap import shorten
-from typing import TYPE_CHECKING, Any, Iterable, Self, override
+from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
 
 from constance import config
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -15,11 +15,11 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange, KTDay
 
+from krm3.timesheet.operations import DayEntryProcessor
+from krm3.utils.db.postgresql.funcs import DateRangeIntersection, Unnest
 from krm3.utils.models import CleanValidatorsMixin
+from krm3.utils.numbers import safe_dec
 
-from ...timesheet.operations import DayEntryProcessor
-from ...utils.db.postgresql.funcs import DateRangeIntersection, Unnest
-from ...utils.numbers import safe_dec
 from .auth import Resource
 
 if TYPE_CHECKING:
@@ -268,7 +268,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     @property
     def bank_from(self) -> D:
-        return -1 * self.bankb if self.bank < 0 else D(0)
+        return -1 * self.bank if self.bank < 0 else D(0)
 
     @property
     def bank_to(self) -> D:
@@ -280,8 +280,8 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return self.is_holiday or self.due_hours == 0
 
     def get_ktday(self) -> KTDay:
-       return self.contract.get_ktday(self.day)
-
+        """Return the calendar-aware KTDay given the Resource's contract."""
+        return cast('KTDay', self.contract.get_ktday(self.day))
 
     def reset(self, full: bool = False, **kwargs) -> None:
         """
@@ -342,7 +342,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             overtime = self.worked_hours - self.due_hours
             self.overtime_hours = overtime if overtime > 0 else D(0.0)
         else:
-            self.overtime_hours = 0
+            self.overtime_hours = D(0.0)
 
         self.clean()
 
@@ -450,7 +450,6 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             )
 
 
-
 class TaskEntry(CleanValidatorsMixin, models.Model):
     """A timesheet task-related entry."""
 
@@ -553,7 +552,7 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
 
 
 @receiver(models.signals.post_save, sender=TimesheetSubmission)
-def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission | list | tuple, **kwargs: Any) -> None:
+def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, **kwargs: Any) -> None:
     instance.dayentry_set.update(timesheet=None)
     if isinstance(instance.period, (list | tuple)):
         lower, upper = instance.period[0], instance.period[1]
