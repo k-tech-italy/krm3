@@ -30,9 +30,9 @@ class ContractSolver:
         self.cache = {}
         for contract in qs:
             period_dict = self.cache.setdefault(contract.resource_id, {})
-            period_dict[contract.period_as_tuple()] = contract
+            period_dict[(contract.period.lower, contract.period.upper or date.max)] = contract
 
-    def solve(self, resource: 'Resource | int', day: date, create_default=False) -> 'Contract | None':
+    def solve(self, resource: 'Resource | int', day: date, create_default: bool = False) -> 'Contract | None':
         """Will solve the contract for the Resource and day."""
         from krm3.core.models import Resource
 
