@@ -96,12 +96,17 @@ def migrate_time_entries():
     for te in list(TaskEntry.objects.select_related('timesheet').all()):
         key = te.resource_id, te.date
         contract = contract_solver.solve(te.resource, te.date)
+        if contract is None:
+            raise ValueError(f'No Contract covers Resource {te.resource_id} on {te.date}')
+        contract_day = contract.get_ktday(te.date)
+        if contract_day is None:
+            raise ValueError(f'Contract {contract.pk} does not cover {te.date}')
 
         day_entries[key]['day'] = te.date
         day_entries[key]['resource_id'] = te.resource_id
         day_entries[key]['closed'] = (te.timesheet and te.timesheet.closed) or False
         day_entries[key]['contract_id'] = contract.id
-        day_entries[key]['is_holiday'] = contract.is_holiday(te.date)
+        day_entries[key]['is_holiday'] = contract_day.is_holiday
         day_entries[key]['due_hours'] = contract.get_due_hours(te.date)
         day_entries[key]['timesheet'] = timesheets.get(key)
 
