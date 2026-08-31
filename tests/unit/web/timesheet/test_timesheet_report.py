@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from bs4 import BeautifulSoup
 from django.urls import reverse
-
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
 
