@@ -452,4 +452,4 @@ def test_active_between(start_date, end_date, expected):
 
     assert list(Contract.objects.active_between(start_date, end_date).values_list('id', flat=True)) == [
         contracts[i].id for i in expected
-    ] 
+    ]
