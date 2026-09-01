@@ -3,17 +3,18 @@ import typing
 from django.contrib import admin, messages
 from django.template.response import TemplateResponse
 
+from krm3.core.models import Mission
 from krm3.missions.facilities import ReimbursementFacility
 from krm3.missions.forms import MissionsReimbursementForm
-from krm3.core.models import Mission
 from krm3.sentry import capture_exception
 from krm3.utils.rates import update_rates
 
 if typing.TYPE_CHECKING:
+    from django.contrib.admin.options import ModelAdmin
     from django.db.models import QuerySet
     from django.http import HttpRequest, HttpResponse
+
     from krm3.core.models import Expense
-    from django.contrib.admin.options import ModelAdmin
 
 
 @admin.action(description='Recalculate reimbursement')
@@ -21,6 +22,7 @@ def recalculate_reimbursement(modeladmin: 'ModelAdmin', request: 'HttpRequest', 
     for expense in queryset.filter(reimbursement=None).all():
         expense.amount_reimbursement = expense.get_reimbursement_amount()
         expense.save()
+
 
 @admin.action(description='Reset reimbursement')
 def reset_reimbursement(modeladmin: 'ModelAdmin', request: 'HttpRequest', queryset: 'QuerySet[Expense]') -> None:
@@ -69,7 +71,7 @@ def get_rates(
     expenses = queryset.filter(amount_base__isnull=True)
     ret = expenses.count()
     qs = expenses.all()
-    update_rates(request, qs)
+    update_rates(qs)
     msg = f'Converted {ret} amounts'
     if silent:
         return msg
