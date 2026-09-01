@@ -15,7 +15,8 @@ BASE_JSON = {
 }
 
 
-def test_api_create_mission(expense, admin_user):
+def test_api_create_mission(expense, admin_user, monkeypatch):
+    monkeypatch.setattr('krm3.currencies.models.currencies.Currency.is_base', lambda x: True)
     assert Expense.objects.count() == 1
 
     fks = {

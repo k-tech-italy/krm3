@@ -75,7 +75,7 @@ def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image,
         image = None
 
     payment_type = PaymentCategoryFactory(personal_expense=expense_type == 'P')
-    expense = ExpenseFactory(
+    expense = Expense(
         amount_base=amt_base, image=image, payment_type=payment_type, amount_reimbursement=initial, reimbursement=None
     )
     reimbursed = expense.apply_reimbursement(force=force)
