@@ -1,10 +1,10 @@
 from typing import Any
 
-from flags.state import flag_enabled
+from django.conf import settings
 from flags.sources import get_flags
+from flags.state import flag_enabled
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from django.conf import settings
 
 from krm3.config.environ import env
 from krm3.core.models import Resource, UserProfile
@@ -31,9 +31,8 @@ LABEL_TO_FLAG_URL_MAP = [
         'flag': 'CONTACTS_ENABLED',
         'url': 'contacts',
         'label': 'Contacts',
-    }
+    },
 ]
-
 
 
 # XXX: why is this not a BaseSerializer? The metaclass implicitly
@@ -118,9 +117,7 @@ class ResourceSerializer(serializers.ModelSerializer):
 
 
 class PreferredLanguageSerializer(serializers.Serializer):
-    language_code = serializers.ChoiceField(
-        choices=[code for code, _ in settings.LANGUAGES]
-    )
+    language_code = serializers.ChoiceField(choices=[code for code, _ in settings.LANGUAGES])
 
-    def validate_language_code(self, value):
+    def validate_language_code(self, value: str) -> None:
         return value.strip().lower()

@@ -384,6 +384,8 @@ class Expense(models.Model):
     def clean(self) -> None:
         if self.day and self.day > datetime.date.today():
             raise ValidationError({'day': _('You cannot make expenses for the future')})
+        if self.mission:
+            self.amount_base = self.calculate_base(save=False)
 
     def get_updated_millis(self) -> int:
         return int(self.modified_ts.timestamp() * 1000)
