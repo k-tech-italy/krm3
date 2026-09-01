@@ -3,7 +3,7 @@ import time
 import pytest
 from django.shortcuts import reverse
 from selenium.webdriver.support.ui import WebDriverWait, Select
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 
 
 @pytest.mark.xfail(reason="This will fail until the frontend counterpart of this feature is merged.")

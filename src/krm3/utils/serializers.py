@@ -5,7 +5,7 @@ from rest_framework.serializers import SerializerMetaclass
 
 
 class ModelDefaultSerializerMixin:
-    def __init__(self, instance=None, *args, **kwargs):
+    def __init__(self, instance=None, *args, **kwargs):  # noqa: ANN001, ANN204
         depth = kwargs.pop('depth', None)
         exclude = kwargs.pop('exclude', None)
 
@@ -26,7 +26,7 @@ class ModelDefaultSerializerMixin:
 
 
 class ModelDefaultSerializerMetaclass(SerializerMetaclass):
-    def __new__(cls, name, bases, dct):
+    def __new__(cls, name, bases, dct):  # noqa: ANN001, ANN204
         if hasattr(model := dct['Meta'].model, 'default_serializer'):
             raise Exception(f'Default serializer for {model} already defined')
         model.default_serializer = property(
