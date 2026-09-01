@@ -1,3 +1,12 @@
+## 3.7.1 (2026-09-01)
+
+### Fix
+
+- **linting**: Just some linting to bump rebvision
+- **Expense**: Fixes 648 Expense with amount-base None
+- **admin**: prevent crashes when searching with empty date range filter
+- **Expense**: add validation for future expenses
+
 ## 3.7.0 (2026-07-16)
 
 ### Feat
