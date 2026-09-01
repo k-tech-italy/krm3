@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
@@ -17,6 +17,7 @@ from .queries import resources_in_period
 
 if TYPE_CHECKING:
     import datetime
+    from collections.abc import Iterable
 
     from django.db.models import QuerySet
     from ktcalendars.types import KTDayType
@@ -166,38 +167,28 @@ class TimesheetReport:
 
 class TimesheetReportOnline(TimesheetReport):
     def report_html(self) -> list[ReportBlock]:
-        blocks = []
-        for resource_data in self.report_data.resources:
-            block = ReportBlock(resource_data.resource)
-            blocks.append(block)
-            header = block.add_row(ReportRow())
-            header.add_cell(sum(not day.nwd for day in resource_data.days))
-            for day in resource_data.days:
-                header.add_cell(day)
+        return [self._resource_block(resource_data) for resource_data in self.report_data.resources]
 
-            if resource_data.has_data:
-                for field_name, label in REPORT_FIELDS:
-                    self._add_metric_row(block, resource_data.days, field_name, label)
-                    if field_name == 'leave_hours':
-                        self._add_special_leave_rows(block, resource_data.days)
-                        self._add_sick_rows(block, resource_data.days)
-
-        return blocks
+    def _resource_block(self, resource_data: ResourceTimesheetReportData) -> ReportBlock:
+        block = ReportBlock(resource_data.resource)
+        self._add_header(block, resource_data.days)
+        if resource_data.has_data:
+            self._add_timesheet_rows(block, resource_data.days)
+        return block
 
     @staticmethod
-    def _add_metric_row(block: ReportBlock, days: list[TimesheetReportDay], field_name: str, label: Any) -> None:
-        row = block.add_row(ReportRow())
-        row.add_cell(label)
-        total_cell = row.add_cell(ReportCell(Decimal(0)))
-        total = Decimal(0)
-
+    def _add_header(block: ReportBlock, days: list[TimesheetReportDay]) -> None:
+        header = block.add_row(ReportRow())
+        header.add_cell(sum(not day.nwd for day in days))
         for day in days:
-            value = day.value(field_name)
-            cell = cast('NwdReportCell', row.add_cell(normal(value) if value else None))
-            cell.nwd = day.nwd
-            total += Decimal(value)
+            header.add_cell(day)
 
-        total_cell.value = normal(total)
+    def _add_timesheet_rows(self, block: ReportBlock, days: list[TimesheetReportDay]) -> None:
+        for field_name, label in REPORT_FIELDS:
+            self._add_row(block, days, label, (day.value(field_name) for day in days))
+            if field_name == 'leave_hours':
+                self._add_special_leave_rows(block, days)
+                self._add_sick_rows(block, days)
 
     def _add_special_leave_rows(self, block: ReportBlock, days: list[TimesheetReportDay]) -> None:
         reasons = sorted(
@@ -208,14 +199,15 @@ class TimesheetReportOnline(TimesheetReport):
             }
         )
         for reason in reasons:
-            self._add_values_row(
+            self._add_row(
                 block,
                 days,
                 _('Special leave ({title})').format(title=reason),
-                lambda day, reason=reason: (
+                (
                     day.entry.special_leave_hours
                     if day.entry and day.entry.special_leave_reason and day.entry.special_leave_reason.title == reason
                     else Decimal(0)
+                    for day in days
                 ),
             )
 
@@ -226,31 +218,31 @@ class TimesheetReportOnline(TimesheetReport):
 
         for protocol in protocols:
             label = _('Sick {title}').format(title=protocol) if protocol else _('Sick')
-            self._add_values_row(
+            self._add_row(
                 block,
                 days,
                 label,
-                lambda day, protocol=protocol: (
+                (
                     day.entry.due_hours
                     if day.entry and day.entry.is_sick and (day.entry.protocol_number or '') == protocol
                     else Decimal(0)
+                    for day in days
                 ),
             )
 
     @staticmethod
-    def _add_values_row(
+    def _add_row(
         block: ReportBlock,
         days: list[TimesheetReportDay],
         label: Any,
-        get_value: Callable[[TimesheetReportDay], Decimal | int],
+        values: Iterable[Decimal | int],
     ) -> None:
         row = block.add_row(ReportRow())
         row.add_cell(label)
         total_cell = row.add_cell(ReportCell(Decimal(0)))
         total = Decimal(0)
 
-        for day in days:
-            value = get_value(day)
+        for day, value in zip(days, values, strict=True):
             cell = cast('NwdReportCell', row.add_cell(normal(value) if value else None))
             cell.nwd = day.nwd
             total += Decimal(value)
