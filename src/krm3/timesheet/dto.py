@@ -41,14 +41,13 @@ class TimesheetDTO:
 
         calendar = KrmCalendar()
 
-        self.days = calendar.iter_dates(start_date, end_date)
         self.resource = resource
 
         if self.contracts.exists():
             self.days = resource.get_krm_days_with_contract(start_date, end_date)
             self.schedule = {day.date: typing.cast('typing.Any', day).min_working_hours for day in self.days}
         else:
-            self.days = KrmCalendar().iter_dates(start_date, end_date)
+            self.days = calendar.iter_dates(start_date, end_date)
             self.schedule = resource.get_schedule(start_date, end_date)
 
         conf: ConstanceTyping = config
