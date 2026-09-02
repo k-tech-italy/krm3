@@ -1,3 +1,13 @@
+## 3.7.2 (2026-09-02)
+
+### Fix
+
+- **timesheet**: zero schedule outside contract period
+
+### Refactor
+
+- **tesk_task_viewset**: parametrize schedule tests for contract periods
+
 ## 3.7.1 (2026-09-01)
 
 ### Fix
