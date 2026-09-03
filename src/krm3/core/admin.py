@@ -100,7 +100,7 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 class ResourceAdmin(ModelAdmin):
     """Resource model admin."""
 
-    list_display = ('first_name', 'last_name', 'user', 'preferred_in_report')
+    list_display = ('first_name', 'last_name', 'user')
     search_fields = ['first_name', 'last_name']
     actions = ['export_timesheets']
 
@@ -132,6 +132,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     list_display = [
         'resource',
         'get_period',
+        'employee',
         'country_calendar_code',
         'working_schedule',
         'sunday_as_holiday',

@@ -72,6 +72,7 @@ class Contract(models.Model):
     )
     sunday_as_holiday = models.BooleanField(default=True, help_text=_('Sunday always a holiday'))
     overtime = models.BooleanField(default=True, help_text=_('Is overtime tracked'))
+    employee = models.BooleanField(default=True)
 
     objects = ContractQuerySet.as_manager()
 

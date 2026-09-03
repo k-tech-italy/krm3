@@ -83,7 +83,6 @@ class ResourceFactory(DjangoModelFactory):
     first_name = Faker('first_name')
     last_name = Faker('last_name')
     user = SubFactory(UserFactory)
-    preferred_in_report = True
     preferred_language = 'en-uk'
 
     class Meta:
@@ -96,6 +95,7 @@ class ContractFactory(AutoRegisterModelFactory[Contract]):
     period = (date(2020, 1, 1), None)
     country_calendar_code = settings.HOLIDAYS_CALENDAR
     sunday_as_holiday = True
+    employee = True
 
     class Meta:
         model = 'core.Contract'
