@@ -12,7 +12,7 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, Resource, DayEntry
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, DayEntry
 from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
 from django import forms

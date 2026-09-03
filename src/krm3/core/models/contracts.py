@@ -51,14 +51,15 @@ class ContractQuerySet(models.QuerySet['Contract']):
         return self.filter(resource=resource, period__contains=KTDay(day).date).first()
 
 
+
 class Contract(models.Model):
+    class ContractType(models.TextChoices):
+        EMPLOYEE = 'EMPLOYEE', _('Employee')
+        CONTRACTOR = 'CONTRACTOR', _('Contractor')
+        OTHER = 'OTHER', _('Other')
+
     resource = models.ForeignKey('core.Resource', on_delete=models.PROTECT)
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
-    country_calendar_code = models.CharField(
-        null=True,
-        blank=True,
-        help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
-    )
     working_schedule = models.JSONField(blank=True, default=dict)
     meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
@@ -72,6 +73,19 @@ class Contract(models.Model):
     )
     sunday_as_holiday = models.BooleanField(default=True, help_text=_('Sunday always a holiday'))
     overtime = models.BooleanField(default=True, help_text=_('Is overtime tracked'))
+    contract_type = models.CharField(
+        max_length=10,
+        choices=ContractType.choices,
+        default=ContractType.EMPLOYEE,
+    )
+    base_in = models.ForeignKey(
+        'core.City',
+        on_delete=models.PROTECT,
+        related_name='contracts',
+        null=True,
+        blank=True,
+    )
+
 
     objects = ContractQuerySet.as_manager()
 
@@ -84,7 +98,17 @@ class Contract(models.Model):
                     ('period', RangeOperators.OVERLAPS),
                     ('resource', RangeOperators.EQUAL),
                 ],
-            )
+            ),
+            models.CheckConstraint(
+                name='valid_contract_type',
+                condition=models.Q(
+                    contract_type__in=[
+                        'EMPLOYEE',
+                        'CONTRACTOR',
+                        'OTHER',
+                    ],
+                ),
+            ),
         ]
         permissions = [
             ('view_any_contract', "Can view(only) everybody's contracts"),
@@ -107,12 +131,12 @@ class Contract(models.Model):
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError({'period': _('End date must be at least one day after start date.')})
 
-        if self.country_calendar_code:
+        if self.calendar_code:
             try:
-                get_country_holidays(country_calendar_code=self.country_calendar_code)
+                get_country_holidays(country_calendar_code=self.calendar_code)
             except NotImplementedError:
                 raise ValidationError(
-                    {'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'}
+                    {'country_calendar_code': f'Wrong country_calendar_code {self.calendar_code}'}
                 )
 
     def build_day(
@@ -152,7 +176,15 @@ class Contract(models.Model):
     @cached_property
     def calendar_code(self) -> str:
         """Return the country calendar code for the contract or the default calendar code if not set."""
-        return self.country_calendar_code if self.country_calendar_code else settings.HOLIDAYS_CALENDAR
+        if self.base_in and self.base_in.country.country_calendar_code:
+            subdivision_code = self.base_in.subdivision_code
+            country_calendar_code = self.base_in.country.country_calendar_code
+
+            if subdivision_code:
+                return f"{country_calendar_code}-{subdivision_code}"
+            return country_calendar_code
+
+        return settings.HOLIDAYS_CALENDAR
 
     @cachedmethod(cache=lambda self: self.__dict__.setdefault('_meal_threshold_cache', {}))
     def meal_threshold(self, day: datetime.date | KTDay) -> D | None:

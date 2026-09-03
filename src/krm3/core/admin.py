@@ -87,12 +87,12 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Country)
 class CountryAdmin(ModelAdmin):
-    search_fields = ['name']
+    search_fields = ['name', 'country_calendar_code']
 
 
 @admin.register(City)
 class CityAdmin(AdminFiltersMixin, ModelAdmin):
-    search_fields = ['name', 'country__name']
+    search_fields = ['name', 'country__name', 'subdivision_code']
     list_filter = [('country__name', AutoCompleteFilter)]
 
 
@@ -100,7 +100,7 @@ class CityAdmin(AdminFiltersMixin, ModelAdmin):
 class ResourceAdmin(ModelAdmin):
     """Resource model admin."""
 
-    list_display = ('first_name', 'last_name', 'user', 'preferred_in_report')
+    list_display = ('first_name', 'last_name', 'user')
     search_fields = ['first_name', 'last_name']
     actions = ['export_timesheets']
 
@@ -128,19 +128,19 @@ class ClientAdmin(ModelAdmin):
 @admin.register(Contract)
 class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ContractForm
-    search_fields = ['resource__last_name', 'resource__first_name']
+    search_fields = ['resource__last_name', 'resource__first_name', 'base_in__name']
     list_display = [
         'resource',
         'get_period',
-        'country_calendar_code',
+        'contract_type',
+        'base_in',
         'working_schedule',
         'sunday_as_holiday',
         'meal_voucher',
-        'sunday_as_holiday',
         'document_link',
     ]
-    list_filter = [('resource', AutoCompleteFilter)]
-    autocomplete_fields = ['resource']
+    list_filter = [('resource', AutoCompleteFilter), ('base_in', AutoCompleteFilter),]
+    autocomplete_fields = ['resource', 'base_in']
     readonly_fields = ['document_link']
 
     formfield_overrides = {

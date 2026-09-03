@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.forms import CharField, ModelForm, TextInput
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange
+from psycopg.types.range import DateRange
 
 from krm3.core.models.projects import Project, Task
 
@@ -29,7 +30,7 @@ class ProjectForm(ModelForm):
         super().__init__(*args, **kwargs)
 
         if not self.instance.pk:
-            self.fields['period'].initial = (datetime.date.today(), None)
+            self.fields['period'].initial = DateRange(datetime.date.today(), None)
 
     def save(self, commit: bool = True) -> None:
         return super().save(commit)

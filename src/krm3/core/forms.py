@@ -46,8 +46,8 @@ class ContractForm(ModelForm):
     def clean(self) -> dict | None:
         ret = super().clean()
         if self.instance.id and (new_period := self.cleaned_data.get('period')) and (self.cleaned_data.get('resource')):
-            old_period = [self.instance.period.lower, self.instance.period.upper or DATE_INFINITE]
-            new_period = [new_period.lower, new_period.upper or DATE_INFINITE]
+            old_period = [self.instance.period.lower, self.instance.period.upper]
+            new_period = [new_period.lower, new_period.upper]
 
             # check if interval becomes smaller
             if new_period[1] < old_period[1] or new_period[0] > old_period[0]:

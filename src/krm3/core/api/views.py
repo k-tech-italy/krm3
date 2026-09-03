@@ -1,4 +1,3 @@
-
 import logging
 from typing import Any, cast
 
@@ -41,6 +40,7 @@ from krm3.core.models import (
     User,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
+
 
 class DefaultPagination(PageNumberPagination):
     page_size = 20
@@ -216,13 +216,14 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     @action(
         methods=['get'],
         detail=False,
-        url_path=r'active/(?P<date_from>[^/]+)?/(?P<date_to>[^/]+)?',
+        url_path=r'active(?:/(?P<date_from>[^/]+)/(?P<date_to>[^/]+))?',
     )
     def active(self, request: Request, date_from: str | None = None, date_to: str | None = None) -> Response:
         if date_from in (None, '') and date_to in (None, ''):
+            today = KTDay().date
             date_from, date_to = (
-                (KTDay() - relativedelta(months=-1)).date.replace(day=1),
-                (KTDay() - relativedelta(months=2)).date.replace(day=1) - relativedelta(days=1),
+                today.replace(day=1),
+                (today + relativedelta(months=1)).replace(day=1) - relativedelta(days=1),
             )
         elif date_from in (None, '') or date_to in (None, ''):
             raise ValueError('From/to dates must be not None if either provided')

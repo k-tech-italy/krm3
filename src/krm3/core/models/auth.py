@@ -126,7 +126,6 @@ class Resource(models.Model):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    preferred_in_report = models.BooleanField(default=True)
     vcard_text = models.TextField(null=True, blank=True)
     fiscal_code = models.CharField(max_length=25, null=True, blank=True, unique=True)
     preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
