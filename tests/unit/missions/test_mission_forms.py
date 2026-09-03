@@ -3,9 +3,10 @@ from django.shortcuts import reverse
 from django.utils.text import slugify
 
 from testutils.date_utils import _dt
-from testutils.factories import ProjectFactory
+from testutils.factories import ExpenseFactory, MissionFactory, ProjectFactory, ReimbursementFactory
 from testutils.mappings import map_mission_status
 
+from krm3.core.models import Mission
 from krm3.missions.forms import MissionAdminForm
 
 
@@ -23,10 +24,6 @@ from krm3.missions.forms import MissionAdminForm
     ],
 )
 def test_calculate_mission_number(dataset, expected):
-    from testutils.factories import MissionFactory
-
-    from krm3.core.models import Mission
-
     project = ProjectFactory()
     for m in dataset:
         MissionFactory(
@@ -53,11 +50,9 @@ def test_calculate_mission_number(dataset, expected):
         pytest.param(None, 'D', None, True, id='only-draft'),
     ],
 )
-def test_auto_mission_number(existing_status, this_status, expected_number, same_year, city, project, resource):
-    from testutils.factories import MissionFactory
-
-    from krm3.core.models import Mission
-
+def test_auto_mission_number(  # noqa: PLR0917
+    existing_status, this_status, expected_number, same_year, city, project, resource
+):
     assert Mission.objects.count() == 0
     mission = None
     if existing_status and existing_status != 'D':
@@ -108,11 +103,9 @@ def test_auto_mission_number(existing_status, this_status, expected_number, same
         ),
     ],
 )
-def test_mission_status_transitions(
+def test_mission_status_transitions(  # noqa: PLR0917
     prev, succ, next_number, expected_number, reimbursed_expenses, err_msg, krm3app, admin_user
 ):
-    from testutils.factories import ExpenseFactory, MissionFactory, ReimbursementFactory
-
     mission = MissionFactory(number=None if prev == 'D' else 1, status=map_mission_status(prev))
     if reimbursed_expenses is not None:
         if reimbursed_expenses:
@@ -137,8 +130,6 @@ def test_mission_status_transitions(
 
 
 def test_mission_clean(project, resource, city) -> None:
-    from krm3.core.models import Mission
-
     form = MissionAdminForm(
         data={
             'from_date': '2025-12-27',

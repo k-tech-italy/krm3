@@ -1,6 +1,15 @@
+import base64
+import json
+from datetime import date, datetime, timezone
+
 import pytest
 from django.urls import reverse
-from testutils.factories import UserFactory, DocumentFactory, DocumentGrantFactory
+from django_simple_dms.models import Document, DocumentTag
+from psycopg.types.range import DateRange
+from testutils.factories import DocumentFactory, DocumentGrantFactory, DocumentTagFactory, UserFactory
+
+from krm3.core.models.documents import ProtectedDocument
+from krm3.web import views
 
 
 class TestDocumentListView:
@@ -30,8 +39,7 @@ class TestDocumentListView:
         def mock_accessible_by(*args, **kwargs):
             raise Exception('Database connection error')
 
-        from krm3.core.models.documents import ProtectedDocument as Document
-        monkeypatch.setattr(Document.objects, 'accessible_by', mock_accessible_by)
+        monkeypatch.setattr(ProtectedDocument.objects, 'accessible_by', mock_accessible_by)
 
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -88,8 +96,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_unicode_decode_error(self, client):
         """Test that UnicodeDecodeError in filter parameter is handled gracefully."""
-        import base64
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -115,8 +121,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_json_decode_error(self, client):
         """Test that JSONDecodeError in filter parameter is handled gracefully."""
-        import base64
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -141,9 +145,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_value_error_unsupported_field(self, client):
         """Test that ValueError from unsupported field in filter is handled gracefully."""
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -179,9 +180,6 @@ class TestDocumentListView:
         All expected exceptions (JSONDecodeError, UnicodeDecodeError, binascii.Error,
         ValueError) are already tested separately.
         """
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -199,7 +197,6 @@ class TestDocumentListView:
         def mock_document_filter_init(*_):
             raise RuntimeError('Unexpected database error')
 
-        from krm3.web import views
         monkeypatch.setattr(views, 'DocumentFilter', mock_document_filter_init)
 
         url = reverse('document_list')
@@ -247,11 +244,6 @@ class TestDocumentListView:
     )
     def test_apply_sorting_with_valid_sort_field(self, client, sort_field, field_name, create_documents_func):
         """Test that _apply_sorting correctly sorts documents by the specified field."""
-        from datetime import date, datetime, timezone
-
-        from psycopg.types.range import DateRange
-        from testutils.factories import DocumentTagFactory
-
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -452,7 +444,6 @@ class TestDocumentListView:
         def mock_values_list(*_):
             raise RuntimeError('Database connection error')
 
-        from django_simple_dms.models import DocumentTag
         monkeypatch.setattr(DocumentTag.objects, 'values_list', mock_values_list)
 
         # Make the request
@@ -470,8 +461,6 @@ class TestDocumentListView:
 
     def test_get_available_tags_returns_sorted_tag_titles(self, client):
         """Test that _get_available_tags returns all tag titles sorted alphabetically."""
-        from testutils.factories import DocumentTagFactory
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -495,13 +484,6 @@ class TestDocumentListView:
 
     def test_document_list_view_with_complex_filter_sorting_and_pagination(self, client):
         """Test the complete happy path with complex filtering (AND/OR), sorting, and pagination."""
-        import base64
-        import json
-        from datetime import date, datetime, timezone
-
-        from psycopg.types.range import DateRange
-        from testutils.factories import DocumentTagFactory
-
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -522,7 +504,6 @@ class TestDocumentListView:
         )
         doc1.tags.add(tag_report)
         # Update upload_date using queryset update to bypass auto_now_add
-        from django_simple_dms.models import Document
         Document.objects.filter(pk=doc1.pk).update(upload_date=datetime(2024, 3, 15, tzinfo=timezone.utc))
         doc1.refresh_from_db()
 
@@ -652,9 +633,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_invalid_date_format_in_upload_date(self, client):
         """Test that invalid date format in upload_date filter generates validation error."""
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -684,9 +662,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_invalid_date_range_in_upload_date(self, client):
         """Test that invalid date range (start > end) in upload_date filter generates validation error."""
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -716,9 +691,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_invalid_date_format_in_reference_period(self, client):
         """Test that invalid date format in reference_period filter generates validation error."""
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')
@@ -748,9 +720,6 @@ class TestDocumentListView:
 
     def test_parse_and_apply_filter_handles_invalid_date_range_in_reference_period(self, client):
         """Test that invalid date range (start > end) in reference_period filter generates validation error."""
-        import base64
-        import json
-
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
         client.login(username='testuser', password='pass123')

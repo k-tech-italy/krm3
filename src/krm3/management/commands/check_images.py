@@ -12,11 +12,11 @@ IMAGE_EXTENSIONS = {'.png', '.svg', '.gif'}
 MARKUP_EXTENSIONS = {'.md', '.html'}
 
 
-def find_all_local_images():
+def find_all_local_images() -> list[Path]:
     return [p for p in DOCS_ROOT.rglob('*') if p.suffix.lower() in IMAGE_EXTENSIONS]
 
 
-def find_all_image_references():
+def find_all_image_references() -> list[tuple[Path, str]]:
     pattern = re.compile(r"""(?:!\[.*?\]\(|<img\s+[^>]*src=['"])([^'")]+)(?:['"])""", re.IGNORECASE)
     refs = []
 
@@ -25,12 +25,12 @@ def find_all_image_references():
             continue
         try:
             content = file.read_text(encoding='utf-8')
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
 
         for match in pattern.findall(content):
             ref = match.strip()
-            if ref.startswith('http://') or ref.startswith('https://'):
+            if ref.startswith(('http://', 'https://')):
                 continue
             if '{{' in ref or '{%' in ref:  # exclude templating
                 continue
@@ -38,18 +38,18 @@ def find_all_image_references():
     return refs
 
 
-def normalize_path(ref, base_file):
+def normalize_path(ref: str, base_file: Path) -> Path:
     if ref.startswith('/'):
         return (DOCS_ROOT / 'docs' / ref.lstrip('/')).resolve()
     return (base_file.parent / ref).resolve()
 
 
 @click.command()
-def command():
+def command() -> None:
     click.echo('🔍 Verifica immagini locali nel progetto...\n')
 
     all_images = find_all_local_images()
-    all_image_paths = set(p.resolve() for p in all_images)
+    all_image_paths = {p.resolve() for p in all_images}
 
     refs = find_all_image_references()
     referenced_paths = set()
@@ -84,7 +84,7 @@ def command():
 
     click.echo('\n❌ Riferimenti a immagini locali mancanti:')
     if missing_refs:
-        for md_file, ref, resolved in missing_refs:
+        for md_file, ref, _resolved in missing_refs:
             click.echo(f'  - {ref} (in {md_file.relative_to(DOCS_ROOT)}) → NON TROVATO')
     else:
         click.echo('  ✅ Nessun riferimento rotto')

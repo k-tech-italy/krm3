@@ -1,6 +1,12 @@
+from __future__ import annotations
+import typing
+
 from adminfilters.autocomplete import AutoCompleteFilter
 from django.contrib import admin
 from django.db import models
+
+if typing.TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 class ACLMixin:
@@ -8,19 +14,19 @@ class ACLMixin:
 
     _resource_link = 'resource'
 
-    def get_list_filter(self, request):
+    def get_list_filter(self, request: HttpRequest):  # noqa: ANN001, ANN201
         ret = admin.ModelAdmin.get_list_filter(self, request).copy()
-        if request.user.has_perm('missions.view_any_mission') or request.user.has_perm('missions.manage_any_mission'):
+        if request.user.has_any_perm(self.acl_permissions):
             ret.insert(
                 1,
                 (self._resource_link, AutoCompleteFilter),
             )
         return ret
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest):  # noqa: ANN001, ANN201
         return self.model.objects.filter_acl(request.user)
 
-    def get_object(self, request, *args, **kwargs):
+    def get_object(self, request: HttpRequest, *args, **kwargs):  # noqa: ANN001, ANN201
         ret = super().get_object(request, *args, **kwargs)
         if ret is None or not ret.is_accessible(request.user):
             raise self.model.DoesNotExist('Object does not exists or is unavailable')
@@ -28,10 +34,10 @@ class ACLMixin:
 
 
 class ActiveQuerySet(models.QuerySet):
-    def actives(self):
+    def actives(self):  # noqa: ANN201
         return self.filter(active=True)
 
 
 class ActiveManagerMixin:
-    def active(self):
+    def active(self):  # noqa: ANN201
         return self.get_queryset().filter(active=True)

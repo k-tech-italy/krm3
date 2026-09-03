@@ -12,7 +12,7 @@ def report_line(key: str, label:str, data: dict, is_alt:bool = False) -> SafeStr
     cells = format_html_join(
         '\n',
         '<td class="p-1 border border-1 text-center">{}</td>',
-        ((c if c else "",) for c in data[key])
+        ((c or "",) for c in data[key])
     )
     row_color = "bg-neutral-300" if is_alt else "bg-neutral-200"
 

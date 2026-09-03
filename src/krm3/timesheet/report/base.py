@@ -10,7 +10,7 @@ from constance import config
 from django.utils.translation import gettext_lazy as _
 
 from krm3.config import settings
-from krm3.core.models import Contract, ExtraHoliday, Resource, TaskEntry, TimesheetSubmission
+from krm3.core.models import Contract, DayEntry, ExtraHoliday, Resource, TaskEntry, TimesheetSubmission
 from krm3.timesheet.rules import Krm3Day
 from ktcalendars import KTDay
 
@@ -52,6 +52,7 @@ class TimesheetReport:
         self.default_schedule: dict[str, float] = json.loads(config.DEFAULT_RESOURCE_SCHEDULE)
         self.country_codes = {str(settings.HOLIDAYS_CALENDAR)}
 
+        self.day_entries = self._get_day_entries()
         self.task_entries = self._get_task_entries()
 
         # loading submissions up front, no matter the flags passed in
@@ -64,8 +65,8 @@ class TimesheetReport:
         self.resource_contracts: dict[int, list[Contract]] = {}
         for contract in self.valid_contracts:
             self.resource_contracts.setdefault(contract.resource.pk, []).append(contract)
-            if contract.country_calendar_code and contract.country_calendar_code not in self.country_codes:
-                self.country_codes.add(contract.country_calendar_code)
+            if contract.calendar_code and contract.calendar_code not in self.country_codes:
+                self.country_codes.add(contract.calendar_code)
 
         # self.extra_holidays = self._get_extra_holidays() if 'extra_holidays' in self.need else {}  # noqa: ERA001
         self._holiday_cache = {}
@@ -108,30 +109,55 @@ class TimesheetReport:
 
             for calendar_day in KTDay(self.from_date).range_to(self.to_date):
                 # XXX: highly inefficient!
-                if found := [day for day in calendar_data[resource_id] if day.date == calendar_day.date]:
+                existing_day = next(
+                    (
+                        report_day
+                        for report_day in calendar_data[resource_id]
+                        if report_day.date == calendar_day.date
+                    ),
+                    None,
+                )
+                if existing_day is not None:
                     # NOTE: submission periods for the same resource are
                     #       not allowed to overlap
-                    day = found[0]
+                    day = existing_day
                     if day.submitted:
                         continue
+                else:
+                    day = Krm3Day(calendar_day)
+                    calendar_data[resource_id].append(day)
 
                 day.resource = resource
-                for c in contracts:
-                    if c.falls_in(day):
-                        day.contract = c
+                contract_day = None
+                for contract in contracts:
+                    contract_day = contract.get_ktday(day, silent=True)
+                    if contract_day is not None:
+                        day.contract = contract
                         break
 
-                country_calendar_code = (
-                    day.contract.country_calendar_code
-                    if day.contract and day.contract.country_calendar_code
-                    else str(settings.HOLIDAYS_CALENDAR)
+                day.holiday = (
+                    contract_day.is_holiday
+                    if contract_day is not None
+                    else KTDay(day, cal_country_code=str(settings.HOLIDAYS_CALENDAR)).is_holiday
                 )
-                day.holiday = self._get_holiday(day, country_calendar_code)
                 min_working_hours = self._get_min_working_hours(day)
                 day.nwd = day.contract is None or day.holiday or min_working_hours == 0
                 if not day.nwd:
                     day.data_due_hours = Decimal(min_working_hours)
-                day.apply([te for te in self.task_entries if te.resource.pk == resource_id and te.date == day.date])
+                day_entry = next(
+                    (
+                        candidate_day_entry
+                        for candidate_day_entry in self.day_entries
+                        if candidate_day_entry.resource.pk == resource_id and candidate_day_entry.day == day.date
+                    ),
+                    None,
+                )
+                task_entries = [
+                    task_entry
+                    for task_entry in self.task_entries
+                    if task_entry.day_entry == day_entry
+                ]
+                day.apply(day_entry, task_entries)
 
         return calendar_data
 
@@ -151,10 +177,20 @@ class TimesheetReport:
     def _get_task_entries(self) -> list[TaskEntry]:
         """Return a list of task entries, preloading their special leave reason if any."""
         return list(
-            TaskEntry.objects.select_related('day_entry', 'day_entry__special_leave_reason').filter(
+            TaskEntry.objects.select_related('day_entry').filter(
                 day_entry__day__gte=self.from_date,
                 day_entry__day__lte=self.to_date,
                 day_entry__resource__in=self.resources,
+            )
+        )
+
+    def _get_day_entries(self) -> list[DayEntry]:
+        """Return the day entries for the report period and resources."""
+        return list(
+            DayEntry.objects.select_related('resource', 'special_leave_reason').filter(
+                day__gte=self.from_date,
+                day__lte=self.to_date,
+                resource__in=self.resources,
             )
         )
 

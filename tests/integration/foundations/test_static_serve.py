@@ -6,11 +6,14 @@ application (static files), and when False, it returns 404 (nginx would serve in
 """
 
 import copy
+import importlib
 import typing
 
 import pytest
 from django.test import override_settings
 from django.urls import clear_url_caches
+
+from krm3.config import urls
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
@@ -24,8 +27,6 @@ def restore_urlpatterns():
     Fixture to save and restore URL patterns after test.
     This ensures that changes to urlpatterns during the test don't affect other tests.
     """
-    from krm3.config import urls
-
     # Save original urlpatterns
     original_urlpatterns = copy.copy(urls.urlpatterns)
 
@@ -48,8 +49,6 @@ def test_static_serve_enabled_with_local_development(browser: 'AppTestBrowser', 
     clear_url_caches()
 
     # Reload the URL configuration to apply the override_settings
-    import importlib
-    from krm3.config import urls
     importlib.reload(urls)
 
     # Navigate to root - this would load the frontend SPA
@@ -76,8 +75,6 @@ def test_static_serve_disabled_without_local_development(browser: 'AppTestBrowse
     clear_url_caches()
 
     # Reload the URL configuration to apply the override_settings
-    import importlib
-    from krm3.config import urls
     importlib.reload(urls)
 
     # Navigate to root - this should NOT be handled by Django

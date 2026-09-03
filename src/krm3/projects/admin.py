@@ -15,6 +15,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 from krm3.core.models import Project, Task
+from krm3.projects.forms import ProjectForm, TaskForm
 from krm3.styles.buttons import NORMAL
 
 if typing.TYPE_CHECKING:
@@ -30,8 +31,6 @@ class TaskInline(admin.TabularInline):  # noqa: D101
 
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
-    from krm3.projects.forms import ProjectForm
-
     form = ProjectForm
     search_fields = ('name', 'client__name')
     list_display = ('client', 'name', 'period')
@@ -58,19 +57,16 @@ class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
-    from krm3.projects.forms import TaskForm
-
     class Media:
         css = {
             'all': ('admin/required_field.css',),
         }
     form = TaskForm
-    list_display = ('project', 'title', 'resource', 'basket', 'period')
-    search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket')
+    list_display = ('project', 'title', 'resource', 'period')
+    search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name')
     list_filter = [
         ('project', AutoCompleteFilter),
         ('resource', AutoCompleteFilter),
-        ('basket', AutoCompleteFilter),
     ]
     autocomplete_fields = ['project', 'resource']
 

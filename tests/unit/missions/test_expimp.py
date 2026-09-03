@@ -1,5 +1,10 @@
 import json
+import os
+import zipfile
+from io import BytesIO
 
+import pytest
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from testutils.factories import (
     DocumentTypeFactory,
     ExpenseCategoryFactory,
@@ -7,19 +12,13 @@ from testutils.factories import (
     PaymentCategoryFactory,
 )
 
-import pytest
-import os
+from krm3.core.models import City, Country, Expense, Mission, Project, Resource
+from krm3.currencies.models import Currency
+from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
-import zipfile
-from io import BytesIO
-from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 def prepare():
-    from krm3.missions.impexp.export import MissionExporter
-    from krm3.missions.impexp.imp import MissionImporter
-    from krm3.core.models import Expense, Mission
-
     assert Mission.objects.count() == 0
 
     original_mission = ExpenseFactory().mission
@@ -58,10 +57,6 @@ def prepare():
 
 
 def test_mission_full_expimp(db):
-    from krm3.core.models import City, Country, Project, Resource
-    from krm3.currencies.models import Currency
-    from krm3.core.models import Expense, Mission
-
     data, pathname = prepare()
     # check it is json parseable
     json.dumps(data)
@@ -97,8 +92,6 @@ def valid_mission_zip():
 
         # Add required data.json file
         data_json = {'missions': [{'id': 1, 'name': 'Test Mission', 'description': 'A test mission'}]}
-        import json
-
         zip_file.writestr('data.json', json.dumps(data_json, indent=2))
 
         # Add some sample images

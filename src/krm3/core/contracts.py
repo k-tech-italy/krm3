@@ -21,10 +21,10 @@ class ContractSolver:
         self.resource_ids = resource_ids
 
     def _populate_cache(self) -> None:
-        from krm3.core.models import Contract
+        from krm3.core.models import Contract  # noqa: PLC0415
 
         qs = Contract.objects.filter(
-            resource_id__in=self.resource_ids if self.resource_ids else [r.id for r in self.resources]
+            resource_id__in=self.resource_ids or [r.id for r in self.resources]
         )
 
         self.cache = {}
@@ -34,7 +34,7 @@ class ContractSolver:
 
     def solve(self, resource: 'Resource | int', day: date, create_default: bool = False) -> 'Contract | None':
         """Will solve the contract for the Resource and day."""
-        from krm3.core.models import Resource
+        from krm3.core.models import Resource  # noqa: PLC0415
 
         if self.cache is None:
             self._populate_cache()

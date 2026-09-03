@@ -7,10 +7,12 @@ from ktcalendars import KTDay
 from ktcalendars.utils import dt
 from testutils.factories import ContractFactory
 
+from krm3.core.models import Contract
+
 if typing.TYPE_CHECKING:
     import datetime
 
-    from krm3.core.models import Contract, Resource
+    from krm3.core.models import Resource
 
 wrong_range = pytest.raises(ValueError, match='day_range must be a tuple of length 1 or 2')
 cover_missing = pytest.raises(ValueError, match='Contract cover missing for requested range')
@@ -34,8 +36,6 @@ def contracts():
     ],
 )
 def test_contract_queryset_by_day(day: datetime.date, expected: int, contracts):
-    from krm3.core.models import Contract
-
     result = Contract.objects.by_day(contracts[0].resource, day)
     if expected is None:
         assert result is None
@@ -60,7 +60,7 @@ def test_contract_queryset_by_day(day: datetime.date, expected: int, contracts):
         pytest.param(0, [dt('2020-02-08'), dt('2020-02-12')], True, None, True, id='atomic-none'),
     ],
 )
-def test_contract_queryset_range_cover_missing(
+def test_contract_queryset_range_cover_missing(  # noqa: PLR0917
     contract: int, rng, partial: bool | None, atomic: bool | None, expected: bool, contracts: list[Contract]
 ):
     res: Resource = contracts[contract].resource

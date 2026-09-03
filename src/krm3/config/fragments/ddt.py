@@ -8,6 +8,7 @@ import logging as _logging
 import os
 import sys
 
+from django.http import HttpRequest
 from django_regex.utils import RegexList as _RegexList
 from flags.state import flag_enabled
 
@@ -23,7 +24,7 @@ if not TESTING:
     try:
         ignored = _RegexList(('/api/.*',))
 
-        def show_ddt(request):
+        def show_ddt(request: HttpRequest) -> bool:
             """Runtime check for showing debug toolbar."""
             if not _env('DEBUG') or request.path in ignored:
                 return False
@@ -41,6 +42,5 @@ if not TESTING:
         DDT_MIDDLEWARES = ['debug_toolbar.middleware.DebugToolbarMiddleware']
         DDT_APPS = ['debug_toolbar']
         INTERNAL_IPS = _env('INTERNAL_IPS')
-        # CSP_REPORT_ONLY = True
     except ImportError:
         logger.info('Skipping debug toolbar')

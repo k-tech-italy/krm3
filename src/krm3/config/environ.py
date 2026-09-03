@@ -1,7 +1,8 @@
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeAlias, Any
+from typing import TYPE_CHECKING, Any, Self
 
 from environ import ImproperlyConfigured, environ, re
 from smart_env import SmartEnv
@@ -11,8 +12,8 @@ from . import DEFAULTS
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    ItemValue: TypeAlias = str | bool | int | list[str] | None
-    ConfigItem: TypeAlias = (
+    type ItemValue = str | bool | int | list[str] | None
+    type ConfigItem = (
         tuple[type, ItemValue]  # type, value
         | tuple[type, ItemValue, str]  # type, value, help,
         | tuple[type, ItemValue, str, Any]  # type, value, hell, develop_value
@@ -20,27 +21,27 @@ if TYPE_CHECKING:
 
 
 class Env(SmartEnv):
-    def __init__(self, prefix: str, **scheme: 'ConfigItem'):
+    def __init__(self, prefix: str, **scheme: 'ConfigItem') -> None:
         super().__init__(**scheme)
         self.prefix: str = prefix or ''
 
-    def __getattr__(self, var):
+    def __getattr__(self, var: str) -> Any:
         return self.get_value(var)
 
-    def __copy__(self):
+    def __copy__(self) -> Self:
         return type(self)(self.prefix, **self.scheme)
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, str]:
         return {k: v for k, v in self.ENVIRON.items() if k.startswith(self.prefix)}
 
-    def get_value(
+    def get_value(  # noqa: C901, PLR0912
         self,
-        var,
-        cast=None,
-        default=environ.Env.NOTSET,  # noqa: C901
-        parse_default=False,
-        raw=False,
-    ):
+        var: str,
+        cast: type | Callable[[Any], Any] | None = None,
+        default: Any = environ.Env.NOTSET,  # noqa: C901
+        parse_default: bool = False,
+        raw: bool = False,
+    ) -> Any:
         """Return value for given environment variable.
 
         :param var: Name of variable.
@@ -93,7 +94,7 @@ class Env(SmartEnv):
 
         return value
 
-    def load_config(self, env_file: str = None):  # pragma: no cover
+    def load_config(self, env_file: str | None = None) -> None:  # pragma: no cover
         # only used by test
         if not os.path.exists(env_file):
             raise ImproperlyConfigured(f"Configuration file '{env_file}' does not exists or cannot be read")

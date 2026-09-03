@@ -2,13 +2,17 @@
 
 import base64
 import urllib.parse
+from typing import TYPE_CHECKING, Any
 
 import sqlparse
 from django import forms
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DEFAULT_DB_ALIAS, connections
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
+
+if TYPE_CHECKING:
+    from smart_admin.site import SmartAdminSite
 
 QUICK_SQL = {
     'Show Tables': 'SELECT * FROM information_schema.tables;',
@@ -27,7 +31,7 @@ QUICK_SQL = {
 class SQLForm(forms.Form):  # noqa: D101
     command = forms.CharField(widget=forms.Textarea(attrs={'style': 'width:100%;height:40px'}))
 
-    def clean_command(self):  # noqa: D102
+    def clean_command(self) -> str:  # noqa: D102
         value = self.cleaned_data.pop('command')
         value = urllib.parse.unquote(base64.b64decode(value).decode())
 
@@ -37,12 +41,12 @@ class SQLForm(forms.Form):  # noqa: D101
                 raise ValidationError('Only one statement is allowed')
         except ValidationError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ValidationError(e)
         return value
 
 
-def save_expression(request):  # noqa: D103
+def save_expression(request: HttpRequest) -> JsonResponse:  # noqa: D103
     form = SQLForm(request.POST)
     if form.is_valid():
         name = request.POST['name']
@@ -59,7 +63,9 @@ def save_expression(request):  # noqa: D103
     return JsonResponse(response)
 
 
-def panel_sql(self, request, extra_context=None):  # noqa: D103
+def panel_sql(
+    self: 'SmartAdminSite', request: HttpRequest, extra_context: dict[str, Any] | None = None
+) -> HttpResponse:  # noqa: D103
     if not request.user.is_superuser:
         raise PermissionDenied
     context = self.each_context(request)
@@ -73,7 +79,6 @@ def panel_sql(self, request, extra_context=None):  # noqa: D103
         if form.is_valid():
             try:
                 cmd = form.cleaned_data['command']
-                # stm = urllib.parse.unquote(base64.b64decode(cmd).decode())
                 response['stm'] = sqlparse.format(cmd)
                 if request.user.is_superuser:
                     conn = connections[DEFAULT_DB_ALIAS]
@@ -85,7 +90,7 @@ def panel_sql(self, request, extra_context=None):  # noqa: D103
                     response['result'] = cursor.fetchall()
                 else:
                     response['result'] = ['Success']
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 response['error'] = str(e)
         else:
             response['error'] = str(form.errors)

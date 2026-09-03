@@ -62,7 +62,7 @@ def configure_dirs(prompt: bool, verbosity: int) -> None:
 )
 @click.option('--admin-password', '-ap', default=env.str('ADMIN_PASSWORD'), help='Do not prompt for parameters')
 @click.pass_context
-def command(  # noqa: PLR0912, PLR0913, C901
+def command(  # noqa: PLR0912, PLR0913, PLR0917, C901
     ctx : dict,
     prompt : bool,
     demo : bool,
@@ -133,6 +133,8 @@ def command(  # noqa: PLR0912, PLR0913, C901
                     call_command('loaddata', f'tools/zapdata/demo/{z}.yaml')
                 except Exception as e:  # noqa: BLE001
                     click.secho(f'WARNING: {e}', fg='yellow')
+
+        call_command('remove_stale_contenttypes', **extra)
 
     except Exception as e:
         if traceback:

@@ -25,7 +25,6 @@ from .fragments.smartadmin import *  # noqa: F401,F403
 from .fragments.social import *  # noqa: F401,F403
 from .fragments.ticketing import *  # noqa: F401,F403
 from .fragments.sysinfo import *  # noqa: F401,F403
-from django.utils.translation import gettext_lazy
 
 logger = logging.getLogger(__name__)
 

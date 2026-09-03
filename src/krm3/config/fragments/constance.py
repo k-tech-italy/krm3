@@ -1,11 +1,11 @@
 import json
 import re
 
+from django.core.exceptions import ValidationError
+
 
 # Constance
 def currency_list_validation(value) -> None:  # noqa: ANN001
-    from django.core.exceptions import ValidationError
-
     if not re.match(r'^[A-Z]{3}(,[A-Z]{3})*$', value):
         raise ValidationError('Must be a csv of currency codes')
 

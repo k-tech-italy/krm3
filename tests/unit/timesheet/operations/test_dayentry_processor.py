@@ -1,5 +1,6 @@
 import pytest
 
+from krm3.core.models import TaskEntry
 from krm3.timesheet.operations import DayEntryProcessor
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, TaskFactory
@@ -24,8 +25,6 @@ def tasks(contract):
 
 
 def test_build_day_existing(contract):
-    from krm3.timesheet.operations import DayEntryProcessor
-
     DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-01')).build_day()
     DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-02')).build_day()
     with pytest.raises(RuntimeError, match='DayEntry already exists'):
@@ -34,8 +33,6 @@ def test_build_day_existing(contract):
 
 
 def test_build_day_reset(contract, tasks):
-    from krm3.timesheet.operations import DayEntryProcessor
-
     day_entry = DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-08')).build_day(
         task_entries=[
             {'task': tasks[0], 'night_shift_hours': 1},
@@ -55,13 +52,10 @@ def test_build_day_reset(contract, tasks):
     )
     assert day_entry.meal_voucher == 1
 
-    from krm3.core.models import TaskEntry
     assert TaskEntry.objects.count() == 2
 
 
 def test_add_del_task(contract, tasks):
-    from krm3.core.models import TaskEntry
-
     dp = DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-06'))
 
     day_entry = dp.build_day(
@@ -89,3 +83,27 @@ def test_add_del_task(contract, tasks):
     assert day_entry.day_hours == 2
     assert day_entry.night_hours == 1
     assert day_entry.meal_voucher == 1
+
+
+@pytest.mark.parametrize(
+    ('day', 'worked_hours', 'bank', 'expected_meal_voucher'),
+    [
+        ('2023-01-02', 6, -2, 1),
+        ('2023-01-03', 0, -8, 1),
+        ('2023-01-04', 8, 2, 1),
+        ('2023-01-05', 6, 2, 0),
+    ],
+)
+def test_meal_voucher_counts_only_bank_withdrawals(  # noqa: PLR0917
+    contract, tasks, day, worked_hours, bank, expected_meal_voucher
+):
+    contract.working_schedule = {'mon': 8, 'tue': 8, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 0, 'sun': 0}
+    contract.meal_voucher = {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8}
+    contract.save(update_fields=['working_schedule', 'meal_voucher'])
+
+    day_entry = DayEntryProcessor(resource=contract.resource, day=_dt(day)).build_day(
+        task_entries=[{'task': tasks[0], 'day_shift_hours': worked_hours}] if worked_hours else [],
+        bank=bank,
+    )
+
+    assert day_entry.meal_voucher == expected_meal_voucher

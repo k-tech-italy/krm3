@@ -1,7 +1,7 @@
 import mimetypes
 from pathlib import Path
 
-from django.http import FileResponse, Http404, HttpResponseNotModified
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse, HttpResponseNotModified
 from django.utils._os import safe_join
 from django.utils.http import http_date
 from django.utils.translation import gettext as _
@@ -10,7 +10,9 @@ from django.views.static import was_modified_since
 
 
 @ensure_csrf_cookie
-def serve(request, document_root=None, show_indexes: bool = False):
+def serve(
+    request: HttpRequest, document_root: str | Path | None = None, show_indexes: bool = False
+) -> HttpResponse:
     """
     Serve static files below a given point in the directory structure.
 

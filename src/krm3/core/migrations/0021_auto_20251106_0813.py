@@ -1,7 +1,7 @@
 from django.db import migrations
 
 def forward(apps, schema_editor) -> None:  # noqa: ANN001
-    from krm3.core.models import TimesheetSubmission
+    from krm3.core.models import TimesheetSubmission  # noqa: PLC0415
 
     for obj in TimesheetSubmission.objects.all():
         obj.timesheet = None if obj.closed is False else obj.calculate_timesheet()

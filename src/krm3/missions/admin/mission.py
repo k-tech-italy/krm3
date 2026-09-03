@@ -49,6 +49,7 @@ if typing.TYPE_CHECKING:
 
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
     save_on_top = True
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']

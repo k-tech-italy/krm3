@@ -96,6 +96,6 @@ inline-quotes = "single"
 [lint.per-file-ignores]
 "tests/**.py" = ["S101", "PLR2004", "S", "SIM117", "D", "UP", "PLR0913", "ANN", "N999", "PT006", "PT007"]
 "src/**/versioning/**.py" = ["N999", ]
-"src/**/migrations/**.py" = ["E501", ]
+"src/**/migrations/**.py" = ["E501", "ANN", "ERA001", "N806", "PLW2901"]
 "tests/_extras/testutils/factories.py" = ["PLC0415"]
 "src/krm3/config/settings.py" = ["F405"]
