@@ -8,4 +8,4 @@ terms:
 
 # TimeEntry
 
-An abstract term for <glossary:DayEntry> or <glossary:TaskEntry>
+`TimeEntry` is a generic term for a <glossary:DayEntry> or a <glossary:TaskEntry>. It is also a Python type alias for those two models, not a Django model or database table.

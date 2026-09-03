@@ -106,7 +106,7 @@ def iterate_scenarios(raw_scenarios) -> Iterator[tuple]:
         time_entry = TimeEntryMock(
             date=_dt('2020-04-13'),
             special_leave_reason=special_leave_reason,
-            protocol_number=scenario['n. prot.'] if scenario['n. prot.'] else None,
+            protocol_number=scenario['n. prot.'] or None,
             bank_from=to_decimal(scenario['bank_from (prelevo)'])
             if scenario['bank_from (prelevo)'] not in ('', None)
             else None,

@@ -1,21 +1,22 @@
+from collections.abc import Sequence
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
-from django.db.models import QuerySet
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
+from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, Resource, DayEntry
+from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, DayEntry
 from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
-from django import forms
 
 
 from django.utils.html import format_html
@@ -59,7 +60,6 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
         return HttpResponseRedirect(url)
 
 
-
 class ResourceAdminMixin:
     @admin.display(description='Resource', ordering='resource')
     def get_resource(self, obj: TaskEntry) -> str:
@@ -80,10 +80,30 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
         ('special_leave_hours', NumberFilter),
         ('rest_hours', NumberFilter),
         ('leave_hours', NumberFilter),
-        # ('holiday_hours', NumberFilter),
+        'asked_holiday',
         ('bank', NumberFilter),
     ]
     list_select_related = ('resource', 'timesheet')
+    calculated_fields = (
+        'closed',
+        'timesheet',
+        'due_hours',
+        'is_holiday',
+        'day_hours',
+        'night_hours',
+        'travel_hours',
+        'on_call_hours',
+        'overtime_hours',
+        'meal_voucher',
+    )
+
+    def get_readonly_fields(self, request: HttpRequest, obj: DayEntry | None = None) -> Sequence[str]:
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if request.user.is_superuser:
+            return readonly_fields
+        if obj is not None:
+            readonly_fields = (*readonly_fields, 'resource', 'contract')
+        return (*readonly_fields, *self.calculated_fields)
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[TaskEntry]:
         qs = DayEntry.objects.all()
@@ -91,26 +111,40 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
             return qs
         return qs.filter(resource__user=request.user)
 
-    def has_view_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_view_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_change_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
+        if obj.is_submitted:
+            return False
         if request.user.has_perm('core.manage_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_delete_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_delete_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
+        if obj.is_submitted:
+            return False
         if request.user.has_perm('core.manage_any_timesheet'):
             return True
         return obj.resource.user == request.user
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[DayEntry]) -> None:
+        if queryset.closed().exists():
+            self.message_user(
+                request,
+                'Closed time entries cannot be deleted. Reopen the timesheet first.',
+                level=messages.ERROR,
+            )
+            return
+        super().delete_queryset(request, queryset)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         if request.user.has_perm('core.manage_any_timesheet'):
@@ -122,10 +156,11 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
 class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     _resource_accessor = lambda adminmodel, obj: obj.day_entry.resource
 
-    list_display = ('get_day', 'get_resource', 'get_task')
+    list_display = ('id', 'get_day', 'get_resource', 'get_task')
 
     list_filter = [
         ('task__project', AutoCompleteFilter),
+        ('day_entry__resource', AutoCompleteFilter),
         ('task', AutoCompleteFilter),
         ('day_entry__day', DateRangeFilter),
         ('day_shift_hours', NumberFilter),
@@ -136,32 +171,32 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
     ]
     list_select_related = ('task__project', 'day_entry__resource', 'timesheet')
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> 'QuerySet[TaskEntry]':
         requestor = request.user
         qs = super().get_queryset(request).select_related('day_entry')
-        if not requestor.has_perm('core.manage_any_timesheet'):
+        if not requestor.has_any_perm('core.view_any_timesheet', 'core.manage_any_timesheet'):
             qs = qs.filter(day_entry__resource__user=requestor)
         return qs
 
-    # def get_form(self, request: HttpRequest, obj: TaskEntry | None = None, **kwargs) -> type[forms.ModelForm]:
-    #     form = super().get_form(request, obj, **kwargs)
-    #
-    #     is_add_view = obj is None
-    #     user = request.user
-    #
-    #     if not user.has_perm('core.manage_any_timesheet'):
-    #         try:
-    #             resource = Resource.objects.get(user=user)
-    #             if is_add_view:
-    #                 if 'resource' in form.base_fields:
-    #                     form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
-    #             else:
-    #                 pass
-    #         except Resource.DoesNotExist:
-    #             if is_add_view and 'resource' in form.base_fields:
-    #                 form.base_fields['resource'].queryset = Resource.objects.none()
-    #
-    #     return form
+    def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+        if obj is not None and obj.is_submitted:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+        if obj is not None and obj.is_submitted:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[TaskEntry]) -> None:
+        if queryset.closed().exists():
+            self.message_user(
+                request,
+                'Closed time entries cannot be deleted. Reopen the timesheet first.',
+                level=messages.ERROR,
+            )
+            return
+        super().delete_queryset(request, queryset)
 
     @button(html_attrs=NORMAL)
     def report(self, _request: HttpRequest) -> HttpResponseRedirect:

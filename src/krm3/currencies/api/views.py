@@ -3,6 +3,7 @@ from django.conf import settings
 from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -18,7 +19,7 @@ class RateAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
     @action(
         detail=True, permission_classes=[], url_path=r'convert/(?P<from_cur>[A-Z]{3})/(?P<amount>(-)?[\d]+(\.\d+)?)'
     )
-    def convert_to_base(self, request, pk, from_cur: str, amount):
+    def convert_to_base(self, request: Request, pk: str, from_cur: str, amount: str) -> Response:
         """Convert the amount."""
         to_cur = settings.BASE_CURRENCY
         converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(
@@ -31,7 +32,9 @@ class RateAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         permission_classes=[],
         url_path=r'convert/(?P<from_cur>[A-Z]{3})/(?P<amount>(-)?[\d]+(\.\d+)?)/(?P<to_cur>[A-Z]{3})',
     )
-    def convert(self, request, pk, from_cur: str, amount, to_cur: str | None = None):
+    def convert(
+        self, request: Request, pk: str, from_cur: str, amount: str, to_cur: str | None = None
+    ) -> Response:
         """Convert the amount."""
         converted = Rate.for_date(pk, include=[from_cur, to_cur]).convert(
             from_value=amount, from_currency=from_cur, to_currency=to_cur

@@ -11,10 +11,11 @@ Note on filename filtering:
 
 import datetime
 import logging
+import re
 from typing import Any
 
+from django.db.models import Count, Q, QuerySet
 from psycopg.types.range import DateRange
-from django.db.models import Q, QuerySet
 
 from krm3.core.models.documents import ProtectedDocument as Document
 
@@ -179,7 +180,7 @@ class DocumentFilter:  # pragma: no cover
                     case _:
                         raise ValueError(f"Unsupported operator: '{operator}'. Expected 'AND' or 'OR'.")
 
-        return q_combined if q_combined else None
+        return q_combined or None
 
     def _build_single_condition_q(self, condition: dict[str, Any]) -> Q | None:
         """Build Q object for a single filter condition.
@@ -224,8 +225,6 @@ class DocumentFilter:  # pragma: no cover
             ValueError: If operator is not supported for filename field
 
         """
-        import re
-
         match operator:
             case 'icontains':
                 # Match the basename containing the value (case-insensitive)
@@ -428,8 +427,6 @@ class DocumentFilter:  # pragma: no cover
         """
         if not value or not isinstance(value, list):
             return queryset
-
-        from django.db.models import Count
 
         # Step 1: Find documents that have ALL required tags by filtering sequentially
         # We filter the queryset multiple times (once per tag) to ensure all tags are present

@@ -5,8 +5,13 @@ from typing import cast
 
 import pytest
 import responses
-from rest_framework.test import APIClient
 from django.test import Client
+from django.utils.http import urlencode
+from rest_framework.test import APIClient
+
+from krm3.core.models import DocumentType, PaymentCategory
+from krm3.core.models.documents import ProtectedDocument as Document
+from krm3.currencies.models import Currency
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
@@ -62,8 +67,6 @@ def events_settings(settings):
 
 @pytest.fixture(autouse=True)
 def currencies(db):
-    from krm3.currencies.models import Currency
-
     Currency.objects.get_or_create(
         iso3='GBP',
         defaults={'title': 'GBP', 'symbol': '£', 'fractional_unit': 'cents', 'base': 100, 'active': True},
@@ -84,8 +87,6 @@ def currencies(db):
 
 @pytest.fixture
 def mock_rate_provider(settings, db):
-    from django.utils.http import urlencode
-
     def fx(day, requested, retrieved):
         responses.add(
             responses.GET,
@@ -106,14 +107,14 @@ def mock_rate_provider(settings, db):
 
 @pytest.fixture
 def regular_user(db):
-    from testutils.factories import UserFactory
+    from testutils.factories import UserFactory  # noqa: PLC0415
 
     return UserFactory()
 
 
 @pytest.fixture
 def user_with_profile(regular_user):
-    from testutils.factories import UserProfileFactory
+    from testutils.factories import UserProfileFactory  # noqa: PLC0415
 
     UserProfileFactory(user=regular_user)
 
@@ -122,14 +123,10 @@ def user_with_profile(regular_user):
 
 @pytest.fixture
 def staff_user(db):
-    from testutils.factories import UserFactory
+    from testutils.factories import UserFactory  # noqa: PLC0415
 
     return UserFactory(is_staff=True)
 
-
-# This admin_user_with_plain_password has the _password attribute set (plaintext),
-# unlike the default Django fixture admin_user.
-# Useful for Selenium login where the raw password is needed.
 
 @pytest.fixture
 def admin_client(admin_user, client):
@@ -141,8 +138,6 @@ def admin_client(admin_user, client):
 @pytest.fixture
 def payment_types(db):
     results = []
-    from krm3.core.models import PaymentCategory
-
     azienda = PaymentCategory.objects.create(title='Azienda')
     results.append(PaymentCategory.objects.create(title='Anticipo', parent=azienda))
     results.append(PaymentCategory.objects.create(title='CCA', parent=azienda))
@@ -155,8 +150,6 @@ def payment_types(db):
 @pytest.fixture
 def document_types(db):
     results = []
-    from krm3.core.models import DocumentType
-
     results.append(DocumentType.objects.get_or_create(title='Scontrino', default=True)[0])
     results.append(DocumentType.objects.get_or_create(title='Fattura')[0])
     results.append(DocumentType.objects.get_or_create(title='Altro')[0])
@@ -166,7 +159,7 @@ def document_types(db):
 
 @pytest.fixture
 def categories(db):
-    from testutils.factories import ExpenseCategoryFactory, PaymentCategoryFactory
+    from testutils.factories import ExpenseCategoryFactory, PaymentCategoryFactory  # noqa: PLC0415
 
     expenses = {
         'alloggio': ExpenseCategoryFactory(title='Alloggio'),
@@ -209,21 +202,21 @@ def categories(db):
 
 @pytest.fixture
 def country(db):
-    from testutils.factories import CountryFactory
+    from testutils.factories import CountryFactory  # noqa: PLC0415
 
     return CountryFactory()
 
 
 @pytest.fixture
 def city(db):
-    from testutils.factories import CityFactory
+    from testutils.factories import CityFactory  # noqa: PLC0415
 
     return CityFactory()
 
 
 @pytest.fixture
 def resource(db):
-    from testutils.factories import ResourceFactory
+    from testutils.factories import ResourceFactory  # noqa: PLC0415
 
     return ResourceFactory()
 
@@ -240,7 +233,7 @@ def resource_factory():
 
 @pytest.fixture
 def project(db):
-    from testutils.factories import ProjectFactory
+    from testutils.factories import ProjectFactory  # noqa: PLC0415
 
     return ProjectFactory()
 
@@ -299,8 +292,8 @@ def resources(admin_user):
 
 @pytest.fixture
 def timesheet_api_user():
-    from testutils.permissions import add_permissions
-    from testutils.factories import UserFactory
+    from testutils.factories import UserFactory  # noqa: PLC0415
+    from testutils.permissions import add_permissions  # noqa: PLC0415
 
     user = UserFactory()
 
@@ -312,8 +305,8 @@ def timesheet_api_user():
 
 @pytest.fixture
 def timesheet_api_staff_user():
-    from testutils.permissions import add_permissions
-    from testutils.factories import UserFactory
+    from testutils.factories import UserFactory  # noqa: PLC0415
+    from testutils.permissions import add_permissions  # noqa: PLC0415
 
     user = UserFactory()
 
@@ -328,8 +321,6 @@ def timesheet_api_staff_user():
 
 @pytest.fixture
 def self_cleaning_add(db):
-    from krm3.core.models.documents import ProtectedDocument as Document
-
     _to_delete = []
     original = Document.add
 

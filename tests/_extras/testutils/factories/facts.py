@@ -1,5 +1,6 @@
 import typing
 from datetime import date, timedelta
+from decimal import Decimal
 
 import factory
 from dateutil.relativedelta import relativedelta
@@ -53,7 +54,8 @@ class GroupFactory(DjangoModelFactory):
 
 
 class CountryFactory(DjangoModelFactory):
-    name = Faker('country')
+    name = 'Italy'
+    country_calendar_code = 'IT'
 
     class Meta:
         model = 'core.Country'
@@ -63,9 +65,11 @@ class CountryFactory(DjangoModelFactory):
 class CityFactory(DjangoModelFactory):
     name = Sequence(lambda n: f'City {n + 1}')
     country = SubFactory(CountryFactory)
+    subdivision_code = "RM"
 
     class Meta:
         model = 'core.City'
+        django_get_or_create = ('name', 'country')
 
 
 class CurrencyFactory(DjangoModelFactory):
@@ -83,7 +87,6 @@ class ResourceFactory(DjangoModelFactory):
     first_name = Faker('first_name')
     last_name = Faker('last_name')
     user = SubFactory(UserFactory)
-    preferred_in_report = True
     preferred_language = 'en-uk'
 
     class Meta:
@@ -94,8 +97,9 @@ class ResourceFactory(DjangoModelFactory):
 class ContractFactory(AutoRegisterModelFactory[Contract]):
     resource = SubFactory(ResourceFactory)
     period = (date(2020, 1, 1), None)
-    country_calendar_code = settings.HOLIDAYS_CALENDAR
     sunday_as_holiday = True
+    contract_type=Contract.ContractType.EMPLOYEE
+    base_in = SubFactory(CityFactory)
 
     class Meta:
         model = 'core.Contract'
@@ -274,8 +278,21 @@ class TimesheetSubmissionFactory(DjangoModelFactory):
 
 class DayEntryFactory(DjangoModelFactory):
     day = Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
-    contract = factory.LazyAttribute(lambda o: ContractFactory(resource=o.resource))
     resource = SubFactory(ResourceFactory)
+    contract = SubFactory(
+        ContractFactory,
+        resource=factory.SelfAttribute('..resource'),
+    )
+    bank = Decimal('0.00')
+    due_hours = Decimal('0.00')
+    travel_hours = Decimal('0.00')
+    day_hours = Decimal('0.00')
+    night_hours = Decimal('0.00')
+    on_call_hours = Decimal('0.00')
+    leave_hours = Decimal('0.00')
+    special_leave_hours = Decimal('0.00')
+    rest_hours = Decimal('0.00')
+    overtime_hours = Decimal('0.00')
 
     class Meta:
         model = 'core.DayEntry'
@@ -293,34 +310,49 @@ class TaskEntryFactory(DjangoModelFactory):
         model_class,
         /,
         resource: 'Resource | None' = None,
-        date: date | bool | None = None,
+        day: date | bool | None = None,
         day_entry: 'DayEntry | bool | None' = None,
         task: 'Task | None' = None,
         **kwargs,
     ) -> 'Task':
         """Create a contract if required."""
-        if day_entry and date:
+        if day_entry and day:
             raise NotImplementedError
 
         manager = cls._get_manager(model_class)
 
         resource = resource or (task.resource if task else None) or ResourceFactory()
+        task = task or TaskFactory(
+            resource=resource,
+            contract=True,
+        )
 
         if day_entry:
             if isinstance(day_entry, bool) and day_entry:
                 kwargs['day_entry'] = DayEntryFactory(resource=resource)
             else:
                 kwargs['day_entry'] = day_entry
-        elif date:
-            if isinstance(date, bool):
+        elif day:
+            if isinstance(day, bool):
                 kwargs['day_entry'] = DayEntryFactory(
                     resource=resource,
                     day=Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31)),
                 )
             else:
-                kwargs['day_entry'] = DayEntryFactory(resource=resource, day=date)
+                contract = Contract.objects.by_day(resource, day)
+                if contract is None:
+                    contract = ContractFactory(
+                        resource=resource,
+                        period=(day, None),
+                    )
 
-        kwargs['task'] = task if task else TaskFactory(resource=resource)
+                kwargs['day_entry'] = DayEntryFactory(
+                    resource=resource,
+                    contract=contract,
+                    day=day,
+                )
+
+        kwargs['task'] = task
 
         return manager.create(**kwargs)
 

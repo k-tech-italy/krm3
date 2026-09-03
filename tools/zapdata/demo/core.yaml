@@ -69,19 +69,23 @@
 - model: core.country
   fields:
     name: Italy
+    country_calendar_code: IT
 - model: core.country
   fields:
     name: United Kingdom
+    country_calendar_code: GB
 - model: core.city
   fields:
     name: Rome
     country:
     - Italy
+    subdivision_code: RM
 - model: core.city
   fields:
     name: Harrogate
     country:
     - United Kingdom
+    subdivision_code:
 - model: core.userprofile
   fields:
     user:

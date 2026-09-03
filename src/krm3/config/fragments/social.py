@@ -85,7 +85,7 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         response = kwargs['response']
         user = kwargs['user']
 
-        from ...core.models import UserProfile
+        from ...core.models import UserProfile  # noqa: PLC0415
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
 
@@ -113,7 +113,7 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY := _env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'):
         if not kwargs.get('is_new'):
             return
 
-        from krm3.core.models import Resource
+        from krm3.core.models import Resource  # noqa: PLC0415
 
         try:
             resource = Resource.objects.get(

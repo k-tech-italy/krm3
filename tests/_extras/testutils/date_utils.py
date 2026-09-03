@@ -1,5 +1,7 @@
 import datetime
 
+from dateutil.parser import parse
+
 
 def _dt(x):
     if len(x) == 8:
@@ -10,6 +12,4 @@ def _dt(x):
 
 
 def _dtt(x):
-    from dateutil.parser import parse
-
     return parse(x)

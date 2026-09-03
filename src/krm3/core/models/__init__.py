@@ -11,6 +11,6 @@ from .accounting import *  # noqa: F401, F403
 def __getattr__(name: str): # noqa: ANN202
     """Lazy import for ProtectedDocument to avoid circular import with django-simple-dms."""
     if name == 'ProtectedDocument':
-        from .documents import ProtectedDocument
+        from .documents import ProtectedDocument  # noqa: PLC0415
         return ProtectedDocument
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

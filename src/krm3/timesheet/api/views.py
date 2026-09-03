@@ -1,9 +1,8 @@
 import datetime
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, cast, override
 
-from django.core import exceptions as django_exceptions
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
@@ -13,25 +12,27 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Contract, Resource
-from krm3.core.models.timesheets import SpecialLeaveReason, TaskEntry, DayEntry
+from krm3.core.models import Resource
+from krm3.core.models.timesheets import SpecialLeaveReason, TaskEntry, DayEntry, TimeEntryAwareQuerySet
 from krm3.events import Event
 from krm3.events.dispatcher import EventDispatcher
-from krm3.sentry import capture_exception
 from krm3.timesheet.api.serializers import (
     BaseDayEntrySerializer,
     SpecialLeaveReasonSerializer,
     DayEntryCreateSerializer,
     DayEntryReadSerializer,
     TimesheetSerializer,
+    BaseTaskEntrySerializer,
+    TaskEntryCreateSerializer,
+    TaskEntryReadSerializer,
+    _model_validation_error_detail,
 )
 from krm3.timesheet.dto import TimesheetDTO
-from ktcalendars import KTDay, KTDateRange
 
 if TYPE_CHECKING:
     from krm3.core.models import User
     from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
-    from krm3.core.models.timesheets import TaskEntriesQuerySet
+
 
 class _TaskEntryCreationFailure(Exception):
     @override
@@ -100,16 +101,38 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
 
 class TaskEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    @staticmethod
+    def _has_non_task_data(day_entry: DayEntry) -> bool:
+        """Return whether a day entry contains data unrelated to tasks."""
+        return any(
+            (
+                day_entry.comment,
+                day_entry.bank,
+                day_entry.asked_holiday,
+                day_entry.leave_hours,
+                day_entry.special_leave_hours,
+                day_entry.is_sick,
+                day_entry.rest_hours,
+            )
+        )
+
+    def _refresh_or_delete_day_entry(self, day_entry: DayEntry) -> None:
+        """Delete an empty day entry or refresh its remaining task data."""
+        if not day_entry.taskentry_set.exists() and not self._has_non_task_data(day_entry):
+            day_entry.delete()
+            return
+
+        day_entry.refresh(
+            task_entries=None,
+            drop_existing=False,
+        )
 
     @override
     def get_queryset(self) -> QuerySet[TaskEntry]:
         user = cast('User', self.request.user)
         return TaskEntry.objects.filter_acl(user=user)  # pyright: ignore
-
-    def update(self, request: Request, *args, **kwargs) -> Response:
-        if resp := self.check_modify_allowed(request):
-            return resp
-        return super().update(request, *args, **kwargs)
 
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         if resp := self.check_modify_allowed(request):
@@ -117,10 +140,16 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     @override
-    def get_serializer_class(self) -> type[BaseDayEntrySerializer]:
-        if self.request.method in ['POST', 'PUT']:
-            return DayEntryCreateSerializer
-        return DayEntryReadSerializer
+    def perform_destroy(self, instance: TaskEntry) -> None:
+        day_entry = instance.day_entry
+        instance.delete()
+        self._refresh_or_delete_day_entry(day_entry)
+
+    @override
+    def get_serializer_class(self) -> type[BaseTaskEntrySerializer]:
+        if self.request.method == 'POST':
+            return TaskEntryCreateSerializer
+        return TaskEntryReadSerializer
 
     @override
     @extend_schema(
@@ -163,83 +192,28 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         ],
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        try:
-            resource_id = request.data.pop('resource_id')
-            resource = Resource.objects.get(pk=resource_id)
-            dates =  [KTDay(d).date for d in set(request.data.pop('dates'))]
-            contracts = resource.get_contract_map(start_day=dates[0], end_day=dates[-1])
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            # normalise keys for the serializer
-            request.data['task'] = request.data.pop('task_id', None)
-            request.data['resource'] = resource_id
-        except (KeyError, ObjectDoesNotExist) as e:
-            capture_exception(e)
-            if isinstance(e, KeyError):
-                return Response(data={'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(f'Object not found (e)', status=status.HTTP_404_NOT_FOUND)
+        resource = serializer.validated_data['resource_id']
+        user = cast('User', request.user)
 
-        if resource.user != request.user and not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
-            return Response(status=status.HTTP_403_FORBIDDEN)
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to create task entries for this resource.')
 
         with transaction.atomic():
-            try:
-                headers = self._create_time_entries(request, resource, contracts, dates, **request.data)
-            except _TaskEntryCreationFailure as e:
-                return Response(
-                    data={'error': f'Invalid task entry for {e.time_entry_date}: {"; ".join(e.messages)}.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            entries = serializer.save()
 
-        return Response(status=status.HTTP_201_CREATED, headers=headers)
+            response_data = TaskEntryReadSerializer(
+                entries,
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
 
-    def _create_time_entries(
-            self,
-            request: Request,
-            resource: Resource,
-            contracts: dict[KTDateRange, Contract],
-            dates: Sequence[str]) -> dict[str, str]:
-        """Generate new time entries for the `resource`.
-
-        :param request: the API request
-        :param resource: the resource requesting to log hours in the timesheet
-        :param dates: the dates for which the resource is logging hours
-        :raises _DayEntryCreationFailure: when any time entry fails validation
-        :return: the response headers on success
-        """
-        for dd in dates:
-            day_entry = DayEntry.objects.get_or_create()
-
-        # TODO: Provisional fix for #423. Will allow single day edits
-        if is_day_entry and len(dates) == 1:
-            DayEntry.objects.filter(resource_id=resource.pk, task__isnull=is_day_entry, day__in=dates).delete()
-
-        for formatted_date in dates:
-            time_entry_data = request.data.copy()
-            time_entry_data.setdefault('date', formatted_date)
-            date = datetime.date.fromisoformat(formatted_date)
-
-            if request.data.get('autofill', False):
-                contract = Contract.objects.get(
-                    resource=resource,
-                    period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
-                )
-                if contract:
-                    time_entry_data['day_shift_hours'] = contract.get_remaining_due_hours(
-                        date, time_entry_data.get('task')
-                    )
-
-            serializer = self.get_serializer(data=time_entry_data, context={'request': request})
-            if serializer.is_valid(raise_exception=True):
-                try:
-                    self.perform_create(serializer)
-                except django_exceptions.ValidationError as e:
-                    raise _TaskEntryCreationFailure(time_entry_date=formatted_date, messages=e.messages) from e
-
-        if request.data.get('holiday_hours'):
-            self.notify_holiday(resource, dates)
-
-        return self.get_success_headers(serializer.data)
+        return Response(
+            response_data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(methods=['post'], detail=False)
     def clear(self, request: Request) -> Response:  # noqa: C901
@@ -249,12 +223,13 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         if not isinstance(requested_entry_ids, list):
             return Response(data={'error': 'Time entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        entries: "TaskEntriesQuerySet" = (
+        entries = cast(
+            'TimeEntryAwareQuerySet[TaskEntry]',
             self.get_queryset()
             .filter(pk__in=requested_entry_ids)
             .annotate(task_is_not_null=ExpressionWrapper(Q(task__isnull=False), output_field=BooleanField()))
-            .order_by('task_is_not_null')
-        )  # pyright: ignore[reportAssignmentType]
+            .order_by('task_is_not_null'),
+        )
 
         if not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             # since we already ACL-filtered the queryset, we need to
@@ -267,7 +242,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             is_missing_acl_filtered_entries = set(requested_entry_ids) != fetched_entry_ids
 
             authorized_resource = Resource.objects.get(user=request.user)
-            is_user_unauthorized = entries.exclude(resource=authorized_resource).exists()
+            is_user_unauthorized = entries.exclude(day_entry__resource=authorized_resource).exists()
 
             if is_missing_acl_filtered_entries or is_user_unauthorized:
                 return Response(status=status.HTTP_403_FORBIDDEN)
@@ -278,20 +253,38 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        with transaction.atomic():
-            for entry in entries:
-                entry.delete()
+        try:
+            with transaction.atomic():
+                day_entry_ids = list(entries.values_list('day_entry_id', flat=True).distinct())
+
+                day_entries = list(DayEntry.objects.select_for_update().filter(pk__in=day_entry_ids))
+
+                entries.delete()
+
+                for day_entry in day_entries:
+                    self._refresh_or_delete_day_entry(day_entry)
+        except DjangoValidationError as exc:
+            return Response(
+                data=_model_validation_error_detail(exc),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def check_modify_allowed(self, request: Request) -> Response | None:
-        """Check if DayEntry can be modified by user and it is not belonging to a submitted Timesheet."""
-        day_entry: DayEntry = self.get_object()
-        if day_entry.resource.user != request.user and not request.user.has_perm('core.manage_any_timesheet'):
+        """Check if TaskEntry can be modified by user and it is not belonging to a submitted Timesheet."""
+        task_entry: TaskEntry = self.get_object()
+        if task_entry.day_entry.resource.user != request.user and not cast('User', request.user).has_perm(
+            'core.manage_any_timesheet'
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
-        if day_entry.is_submitted:
+        if task_entry.is_submitted:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
         return None
+
+class DayEntryAPIViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     def notify_holiday(self, resource: Resource, dates: Iterable[str]) -> None:
         sorted_dates = sorted(dates)
@@ -306,21 +299,171 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             )
         )
 
-
-class DayEntryAPIViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
     @override
     def get_queryset(self) -> QuerySet[DayEntry]:
         user = cast('User', self.request.user)
         return DayEntry.objects.filter_acl(user=user)  # pyright: ignore
 
-
     @override
     def get_serializer_class(self) -> type[BaseDayEntrySerializer]:
-        if self.request.method in ['POST', 'PUT']:
+        if self.request.method == 'POST':
             return DayEntryCreateSerializer
         return DayEntryReadSerializer
+
+    def perform_create(self, serializer: BaseDayEntrySerializer) -> None:
+        resource = serializer.validated_data['resource']
+        user = cast('User', self.request.user)
+
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to create day entries for this resource.')
+
+        serializer.save()
+
+    @override
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        dates = serializer.validated_data.pop('dates', None)
+        if dates is None:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        resource = serializer.validated_data['resource']
+        user = cast('User', request.user)
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to modify day entries for this resource.')
+
+        saved_entries = []
+        with transaction.atomic():
+            Resource.objects.select_for_update().get(pk=resource.pk)
+            existing_entries = {
+                entry.day: entry
+                for entry in DayEntry.objects.select_for_update().filter(resource=resource, day__in=dates)
+            }
+
+            if any(entry.closed for entry in existing_entries.values()):
+                return Response(
+                    data={'error': _('Closed day entries cannot be modified.')},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            for day in dates:
+                entry_data = serializer.validated_data.copy()
+                entry_data['day'] = day
+                entry = existing_entries.get(day)
+                if entry is None:
+                    saved_entries.append(serializer.create(entry_data))
+                else:
+                    saved_entries.append(serializer.update(entry, entry_data))
+
+        response_data = DayEntryReadSerializer(
+            saved_entries,
+            many=True,
+            context=self.get_serializer_context(),
+        ).data
+
+        if request.data.get('asked_holiday', False) is True:
+            self.notify_holiday(resource, dates)
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    @override
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Delete a single day entry, only if owned by the user or the user can manage any timesheet."""
+        day_entry: DayEntry = self.get_object()
+        user = cast('User', request.user)
+        if day_entry.resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if day_entry.closed:
+            return Response(
+                data={'error': _('Closed day entries cannot be modified.')},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
+
+    def _ids_from_request(self, request: Request) -> list[Any] | Response:
+        """Read and validate the 'ids' list from the request body."""
+        requested_entry_ids = request.data.get('ids', [])
+        if not requested_entry_ids:
+            return Response(data={'error': 'No day entry ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(requested_entry_ids, list):
+            return Response(data={'error': 'Day entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        return requested_entry_ids
+
+    def _acl_error(self, request: Request, ids: list[Any], entries: list[DayEntry]) -> Response | None:
+        """Return a 403 Response if the user has no rights on the requested day entries, otherwise None."""
+        user = cast('User', request.user)
+        if not user.has_any_perm('core.manage_any_timesheet'):
+            fetched_entry_ids = {entry.pk for entry in entries}
+            is_missing_acl_filtered_entries = set(ids) != fetched_entry_ids
+            is_user_unauthorized = any(entry.resource.user != user for entry in entries)
+
+            if is_missing_acl_filtered_entries or is_user_unauthorized:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+        return None
+
+    @action(methods=['post'], detail=False, url_path='delete', url_name='delete')
+    def delete_non_task_data(self, request: Request) -> Response:
+        """Delete non-task data from multiple day entries while preserving their task entries."""
+        ids = self._ids_from_request(request)
+        if isinstance(ids, Response):
+            return ids
+
+        with transaction.atomic():
+            entries = list(self.get_queryset().filter(pk__in=ids).prefetch_related('taskentry_set'))
+
+            if (error := self._acl_error(request, ids, entries)):
+                return error
+
+            if any(entry.closed for entry in entries):
+                return Response(
+                    data={'error': 'Found closed day entry. Closed day entries are frozen and cannot be cleared.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            for entry in entries:
+                if not entry.taskentry_set.exists():
+                    entry.delete()
+                    continue
+
+                entry.bank = 0
+                entry.asked_holiday = False
+                entry.leave_hours = 0
+                entry.special_leave_hours = 0
+                entry.special_leave_reason = None
+                entry.protocol_number = None
+                entry.is_sick = False
+                entry.rest_hours = 0
+                entry.comment = None
+                entry.refresh(task_entries=None, drop_existing=False)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'], detail=False)
+    def clear(self, request: Request) -> Response:
+        """Delete multiple day entries and their related task entries."""
+        ids = self._ids_from_request(request)
+        if isinstance(ids, Response):
+            return ids
+
+        with transaction.atomic():
+            entries = list(self.get_queryset().filter(pk__in=ids))
+
+            if (error := self._acl_error(request, ids, entries)):
+                return error
+
+            if any(entry.closed for entry in entries):
+                return Response(
+                    data={'error': 'Found closed day entry. Closed day entries are frozen and cannot be deleted.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            DayEntry.objects.filter(pk__in=[entry.pk for entry in entries]).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = SpecialLeaveReason.objects.all()

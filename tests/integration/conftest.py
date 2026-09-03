@@ -1,25 +1,21 @@
 import datetime
-import os
-import signal
-import subprocess
-from pathlib import Path
+import typing
 from typing import Generator
 
 import pytest
 from seleniumbase import config as sb_config
 from seleniumbase.core import session_helper
 
-import typing
-
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppSeleniumTC
+
 
 @pytest.fixture
 def browser(live_server, request) -> Generator['AppSeleniumTC', None, None]:
     """SeleniumBase as a pytest fixture.
     Usage example: "def test_one(sb):"
     You may need to use this for tests that use other pytest fixtures."""
-    from testutils.selenium import AppSeleniumTC
+    from testutils.selenium import AppSeleniumTC  # noqa: PLC0415
 
     if request.cls:
         if sb_config.reuse_class_session:
@@ -56,7 +52,7 @@ def browser(live_server, request) -> Generator['AppSeleniumTC', None, None]:
 @pytest.fixture
 def freeze_frontend_time(browser):
     def _freeze(iso_date: str):
-        dt = datetime.datetime.fromisoformat(iso_date.replace('Z', '+00:00'))
+        dt = datetime.datetime.fromisoformat(iso_date)
         timestamp_ms = int(dt.timestamp() * 1000)
         browser.driver.execute_cdp_cmd(
             'Page.addScriptToEvaluateOnNewDocument',

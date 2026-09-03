@@ -15,6 +15,6 @@ A <glossary:Project>'s purchase order issued by the Customer.
 ## Fields
 
 - `project`: The <glossary:Project> this PO belongs to.
-- `billable`: If it is billable.
+- `is_billable`: If it is billable.
 - `period`: the PO's date interval
 - `state`:

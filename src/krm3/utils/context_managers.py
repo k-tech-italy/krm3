@@ -6,6 +6,7 @@ from flags.state import flag_enabled
 
 from krm3.utils.context import request_ctx
 
+
 class SqlPerfMonitor(CaptureQueriesContext):
     def __enter__(self) -> Self:
         self.enabled = flag_enabled('SQL_PERF_MONITOR_ENABLED')

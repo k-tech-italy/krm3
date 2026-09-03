@@ -13,6 +13,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.text import slugify
+from django_tables2.config import RequestConfig
 from django_tables2.export import TableExport
 
 from krm3.missions.admin.expenses import ExpenseInline
@@ -133,6 +134,7 @@ def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
+    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
     list_display = ['number', 'year', 'month', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     form = ReimbursementAdminForm
     inlines = [ExpenseInline]
@@ -204,8 +206,6 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         self, reimbursement: Reimbursement, table_data: list, export_format: str, request: HttpRequest
     ) -> HttpResponse | None:
         """Export django table data."""
-        from django_tables2.config import RequestConfig
-
         RequestConfig(request).configure(table_data)
 
         if TableExport.is_valid_format(export_format):

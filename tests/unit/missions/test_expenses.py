@@ -20,10 +20,10 @@ from testutils.factories import (
 )
 from testutils.permissions import add_permissions
 
+from krm3.core.models import Expense
 from krm3.missions.api.serializers.expense import ExpenseCreateSerializer
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.forms import ExpenseAdminForm
-from krm3.core.models import Expense
 
 
 def test_expense_manager(expense):
@@ -47,7 +47,9 @@ def test_expense_manager(expense):
         pytest.param('GBP', 50.0, 100, 5, False, True, id='gbp-recalc'),
     ],
 )
-def test_expense_calculate_base(iso3, amt_currency, amt_base, expected, force_rates, force_reset, mock_rate_provider):
+def test_expense_calculate_base(  # noqa: PLR0917
+    iso3, amt_currency, amt_base, expected, force_rates, force_reset, mock_rate_provider
+):
     mock_rate_provider(day := date(2020, 1, 1), 'EUR,GBP,USD', {'EUR': 0.2, 'GBP': 2, 'USD': 1})
 
     expense = ExpenseFactory(
@@ -66,7 +68,9 @@ def test_expense_calculate_base(iso3, amt_currency, amt_base, expected, force_ra
         pytest.param(100.0, None, 'A', False, False, -100, id='az-woimage'),
     ],
 )
-def test_expense_calculate_reimbursement(amt_base, initial, expense_type, image, force, expected, db, monkeypatch):
+def test_expense_calculate_reimbursement(  # noqa: PLR0917
+    amt_base, initial, expense_type, image, force, expected, db, monkeypatch
+):
     monkeypatch.setattr('krm3.core.models.Expense.calculate_base', Mock())
 
     if image:

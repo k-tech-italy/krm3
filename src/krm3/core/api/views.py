@@ -1,8 +1,10 @@
-
+import base64
+import json
 import logging
-from typing import Any, cast
+from typing import Any, cast, override
 
 from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.contrib.auth import (
     authenticate,
     login as djlogin,
@@ -14,6 +16,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ktcalendars import KTDay
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAuthenticated
 from rest_framework.request import Request
@@ -42,6 +45,7 @@ from krm3.core.models import (
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
+
 class DefaultPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -65,10 +69,7 @@ class GoogleOAuthView(APIView):
 
         Frontend calls this with: GET /api/v1/o/google-oauth2/?redirect_uri=http://localhost:8000/login
         """
-        import base64
-        import json
-
-        from social_django.utils import load_backend, load_strategy
+        from social_django.utils import load_backend, load_strategy  # noqa: PLC0415
 
         # Get the frontend redirect URI (where Google should redirect after auth)
         redirect_uri = request.query_params.get('redirect_uri')
@@ -99,10 +100,7 @@ class GoogleOAuthView(APIView):
 
         Frontend sends: POST /api/v1/o/google-oauth2/ with state and code in the body
         """
-        import base64
-        import json
-
-        from social_django.utils import load_backend, load_strategy
+        from social_django.utils import load_backend, load_strategy  # noqa: PLC0415
 
         # Get the state from the request (this is our base64-encoded state)
         encoded_state = request.data.get('state') or request.POST.get('state')
@@ -216,13 +214,14 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     @action(
         methods=['get'],
         detail=False,
-        url_path=r'active/(?P<date_from>[^/]+)?/(?P<date_to>[^/]+)?',
+        url_path=r'active(?:/(?P<date_from>[^/]+)/(?P<date_to>[^/]+))?',
     )
     def active(self, request: Request, date_from: str | None = None, date_to: str | None = None) -> Response:
         if date_from in (None, '') and date_to in (None, ''):
+            today = KTDay().date
             date_from, date_to = (
-                (KTDay() - relativedelta(months=-1)).date.replace(day=1),
-                (KTDay() - relativedelta(months=2)).date.replace(day=1) - relativedelta(days=1),
+                today.replace(day=1),
+                (today + relativedelta(months=1)).replace(day=1) - relativedelta(days=1),
             )
         elif date_from in (None, '') or date_to in (None, ''):
             raise ValueError('From/to dates must be not None if either provided')
@@ -299,6 +298,26 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetSubmissionSerializer
 
+    @staticmethod
+    def _check_manage_permission(request: Request) -> None:
+        if not cast('User', request.user).has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to modify timesheet submissions.')
+
+    @override
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().update(request, *args, **kwargs)
+
+    @override
+    def partial_update(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().partial_update(request, *args, **kwargs)
+
+    @override
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().destroy(request, *args, **kwargs)
+
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)
         ret = super().get_queryset()
@@ -355,7 +374,5 @@ class SupportedLanguagesViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self, request: Request) -> Response:
-        from django.conf import settings
-
         languages = [{'language_code': code, 'language': name} for code, name in settings.LANGUAGES]
         return Response(languages)

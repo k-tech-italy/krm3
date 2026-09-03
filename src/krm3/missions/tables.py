@@ -81,7 +81,7 @@ class MissionExpenseExportTable(MissionExpenseBaseTable):
         return 'yes' if record.image else 'no'
 
     def render_reimbursement(self, record: Expense) -> str:
-        return record.reimbursement if record.reimbursement else '--'
+        return record.reimbursement or '--'
 
     class Meta:
         model = Expense
@@ -124,4 +124,4 @@ class ReimbursementExpenseExportTable(ReimbursementExpenseBaseTable):
         return 'yes' if record.image else 'no'
 
     def render_mission(self, record: Expense) -> str:
-        return record.mission if record.mission else '--'
+        return record.mission or '--'

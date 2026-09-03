@@ -1,16 +1,18 @@
-import datetime
 import re
 import typing
 
 import pytest
 from constance import config
+from constance.test import override_config
 from django.test import override_settings
 from freezegun import freeze_time
+from krm3.core.models import TaskEntry
 from selenium.webdriver.common.by import By
 
 from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
+    DayEntryFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TaskFactory,
@@ -20,6 +22,7 @@ from testutils.factories import (
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
+    from krm3.core.models import Task
 
 pytestmark = pytest.mark.selenium
 
@@ -53,10 +56,10 @@ def flag_timesheet():
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_data_for_current_week(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
     freeze_frontend_time('2025-06-19T00:00:00Z')
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     ContractFactory(resource=resource)
 
     TaskFactory(
@@ -75,15 +78,16 @@ def test_timesheet_data_for_current_week(
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_no_data_only_next_month(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
     freeze_frontend_time('2025-06-06T00:00:00Z')
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
 
     # Task che inizierà nel mese successivo
     TaskFactory(
         resource=resource,
         period=(_dt('2025-07-01'), _dt('2025-07-31')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -94,19 +98,13 @@ def test_timesheet_no_data_only_next_month(
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_no_data_only_prev_month(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
-):
+def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', freeze_frontend_time):
     freeze_frontend_time('2025-06-06T00:00:00Z')
-    resource = resource_factory(user=regular_user)
 
     # Task che è finito nel mese precedente
-    TaskFactory(
-        resource=resource,
-        period=(_dt('2025-05-01'), _dt('2025-06-01')),
-    )
+    task: Task = TaskFactory(period=(_dt('2025-05-01'), _dt('2025-06-01')), contract=True)
 
-    browser.login_as_user(regular_user)
+    browser.login_as_user(task.resource.user)
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
@@ -115,14 +113,15 @@ def test_timesheet_no_data_only_prev_month(
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_no_data_for_current_period(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     freeze_frontend_time('2025-06-06T00:00:00Z')
     # Task che inizierà nel mese successivo
     TaskFactory(
         resource=resource,
         period=(_dt('2025-07-01'), _dt('2025-07-31')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -133,12 +132,13 @@ def test_timesheet_no_data_for_current_period(
 @freeze_time('2025-06-25')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time):
-    resource = resource_factory(user=regular_user)
+def test_timesheet_quick_add(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    resource = ResourceFactory(user=regular_user)
     freeze_frontend_time('2025-06-25T00:00:00Z')
     TaskFactory(
         resource=resource,
         period=(_dt('2025-06-01'), _dt('2025-07-01')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -167,56 +167,55 @@ def test_timesheet_no_tasks_defined(browser: 'AppTestBrowser', regular_user, res
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
-
 @freeze_time('2025-06-13')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time):
-    resource = resource_factory(user=regular_user)
-
+def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-06-13T00:00:00Z')
-
-    TaskFactory(
-        resource=resource,
-        period=(_dt('2025-06-01'), _dt('2025-07-01')),
-
-    )
-    TaskFactory(
+    resource = ResourceFactory(user=regular_user)
+    contract = ContractFactory(resource=resource)
+    task_1 = TaskFactory(
         resource=resource,
         period=(_dt('2025-06-01'), _dt('2025-07-01')),
     )
+    task_2 = TaskFactory(
+        resource=resource,
+        period=(_dt('2025-06-01'), _dt('2025-07-01')),
+    )
+    existing_task_entry = TaskEntryFactory(
+        resource=resource,
+        task=task_1,
+        day=_dt('2025-06-02'),
+        day_shift_hours=8,
+        night_shift_hours=8,
+        travel_hours=8
+
+    )
+    day_entry = existing_task_entry.day_entry
+    day_entry.due_hours = contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    entry_tile_1 = browser.wait_for_element_visible('xpath', '//div[contains(@id, "Mon Jun 02")]')
-    browser.click_and_release(entry_tile_1)
-
-    browser.find_element('//*[contains(text(), "More")]', timeout=10)
-    browser.click('//*[contains(text(), "More")]')
-
-    browser.fill('//input[@id="daytime-input"]', '14')
-    browser.click('//*[contains(text(), "Save")]')
-
-    entry_tile_2 = browser.find_elements('xpath', '//div[starts-with(@id, "Mon Jun 02")]')[1]
-    browser.click_and_release(entry_tile_2)
-
-    browser.find_element('//*[contains(text(), "More")]', timeout=10)
-    browser.click('//*[contains(text(), "More")]')
-    browser.find_element('//input[@id="daytime-input"]', timeout=10)
-    browser.fill('//input[@id="daytime-input"]', '13')
-
-    browser.click('//*[contains(text(), "Save")]')
-
-    browser.assert_element(
-        '//p[@id="creation-error-message" and text()="Invalid time entry for 2025-06-02: '
-        'Total hours on all time entries on 2025-06-02 (27.00) is over 24 hours."]'
+    entry_tile = browser.wait_for_element_visible(
+        By.XPATH,
+        f'//div[@role="button" and starts-with(@id, "Mon Jun 02 2025-{task_2.pk}")]',
     )
+    browser.click_and_release(entry_tile)
 
-    browser.click('//button[@aria-label="Close modal"]')
+    browser.wait_for_element_visible('#short-menu-more-button')
+    browser.js_click('#short-menu-more-button')
 
-    browser.assert_element('//div[contains(@id, "Mon Jun 02 2025")]//span[contains(text(), "14")]')
-    browser.assert_element_absent('//div[contains(@id, "Mon Jun 02 2025")]//span[contains(text(), "13")]')
+    task_dialog = '[role="dialog"]'
+    browser.wait_for_element_visible(task_dialog)
+    browser.fill('#daytime-input', '1')
+    browser.click('#edit-task-entry-container button[type="submit"]')
+
+    browser.assert_element('//*[@id="creation-error-message" and normalize-space()="Maximum 24 total hours per day."]')
+
+    assert TaskEntry.objects.filter(day_entry=day_entry, task=task_1).count() == 1
+    assert not TaskEntry.objects.filter(day_entry=day_entry, task=task_2).exists()
 
 
 @freeze_time('2025-05-13')
@@ -230,21 +229,47 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     task_1 = TaskFactory(
         resource=resource,
         period=(_dt('2025-05-01'), _dt('2025-05-31')),
+        contract=True,
     )
     task_2 = TaskFactory(
         resource=resource,
         period=(_dt('2025-05-01'), _dt('2025-05-31')),
+        contract=True,
     )
     task_3 = TaskFactory(
         resource=resource,
         period=(_dt('2025-05-01'), _dt('2025-05-31')),
+        contract=True,
     )
-    TaskEntryFactory(task=task_1, date=_dt('2025-05-21'), day_shift_hours=1, resource=resource)
-    TaskEntryFactory(task=task_1, date=_dt('2025-05-22'), day_shift_hours=1, resource=resource)
+    task_1_entry = TaskEntryFactory(
+        task=task_1,
+        day=_dt('2025-05-21'),
+        day_shift_hours=1,
+        resource=resource,
+    )
+    task_1_next_day_entry = TaskEntryFactory(
+        task=task_1,
+        day=_dt('2025-05-22'),
+        day_shift_hours=1,
+        resource=resource,
+    )
 
-    TaskEntryFactory(task=task_2, date=_dt('2025-05-21'), day_shift_hours=5, resource=resource)
+    TaskEntryFactory(
+        task=task_2,
+        day_entry=task_1_entry.day_entry,
+        day_shift_hours=5,
+        resource=resource,
+    )
 
-    TaskEntryFactory(task=task_3, date=_dt('2025-05-21'), day_shift_hours=8, resource=resource)
+    TaskEntryFactory(
+        task=task_3,
+        day_entry=task_1_entry.day_entry,
+        day_shift_hours=8,
+        resource=resource,
+    )
+
+    task_1_entry.day_entry.refresh(task_entries=None, drop_existing=False)
+    task_1_next_day_entry.day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
 
@@ -256,17 +281,12 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
     browser.assert_element(f'//div[div[text()="{task_3.title}"] and following-sibling::div[p[text()="8"]]]')
 
     # check total hours for days
-    browser.assert_element('//div[@id="column-20"]/div/div/div/div[contains(., "14h")]')
-    browser.assert_element('//div[@id="column-21"]/div/div/div/div[contains(., "1h")]')
-
-    entry_tile = browser.find_element('xpath', '//div[contains(@id, "Fri May 02")]')
-
-    # Perform drag and drop with minimal offset
-    browser.click_and_release(entry_tile)
-
-    browser.wait_for_element('//*[contains(text(), "More")]', timeout=5)
-    browser.click('//*[contains(text(), "More")]')
-    browser.assert_element('//*[contains(text(), "Save")]')
+    browser.assert_element(
+        '//div[@data-tooltip-id="tooltip-hours-2025-05-21" and normalize-space()="14h"]'
+    )
+    browser.assert_element(
+        '//div[@data-tooltip-id="tooltip-hours-2025-05-22" and normalize-space()="1h"]'
+    )
 
 
 @freeze_time('2025-07-13')
@@ -274,7 +294,15 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    task_entry = TaskEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource, contract=True),
+        day_shift_hours=2,
+        day=_dt('2025-07-04'),
+    )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
     special_leave_reason = SpecialLeaveReasonFactory()
 
     browser.login_as_user(regular_user)
@@ -301,7 +329,15 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
+    task_entry = TaskEntryFactory(
+        resource=resource,
+        task=TaskFactory(resource=resource, contract=True),
+        day_shift_hours=2,
+        day=_dt('2025-07-04'),
+    )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
     special_leave_reason = SpecialLeaveReasonFactory()
 
     browser.login_as_user(regular_user)
@@ -321,7 +357,7 @@ def test_sum_of_leave_special_leave_and_day_entries_cannot_exceed_8h(
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        'No overtime allowed when logging leave, special leave or rest hours. '
+        'No overtime allowed when logging leave, special leave, rest or bank withdrawal hours. '
         'Maximum allowed for 2025-07-04 is 8 hours, Total hours: 9'
     )
     actual_error = error_element.text.strip()
@@ -334,12 +370,15 @@ def test_add_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(
+    task_entry = TaskEntryFactory(
         resource=resource,
-        task=TaskFactory(resource=resource),
+        task=TaskFactory(resource=resource, contract=True),
         day_shift_hours=10,
-        date='2025-07-04',
+        day=_dt('2025-07-04'),
     )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
@@ -365,19 +404,26 @@ def test_use_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(
+    banked_task_entry = TaskEntryFactory(
         resource=resource,
-        task=TaskFactory(resource=resource),
+        task=TaskFactory(resource=resource, contract=True),
         day_shift_hours=10,
-        date='2025-07-03',
+        day=_dt('2025-07-03'),
     )
-    TaskEntryFactory(resource=resource, task=None, bank_to=2, date='2025-07-03', day_shift_hours=0)
-    TaskEntryFactory(
+    banked_day_entry = banked_task_entry.day_entry
+    banked_day_entry.due_hours = banked_day_entry.contract.get_due_hours(banked_day_entry.day)
+    banked_day_entry.bank = 2
+    banked_day_entry.refresh(task_entries=None, drop_existing=False)
+
+    current_task_entry = TaskEntryFactory(
         resource=resource,
-        task=TaskFactory(resource=resource),
+        task=TaskFactory(resource=resource, contract=True),
         day_shift_hours=6,
-        date='2025-07-04',
+        day=_dt('2025-07-04'),
     )
+    current_day_entry = current_task_entry.day_entry
+    current_day_entry.due_hours = current_day_entry.contract.get_due_hours(current_day_entry.day)
+    current_day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
@@ -403,12 +449,15 @@ def test_add_bank_hours_below_scheduled_hours(browser: 'AppTestBrowser', regular
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(
+    task_entry = TaskEntryFactory(
         resource=resource,
-        task=TaskFactory(resource=resource),
+        task=TaskFactory(resource=resource, contract=True),
         day_shift_hours=6,
-        date='2025-07-04',
+        day=_dt('2025-07-04'),
     )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
@@ -431,8 +480,8 @@ def test_add_bank_hours_below_scheduled_hours(browser: 'AppTestBrowser', regular
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        'Invalid time entry for 2025-07-04: Cannot deposit 2.00 bank hours. '
-        'Total hours would become 4.00 which is below scheduled hours (8).'
+        'Cannot deposit 2 bank hours for 2025-07-04. '
+        'Effective hours would be 4, below the scheduled 8 hours.'
     )
     actual_error = error_element.text.strip()
 
@@ -444,20 +493,16 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(
+    task_entry = TaskEntryFactory(
         resource=resource,
-        task=TaskFactory(resource=resource),
+        task=TaskFactory(resource=resource, contract=True),
         day_shift_hours=6,
-        date='2025-07-04',
+        day=_dt('2025-07-04'),
     )
-
-    TaskEntryFactory(
-        resource=resource,
-        day_shift_hours=0,
-        task=None,
-        bank_from=2,
-        date='2025-07-04',
-    )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.bank = -2
+    day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
@@ -472,52 +517,49 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
     browser.click('//button[contains(text(), "Save")]')
 
-    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
-
-    expected_error = (
-        'Invalid time entry for 2025-07-04: Cannot both withdraw from and deposit '
-        'to bank hours on the same day; Cannot deposit 2.00 bank hours. Total hours '
-        'would become 6.00 which is below scheduled hours (8).'
-    )
-    actual_error = error_element.text.strip()
-
-    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
+    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
+    assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
 
+@override_config(BANK_HOURS_LOWER_BOUND=-16.0)
 @freeze_time('2025-07-13')
 def test_cannot_withdraw_hours_below_lower_bound(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-    # NOTE: default lower bound is -16
-    # FIXME: this test should also change the lower bound
+    # Set the lower bound explicitly so the test does not depend on the application's default configuration.
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
+    contract = ContractFactory(resource=resource)
 
-    TaskEntryFactory(
+    DayEntryFactory(
         resource=resource,
-        day_shift_hours=0,
-        task=None,
-        bank_from=8,
-        date='2025-07-07',
+        contract=contract,
+        day=_dt('2025-07-07'),
+        due_hours=contract.get_due_hours(_dt('2025-07-07')),
+        bank=-8,
     )
 
-    TaskEntryFactory(
+    DayEntryFactory(
         resource=resource,
-        day_shift_hours=0,
-        task=None,
-        bank_from=8,
-        date='2025-07-08',
+        contract=contract,
+        day=_dt('2025-07-08'),
+        due_hours=contract.get_due_hours(_dt('2025-07-08')),
+        bank=-8,
     )
 
-    TaskEntryFactory(
+    task_entry = TaskEntryFactory(
         day_shift_hours=2,
         resource=resource,
-        task=TaskFactory(resource=resource),
-        date='2025-07-09',
+        task=TaskFactory(resource=resource, contract=contract),
+        day=_dt('2025-07-09'),
     )
+    day_entry = task_entry.day_entry
+    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "16")]')
+    browser.assert_element('//p[@data-testid="bank-total" and normalize-space()="-16h"]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = -16h)'
 
@@ -530,57 +572,52 @@ def test_cannot_withdraw_hours_below_lower_bound(browser: 'AppTestBrowser', regu
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        'Invalid time entry for 2025-07-09: This transaction would exceed the minimum bank'
-        ' balance of -16.0 hours. Current balance: -16.00, attempting to change by: 1.00.'
+        'This transaction would exceed the minimum bank balance of -16.0 hours. '
+        'Current balance: -16.00, attempting to change by: -1.00'
     )
     actual_error = error_element.text.strip()
 
     assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
 
 
+@override_config(BANK_HOURS_UPPER_BOUND=16.0)
 @freeze_time('2025-07-13')
-def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-    # NOTE: default upper bound is 16
-    # FIXME: this test should also change the upper bound
+def test_cannot_exceed_bank_hours_upper_bound(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
+    # Set the upper bound explicitly so the test does not depend on the application's default configuration.
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
 
-    TaskEntryFactory(
+    first_task_entry = TaskEntryFactory(
         resource=resource,
         day_shift_hours=16,
-        task=TaskFactory(resource=resource),
-        date='2025-07-07',
+        task=TaskFactory(resource=resource, contract=True),
+        day=_dt('2025-07-07'),
     )
+    first_day_entry = first_task_entry.day_entry
+    first_day_entry.due_hours = first_day_entry.contract.get_due_hours(first_day_entry.day)
+    first_day_entry.bank = 8
+    first_day_entry.refresh(task_entries=None, drop_existing=False)
 
-    TaskEntryFactory(
-        resource=resource,
-        day_shift_hours=0,
-        task=None,
-        bank_to=8,
-        date='2025-07-07',
-    )
-
-    TaskEntryFactory(
+    second_task_entry = TaskEntryFactory(
         resource=resource,
         day_shift_hours=16,
-        task=TaskFactory(resource=resource),
-        date='2025-07-08',
+        task=TaskFactory(resource=resource, contract=True),
+        day=_dt('2025-07-08'),
     )
+    second_day_entry = second_task_entry.day_entry
+    second_day_entry.due_hours = second_day_entry.contract.get_due_hours(second_day_entry.day)
+    second_day_entry.bank = 8
+    second_day_entry.refresh(task_entries=None, drop_existing=False)
 
-    TaskEntryFactory(
+    current_task_entry = TaskEntryFactory(
+        day_shift_hours=16,
         resource=resource,
-        day_shift_hours=0,
-        task=None,
-        bank_to=8,
-        date='2025-07-08',
+        task=TaskFactory(resource=resource, contract=True),
+        day=_dt('2025-07-09'),
     )
-
-    TaskEntryFactory(
-        day_shift_hours=1,
-        resource=resource,
-        task=TaskFactory(resource=resource),
-        date='2025-07-09',
-    )
+    current_day_entry = current_task_entry.day_entry
+    current_day_entry.due_hours = current_day_entry.contract.get_due_hours(current_day_entry.day)
+    current_day_entry.refresh(task_entries=None, drop_existing=False)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
@@ -598,9 +635,8 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
     error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
 
     expected_error = (
-        'Invalid time entry for 2025-07-09: This transaction would exceed the maximum bank balance of 16.0 hours. '
-        'Current balance: 16.00, attempting to add: -8.00; Cannot deposit 8.00 bank hours.'
-        ' Total hours would become -7.00 which is below scheduled hours (8).'
+        'This transaction would exceed the maximum bank balance of 16.0 hours. '
+        'Current balance: 16.00, attempting to add: 8.00'
     )
     actual_error = error_element.text.strip()
 
@@ -611,69 +647,91 @@ def test_store_more_bank_hours_than_16(browser: 'AppTestBrowser', regular_user, 
 def test_sick_day_wrong_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskFactory(resource=resource)
+    TaskFactory(resource=resource, contract=True)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
-    browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+    day_header = '[data-testid="header-2025-07-04"]'
+    browser.wait_for_element_visible(day_header)
+    browser.js_click(day_header)
+    browser.wait_for_element_visible('[role="dialog"][aria-label="Day Entry"]')
+
+    sick_radio = '[data-testid="day-entry-sick-radio"]'
+    browser.js_click(sick_radio)
+    browser.wait_for_element_present(f'{sick_radio}:checked')
+
+    protocol_number_input = '#day-entry-protocol-number-input'
+    browser.wait_for_element_visible(protocol_number_input)
 
     # Add a wrong protocol number
-    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', 'ABC3982ESA')
-
-    browser.click('//button[contains(text(), "Save")]')
+    browser.fill(protocol_number_input, 'ABC3982ESA')
 
     browser.assert_element(
-        '//*[contains(text(), "Invalid time entry for 2025-07-04: Protocol number digits must be numeric.")]'
+        '//*[contains(text(), "Protocol number must contain digits only.")]'
     )
+    browser.assert_attribute('#day-entry-submit-button', 'disabled')
 
 
 @freeze_time('2025-07-13')
 def test_sick_day_empty_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskFactory(resource=resource)
+    TaskFactory(resource=resource,  contract=True)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
-    browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+    day_header = '[data-testid="header-2025-07-04"]'
+    browser.wait_for_element_visible(day_header)
+    browser.js_click(day_header)
+    browser.wait_for_element_visible('[role="dialog"][aria-label="Day Entry"]')
+
+    sick_radio = '[data-testid="day-entry-sick-radio"]'
+    browser.js_click(sick_radio)
+    browser.wait_for_element_present(f'{sick_radio}:checked')
+    browser.wait_for_element_visible('#day-entry-protocol-number-input')
 
     # Leaving an empty protocol number should be possible now
-    browser.click('//button[contains(text(), "Save")]')
+    browser.wait_for_element_clickable('#day-entry-submit-button')
+    browser.click('#day-entry-submit-button')
 
-    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+    browser.wait_for_element_visible('.lucide-stethoscope')
 
 
 @freeze_time('2025-07-13')
 def test_sick_day_correct_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskFactory(resource=resource)
+    TaskFactory(resource=resource, contract=True)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
-    browser.click_and_release(day_tile)
-    browser.click('//div[contains(@id, "day-entry-sick-days-div")]')
+    day_header = '[data-testid="header-2025-07-04"]'
+    browser.wait_for_element_visible(day_header)
+    browser.js_click(day_header)
+    browser.wait_for_element_visible('[role="dialog"][aria-label="Day Entry"]')
+
+    sick_radio = '[data-testid="day-entry-sick-radio"]'
+    browser.js_click(sick_radio)
+    browser.wait_for_element_present(f'{sick_radio}:checked')
+
+    protocol_number_input = '#day-entry-protocol-number-input'
+    browser.wait_for_element_visible(protocol_number_input)
 
     # Add a protocol number with correct format (only digits)
-    browser.fill('//textarea[contains(@id,"day-entry-protocol-number-input")]', '001234985983400')
+    browser.fill(protocol_number_input, '001234985983400')
 
-    browser.click('//button[contains(text(), "Save")]')
+    browser.wait_for_element_clickable('#day-entry-submit-button')
+    browser.click('#day-entry-submit-button')
 
-    browser.assert_element('//*[contains(@class, "lucide-stethoscope")]')
+    browser.wait_for_element_visible('.lucide-stethoscope')
 
     # check the protocol number is saved
-    browser.click_and_release(day_tile)
-    browser.assert_element(
-        '//textarea[contains(@id,"day-entry-protocol-number-input")][contains(text(), "001234985983400")]'
-    )
+    browser.js_click(day_header)
+    browser.wait_for_element_visible('[role="dialog"][aria-label="Day Entry"]')
+    browser.assert_attribute(protocol_number_input, 'value', '001234985983400')
 
 
 @freeze_time('2025-07-13')
@@ -682,36 +740,48 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
 ):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskFactory(resource=resource)
+    contract = ContractFactory(resource=resource)
+    TaskFactory(resource=resource, contract=contract)
 
-    TimesheetSubmissionFactory(
-        resource=resource, closed=True, period=(_dt('2025-07-01'), _dt('2025-07-31'))
+    day_entry = DayEntryFactory(
+        resource=resource,
+        contract=contract,
+        day=_dt('2025-07-04'),
+        due_hours=contract.get_due_hours(_dt('2025-07-04')),
+        closed=True,
     )
+
+    submission = TimesheetSubmissionFactory(
+        resource=resource,
+        closed=True,
+        period=(_dt('2025-07-01'), _dt('2025-07-31')),
+    )
+    type(day_entry).objects.filter(pk=day_entry.pk).update(timesheet=submission)
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
-    day_tile = browser.wait_for_element_visible('//div[contains(@id, "column-3")]')
-    browser.click_and_release(day_tile)  # type: ignore
-    calendar_input = browser.wait_for_element_visible('//*[contains(@value,"2025-07-04")]')
-    assert calendar_input.get_attribute('disabled') == 'true'  # type: ignore
-    bank_hour_save = browser.wait_for_element_visible('//input[contains(@id, "save-bank-hour-input")]')
-    assert bank_hour_save.get_attribute('disabled') == 'true'  # type: ignore
-    bank_hour_use = browser.wait_for_element_visible('//input[contains(@id, "from-bank-hour-input")]')
-    assert bank_hour_use.get_attribute('disabled') == 'true'  # type: ignore
+    day_header = '[data-testid="header-2025-07-04"]'
+    browser.wait_for_element_visible(day_header)
+    browser.js_click(day_header)
+    browser.wait_for_element_visible('[role="dialog"][aria-label="Day Entry"]')
+
+    browser.assert_attribute('#day-entry-from-date-picker', 'disabled')
+    browser.assert_attribute('#save-bank-hour-input', 'disabled')
+    browser.assert_attribute('#from-bank-hour-input', 'disabled')
 
 
 @freeze_time('2025-06-25')
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_scheduled_hours_exact_colors(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     freeze_frontend_time('2025-06-25T00:00:00Z')
     TaskFactory(
         resource=resource,
-        period=_dt('2025-06-01'),
-        end_date=_dt('2025-06-30'),
+        period=(_dt('2025-06-01'), _dt('2025-07-01')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -744,13 +814,14 @@ def test_timesheet_scheduled_hours_exact_colors(
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_scheduled_hours_less_colors(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     freeze_frontend_time('2025-06-25T00:00:00Z')
     TaskFactory(
         resource=resource,
         period=(_dt('2025-06-01'), _dt('2025-07-01')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -778,9 +849,9 @@ def test_timesheet_scheduled_hours_less_colors(
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_scheduled_hours_more_colors(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     ContractFactory(resource=resource)
     freeze_frontend_time('2025-06-25T00:00:00Z')
     TaskFactory(
@@ -801,9 +872,13 @@ def test_timesheet_scheduled_hours_more_colors(
 
     browser.click_and_release(element)
 
-    browser.click('//*[contains(text(), "More")]')
-    browser.fill('//input[@id="daytime-input"]', '13')
-    browser.click('//*[contains(text(), "Save")]')
+    more_button = '#short-menu-more-button'
+    browser.wait_for_element_visible(more_button)
+    browser.js_click(more_button)
+    task_dialog = '//div[@role="dialog" and starts-with(@aria-label, "Add Task Entry for ")]'
+    browser.wait_for_element_visible(task_dialog)
+    browser.fill(f'{task_dialog}//input[@id="daytime-input"]', '13')
+    browser.click(f'{task_dialog}//button[normalize-space()="Save"]')
     element_path = (
         '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
@@ -815,14 +890,15 @@ def test_timesheet_scheduled_hours_more_colors(
 @pytest.mark.selenium
 @pytest.mark.django_db
 def test_timesheet_non_working_day_more_colors(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
+    browser: 'AppTestBrowser', regular_user, freeze_frontend_time
 ):
     """Test adding hours in non-working-day is changing color to MORE_THAN_SCHEDULE_COLOR_DARK_THEME."""
-    resource = resource_factory(user=regular_user)
+    resource = ResourceFactory(user=regular_user)
     freeze_frontend_time('2025-06-28T00:00:00Z')
     TaskFactory(
         resource=resource,
         period=(_dt('2025-06-01'), _dt('2025-07-01')),
+        contract=True,
     )
 
     browser.login_as_user(regular_user)
@@ -834,9 +910,13 @@ def test_timesheet_non_working_day_more_colors(
 
     browser.click_and_release(element)
 
-    browser.click('//*[contains(text(), "More")]')
-    browser.fill('//input[@id="daytime-input"]', '2')
-    browser.click('//*[contains(text(), "Save")]')
+    more_button = '#short-menu-more-button'
+    browser.wait_for_element_visible(more_button)
+    browser.js_click(more_button)
+    task_dialog = '//div[@role="dialog" and starts-with(@aria-label, "Add Task Entry for ")]'
+    browser.wait_for_element_visible(task_dialog)
+    browser.fill(f'{task_dialog}//input[@id="daytime-input"]', '2')
+    browser.click(f'{task_dialog}//button[normalize-space()="Save"]')
     element_path = (
         '//div[contains(@data-testid, "header-2025-06-29") and contains(@style,'
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'

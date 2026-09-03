@@ -9,6 +9,7 @@ from freezegun import freeze_time
 from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
+    DayEntryFactory,
     ResourceFactory,
     TaskFactory,
     TaskEntryFactory,
@@ -21,12 +22,12 @@ from testutils.web import _assert_homepage_content
 @freeze_time('2025-08-22')
 def test_report_view_current_month(admin_client):
     resource = ResourceFactory()
-    ContractFactory(resource=resource)
-    TaskEntryFactory(
+    contract = ContractFactory(resource=resource)
+    DayEntryFactory(
         resource=resource,
-        day_shift_hours=0,
-        date=datetime.date.today(),
-        holiday_hours=8,
+        contract=contract,
+        day=datetime.date.today(),
+        asked_holiday=True,
     )
     url = reverse('report')
     response = admin_client.get(url)
@@ -62,41 +63,42 @@ def test_report_creation(admin_client):  # noqa: PLR0915
     task_1 = TaskFactory(resource=r1)
 
     TaskEntryFactory(
-        date=_dt('2025-06-05'),
+        day=_dt('2025-06-05'),
         day_shift_hours=8,
         task=task_1,
         resource=r1,
     )
     TaskEntryFactory(
-        date=_dt('2025-06-06'),
+        day=_dt('2025-06-06'),
         day_shift_hours=6,
         task=task_1,
         resource=r1,
     )
-    TaskEntryFactory(
-        date=_dt('2025-06-09'),
-        day_shift_hours=0,
-        sick_hours=8,
+    DayEntryFactory(
+        day=_dt('2025-06-09'),
+        contract=contract_1,
+        is_sick=True,
         protocol_number=12321,
         resource=r1,
     )
-    TaskEntryFactory(
-        date=_dt('2025-06-10'),
-        day_shift_hours=0,
-        sick_hours=8,
+    DayEntryFactory(
+        day=_dt('2025-06-10'),
+        contract=contract_1,
+        is_sick=True,
         resource=r1,
     )
-    TaskEntryFactory(
-        date=_dt('2025-06-11'),
-        day_shift_hours=0,
-        sick_hours=8,
+    DayEntryFactory(
+        day=_dt('2025-06-11'),
+        contract=contract_1,
+        is_sick=True,
         resource=r1,
     )
 
+    task_2 = TaskFactory(resource=r2)
     TaskEntryFactory(
-        date=_dt('2025-06-13'),
+        day=_dt('2025-06-13'),
         night_shift_hours=7,
-        task=task_1,
+        task=task_2,
         resource=r2,
     )
 

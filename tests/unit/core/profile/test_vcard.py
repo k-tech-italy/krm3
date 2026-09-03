@@ -1,8 +1,3 @@
-import datetime
-import json
-import typing
-from datetime import date
-
 import pytest
 from testutils.factories import ResourceFactory
 
@@ -67,7 +62,7 @@ def test_resource_vcard_validation(vcard_text, should_be_valid, test_description
     - Apple-specific extensions (item1.TEL, X-ABLabel, etc.)
     - Missing VERSION or FN/N fields (lenient mode)
     """
-    from django.core.exceptions import ValidationError
+    from django.core.exceptions import ValidationError  # noqa: PLC0415
 
     resource = ResourceFactory(vcard_text=vcard_text)
 

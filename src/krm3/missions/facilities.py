@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class ReimbursementFacility:
-    def __init__(self, ids: Union[str, 'QuerySet']):
+    def __init__(self, ids: Union[str, 'QuerySet']) -> None:
         if isinstance(ids, str):
             queryset = Expense.objects.filter(id__in=map(int, ids.split(',')))
         else:
@@ -36,7 +36,7 @@ class ReimbursementFacility:
             }
         return results
 
-    def check_year(self, year: int):
+    def check_year(self, year: int) -> None:
         min_max = self.queryset.aggregate(mi=Min('mission__year'), ma=Max('mission__year'))
         if not min_max['mi'] <= year <= min_max['ma']:
             raise ValidationError(f'Year must be between {min_max["mi"]} and {min_max["ma"]}', code='year')
@@ -62,7 +62,7 @@ class ReimbursementFacility:
                 month=month,
                 number=number,
             )
-            for mission, expenses in missions.items():
+            for expenses in missions.values():
                 for expense in expenses:
                     expense.apply_reimbursement(force=False, reimbursement=reimbursement)
             reimbursements.append(reimbursement)

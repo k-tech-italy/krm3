@@ -1,12 +1,13 @@
 """Sentry admin panel module."""
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 import sentry_sdk
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.utils.html import urlize
 from django.utils.html import format_html
@@ -14,10 +15,15 @@ from django.utils.html import format_html
 from krm3.config.admin_extras.forms import SentryForm
 from krm3.utils.sentry import get_sentry_dashboard, get_sentry_host
 
+if TYPE_CHECKING:
+    from smart_admin.site import SmartAdminSite
+
 logger = logging.getLogger(__name__)
 
 
-def sentry(self, request, extra_context=None):  # noqa: D103
+def sentry(
+    self: 'SmartAdminSite', request: HttpRequest, extra_context: dict[str, Any] | None = None
+) -> HttpResponse:  # noqa: D103
     context = self.each_context(request)
     context['title'] = 'Sentry'
     context['info'] = {
@@ -45,7 +51,7 @@ def sentry(self, request, extra_context=None):  # noqa: D103
                     logger.exception(e)
                     last_event_id = sentry_sdk.last_event_id()
             elif opt in ['403', '404', '500']:
-                from krm3.web.views.errors import error_403_view, error_404_view, error_500_view
+                from krm3.web.views.errors import error_403_view, error_404_view, error_500_view  # noqa: PLC0415
 
                 mapping = {
                     '403': (PermissionDenied, error_403_view),

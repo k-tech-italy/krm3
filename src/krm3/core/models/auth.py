@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from ktcalendars.types import KTDayType
 
-    from krm3.core.models import Contract
+    from krm3.core.models import Contract, DayEntry
 
 
 class UserManager(BaseUserManager):
@@ -126,12 +126,15 @@ class Resource(models.Model):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    preferred_in_report = models.BooleanField(default=True)
     vcard_text = models.TextField(null=True, blank=True)
     fiscal_code = models.CharField(max_length=25, null=True, blank=True, unique=True)
     preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
 
     objects = ResourceQuerySet.as_manager()
+
+    if TYPE_CHECKING:
+        dayentry_set: models.Manager[DayEntry]
+        contract_set: models.Manager[Contract]
 
     class Meta:
         ordering = ['last_name', 'first_name']

@@ -3,6 +3,7 @@
 ## B
 - [BankOfHours](terms/BankOfHours.md)
 - [BaseCurrency](terms/BaseCurrency.md)
+- [Basket](terms/Basket.md)
 ## C
 - [ClosedEntry](terms/ClosedEntry.md)
 - [Contract](terms/Contract.md)
@@ -18,6 +19,7 @@
 - [OpenEntry](terms/OpenEntry.md)
 ## P
 - [PaymentType](terms/PaymentType.md)
+- [Project](terms/Project.md)
 ## R
 - [Reimbursement](terms/Reimbursement.md)
 - [Resource](terms/Resource.md)

@@ -6,13 +6,11 @@ terms:
     - BankOfHours
 ---
 
-# BankOfHours (NOT IMPLEMENTED YET!)
+# BankOfHours
 
-_Django Model: core.TimeEntry_
+Bank of Hours transactions are recorded on the <glossary:DayEntry> model in its signed `bank` field. A positive value adds hours to the bank; a negative value uses hours from the bank.
 
-Bank Of Hours is place where <glossary:Resource> can deposit or get hours from. Hours are saved on <glossary:TimeEntry> model on fields bank_from and bank_to.
-Value of bank is calculated by adding values bank_to and subtracting bank_from for every <glossary:TimeEntry> assigned to <glossary:Resource>.
-Note that value of bank can be negative when sum of bank_from > bank_to
+The bank balance for a <glossary:Resource> is the sum of the `bank` values on their day entries. The balance can be negative.
 
 ## When hours can be added to bank?
 <glossary:Resource> can add hours to bank when number of hours worked for selected day > working_schedule for that day.
