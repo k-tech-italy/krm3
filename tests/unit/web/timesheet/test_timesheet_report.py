@@ -50,16 +50,16 @@ def test_timesheet_report_shows_day_entry_hours_and_totals(admin_client):
 
 
 def test_timesheet_report_only_shows_preferred_resources_to_privileged_users(admin_client):
-    preferred = ResourceFactory(preferred_in_report=True)
-    hidden = ResourceFactory(preferred_in_report=False)
-    ContractFactory(resource=preferred)
-    ContractFactory(resource=hidden)
+    employee_contract = ContractFactory(employee=True)
+    contractor_contract = ContractFactory(employee=False)
+    employee_resource = employee_contract.resource
+    contractor_resource = contractor_contract.resource
 
     response = admin_client.get(reverse('report-month', args=['202506']))
 
     assert response.status_code == 200
-    assert _get_resource_table(response, preferred) is not None
-    assert _get_resource_table(response, hidden) is None
+    assert _get_resource_table(response, employee_resource) is not None
+    assert _get_resource_table(response, contractor_resource) is None
 
 
 def test_timesheet_report_shows_sick_protocol_and_special_leave(admin_client):
@@ -121,8 +121,8 @@ def test_timesheet_report_marks_holidays_as_non_working_days(admin_client):
 
 
 def test_resource_can_see_their_empty_timesheet_report_when_not_preferred(client):
-    resource = ResourceFactory(preferred_in_report=False)
-    ContractFactory(resource=resource)
+    contractor_contract = ContractFactory(employee=False)
+    resource = contractor_contract.resource
     client.login(username=resource.user.username, password=resource.user._password)
 
     response = client.get(reverse('report-month', args=['202506']))

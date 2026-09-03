@@ -172,6 +172,7 @@ class TimesheetReportExport(TimesheetReport):
 
     @override
     def _get_resources(self, user: User) -> list[Resource]:
+        # FIXME: preferred_in_report has been removed from Resource, moved to employee field in Contract
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return [*Resource.objects.filter(preferred_in_report=True)]
         return [user.get_resource()]

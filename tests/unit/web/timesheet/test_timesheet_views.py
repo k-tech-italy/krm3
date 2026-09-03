@@ -48,26 +48,15 @@ def test_user_without_permission_can_only_see_their_reports(url, resource_client
 @pytest.mark.parametrize('url', ('/be/report/', '/be/task_report/'))
 def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contract(permissions, url, client):
     contracted_user = UserFactory(username='ihaveavalidcontract', password='pass123')
-    preferred_user = UserFactory(username='ihaveonetoo', password='pass123')
-    expired_user = UserFactory(username='former', password='pass123')
-    user_without_contract = UserFactory(username='illegal', password='pass123')
 
-    contracted_resource = ResourceFactory(user=contracted_user, profile=contracted_user.profile)
-    preferred_resource = ResourceFactory(user=preferred_user, profile=preferred_user.profile, preferred_in_report=True)
-    expired_resource = ResourceFactory(user=expired_user, profile=expired_user.profile, preferred_in_report=True)
-    resource_without_contract = ResourceFactory(
-        user=user_without_contract, profile=user_without_contract.profile, preferred_in_report=True
-    )
+    _contract_for_contracted_resource = ContractFactory(resource=ResourceFactory(user=contracted_user) ,period=(_dt('2024-01-01'), None), employee=True)
+    _contract_for_employed_resource = ContractFactory(period=(_dt('2024-01-01'), None), employee=True)
+    _contract_for_expired_resource = ContractFactory(period=(_dt('2024-01-01'), _dt('2024-06-01')),employee=True)
 
-    _contract_for_contracted_resource = ContractFactory(
-        resource=contracted_resource, period=(_dt('2024-01-01'), None)
-    )
-    _contract_for_preferred_resource = ContractFactory(
-        resource=preferred_resource, period=(_dt('2024-01-01'), None)
-    )
-    _contract_for_expired_resource = ContractFactory(
-        resource=expired_resource, period=(_dt('2024-01-01'), _dt('2024-06-01'))
-    )
+    contracted_resource = _contract_for_contracted_resource.resource
+    preferred_resource = _contract_for_employed_resource.resource
+    expired_resource = _contract_for_expired_resource.resource
+    resource_without_contract = ResourceFactory()
 
     def expected_rendered_name(resource):
         return f'{resource.last_name}</strong> {resource.first_name}'
