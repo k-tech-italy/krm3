@@ -7,7 +7,7 @@ The report is available as first menu entry in the menu `Reports`.
 # Layout
 
 There are several tables in the report: one for each Resource, sorted by Resource surname and name.
-Only the Resources with 'Preferred in report' field set to 'Yes' are shown.
+Users with global timesheet viewing permissions see resources with an employee contract overlapping the selected period. Other users see their own resource.
 
 Example of table:
 ![TimesheetReportExample.png](../assets/TimesheetReportExample.png)
@@ -40,20 +40,20 @@ Following rows (see [Definitions for each calendar Day](#definitions-for-each-ca
 - Night shift hours: The number of hours the Resource worked in the day during the Night Shift (denormalised from TaskEntry children).
 - On Call: The number of hours the Resource was on call in the day (denormalised from TaskEntry children).
 - Leave: The number of hours the Resource was on leave in the day.
-- Special leave: The number of hours the Resource was on Special Leave in the day.
-- Special leave Reason: The number of hours the Resource was on Special Leave in the day.
+- Special leave: The number of hours the Resource was on special leave in the day.
+- Special leave reason: The reason or category associated with the special leave.
 - Protocol Number: The protocol number for the Sick day
 - Sick: The number of hours (equivalent to the expected Due Hours) the Resource was sick in the day.
 - Rest: The number of hours the Resource was on rest in the day.
 - Overtime: The number of hours the Resource earned as overtime in the day (see [Overtime Calculations](rules.md#overtime)).
-- Meal Voucher: 1 if the meal voucher was earned by the Resource in the day (see [Meal Voucher Calculations](rules.md#meal-voucher)).
+- Meal Voucher: 1 if worked hours plus hours withdrawn from the Bank of Hours reach the Contract's meal-voucher threshold for the day. Bank deposits and On Call Hours do not count (see [Meal Voucher Calculations](rules.md#meal-voucher)).
 
 ## Calculated properties:
 
 - Holiday hours: The number of hours (equivalent to the expected Due Hours) the Resource was on holiday in the day.
 - Worked hours: A property calculated as the sum of Day Shift + Night Shift + Travel Hours recorded in the TaskEntries
-- Regular hours: A field representing the Resource _Worked hours_ + the bank daily balance up to maximum the expected number of hours (Due Hours).
-- Remaining hours: The number of hours the Resource is expected to work in the day (Due Hours) minus the number of hours the Resource worked in the day, or 0 if the Resource worked more than the expected number of hours (Due Hours).
+- Regular hours: The Resource's Worked Hours minus the bank movement, limited to a minimum of 0 and a maximum of Due Hours. Bank deposits reduce Regular Hours, while bank withdrawals increase them.
+- Remaining hours: The number of hours the Resource is expected to work in the day (Due Hours) minus the Regular Hours, or 0 if Regular Hours exceed the expected number of hours (Due Hours).
 
 # Rules and Calculations
 

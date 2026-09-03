@@ -29,7 +29,7 @@ from django_simple_dms.models import DocumentTag
 from krm3.core.forms import ResourceForm
 from krm3.core.models import Project, Resource, Task
 from krm3.core.models.documents import ProtectedDocument as Document
-from krm3.timesheet.report.availability import AvailabilityReportOnline
+from krm3.reports.availability import AvailabilityReport
 from krm3.timesheet.report.payslip import TimesheetReportOnline
 from krm3.timesheet.report.payslip_report import TimesheetReportExport
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
@@ -198,15 +198,15 @@ class AvailabilityReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context.update(ctx)
 
         selected_project = self.request.GET.get('project', '')
-        project_param = selected_project if selected_project else None
+        project_param = selected_project or None
 
         projects = {'': _('All projects')} | dict(Project.objects.values_list('id', 'name'))
         context['projects'] = projects
         context['selected_project'] = selected_project
-        report_blocks = AvailabilityReportOnline(
-            ctx['start'], ctx['end'], cast('UserType', self.request.user), project_param,
+        context['report'] = AvailabilityReport(
+            (ctx['start'], ctx['start'] + relativedelta(months=1)),
+            project_param,
         )
-        context['report_blocks'] = report_blocks.report_html()
 
         return context
 
@@ -248,7 +248,9 @@ def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpRes
             current_row += 2
 
         holidays = []
-        overlapping_contracts: 'list[Contract]' = resource.get_contract_map(min(data['days']).date, max(data['days']).date)
+        overlapping_contracts: 'list[Contract]' = resource.get_contract_map(
+            min(data['days']).date, max(data['days']).date
+        )
 
         for day in data['days']:
             contract = resource.contract_for_date(overlapping_contracts, day)
@@ -438,7 +440,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             cast('UserType', self.request.user),
             project=int(selected_project) if selected_project else None,
             resource=int(selected_resource) if selected_resource else None,
-            task_title=selected_task if selected_task else None,
+            task_title=selected_task or None,
         )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only

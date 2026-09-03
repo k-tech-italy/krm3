@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-02 14:52+0000\n"
+"POT-Creation-Date: 2026-10-06 08:41+0000\n"
 "PO-Revision-Date: 2025-11-14 15:06+0000\n"
 "Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: French <https://wl.singlewave.co.uk/projects/ktcalendars/"
@@ -21,202 +21,304 @@ msgstr ""
 
 #: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
 msgid "Please correct the error below."
-msgstr ""
+msgstr "Veuillez corriger l'erreur ci-dessous."
 
 #: src/krm3/config/admin_extras/templates/admin/console/celery.html:55
 msgid "Please correct the errors below."
-msgstr ""
+msgstr "Veuillez corriger les erreurs ci-dessous."
 
-#: src/krm3/config/settings.py:181
-msgid "English"
-msgstr ""
+#: src/krm3/core/contracts.py:17
+msgid "Cannot specify both resources and resource_ids"
+msgstr "Impossible d'indiquer à la fois resources et resource_ids"
 
-#: src/krm3/config/settings.py:182
-msgid "Italian"
-msgstr ""
+#: src/krm3/core/models/contracts.py:57
+msgid "Employee"
+msgstr "Salarié"
 
-#: src/krm3/config/settings.py:183
-msgid "French"
-msgstr ""
+#: src/krm3/core/models/contracts.py:58
+msgid "Contractor"
+msgstr "Prestataire"
 
-#: src/krm3/config/settings.py:184
-msgid "Polish"
-msgstr ""
+#: src/krm3/core/models/contracts.py:59
+msgid "Other"
+msgstr "Autre"
 
-#: src/krm3/core/models/missions.py:45
+#: src/krm3/core/models/contracts.py:62 src/krm3/core/models/projects.py:75
+#: src/krm3/core/models/projects.py:118 src/krm3/core/models/projects.py:192
+#: src/krm3/core/models/timesheets.py:128
+#: src/krm3/core/models/timesheets.py:742
+msgid "N.B.: End date is the day after the actual end date"
+msgstr "N.B. : la date de fin correspond au lendemain de la date de fin réelle"
+
+#: src/krm3/core/models/contracts.py:74
+msgid "Sunday always a holiday"
+msgstr "Dimanche toujours férié"
+
+#: src/krm3/core/models/contracts.py:75
+msgid "Is overtime tracked"
+msgstr "Suivi des heures supplémentaires"
+
+#: src/krm3/core/models/contracts.py:130
+msgid "Start date is required."
+msgstr "La date de début est obligatoire."
+
+#: src/krm3/core/models/contracts.py:132 src/krm3/core/models/projects.py:44
+#: src/krm3/core/models/timesheets.py:94 src/krm3/core/models/timesheets.py:767
+msgid "End date must be at least one day after start date"
+msgstr "La date de fin doit être au moins un jour après la date de début"
+
+#: src/krm3/core/models/contracts.py:212
+msgid "Date outside contract period"
+msgstr "Date en dehors de la période du contrat"
+
+#: src/krm3/core/models/missions.py:48
 msgid "Draft"
-msgstr ""
+msgstr "Brouillon"
 
-#: src/krm3/core/models/missions.py:46
+#: src/krm3/core/models/missions.py:49 src/krm3/core/models/timesheets.py:246
 msgid "Submitted"
-msgstr ""
+msgstr "Soumis"
 
-#: src/krm3/core/models/missions.py:47
+#: src/krm3/core/models/missions.py:50
 msgid "Cancelled"
-msgstr ""
-
-#: src/krm3/core/models/missions.py:103
-msgid ""
-"If a mission is in DRAFT then number must empty, otherwise it is mandatory"
-msgstr ""
+msgstr "Annulé"
 
 #: src/krm3/core/models/missions.py:106
+msgid ""
+"If a mission is in DRAFT then number must empty, otherwise it is mandatory"
+msgstr "Si une mission est en BROUILLON, le numéro doit être vide ; sinon il est obligatoire"
+
+#: src/krm3/core/models/missions.py:109
 msgid "to_date must be > from_date"
-msgstr ""
+msgstr "to_date doit être > from_date"
 
-#: src/krm3/core/models/projects.py:70
+#: src/krm3/core/models/missions.py:343
+msgid "You cannot make expenses for the future"
+msgstr "Vous ne pouvez pas saisir de dépenses futures"
+
+#: src/krm3/core/models/projects.py:40
 msgid "\"start_date\" is required"
-msgstr ""
+msgstr "« date de début » est obligatoire"
 
-#: src/krm3/core/models/projects.py:73 src/krm3/core/models/projects.py:122
-#: src/krm3/core/models/projects.py:248
-msgid "End date must be at least one day after start date"
-msgstr ""
+#: src/krm3/core/models/projects.py:102
+msgid "The project period would exclude existing tasks."
+msgstr "La période du projet exclurait des tâches existantes."
 
-#: src/krm3/core/models/projects.py:81
+#: src/krm3/core/models/projects.py:108
 msgid "Open"
-msgstr ""
+msgstr "Ouvert"
 
-#: src/krm3/core/models/projects.py:82
+#: src/krm3/core/models/projects.py:109
 msgid "Closed"
-msgstr ""
+msgstr "Fermé"
 
-#: src/krm3/core/models/projects.py:243
-msgid "A Project must be assigned to this task"
-msgstr ""
+#: src/krm3/core/models/projects.py:223
+msgid "Task period must be contained within the project period."
+msgstr "La période de la tâche doit être comprise dans la période du projet."
 
-#: src/krm3/core/models/projects.py:253
+#: src/krm3/core/models/projects.py:228
+msgid "Missing contract cover for the range {}"
+msgstr "Aucun contrat ne couvre la période {}"
+
+#: src/krm3/core/models/timesheets.py:197
+#: src/krm3/core/models/timesheets.py:313
+#: src/krm3/core/models/timesheets.py:649
+msgid "Closed time entries cannot be deleted. Reopen the timesheet first."
+msgstr "Les saisies clôturées ne peuvent pas être supprimées. Rouvrez d'abord la feuille de temps."
+
+#: src/krm3/core/models/timesheets.py:244
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:28
+msgid "Day"
+msgstr "Jour"
+
+#: src/krm3/core/models/timesheets.py:247
+msgid "Notes"
+msgstr "Notes"
+
+#: src/krm3/core/models/timesheets.py:250
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:44
+msgid "Resource"
+msgstr "Ressource"
+
+#: src/krm3/core/models/timesheets.py:253
+msgid "Hours bank, positive deposits, negative withdrawals"
+msgstr "Banque d'heures : valeurs positives pour les dépôts, négatives pour les retraits"
+
+#: src/krm3/core/models/timesheets.py:257
+msgid "Due hours for the day"
+msgstr "Heures dues pour la journée"
+
+#: src/krm3/core/models/timesheets.py:260
+msgid "Travel hours"
+msgstr "Heures de déplacement"
+
+#: src/krm3/core/models/timesheets.py:261 src/krm3/timesheet/report/base.py:30
+#: src/krm3/timesheet/report/payslip.py:39
+msgid "Day shift hours"
+msgstr "Heures de jour"
+
+#: src/krm3/core/models/timesheets.py:262 src/krm3/timesheet/report/base.py:31
+#: src/krm3/timesheet/report/payslip.py:40
+msgid "Night shift hours"
+msgstr "Heures de nuit"
+
+#: src/krm3/core/models/timesheets.py:263
+msgid "On call hours"
+msgstr "Heures d'astreinte"
+
+#: src/krm3/core/models/timesheets.py:266
+msgid "Is Holiday for resource according to contract's calendar"
+msgstr "Jour férié pour la ressource selon le calendrier du contrat"
+
+#: src/krm3/core/models/timesheets.py:268
+msgid "Holiday requested by resource"
+msgstr "Congé demandé par la ressource"
+
+#: src/krm3/core/models/timesheets.py:269
+msgid "Leave hours"
+msgstr "Heures de permission"
+
+#: src/krm3/core/models/timesheets.py:271
+msgid "Special leave hours"
+msgstr "Heures de congé exceptionnel"
+
+#: src/krm3/core/models/timesheets.py:274
+msgid "Special leave reason"
+msgstr "Motif du congé exceptionnel"
+
+#: src/krm3/core/models/timesheets.py:276
+msgid "Sick certificate number"
+msgstr "Numéro du certificat médical"
+
+#: src/krm3/core/models/timesheets.py:277
+msgid "Resource called in sick"
+msgstr "Ressource en arrêt maladie"
+
+#: src/krm3/core/models/timesheets.py:278
+msgid "Rest hours"
+msgstr "Heures de repos"
+
+#: src/krm3/core/models/timesheets.py:280
+msgid "Overtime hours in the day"
+msgstr "Heures supplémentaires de la journée"
+
+#: src/krm3/core/models/timesheets.py:282
+msgid "Meal voucher for the day"
+msgstr "Ticket-restaurant de la journée"
+
+#: src/krm3/core/models/timesheets.py:421
+msgid "Cannot have both task_entry and kwargs"
+msgstr "Impossible d'avoir à la fois task_entry et kwargs"
+
+#: src/krm3/core/models/timesheets.py:471
 #, python-brace-format
 msgid ""
-"A task must not start before its related project - task \"{task_title}\" is "
-"supposed to start on {task_start_date}, but related project "
-"\"{project_name}\" starts on {project_start_date}"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:85
-msgid "End date must be at least one day after start date"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:119
-#: src/krm3/core/models/timesheets.py:709
-msgid "N.B.: End date is the day after the actual end date"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:467
-msgid "Protocol number can be used only for sick days"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:470
-msgid "Protocol number digits must be numeric"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:474
-msgid "You cannot log task hours in a day entry"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:478
-msgid "You cannot log non-task hours in a task entry"
-msgstr ""
+"Cannot deposit {bank_hours} bank hours. Total hours would become "
+"{task_hours}, which is below scheduled hours ({scheduled_hours})."
+msgstr "Impossible de déposer {bank_hours} heures dans la banque d'heures. Le total des heures deviendrait {task_hours}, inférieur aux heures prévues ({scheduled_hours})."
 
 #: src/krm3/core/models/timesheets.py:487
-msgid "You cannot log more than one kind of non-task hours in a day"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:494
-msgid "You cannot log task hours and non-task hours together"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:499
-#, python-brace-format
-msgid "Total hours on this time entry ({total_hours}) is over 24 hours"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:512
 #, python-brace-format
 msgid ""
-"Total hours on all time entries on {date} ({total_hours}) is over 24 hours"
-msgstr ""
+"Cannot withdraw bank hours when effective hours ({task_hours}) are higher "
+"than scheduled hours ({scheduled_hours})."
+msgstr "Impossible de retirer des heures de la banque d'heures lorsque les heures effectives ({task_hours}) dépassent les heures prévues ({scheduled_hours})."
 
-#: src/krm3/core/models/timesheets.py:520
-msgid "Only a special leave can have a reason"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:523
-msgid "Reason is required when logging a special leave"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:531
-msgid "reason is required"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:536
-#, python-brace-format
-msgid "Reason \"{title}\" is not valid on {date}"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:565
-#, python-brace-format
-msgid ""
-"No overtime allowed when logging a {kind}. Maximum allowed is {work_hours}, "
-"got {actual_hours}"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:578
-msgid "Cannot both withdraw from and deposit to bank hours on the same day"
-msgstr ""
-
-#: src/krm3/core/models/timesheets.py:591
+#: src/krm3/core/models/timesheets.py:510
 #, python-brace-format
 msgid ""
 "This transaction would exceed the maximum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to add: {change}"
-msgstr ""
+msgstr "Cette opération dépasserait le solde maximal de la banque d'heures de {limit} heures. Solde actuel : {current}, ajout demandé : {change}"
 
-#: src/krm3/core/models/timesheets.py:599
+#: src/krm3/core/models/timesheets.py:518
 #, python-brace-format
 msgid ""
 "This transaction would exceed the minimum bank balance of {limit} hours. "
 "Current balance: {current}, attempting to change by: {change}"
-msgstr ""
+msgstr "Cette opération dépasserait le solde minimal de la banque d'heures de {limit} heures. Solde actuel : {current}, variation demandée : {change}"
 
-#: src/krm3/core/models/timesheets.py:609
+#: src/krm3/core/models/timesheets.py:526
+msgid "Cannot modify entries for submitted timesheets"
+msgstr "Impossible de modifier les saisies des feuilles de temps soumises"
+
+#: src/krm3/core/models/timesheets.py:531
+#: src/krm3/timesheet/api/serializers.py:522
+msgid "Maximum 24 total hours per day."
+msgstr "Maximum 24 heures au total par jour."
+
+#: src/krm3/core/models/timesheets.py:539
 msgid "Cannot use bank hours during holidays or sick days"
-msgstr ""
+msgstr "Impossible d'utiliser la banque d'heures pendant les congés ou les jours de maladie"
 
-#: src/krm3/core/models/timesheets.py:616
+#: src/krm3/core/models/timesheets.py:546
 #, python-brace-format
 msgid "Cannot deposit bank hours during a {day_type}"
-msgstr ""
+msgstr "Impossible de déposer des heures dans la banque d'heures pendant un {day_type}"
 
-#: src/krm3/core/models/timesheets.py:636
-#, python-brace-format
-msgid ""
-"Cannot deposit {bank_hours} bank hours. Total hours would become "
-"{task_hours} which is below scheduled hours ({scheduled_hours})"
-msgstr ""
+#: src/krm3/core/models/timesheets.py:553
+msgid "Protocol number can be used only for sick days"
+msgstr "Le numéro de protocole ne peut être utilisé que pour les jours de maladie"
 
-#: src/krm3/core/models/timesheets.py:647
-#, python-brace-format
-msgid ""
-"Cannot withdraw bank hours when task hours ({task_hours}) are higher or "
-"equal scheduled hours ({scheduled_hours})"
-msgstr ""
+#: src/krm3/core/models/timesheets.py:556
+msgid "Protocol number digits must be numeric"
+msgstr "Le numéro de protocole ne doit contenir que des chiffres"
 
-#: src/krm3/core/models/timesheets.py:712
+#: src/krm3/core/models/timesheets.py:565
+msgid "You cannot log more than one kind of non-task hours in a day"
+msgstr "Vous ne pouvez pas saisir plus d'un type d'heures hors tâche par jour"
+
+#: src/krm3/core/models/timesheets.py:572
+msgid "Cannot request holiday on a public holiday."
+msgstr "Impossible de demander un congé un jour férié."
+
+#: src/krm3/core/models/timesheets.py:656
+msgid "Cannot modify time entries for submitted timesheets"
+msgstr "Impossible de modifier les saisies des feuilles de temps soumises"
+
+#: src/krm3/core/models/timesheets.py:668
+msgid "All hours must be 0 or greater"
+msgstr "Toutes les heures doivent être supérieures ou égales à 0"
+
+#: src/krm3/core/models/timesheets.py:673
+msgid "Task entries cannot be added to a sick day or requested holiday."
+msgstr "Impossible d'ajouter des saisies de tâche à un jour de maladie ou de congé demandé."
+
+#: src/krm3/core/models/timesheets.py:680
+msgid "The task is not assigned to the resource of the day entry."
+msgstr "La tâche n'est pas attribuée à la ressource de la saisie journalière."
+
+#: src/krm3/core/models/timesheets.py:692
+msgid "At least one hours or bank field must be greater than 0"
+msgstr "Au moins un champ d'heures ou de banque d'heures doit être supérieur à 0"
+
+#: src/krm3/core/models/timesheets.py:745
 msgid "holidays.code and optionally subdivision from holidays library"
-msgstr ""
+msgstr "holidays.code et, en option, la subdivision de la bibliothèque holidays"
+
+#: src/krm3/core/models/timesheets.py:765
+msgid "Open-ended period not supported"
+msgstr "Période sans date de fin non prise en charge"
+
+#: src/krm3/documents/importers/payslip.py:15
+msgid "KT Payslip"
+msgstr "Bulletin de paie KT"
+
+#: src/krm3/documents/templates/admin/documents/payslip_upload.html:9
+msgid "Submit"
+msgstr "Envoyer"
 
 #: src/krm3/fe/views.py:35
 #, python-format
 msgid "“%(path)s” does not exist"
-msgstr ""
+msgstr "« %(path)s » n'existe pas"
 
 #: src/krm3/missions/templates/admin/missions/expense/expense_qr.html:9
 #: src/krm3/missions/templates/admin/missions/reimbursement/preview.html:5
 #: src/krm3/missions/templates/admin/missions/reimbursement/results.html:5
 #: src/krm3/missions/templates/admin/missions/reimbursement/summary.html:20
 msgid "Django administration"
-msgstr ""
+msgstr "Administration de Django"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:5
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:53
@@ -229,13 +331,10 @@ msgid "Login"
 msgstr "Connexion"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:20
+#: src/krm3/web/templates/document_list.html:21
 #: src/krm3/web/templates/user_resource.html:59
 msgid "Back"
 msgstr "Retour"
-
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:28
-msgid "Day"
-msgstr "Jour"
 
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:32
 msgid "Mission"
@@ -249,10 +348,6 @@ msgstr "Projet"
 msgid "City"
 msgstr "Ville"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:44
-msgid "Resource"
-msgstr "Ressource"
-
 #: src/krm3/missions/templates/admin/missions/mission/upload_image.html:56
 msgid "Choose File"
 msgstr "Choisir un fichier"
@@ -261,352 +356,705 @@ msgstr "Choisir un fichier"
 msgid "Use Camera"
 msgstr "Utiliser la caméra"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:65
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:58
+msgid "Scan another QR"
+msgstr "Scanner un autre QR"
+
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:66
+#: src/krm3/web/templates/scan_qr.html:24
 msgid "Capture Photo"
 msgstr "Capturer la photo"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:69
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:70
 msgid "Image preview"
 msgstr "Aperçu de l'image"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:70
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:71
 msgid "Remove image"
 msgstr "Supprimer l'image"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:71
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:72
 msgid "Recapture photo"
 msgstr "Recapturer la photo"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:72
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:73
 msgid "Recapture"
 msgstr "Recapturer"
 
-#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:76
+#: src/krm3/missions/templates/admin/missions/mission/upload_image.html:77
 msgid "Submit Image"
 msgstr "Soumettre l'image"
 
-#: src/krm3/timesheet/api/serializers.py:119
+#: src/krm3/projects/forms.py:57
+msgid "Contract matching task period not found"
+msgstr "Aucun contrat correspondant à la période de la tâche"
+
+#: src/krm3/reports/availability.py:22
+#: src/krm3/timesheet/report/availability.py:22
+#: src/krm3/timesheet/report/availability.py:143
+msgid "H"
+msgstr "C"
+
+#: src/krm3/reports/availability.py:23
+#: src/krm3/timesheet/report/availability.py:23
+#: src/krm3/timesheet/report/availability.py:145
+msgid "S"
+msgstr "M"
+
+#: src/krm3/reports/availability.py:24
+#: src/krm3/timesheet/report/availability.py:24
+#: src/krm3/timesheet/report/availability.py:148
+msgid "L"
+msgstr "P"
+
+#: src/krm3/reports/availability.py:25
+#: src/krm3/timesheet/report/availability.py:25
+#: src/krm3/timesheet/report/availability.py:150
+msgid "SL"
+msgstr "CE"
+
+#: src/krm3/reports/availability.py:26
+#: src/krm3/timesheet/report/availability.py:26
+#: src/krm3/timesheet/report/availability.py:152
+msgid "R"
+msgstr "R"
+
+#: src/krm3/reports/availability.py:117
+#: src/krm3/timesheet/report/availability.py:117
+#: src/krm3/web/templates/report.html:51
+#: src/krm3/web/templates/task_report.html:82
+msgid "Days"
+msgstr "Jours"
+
+#: src/krm3/timesheet/api/serializers.py:157
+msgid "Provide either day or dates, but not both."
+msgstr "Indiquez soit day, soit dates, mais pas les deux."
+
+#: src/krm3/timesheet/api/serializers.py:186
+msgid "A day cannot be both holiday and sick."
+msgstr "Un jour ne peut pas être à la fois un congé et un jour de maladie."
+
+#: src/krm3/timesheet/api/serializers.py:192
+msgid "Protocol number can only be set for a sick day."
+msgstr "Le numéro de protocole ne peut être indiqué que pour un jour de maladie."
+
+#: src/krm3/timesheet/api/serializers.py:198
+msgid "A special leave reason is required when special leave hours are set."
+msgstr "Un motif de congé exceptionnel est obligatoire lorsque des heures de congé exceptionnel sont indiquées."
+
+#: src/krm3/timesheet/api/serializers.py:215
+msgid "Hours must be between 0 and 24."
+msgstr "Les heures doivent être comprises entre 0 et 24."
+
+#: src/krm3/timesheet/api/serializers.py:229
+#: src/krm3/timesheet/api/serializers.py:271
+msgid "A day entry already exists for this resource and date."
+msgstr "Une saisie journalière existe déjà pour cette ressource et cette date."
+
+#: src/krm3/timesheet/api/serializers.py:235
+msgid "No valid contract found for this date."
+msgstr "Aucun contrat valide trouvé pour cette date."
+
+#: src/krm3/timesheet/api/serializers.py:242
+msgid "The special leave reason is not valid for this date."
+msgstr "Le motif de congé exceptionnel n'est pas valide pour cette date."
+
+#: src/krm3/timesheet/api/serializers.py:386
+msgid "You do not have permission to perform this action."
+msgstr "Vous n'avez pas l'autorisation d'effectuer cette action."
+
+#: src/krm3/timesheet/api/serializers.py:401
+msgid "The task is not assigned to the selected resource."
+msgstr "La tâche n'est pas attribuée à la ressource sélectionnée."
+
+#: src/krm3/timesheet/api/serializers.py:410
+msgid "You do not have permission to create task entries for this resource."
+msgstr "Vous n'avez pas l'autorisation de créer des saisies de tâche pour cette ressource."
+
+#: src/krm3/timesheet/api/serializers.py:425
+msgid "Cannot create task entries outside the task period."
+msgstr "Impossible de créer des saisies de tâche en dehors de la période de la tâche."
+
+#: src/krm3/timesheet/api/serializers.py:442
+#, python-brace-format
+msgid ""
+"The selected dates are non-working days: {dates}. Add them individually if "
+"needed."
+msgstr "Les dates sélectionnées sont des jours non ouvrés : {dates}. Ajoutez-les individuellement si nécessaire."
+
+#: src/krm3/timesheet/api/serializers.py:470
 #, python-brace-format
 msgid "Hours must not be negative, got {value}."
-msgstr ""
+msgstr "Les heures ne doivent pas être négatives, valeur reçue : {value}."
 
-#: src/krm3/timesheet/api/serializers.py:146
+#: src/krm3/timesheet/api/serializers.py:512
+msgid "Maximum 16 daytime hours per day."
+msgstr "Maximum 16 heures de jour par jour."
+
+#: src/krm3/timesheet/api/serializers.py:517
+msgid "Maximum 8 nighttime hours per day."
+msgstr "Maximum 8 heures de nuit par jour."
+
+#: src/krm3/timesheet/api/serializers.py:541
+#, python-brace-format
+msgid ""
+"Maximum {hours} working hours for this day because the remaining due hours "
+"are covered by leave, rest, or bank hours."
+msgstr "Maximum {hours} heures travaillées pour cette journée, car les heures dues restantes sont couvertes par des permissions, du repos ou la banque d'heures."
+
+#: src/krm3/timesheet/api/serializers.py:625
+#, python-brace-format
+msgid "No valid contract found for {day}."
+msgstr "Aucun contrat valide trouvé pour le {day}."
+
+#: src/krm3/timesheet/api/serializers.py:665
+msgid "Cannot add task entries to a sick day or requested holiday."
+msgstr "Impossible d'ajouter des saisies de tâche à un jour de maladie ou de congé demandé."
+
+#: src/krm3/timesheet/api/serializers.py:674
+msgid "Cannot autofill a public holiday."
+msgstr "Impossible de remplir automatiquement un jour férié."
+
+#: src/krm3/timesheet/api/serializers.py:760
 #, python-brace-format
 msgid "Reason for special leave is not valid yet: \"{value}\""
-msgstr ""
+msgstr "Le motif de congé exceptionnel n'est pas encore valide : « {value} »"
 
-#: src/krm3/timesheet/api/serializers.py:151
+#: src/krm3/timesheet/api/serializers.py:767
 #, python-brace-format
 msgid "Reason for special leave is expired: \"{value}\""
-msgstr ""
+msgstr "Le motif de congé exceptionnel a expiré : « {value} »"
 
-#: src/krm3/timesheet/api/views.py:255
+#: src/krm3/timesheet/api/views.py:282
 msgid "Timesheet already submitted."
-msgstr ""
+msgstr "Feuille de temps déjà soumise."
 
-#: src/krm3/timesheet/report/availability.py:20
-msgid "H"
-msgstr ""
+#: src/krm3/timesheet/api/views.py:348 src/krm3/timesheet/api/views.py:377
+msgid "Closed day entries cannot be modified."
+msgstr "Les saisies journalières clôturées ne peuvent pas être modifiées."
 
-#: src/krm3/timesheet/report/availability.py:21
-msgid "S"
-msgstr ""
+#: src/krm3/timesheet/operations.py:22
+msgid "No contract found for {} on {}"
+msgstr "Aucun contrat trouvé pour {} le {}"
 
-#: src/krm3/timesheet/report/availability.py:22
-msgid "L"
-msgstr ""
+#: src/krm3/timesheet/operations.py:44
+msgid "DayEntry already exists"
+msgstr "La saisie journalière existe déjà"
 
-#: src/krm3/timesheet/report/availability.py:23
-msgid "SL"
-msgstr ""
-
-#: src/krm3/timesheet/report/availability.py:24
-msgid "R"
-msgstr ""
-
-#: src/krm3/timesheet/report/availability.py:107
-#: src/krm3/web/templates/report.html:51
-#: src/krm3/web/templates/task_report.html:28
-msgid "Days"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:27
+#: src/krm3/timesheet/report/base.py:27 src/krm3/timesheet/report/payslip.py:36
 msgid "Bank hours"
-msgstr ""
+msgstr "Banque d'heures"
 
-#: src/krm3/timesheet/report/base.py:28
+#: src/krm3/timesheet/report/base.py:28 src/krm3/timesheet/report/payslip.py:37
 msgid "Due hours"
-msgstr ""
+msgstr "Heures dues"
 
-#: src/krm3/timesheet/report/base.py:29
-#: src/krm3/timesheet/report/payslip_report.py:22
+#: src/krm3/timesheet/report/base.py:29 src/krm3/timesheet/report/payslip.py:38
+#: src/krm3/timesheet/report/payslip_report.py:23
 msgid "Regular hours"
-msgstr ""
+msgstr "Heures normales"
 
-#: src/krm3/timesheet/report/base.py:30
-msgid "Day shift hours"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:31
-msgid "Night shift hours"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:32
-#: src/krm3/timesheet/report/payslip_report.py:24
-#: src/krm3/timesheet/report/task.py:18
-msgid "On call"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:33 src/krm3/timesheet/report/task.py:19
-msgid "Travel"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:34
+#: src/krm3/timesheet/report/base.py:32 src/krm3/timesheet/report/payslip.py:41
 #: src/krm3/timesheet/report/payslip_report.py:25
-msgid "Holiday"
-msgstr ""
+#: src/krm3/timesheet/report/task.py:20
+msgid "On call"
+msgstr "Astreinte"
 
-#: src/krm3/timesheet/report/base.py:35
+#: src/krm3/timesheet/report/base.py:33 src/krm3/timesheet/report/payslip.py:42
+#: src/krm3/timesheet/report/task.py:21
+msgid "Travel"
+msgstr "Déplacement"
+
+#: src/krm3/timesheet/report/base.py:34 src/krm3/timesheet/report/payslip.py:43
 #: src/krm3/timesheet/report/payslip_report.py:26
+msgid "Holiday"
+msgstr "Congés"
+
+#: src/krm3/timesheet/report/base.py:35 src/krm3/timesheet/report/payslip.py:44
+#: src/krm3/timesheet/report/payslip_report.py:27
 msgid "Leave"
-msgstr ""
+msgstr "Permissions"
 
-#: src/krm3/timesheet/report/base.py:36
-#: src/krm3/timesheet/report/payslip_report.py:28
-msgid "Rest"
-msgstr ""
-
-#: src/krm3/timesheet/report/base.py:37
+#: src/krm3/timesheet/report/base.py:36 src/krm3/timesheet/report/payslip.py:45
 #: src/krm3/timesheet/report/payslip_report.py:29
-msgid "Overtime"
-msgstr ""
+msgid "Rest"
+msgstr "Repos"
 
-#: src/krm3/timesheet/report/base.py:38
+#: src/krm3/timesheet/report/base.py:37 src/krm3/timesheet/report/payslip.py:46
 #: src/krm3/timesheet/report/payslip_report.py:30
-msgid "Meal voucher"
-msgstr ""
+msgid "Overtime"
+msgstr "Heures supplémentaires"
 
-#: src/krm3/timesheet/report/payslip.py:53
+#: src/krm3/timesheet/report/base.py:38 src/krm3/timesheet/report/payslip.py:47
+#: src/krm3/timesheet/report/payslip_report.py:31
+msgid "Meal voucher"
+msgstr "Ticket-restaurant"
+
+#: src/krm3/timesheet/report/payslip.py:208
 #, python-brace-format
 msgid "Special leave ({title})"
-msgstr ""
+msgstr "Congé exceptionnel ({title})"
 
-#: src/krm3/timesheet/report/payslip.py:73
+#: src/krm3/timesheet/report/payslip.py:223
 #, python-brace-format
 msgid "Sick {title}"
-msgstr ""
+msgstr "Maladie {title}"
 
-#: src/krm3/timesheet/report/payslip.py:84
-#: src/krm3/timesheet/report/payslip_report.py:27
+#: src/krm3/timesheet/report/payslip.py:223
+#: src/krm3/timesheet/report/payslip_report.py:28
 msgid "Sick"
-msgstr ""
+msgstr "Maladie"
 
-#: src/krm3/timesheet/report/payslip_report.py:23
-#: src/krm3/timesheet/report/task.py:17
+#: src/krm3/timesheet/report/payslip_report.py:24
+#: src/krm3/timesheet/report/task.py:19
 msgid "Night shift"
-msgstr ""
+msgstr "Travail de nuit"
 
-#: src/krm3/timesheet/report/payslip_report.py:78
+#: src/krm3/timesheet/report/payslip_report.py:80
 #, python-brace-format
 msgid "Days {working_days}"
-msgstr ""
+msgstr "Jours {working_days}"
 
-#: src/krm3/timesheet/report/payslip_report.py:79
+#: src/krm3/timesheet/report/payslip_report.py:81
 #: src/krm3/web/templates/report.html:52
-#: src/krm3/web/templates/task_report.html:29
+#: src/krm3/web/templates/task_report.html:83
 msgid "Total HH"
-msgstr ""
+msgstr "Total HH"
 
-#: src/krm3/timesheet/report/payslip_report.py:105
+#: src/krm3/timesheet/report/payslip_report.py:107
 #, python-brace-format
 msgid "Special leave ({sl_title})"
-msgstr ""
+msgstr "Congé exceptionnel ({sl_title})"
 
-#: src/krm3/timesheet/report/payslip_report.py:110
+#: src/krm3/timesheet/report/payslip_report.py:112
 #, python-brace-format
 msgid "Sick {protocol}"
-msgstr ""
+msgstr "Maladie {protocol}"
 
-#: src/krm3/timesheet/report/payslip_report.py:158
+#: src/krm3/timesheet/report/payslip_report.py:163
 msgid "No data available"
-msgstr ""
+msgstr "Aucune donnée disponible"
 
-#: src/krm3/timesheet/report/task.py:140
+#: src/krm3/timesheet/report/task.py:195
 msgid "Total per day"
-msgstr ""
+msgstr "Total par jour"
 
-#: src/krm3/timesheet/report/task.py:215
+#: src/krm3/timesheet/report/task.py:271
 msgid "Absences"
-msgstr ""
+msgstr "Absences"
 
 #: src/krm3/utils/filters.py:9 src/krm3/utils/filters.py:21
 msgid "Recent"
-msgstr ""
+msgstr "Récent"
 
-#: src/krm3/utils/filters.py:22
+#: src/krm3/utils/filters.py:22 src/krm3/web/views.py:421
+#: src/krm3/web/views.py:424 src/krm3/web/views.py:429
 msgid "All"
-msgstr ""
+msgstr "Tous"
 
 #: src/krm3/utils/i18n.py:6
 msgid "Mon"
-msgstr ""
+msgstr "Lun"
 
 #: src/krm3/utils/i18n.py:7
 msgid "Tue"
-msgstr ""
+msgstr "Mar"
 
 #: src/krm3/utils/i18n.py:8
 msgid "Wed"
-msgstr ""
+msgstr "Mer"
 
 #: src/krm3/utils/i18n.py:9
 msgid "Thu"
-msgstr ""
+msgstr "Jeu"
 
 #: src/krm3/utils/i18n.py:10
 msgid "Fri"
-msgstr ""
+msgstr "Ven"
 
 #: src/krm3/utils/i18n.py:11
 msgid "Sat"
-msgstr ""
+msgstr "Sam"
 
 #: src/krm3/utils/i18n.py:12
 msgid "Sun"
-msgstr ""
+msgstr "Dim"
 
 #: src/krm3/web/templates/availability_report.html:27
 #: src/krm3/web/templates/report.html:26
 #: src/krm3/web/templates/task_report.html:14
 msgid "Prev month"
-msgstr ""
+msgstr "Mois précédent"
 
 #: src/krm3/web/templates/availability_report.html:29
 #, python-format
 msgid "Availability Report %(title)s"
-msgstr ""
+msgstr "Rapport de disponibilité %(title)s"
 
 #: src/krm3/web/templates/availability_report.html:31
 #: src/krm3/web/templates/report.html:30
-#: src/krm3/web/templates/task_report.html:18
+#: src/krm3/web/templates/task_report.html:25
 msgid "Next month"
-msgstr ""
+msgstr "Mois suivant"
 
 #: src/krm3/web/templates/availability_report.html:35
 msgid "Filter for project"
-msgstr ""
+msgstr "Filtrer par projet"
+
+#: src/krm3/web/templates/document_list.html:22
+msgid "Document Management"
+msgstr "Gestion des documents"
+
+#: src/krm3/web/templates/document_list.html:34
+msgid "Filter Builder"
+msgstr "Générateur de filtres"
+
+#: src/krm3/web/templates/document_list.html:38
+msgid "Filters applied"
+msgstr "Filtres appliqués"
+
+#: src/krm3/web/templates/document_list.html:52
+msgid "Clear All"
+msgstr "Tout effacer"
+
+#: src/krm3/web/templates/document_list.html:75
+msgid "Combine with"
+msgstr "Combiner avec"
+
+#: src/krm3/web/templates/document_list.html:88
+msgid "Field"
+msgstr "Champ"
+
+#: src/krm3/web/templates/document_list.html:90
+msgid "Select field..."
+msgstr "Sélectionner un champ..."
+
+#: src/krm3/web/templates/document_list.html:99
+msgid "Operator"
+msgstr "Opérateur"
+
+#: src/krm3/web/templates/document_list.html:112
+msgid "Value"
+msgstr "Valeur"
+
+#: src/krm3/web/templates/document_list.html:113
+msgid "Enter filename..."
+msgstr "Saisir le nom du fichier..."
+
+#: src/krm3/web/templates/document_list.html:120
+msgid "Date"
+msgstr "Date"
+
+#: src/krm3/web/templates/document_list.html:128
+#: src/krm3/web/templates/document_list.html:144
+msgid "Date Range"
+msgstr "Plage de dates"
+
+#: src/krm3/web/templates/document_list.html:131
+#: src/krm3/web/templates/document_list.html:147
+msgid "From"
+msgstr "Du"
+
+#: src/krm3/web/templates/document_list.html:133
+#: src/krm3/web/templates/document_list.html:149
+msgid "to"
+msgstr "au"
+
+#: src/krm3/web/templates/document_list.html:135
+#: src/krm3/web/templates/document_list.html:151
+msgid "To"
+msgstr "Au"
+
+#: src/krm3/web/templates/document_list.html:160
+#: src/krm3/web/templates/document_list.html:248
+#: src/krm3/web/templates/partials/document_table.html:61
+msgid "Tags"
+msgstr "Étiquettes"
+
+#: src/krm3/web/templates/document_list.html:181
+msgid "Remove"
+msgstr "Retirer"
+
+#: src/krm3/web/templates/document_list.html:192
+msgid "Add Condition"
+msgstr "Ajouter une condition"
+
+#: src/krm3/web/templates/document_list.html:202
+msgid "Add Group"
+msgstr "Ajouter un groupe"
+
+#: src/krm3/web/templates/document_list.html:215
+msgid "Apply Filters"
+msgstr "Appliquer les filtres"
+
+#: src/krm3/web/templates/document_list.html:245
+#: src/krm3/web/templates/partials/document_table.html:25
+msgid "Filename"
+msgstr "Nom du fichier"
+
+#: src/krm3/web/templates/document_list.html:246
+#: src/krm3/web/templates/partials/document_table.html:37
+msgid "Upload Date"
+msgstr "Date de téléversement"
+
+#: src/krm3/web/templates/document_list.html:247
+#: src/krm3/web/templates/partials/document_table.html:49
+msgid "Reference Period"
+msgstr "Période de référence"
+
+#: src/krm3/web/templates/document_list.html:253
+#: src/krm3/web/templates/document_list.html:266
+msgid "Contains"
+msgstr "Contient"
+
+#: src/krm3/web/templates/document_list.html:254
+msgid "Exact match"
+msgstr "Correspondance exacte"
+
+#: src/krm3/web/templates/document_list.html:255
+msgid "Starts with"
+msgstr "Commence par"
+
+#: src/krm3/web/templates/document_list.html:256
+msgid "Ends with"
+msgstr "Se termine par"
+
+#: src/krm3/web/templates/document_list.html:259
+msgid "Equals"
+msgstr "Égal à"
+
+#: src/krm3/web/templates/document_list.html:260
+msgid "After or on"
+msgstr "À partir du"
+
+#: src/krm3/web/templates/document_list.html:261
+msgid "Before or on"
+msgstr "Jusqu'au"
+
+#: src/krm3/web/templates/document_list.html:262
+msgid "Between"
+msgstr "Entre"
+
+#: src/krm3/web/templates/document_list.html:265
+msgid "Overlaps with"
+msgstr "Chevauche"
+
+#: src/krm3/web/templates/document_list.html:267
+msgid "Contained by"
+msgstr "Compris dans"
+
+#: src/krm3/web/templates/document_list.html:270
+msgid "Contains all"
+msgstr "Contient tous"
+
+#: src/krm3/web/templates/document_list.html:271
+msgid "Contains any"
+msgstr "Contient au moins un"
+
+#: src/krm3/web/templates/document_list.html:272
+msgid "Exact set"
+msgstr "Ensemble exact"
+
+#: src/krm3/web/templates/document_list.html:279
+msgid "Select tags..."
+msgstr "Sélectionner des étiquettes..."
+
+#: src/krm3/web/templates/partials/document_table.html:95
+msgid "No tags"
+msgstr "Aucune étiquette"
+
+#: src/krm3/web/templates/partials/document_table.html:104
+msgid "No documents found matching the current filters."
+msgstr "Aucun document ne correspond aux filtres actuels."
+
+#: src/krm3/web/templates/partials/document_table.html:115
+msgid "Showing"
+msgstr "Affichage de"
+
+#: src/krm3/web/templates/partials/document_table.html:118
+#: src/krm3/web/templates/partials/document_table.html:139
+msgid "of"
+msgstr "sur"
+
+#: src/krm3/web/templates/partials/document_table.html:120
+msgid "document(s)"
+msgstr "document(s)"
+
+#: src/krm3/web/templates/partials/document_table.html:122
+msgid "No documents found"
+msgstr "Aucun document trouvé"
+
+#: src/krm3/web/templates/partials/document_table.html:134
+msgid "Previous"
+msgstr "Précédent"
+
+#: src/krm3/web/templates/partials/document_table.html:139
+msgid "Page"
+msgstr "Page"
+
+#: src/krm3/web/templates/partials/document_table.html:147
+msgid "Next"
+msgstr "Suivant"
 
 #: src/krm3/web/templates/report.html:28
 #, python-format
 msgid "Report %(title)s"
-msgstr ""
+msgstr "Rapport %(title)s"
 
 #: src/krm3/web/templates/report.html:33
 msgid "Download report"
-msgstr ""
+msgstr "Télécharger le rapport"
 
 #: src/krm3/web/templates/report.html:79
 msgid "No time entries available"
-msgstr ""
+msgstr "Aucune saisie disponible"
+
+#: src/krm3/web/templates/scan_qr.html:5
+msgid "Scan QR"
+msgstr "Scanner le QR"
 
 #: src/krm3/web/templates/task_report.html:16
 #, python-format
 msgid "Task Report %(title)s"
-msgstr ""
+msgstr "Rapport des tâches %(title)s"
 
-#: src/krm3/web/templates/task_report.html:43
+#: src/krm3/web/templates/task_report.html:18
+msgid "Toggle filters"
+msgstr "Afficher/masquer les filtres"
+
+#: src/krm3/web/templates/task_report.html:31
+msgid "Resources"
+msgstr "Resources"
+
+#: src/krm3/web/templates/task_report.html:41
+msgid "Projects"
+msgstr "Projet"
+
+#: src/krm3/web/templates/task_report.html:51
+msgid "Tasks"
+msgstr "Tâches"
+
+#: src/krm3/web/templates/task_report.html:61
+msgid "Tasks only"
+msgstr "Tâches uniquement :"
+
+#: src/krm3/web/templates/task_report.html:68
+msgid "Apply filters"
+msgstr "Appliquer les filtres"
+
+#: src/krm3/web/templates/task_report.html:97
 msgid "No tasks assigned"
-msgstr ""
+msgstr "Aucune tâche attribuée"
 
 #: src/krm3/web/templates/user_resource.html:26
 msgid "Contact VCARD"
-msgstr ""
+msgstr "VCARD du contact"
 
 #: src/krm3/web/templates/user_resource.html:71
 msgid "First Name"
-msgstr ""
+msgstr "Prénom"
 
 #: src/krm3/web/templates/user_resource.html:81
 msgid "Last Name"
-msgstr ""
+msgstr "Nom"
 
-#: src/krm3/web/templates/user_resource.html:94
+#: src/krm3/web/templates/user_resource.html:91
+msgid "Preferred Language"
+msgstr "Langue préférée"
+
+#: src/krm3/web/templates/user_resource.html:104
 msgid "Cancel"
-msgstr ""
+msgstr "Annuler"
 
-#: src/krm3/web/templates/user_resource.html:97
+#: src/krm3/web/templates/user_resource.html:107
 msgid "Save Changes"
-msgstr ""
+msgstr "Enregistrer les modifications"
 
-#: src/krm3/web/views.py:102
+#: src/krm3/web/views.py:116
 msgid "Profile updated successfully."
-msgstr ""
+msgstr "Profil mis à jour avec succès."
 
-#: src/krm3/web/views.py:161 src/krm3/web/views.py:315
-#: src/krm3/web/views.py:364
+#: src/krm3/web/views.py:179 src/krm3/web/views.py:338
+#: src/krm3/web/views.py:388
 msgid "January"
-msgstr ""
+msgstr "Janvier"
 
-#: src/krm3/web/views.py:162 src/krm3/web/views.py:316
-#: src/krm3/web/views.py:365
+#: src/krm3/web/views.py:180 src/krm3/web/views.py:339
+#: src/krm3/web/views.py:389
 msgid "February"
-msgstr ""
+msgstr "Février"
 
-#: src/krm3/web/views.py:163 src/krm3/web/views.py:317
-#: src/krm3/web/views.py:366
+#: src/krm3/web/views.py:181 src/krm3/web/views.py:340
+#: src/krm3/web/views.py:390
 msgid "March"
-msgstr ""
+msgstr "Mars"
 
-#: src/krm3/web/views.py:164 src/krm3/web/views.py:318
-#: src/krm3/web/views.py:367
+#: src/krm3/web/views.py:182 src/krm3/web/views.py:341
+#: src/krm3/web/views.py:391
 msgid "April"
-msgstr ""
+msgstr "Avril"
 
-#: src/krm3/web/views.py:165 src/krm3/web/views.py:319
-#: src/krm3/web/views.py:368
+#: src/krm3/web/views.py:183 src/krm3/web/views.py:342
+#: src/krm3/web/views.py:392
 msgid "May"
-msgstr ""
+msgstr "Mai"
 
-#: src/krm3/web/views.py:166 src/krm3/web/views.py:320
-#: src/krm3/web/views.py:369
+#: src/krm3/web/views.py:184 src/krm3/web/views.py:343
+#: src/krm3/web/views.py:393
 msgid "June"
-msgstr ""
+msgstr "Juin"
 
-#: src/krm3/web/views.py:167 src/krm3/web/views.py:321
-#: src/krm3/web/views.py:370
+#: src/krm3/web/views.py:185 src/krm3/web/views.py:344
+#: src/krm3/web/views.py:394
 msgid "July"
-msgstr ""
+msgstr "Juillet"
 
-#: src/krm3/web/views.py:168 src/krm3/web/views.py:322
-#: src/krm3/web/views.py:371
+#: src/krm3/web/views.py:186 src/krm3/web/views.py:345
+#: src/krm3/web/views.py:395
 msgid "August"
-msgstr ""
+msgstr "Août"
 
-#: src/krm3/web/views.py:169 src/krm3/web/views.py:323
-#: src/krm3/web/views.py:372
+#: src/krm3/web/views.py:187 src/krm3/web/views.py:346
+#: src/krm3/web/views.py:396
 msgid "September"
-msgstr ""
+msgstr "Septembre"
 
-#: src/krm3/web/views.py:170 src/krm3/web/views.py:324
-#: src/krm3/web/views.py:373
+#: src/krm3/web/views.py:188 src/krm3/web/views.py:347
+#: src/krm3/web/views.py:397
 msgid "October"
-msgstr ""
+msgstr "Octobre"
 
-#: src/krm3/web/views.py:171 src/krm3/web/views.py:325
-#: src/krm3/web/views.py:374
+#: src/krm3/web/views.py:189 src/krm3/web/views.py:348
+#: src/krm3/web/views.py:398
 msgid "November"
-msgstr ""
+msgstr "Novembre"
 
-#: src/krm3/web/views.py:172 src/krm3/web/views.py:326
-#: src/krm3/web/views.py:375
+#: src/krm3/web/views.py:190 src/krm3/web/views.py:349
+#: src/krm3/web/views.py:399
 msgid "December"
-msgstr ""
+msgstr "Décembre"
 
-#: src/krm3/web/views.py:185
+#: src/krm3/web/views.py:203
 msgid "All projects"
-msgstr ""
+msgstr "Tous les projets"
 
-#: src/krm3/web/views.py:295
+#: src/krm3/web/views.py:318
 #, python-brace-format
 msgid "Resource report {title}"
-msgstr ""
+msgstr "Rapport de la ressource {title}"
+
+#: src/krm3/web/views.py:519
+msgid "Error loading documents. Please try again."
+msgstr "Erreur lors du chargement des documents. Veuillez réessayer."
+
+#: src/krm3/web/views.py:544
+msgid "Invalid filter format. Please try again."
+msgstr "Format de filtre non valide. Veuillez réessayer."
+
+#: src/krm3/web/views.py:549
+msgid "Invalid filter encoding. Please try again."
+msgstr "Encodage de filtre non valide. Veuillez réessayer."
+
+#: src/krm3/web/views.py:558
+msgid "Error applying filter. Please check your filter criteria."
+msgstr "Erreur lors de l'application du filtre. Veuillez vérifier vos critères."

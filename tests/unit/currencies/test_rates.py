@@ -7,6 +7,8 @@ import pytest
 import responses
 from testutils.factories import RateFactory
 
+from krm3.currencies.models import Rate
+
 
 def test_rate_str(db):
     rate = RateFactory()
@@ -30,9 +32,9 @@ def test_rate_str(db):
         pytest.param({'GBP': 1.1}, True, None, 'EUR,GBP,USD', {'EUR': 0.92172, 'GBP': 0.77373, 'USD': 1}, id='force'),
     ],
 )
-def test_rate_for_day(initial, force, include, requested, expected, mock_rate_provider):
-    from krm3.currencies.models import Rate
-
+def test_rate_for_day(  # noqa: PLR0917
+    initial, force, include, requested, expected, mock_rate_provider
+):
     assert Rate.objects.count() == 0
 
     day = date(2022, 5, 7)
@@ -111,9 +113,9 @@ def test_rate_for_day(initial, force, include, requested, expected, mock_rate_pr
         ),
     ],
 )
-def test_rate_ensure_rates_ok(existing, force, include, requested, retrieved, expected, mock_rate_provider):
-    from krm3.currencies.models import Rate
-
+def test_rate_ensure_rates_ok(  # noqa: PLR0917
+    existing, force, include, requested, retrieved, expected, mock_rate_provider
+):
     rate = Rate(day=datetime.datetime.strptime('20231120', '%Y%m%d').date(), rates=existing)
 
     mock_rate_provider(rate.day, requested, retrieved)
@@ -126,18 +128,16 @@ def test_rate_ensure_rates_ok(existing, force, include, requested, retrieved, ex
 @pytest.mark.parametrize(
     'from_value, from_currency, to_currency, expected',
     [
-        pytest.param(1, 'USD', 'USD', Decimal('1'), id='usd-usd'),
+        pytest.param(1, 'USD', 'USD', Decimal(1), id='usd-usd'),
         pytest.param(1, 'USD', 'EUR', Decimal('0.20'), id='usd-eur'),
         pytest.param(1, 'EUR', 'USD', Decimal('5.0'), id='eur-usd'),
-        pytest.param(1, 'USD', 'GBP', Decimal('2'), id='usd-gbp'),
+        pytest.param(1, 'USD', 'GBP', Decimal(2), id='usd-gbp'),
         pytest.param(1, 'GBP', 'EUR', Decimal('0.1'), id='gbp-eur'),
-        pytest.param(1, 'EUR', 'GBP', Decimal('10'), id='eur-gbp'),
+        pytest.param(1, 'EUR', 'GBP', Decimal(10), id='eur-gbp'),
         pytest.param(1, 'GBP', None, Decimal('0.1'), id='gbp-default'),
     ],
 )
 def test_rate_convert(from_value, from_currency, to_currency, expected):
-    from krm3.currencies.models import Rate
-
     rate = Rate(date(2022, 5, 7), {'EUR': 0.2, 'GBP': 2, 'USD': 1})
 
     result = rate.convert(from_value, from_currency, to_currency=to_currency)
@@ -163,8 +163,6 @@ def test_rate_convert(from_value, from_currency, to_currency, expected):
 )
 def test_rate_get_rates(ensured, force, include, expected, monkeypatch):
     monkeypatch.setattr('krm3.currencies.models.currencies.Rate.ensure_rates', mock := Mock(return_value=ensured))
-    from krm3.currencies.models import Rate
-
     rate = Rate(date(2022, 5, 7), {'EUR': 0.2, 'GBP': 2, 'USD': 1})
     if force:
         rate.rates = ensured

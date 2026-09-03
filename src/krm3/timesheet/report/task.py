@@ -4,8 +4,8 @@ from decimal import Decimal
 from typing import override
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from ktcalendars import KTDateRange
 
 from krm3.core.models import Resource, Task
 from krm3.timesheet.report.base import TimesheetReport
@@ -55,8 +55,9 @@ class TimesheetTaskReport(TimesheetReport):
         """Load tasks for all resources in the report."""
         resource_ids = [r.id for r in self.resources]
 
-        tasks = Task.objects.filter(resource_id__in=resource_ids, start_date__lte=self.to_date).filter(
-            Q(end_date__gte=self.from_date) | Q(end_date__isnull=True)
+        tasks = Task.objects.filter(
+            resource_id__in=resource_ids,
+            period__overlap=KTDateRange.from_start_end(self.from_date, self.to_date),
         )
         if self.project_id:
             tasks = tasks.filter(project_id=self.project_id)
@@ -76,7 +77,11 @@ class TimesheetTaskReport(TimesheetReport):
 
     def _calculate_task_hours_for_day(self, kd: Krm3Day, tasks: list[Task], resource_id: int) -> None:
         """Calculate task hours for a specific day."""
-        day_entries = [te for te in self.time_entries if te.resource_id == resource_id and te.date == kd.date]
+        day_entries = [
+            te
+            for te in self.task_entries
+            if te.day_entry.resource_id == resource_id and te.day_entry.day == kd.date
+        ]
 
         for task in tasks:
             task_hours = sum(
@@ -146,8 +151,10 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 if key in ('night_shift', 'travel'):
                     day_entries = [
                         te
-                        for te in self.time_entries
-                        if te.resource_id == resource.id and te.date == kd.date and te.task_id in resource_task_ids
+                        for te in self.task_entries
+                        if te.day_entry.resource_id == resource.id
+                        and te.day_entry.day == kd.date
+                        and te.task_id in resource_task_ids
                     ]
                     value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
                 else:
@@ -167,8 +174,10 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 if key in ('night_shift', 'travel'):
                     day_entries = [
                         te
-                        for te in self.time_entries
-                        if te.resource_id == resource.id and te.date == rkd.date and te.task_id in resource_task_ids
+                        for te in self.task_entries
+                        if te.day_entry.resource_id == resource.id
+                        and te.day_entry.day == rkd.date
+                        and te.task_id in resource_task_ids
                     ]
                     value = Decimal(sum(getattr(te, f'{key}_hours', 0) or 0 for te in day_entries))
                 else:

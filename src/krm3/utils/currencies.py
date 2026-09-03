@@ -1,7 +1,7 @@
 import decimal
 
 
-def rounding(currency, value):
+def rounding(currency, value):  # noqa: ANN001, ANN201
     if not isinstance(value, decimal.Decimal):
         value = decimal.Decimal(value)
     # TODO: fix to use currency for number of decimals

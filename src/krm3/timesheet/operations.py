@@ -13,7 +13,7 @@ if typing.TYPE_CHECKING:
 
 class DayEntryProcessor:
     def __init__(self, resource: Resource, day: str | date | KTDay, contract: 'Contract | None' = None) -> 'DayEntry':
-        from krm3.core.models import Contract
+        from krm3.core.models import Contract  # noqa: PLC0415
 
         self.day: date = KTDay(day).date
         self.resource: Resource = resource
@@ -31,7 +31,7 @@ class DayEntryProcessor:
         In the dict, the reference to the Task can be provided with the key "task" and can be either an instance
         of Task or its pk using "task_id".
         """
-        from krm3.core.models import DayEntry, TaskEntry
+        from krm3.core.models import DayEntry, TaskEntry  # noqa: PLC0415
 
         task_entries = task_entries or []
 
@@ -60,13 +60,12 @@ class DayEntryProcessor:
                 )
 
         day_entry.refresh(task_entries_list)
-        day_entry.save()
         TaskEntry.objects.bulk_create(task_entries_list)
         return day_entry
 
     def add_task_entry(self, task_entry: 'TaskEntry | None' = None, **kwargs) -> 'DayEntry':
         """Add task entry to DayEntry and refresh data."""
-        from krm3.core.models import DayEntry
+        from krm3.core.models import DayEntry  # noqa: PLC0415
 
         day_entry = kwargs.pop('day_entry', DayEntry.objects.get(day=self.day, resource=self.resource))
         if task_entry is None:
@@ -78,7 +77,7 @@ class DayEntryProcessor:
 
     def del_task_entry(self, task_or_entry: 'int | TaskEntry | Task') -> 'DayEntry':
         """Delete task entry from DayEntry and refresh data."""
-        from krm3.core.models import Task, TaskEntry
+        from krm3.core.models import Task, TaskEntry  # noqa: PLC0415
 
         if isinstance(task_or_entry, int):
             task_or_entry = TaskEntry.objects.select_related('day_entry').get(pk=task_or_entry)
@@ -89,7 +88,7 @@ class DayEntryProcessor:
 
     def _build_task(self, day_entry: 'DayEntry', task: 'Task | int | None', **kwargs) -> 'TaskEntry':
         """Build a TaskEntry object with provided kwargs."""
-        from krm3.core.models import Task, TaskEntry
+        from krm3.core.models import Task, TaskEntry  # noqa: PLC0415
 
         if task is None:
             task = Task.objects.get(pk=kwargs.pop('task_id'))

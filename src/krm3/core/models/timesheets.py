@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import abc
 import datetime
-from decimal import Decimal as D  # noqa: N817
+from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
 
@@ -16,9 +17,11 @@ from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange, KTDay
 
 from krm3.timesheet.operations import DayEntryProcessor
+from krm3.timesheet.utils import calculate_regular_hours
 from krm3.utils.db.postgresql.funcs import DateRangeIntersection, Unnest
 from krm3.utils.models import CleanValidatorsMixin
 from krm3.utils.numbers import safe_dec
+from typing_extensions import deprecated
 
 from .auth import Resource
 
@@ -30,6 +33,7 @@ if TYPE_CHECKING:
 
 DAYTIME_WORK_HOURS_MAX = 16
 NIGHTTIME_WORK_HOURS_MAX = 8
+TOTAL_WORK_HOURS_MAX = 24
 
 
 class SpecialLeaveReasonQuerySet(QuerySet):
@@ -173,21 +177,47 @@ class TimesheetSubmission(models.Model):
         return TimesheetSerializer(timesheet).data
 
 
-def acl_queryset_factory(prefix: str) -> QuerySet:
-    class TimeEntriesQuerySet(QuerySet):
+type TimeEntry = DayEntry | TaskEntry
+
+
+class TimeEntryAwareQuerySet[T: TimeEntry](QuerySet[T], abc.ABC):
+    @abc.abstractmethod
+    def open(self) -> Self: ...
+
+    @abc.abstractmethod
+    def closed(self) -> Self: ...
+
+    @abc.abstractmethod
+    def filter_acl(self) -> Self: ...
+
+    def delete(self) -> tuple[int, dict[str, int]]:
+        if self.closed().exists():
+            raise ValidationError(
+                _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
+                code='timesheet_closed',
+            )
+        return super().delete()
+
+
+def acl_queryset_factory[T: models.Model](prefix: str) -> type[TimeEntryAwareQuerySet[T]]:
+    class TimeEntryQuerySet(TimeEntryAwareQuerySet):
+        _prefix = f'{prefix.rstrip("_")}__' if prefix else ''
+
         def open(self) -> Self:
             """Select the open time entries in this queryset.
 
             :return: the filtered queryset.
             """
-            return self.filter(Q(**{f'{prefix}timesheet__isnull': True}) | Q(**{f'{prefix}timesheet__closed': False}))
+            return self.filter(
+                Q(**{f'{self._prefix}timesheet__isnull': True}) | Q(**{f'{self._prefix}timesheet__closed': False})
+            )
 
         def closed(self) -> Self:
             """Select the closed time entries in this queryset.
 
             :return: the filtered queryset.
             """
-            return self.filter(**{f'{prefix}timesheet__isnull': False, f'{prefix}timesheet__closed': True})
+            return self.filter(**{f'{self._prefix}timesheet__isnull': False, f'{self._prefix}timesheet__closed': True})
 
         def filter_acl(self, user: AbstractUser) -> Self:
             """Return the queryset for the owned records.
@@ -198,13 +228,13 @@ def acl_queryset_factory(prefix: str) -> QuerySet:
                 {'core.manage_any_timesheet', 'core.view_any_timesheet'}
             ):
                 return self.all()
-            return self.filter(**{f'{prefix}resource__user': user})
+            return self.filter(**{f'{self._prefix}resource__user': user})
 
-    return TimeEntriesQuerySet
+    return TimeEntryQuerySet
 
 
-TaskEntriesQuerySet: QuerySet[TaskEntry] = acl_queryset_factory(prefix='day_entry__')
-DayEntriesQuerySet: QuerySet[DayEntry] = acl_queryset_factory(prefix='')
+TaskEntryQuerySet: type[TimeEntryAwareQuerySet[TaskEntry]] = acl_queryset_factory(prefix='day_entry__')
+DayEntryQuerySet: type[TimeEntryAwareQuerySet[DayEntry]] = acl_queryset_factory(prefix='')
 
 
 class DayEntry(CleanValidatorsMixin, models.Model):
@@ -250,11 +280,12 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     )
     meal_voucher = models.PositiveIntegerField(default=0, help_text=_('Meal voucher for the day'))
 
-    objects = DayEntriesQuerySet.as_manager()
+    objects = DayEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = 'Day entries'
         constraints = [
+            models.UniqueConstraint(fields=('resource', 'day'), name='unique_resource_day'),
             models.CheckConstraint(
                 condition=models.Q(special_leave_hours__range=(0, 24)), name='special_leave_hours_range'
             ),
@@ -267,17 +298,46 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return f'{self.resource} - {self.day}'
 
     @property
-    def bank_from(self) -> D:
-        return -1 * self.bank if self.bank < 0 else D(0)
+    def is_submitted(self) -> bool:
+        return TimesheetSubmission.objects.filter(
+            resource_id=self.resource_id,
+            closed=True,
+            period__contains=self.day,
+        ).exists()
+
+    @override
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        if self.is_submitted:
+            raise ValidationError(
+                _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
+                code='timesheet_closed',
+            )
+        return super().delete(*args, **kwargs)
 
     @property
-    def bank_to(self) -> D:
-        return self.bank if self.bank > 0 else D(0)
+    def effective_hours(self) -> Decimal:
+        """Return the hours covered by work, absences and bank operations."""
+        return (
+            safe_dec(self.worked_hours)
+            + safe_dec(self.leave_hours)
+            + safe_dec(self.special_leave_hours)
+            + safe_dec(self.rest_hours)
+            - safe_dec(self.bank)
+        )
 
     @property
+    @deprecated('Use `not is_workday` instead')
     def nwd(self) -> bool:
-        """Return True if the day is a non-working day."""
-        return self.is_holiday or self.due_hours == 0
+        """Return True if the day is a non-workday.
+
+        **Deprecated**. Use `not is_workday` instead.
+        """
+        return not self.is_workday
+
+    @property
+    def is_workday(self) -> bool:
+        """Return True if the day is a workday."""
+        return not self.is_holiday and self.due_hours > 0
 
     def get_ktday(self) -> KTDay:
         """Return the calendar-aware KTDay given the Resource's contract."""
@@ -294,28 +354,28 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         self.closed = self.timesheet.closed if self.timesheet else False
         self.is_holiday = self.contract.get_ktday(self.day).is_holiday
         self.due_hours = self.contract.get_due_hours(self.day)
-        self.overtime_hours = D(0.0)
+        self.overtime_hours = Decimal(0.0)
         self.meal_voucher = 0
         self.taskentry_set.set(kwargs.pop('task_entries', []))
 
-        self.travel_hours = D(0.0)
-        self.day_hours = D(0.0)
-        self.night_hours = D(0.0)
-        self.on_call_hours = D(0.0)
+        self.travel_hours = Decimal(0.0)
+        self.day_hours = Decimal(0.0)
+        self.night_hours = Decimal(0.0)
+        self.on_call_hours = Decimal(0.0)
 
         self.comment = kwargs.pop('comment', self.comment)
 
         if full:  # reset also non-calculated fields
-            self.bank_hours = D(0.0)
+            self.bank_hours = Decimal(0.0)
             self.asked_holiday = False
-            self.leave_hours = D(0.0)
-            self.special_leave_hours = D(0.0)
+            self.leave_hours = Decimal(0.0)
+            self.special_leave_hours = Decimal(0.0)
             self.special_leave_reason = None
             self.protocol_number = None
             self.is_sick = False
-            self.rest_hours = D(0.0)
+            self.rest_hours = Decimal(0.0)
 
-    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True) -> None:
+    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True, save: bool = True) -> None:
         """Recalculate the day entry based on the given task entries.
 
         Invokes clean() after the calculation.
@@ -328,23 +388,27 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         if task_entries is None:
             task_entries = list(self.taskentry_set.all())
 
-        self.day_hours = D(sum([safe_dec(te.day_shift_hours) for te in task_entries]))
-        self.night_hours = D(sum([safe_dec(te.night_shift_hours) for te in task_entries]))
-        self.travel_hours = D(sum([safe_dec(te.travel_hours) for te in task_entries]))
-        self.on_call_hours = D(sum([safe_dec(te.on_call_hours) for te in task_entries]))
+        self.day_hours = Decimal(sum([safe_dec(te.day_shift_hours) for te in task_entries]))
+        self.night_hours = Decimal(sum([safe_dec(te.night_shift_hours) for te in task_entries]))
+        self.travel_hours = Decimal(sum([safe_dec(te.travel_hours) for te in task_entries]))
+        self.on_call_hours = Decimal(sum([safe_dec(te.on_call_hours) for te in task_entries]))
 
         if meal_threshold := self.contract.meal_threshold(self.day):
-            self.meal_voucher = 1 if self.worked_hours >= meal_threshold else 0
+            bank_withdrawal = max(-Decimal(self.bank), Decimal(0))
+            eligible_hours = self.worked_hours + bank_withdrawal
+            self.meal_voucher = 1 if eligible_hours >= meal_threshold else 0
         else:
             self.meal_voucher = 0
 
         if self.contract.overtime:
             overtime = self.worked_hours - self.due_hours
-            self.overtime_hours = overtime if overtime > 0 else D(0.0)
+            self.overtime_hours = overtime if overtime > 0 else Decimal(0.0)
         else:
-            self.overtime_hours = D(0.0)
+            self.overtime_hours = Decimal(0.0)
 
         self.clean()
+        if save:
+            self.save()
 
     def add_task_entry(self, task_entry: TaskEntry | None = None, **kwargs) -> DayEntry:
         """Add a single TaskEntry to the DayEntry using the DayEntryProcessor and refreshes."""
@@ -362,18 +426,22 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return dp.del_task_entry(task_or_entry=task_or_entry)
 
     @property
-    def worked_hours(self) -> D:
+    def worked_hours(self) -> Decimal:
         """The sum of Day Shift + Night Shift + Travel Hours recorded in the TaskEntries."""
-        return D(self.day_hours + self.night_hours + self.travel_hours)
+        return Decimal(self.day_hours + self.night_hours + self.travel_hours)
 
     @property
-    def regular_hours(self) -> D:
-        return D(min(self.worked_hours - D(self.bank), self.due_hours))
+    def regular_hours(self) -> Decimal:
+        return calculate_regular_hours(
+            worked_hours=self.worked_hours,
+            bank=Decimal(self.bank),
+            due_hours=Decimal(self.due_hours),
+        )
 
     @property
-    def remaining_hours(self) -> D:
+    def remaining_hours(self) -> Decimal:
         hours = self.due_hours - self.regular_hours
-        return D(max(0.0, hours))
+        return Decimal(max(0.0, hours))
 
     @property
     def is_leave(self) -> bool:
@@ -387,12 +455,53 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     def is_rest(self) -> bool:
         return self.rest_hours > 0
 
+    def verify_bank_hours_against_scheduled_hours(self) -> None:
+        """Validate bank hours against the scheduled hours."""
+        self._verify_bank_hours_against_scheduled_hours()
+
+    def verify_bank_hours_restrictions_with_day_entries(self) -> None:
+        """Validate bank operations against holidays, sickness, and absence hours."""
+        self._verify_bank_hours_restrictions_with_day_entries()
+
+    def _verify_bank_hours_against_scheduled_hours(self) -> None:
+        """Ensure bank operations do not cross the scheduled-hours threshold."""
+        if self.bank > 0 and self.effective_hours < self.due_hours:
+            message = _(
+                'Cannot deposit {bank_hours} bank hours. '
+                'Total hours would become {task_hours}, '
+                'which is below scheduled hours ({scheduled_hours}).'
+            ).format(
+                bank_hours=self.bank,
+                task_hours=self.effective_hours,
+                scheduled_hours=self.due_hours,
+            )
+
+            raise ValidationError(
+                f'Invalid day entry for {self.day}: {message}',
+                code='bank_deposit_below_scheduled_hours',
+            )
+
+        if self.bank < 0 and self.effective_hours > self.due_hours:
+            message = _(
+                'Cannot withdraw bank hours when effective hours '
+                '({task_hours}) are higher than scheduled hours '
+                '({scheduled_hours}).'
+            ).format(
+                task_hours=self.effective_hours,
+                scheduled_hours=self.due_hours,
+            )
+
+            raise ValidationError(
+                f'Invalid day entry for {self.day}: {message}',
+                code='bank_withdraw_above_scheduled_hours',
+            )
+
     def _verify_bank_hours_balance_limits(self) -> None:
         """Verify that the transaction won't exceed total balance limits (-16 to +16)."""
-        balance_upper = D(str(config.BANK_HOURS_UPPER_BOUND))
-        balance_lower = D(str(config.BANK_HOURS_LOWER_BOUND))
-        current_balance = self.resource.get_bank_hours_balance(self.day)
-        new_balance = current_balance + D(self.bank)
+        balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
+        balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
+        current_balance = self.resource.get_bank_hours_balance((KTDay(self.day) - 1).date)
+        new_balance = current_balance + Decimal(self.bank)
 
         if new_balance > balance_upper:
             raise ValidationError(
@@ -412,8 +521,15 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             )
 
     def _verify_timesheet_not_submitted(self) -> None:
-        if self.timesheet and self.timesheet.closed:
+        if self.is_submitted:
             raise ValidationError(_('Cannot modify entries for submitted timesheets'), code='timesheet_submitted')
+
+    def _verify_total_hours(self) -> None:
+        if self.effective_hours > TOTAL_WORK_HOURS_MAX:
+            raise ValidationError(
+                _('Maximum 24 total hours per day.'),
+                code='total_hours_above_limit',
+            )
 
     def _verify_bank_hours_restrictions_with_day_entries(self) -> None:
         """Verify bank hours restrictions with different types of day entries."""
@@ -439,14 +555,21 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             raise ValidationError(_('Protocol number digits must be numeric'), code='protocol_number_not_numeric')
 
     def _verify_at_most_one_absence(self) -> None:
-        is_one_of_the_leave_types = self.is_leave or self.is_special_leave
+        has_partial_day_absence = self.is_leave or self.is_special_leave or self.is_rest
         has_too_many_day_entry_hours_logged = (
-            len([cond for cond in (self.is_sick, self.is_holiday, is_one_of_the_leave_types) if cond]) > 1
+            len([cond for cond in (self.is_sick, self.asked_holiday, has_partial_day_absence) if cond]) > 1
         )
         if has_too_many_day_entry_hours_logged:
             raise ValidationError(
                 _('You cannot log more than one kind of non-task hours in a day'),
                 code='multiple_absence_kind',
+            )
+
+    def _verify_holiday_request(self) -> None:
+        if self.is_holiday and self.asked_holiday:
+            raise ValidationError(
+                _('Cannot request holiday on a public holiday.'),
+                code='holiday_requested_on_public_holiday',
             )
 
 
@@ -465,7 +588,7 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
     # this will need to be turned into not nullable after migrations
     day_entry = models.ForeignKey(DayEntry, on_delete=models.CASCADE)
 
-    objects = TaskEntriesQuerySet.as_manager()
+    objects = TaskEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = 'Task entries'
@@ -505,27 +628,30 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
         )
 
     @property
-    def total_task_hours(self) -> D:
+    def total_task_hours(self) -> Decimal:
         """Compute the total task-related hours logged on this entry.
 
         :return: the computed total.
         """
         # NOTE: could use sum() on a comprehension, but `sum()` may also
         #       return Literal[0], which trips up the type checker
-        return D(self.day_shift_hours) + D(self.night_shift_hours) + D(self.travel_hours)
+        return Decimal(self.day_shift_hours) + Decimal(self.night_shift_hours) + Decimal(self.travel_hours)
 
     @property
     def is_submitted(self) -> bool:
-        return not (self.day_entry.timesheet is None or self.day_entry.timesheet.closed is False)
+        return self.day_entry.is_submitted
+
+    @override
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        if self.is_submitted:
+            raise ValidationError(
+                _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
+                code='timesheet_closed',
+            )
+        return super().delete(*args, **kwargs)
 
     def _verify_timesheet_not_submitted(self) -> None:
-        if self.pk is None:
-            return
-        if self.is_submitted or (
-            TimesheetSubmission.objects.filter(
-                resource=self.day_entry.resource, closed=True, period__contains=self.day_entry.day
-            ).exists()
-        ):
+        if self.day_entry.is_submitted:
             raise ValidationError(_('Cannot modify time entries for submitted timesheets'), code='timesheet_submitted')
 
     def _verify_no_negative_hours(self) -> None:
@@ -540,6 +666,20 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
         ):
             raise ValidationError(_('All hours must be 0 or greater'), code='negative_hours')
 
+    def _verify_no_task_during_full_day_absence(self) -> None:
+        if self.day_entry.is_sick or self.day_entry.asked_holiday:
+            raise ValidationError(
+                _('Task entries cannot be added to a sick day or requested holiday.'),
+                code='task_entry_during_full_day_absence',
+            )
+
+    def _verify_task_resource_matches_day_entry(self) -> None:
+        if self.task.resource_id != self.day_entry.resource_id:
+            raise ValidationError(
+                _('The task is not assigned to the resource of the day entry.'),
+                code='task_resource_mismatch',
+            )
+
     def _verify_at_least_one_nonzero_hours_and_bank_field(self) -> None:
         hours_fields = (
             self.day_shift_hours,
@@ -553,12 +693,20 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
 
 @receiver(models.signals.post_save, sender=TimesheetSubmission)
 def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, **kwargs: Any) -> None:
-    instance.dayentry_set.update(timesheet=None)
+    instance.dayentry_set.update(timesheet=None, closed=False)
     if isinstance(instance.period, (list | tuple)):
         lower, upper = instance.period[0], instance.period[1]
     else:
         lower, upper = instance.period.lower, instance.period.upper
-    DayEntry.objects.filter(resource=instance.resource, day__gte=lower, day__lt=upper).update(timesheet=instance)
+    DayEntry.objects.filter(resource=instance.resource, day__gte=lower, day__lt=upper).update(
+        timesheet=instance,
+        closed=instance.closed,
+    )
+
+
+@receiver(models.signals.pre_delete, sender=TimesheetSubmission)
+def unlink_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, **kwargs: Any) -> None:
+    instance.dayentry_set.update(timesheet=None, closed=False)
 
 
 @receiver(models.signals.pre_save, sender=DayEntry)
@@ -616,3 +764,10 @@ class ExtraHoliday(models.Model):
             raise ValidationError({'period': _('Open-ended period not supported')})
         if self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError({'period': _('End date must be at least one day after start date')})
+
+
+@receiver([models.signals.post_save, models.signals.post_delete], sender=ExtraHoliday)
+def clear_extra_holiday_cache(sender: type[ExtraHoliday], **kwargs: Any) -> None:
+    from krm3.utils._extra_holidays import extra_holidays  # noqa: PLC0415
+
+    extra_holidays.clear()

@@ -8,7 +8,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def get_sentry_host():  # noqa: D103
+def get_sentry_host() -> str:  # noqa: D103
     result: ParseResult = urlparse(settings.SENTRY_DSN)
     host = f'{result.scheme}://{result.hostname}'
     if result.port:
@@ -17,11 +17,11 @@ def get_sentry_host():  # noqa: D103
     return host
 
 
-def get_sentry_dashboard():  # noqa: D103
+def get_sentry_dashboard() -> str:  # noqa: D103
     return f'{get_sentry_host()}/{settings.SENTRY_PROJECT}'
 
 
-def get_event_url(event_id):  # noqa: D103
+def get_event_url(event_id: int) -> str | None:  # noqa: D103
     try:
         return f'{get_sentry_host()}/{settings.SENTRY_PROJECT}/?query={event_id}'
     except Exception as e:

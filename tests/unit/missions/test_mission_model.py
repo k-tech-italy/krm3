@@ -7,19 +7,16 @@ Any modification is made in the form.
 """
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
 
 import pytest
 from django.core.exceptions import ValidationError
 from testutils.date_utils import _dt
+from testutils.factories import MissionFactory
 
-if TYPE_CHECKING:
-    from krm3.core.models import Mission
+from krm3.core.models import Mission
 
 
 def map_mission_status(status: str) -> 'Mission.MissionStatus':
-    from krm3.core.models import Mission
-
     return {
         'S': Mission.MissionStatus.SUBMITTED,
         'D': Mission.MissionStatus.DRAFT,
@@ -39,8 +36,6 @@ def map_mission_status(status: str) -> 'Mission.MissionStatus':
     ],
 )
 def test_mission_status_transitions(number, status, expectation):
-    from testutils.factories import MissionFactory
-
     mission: Mission = MissionFactory.build(number=number, status=map_mission_status(status))
 
     with expectation:
@@ -68,10 +63,6 @@ def test_mission_status_transitions(number, status, expectation):
     ),
 )
 def test_missions_validation(from_date, to_date, expectation):
-    from testutils.factories import MissionFactory
-
-    from krm3.core.models import Mission
-
     mission: Mission = MissionFactory.build(
         number=1, status=Mission.MissionStatus.SUBMITTED, from_date=from_date, to_date=to_date
     )
@@ -82,10 +73,6 @@ def test_missions_validation(from_date, to_date, expectation):
 
 
 def test_calculate_number():
-    from testutils.factories import MissionFactory
-
-    from krm3.core.models import Mission
-
     assert Mission.calculate_number(None, 2023) == 1
 
     mission: Mission = MissionFactory(

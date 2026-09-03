@@ -1,3 +1,4 @@
+import decimal
 import datetime
 
 from constance import config
@@ -19,26 +20,25 @@ class Currency(models.Model):
 
     objects = ActiveQuerySet.as_manager()
 
-    def __str__(self):
-        return f'{self.iso3} {self.symbol}'
-
-    def is_base(self):
-        return self.iso3 == settings.BASE_CURRENCY
-
     class Meta:
         verbose_name_plural = 'currencies'
         ordering = ('iso3',)
 
+    def __str__(self) -> str:
+        return f'{self.iso3} {self.symbol}'
+
+    def is_base(self) -> bool:
+        return self.iso3 == settings.BASE_CURRENCY
 
 class Rate(models.Model):
     day = models.DateField(primary_key=True)
     rates = models.JSONField(default=dict, blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.day:%Y-%m-%d}'
 
-    def ensure_rates(self, force=False, include=None):
-        """Ensure the rates are present for the currencies. Forces refresh eventually"""
+    def ensure_rates(self, force: bool = False, include: list[str] | None = None) -> None:
+        """Ensure the rates are present for the currencies. Force refresh eventually."""
         if include is None:
             include = []
 
@@ -47,24 +47,31 @@ class Rate(models.Model):
         if force:
             missing = set(config.CURRENCIES.split(',')) | set(include) | set(self.rates.keys())
         if missing:
-            from krm3.currencies.client import get_client
+            from krm3.currencies.client import get_client  # noqa: PLC0415
 
             client = get_client()
-            ret = client.get_historical(self.day.strftime('%Y-%m-%d'), symbols=sorted(list(missing)))
+            ret = client.get_historical(self.day.strftime('%Y-%m-%d'), symbols=sorted(missing))
             self.rates |= {k: v for k, v in ret['rates'].items() if k == 'USD' or k in missing}
             self.save()
 
-    def get_rates(self, force=False, include=None):
-        """Retrieves the rate values. Forces the refresh if needed"""
+    def get_rates(self, force: bool = False, include: list[str] | None = None) -> dict[str, object]:
+        """Retrieve the rate values. Force the refresh if needed."""
         if include is None:
             include = []
 
         self.ensure_rates(force=force, include=include)
         return {k: v for k, v in self.rates.items() if k in config.CURRENCIES.split(',')}
 
-    def convert(self, from_value, from_currency: str, to_currency: str = None, force=False):
-        """Converts a value from a specific currency to another.
-        If target currency is not specified it will be using settings.BASE_CURRENCY
+    def convert(
+        self,
+        from_value: decimal.Decimal | float | int | str,
+        from_currency: str | Currency,
+        to_currency: str | Currency | None = None,
+        force: bool = False,
+    ) -> decimal.Decimal:
+        """Convert a value from a specific currency to another.
+
+        If target currency is not specified, use settings.BASE_CURRENCY.
         """
         if isinstance(from_currency, Currency):
             from_currency = from_currency.iso3
@@ -75,12 +82,10 @@ class Rate(models.Model):
         self.ensure_rates(force=force, include=[from_currency, to_currency])
         return rounding(to_currency, float(from_value) / self.rates[from_currency] * self.rates[to_currency])
 
-    # def to_base(self, from_value, from_currency: str, force=False):
-    #     """Converts a value from a specific currency to base currency"""
-    #     return self.convert(from_value, from_currency, settings.BASE_CURRENCY, force)
-
     @staticmethod
-    def for_date(date: datetime.date, force=False, include=None):
+    def for_date(
+        date: datetime.date, force: bool = False, include: list[str] | None = None
+    ) -> 'Rate':
         """Constructor-like method returning a Rate instance for the specific date."""
         if include is None:
             include = []

@@ -1,16 +1,22 @@
 """Converter admin panel module."""
 
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
+
 from dateutil.parser import parse
 from django import forms
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 from tabulate import tabulate
 
 from krm3.currencies.models import Rate
 
+if TYPE_CHECKING:
+    from smart_admin.site import SmartAdminSite
 
-def _parse_entries(value):
+
+def _parse_entries(value: str) -> list[dict[str, datetime | float | str]]:
     results = []
     lines: list[str] = value.splitlines()
 
@@ -32,18 +38,18 @@ class ConverterForm(forms.Form):  # noqa: D101
     entries = forms.CharField(widget=forms.Textarea())
     to_currency = forms.ChoiceField(choices=CURRENCY_CHOICES)
 
-    def clean_entries(self):  # noqa: D102
+    def clean_entries(self) -> list[dict[str, datetime | float | str]]:  # noqa: D102
         value: str = self.cleaned_data.pop('entries')
         try:
             results = _parse_entries(value)
         except ValidationError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise ValidationError(e)
         return results
 
 
-def save_expression(request):  # noqa: D103
+def save_expression(request: HttpRequest) -> JsonResponse:  # noqa: D103
     form = ConverterForm(request.POST)
     if form.is_valid():
         name = request.POST['name']
@@ -60,7 +66,9 @@ def save_expression(request):  # noqa: D103
     return JsonResponse(response)
 
 
-def panel_converter(self, request, extra_context=None):  # noqa: D103
+def panel_converter(
+    self: 'SmartAdminSite', request: HttpRequest, extra_context: dict[str, Any] | None = None
+) -> HttpResponse:  # noqa: D103
     if not request.user.is_superuser:
         raise PermissionDenied
     context = self.each_context(request)
@@ -81,22 +89,6 @@ def panel_converter(self, request, extra_context=None):  # noqa: D103
                 )
             headers = ['date', 'amount', 'currency', to_currency]
             context['results'] = tabulate(table, headers, tablefmt='html')
-            # try:
-            #     cmd = form.cleaned_data['command']
-            #     # stm = urllib.parse.unquote(base64.b64decode(cmd).decode())
-            #     response['stm'] = sqlparse.format(cmd)
-            #     if request.user.is_superuser:
-            #         conn = connections[DEFAULT_DB_ALIAS]
-            #     else:
-            #         conn = connections['read_only']
-            #     cursor = conn.cursor()
-            #     cursor.execute(cmd)
-            #     if cursor.pgresult_ptr is not None:
-            #         response['result'] = cursor.fetchall()
-            #     else:
-            #         response['result'] = ['Success']
-            # except Exception as e:
-            #     response['error'] = str(e)
         else:
             context['errors'] = str(form.errors)
     else:

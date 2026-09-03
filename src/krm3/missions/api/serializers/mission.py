@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db.models import Max
 from rest_framework import serializers
 
@@ -65,8 +67,8 @@ class MissionCreateSerializer(serializers.ModelSerializer):
             'resource',
         )
 
-    def create(self, validated_data):
-        number = validated_data.get('number', None)  # TODO from city ID to country default_currencies
+    def create(self, validated_data: dict[str, Any]) -> Mission:
+        number = validated_data.get('number')  # TODO from city ID to country default_currencies
 
         if number is None:
             last_number = Mission.objects.aggregate(Max('number'))['number__max']

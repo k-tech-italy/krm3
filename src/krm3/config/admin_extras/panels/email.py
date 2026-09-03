@@ -1,20 +1,28 @@
 """Email panel module."""
 
 import logging
+from collections.abc import Callable
 from functools import partial
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.contrib import messages
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
 from krm3.utils.reflect import fqn
 from krm3.utils.sysinfo import masker
 from krm3.utils.threading import runs_in_background
 
+if TYPE_CHECKING:
+    from smart_admin.site import SmartAdminSite
+
 logger = logging.getLogger(__name__)
 
 
-def email(self, request, extra_context=None):  # noqa: D103
+def email(
+    self: 'SmartAdminSite', request: HttpRequest, extra_context: dict[str, Any] | None = None
+) -> HttpResponse:  # noqa: D103
     context = self.each_context(request)
     context['title'] = 'Email'
     context['smtp'] = {
@@ -30,22 +38,22 @@ def email(self, request, extra_context=None):  # noqa: D103
     }
     if request.method == 'POST':
 
-        def _run(func, **kwargs):
+        def _run(func: Callable[..., Any], **kwargs) -> None:
             try:
                 func(**kwargs)
                 context['results'][fqn(func)] = kwargs.get('to', kwargs.get('recipient_list'))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 context['results'][fqn(func)] = f'{e.__class__.__name__}: {e}'
 
         try:
-            from django.core.mail import get_connection
+            from django.core.mail import get_connection  # noqa: PLC0415
 
             conn = get_connection()
             context['results'] = {}
             context['connection'] = conn
-            from django.core.mail import send_mail as django_send_mail
+            from django.core.mail import send_mail as django_send_mail  # noqa: PLC0415
 
-            from krm3.utils.threading import wait_for_tasks
+            from krm3.utils.threading import wait_for_tasks  # noqa: PLC0415
 
             subject = lambda f: "%sSend email test: '%s" % (settings.EMAIL_SUBJECT_PREFIX, f)  # noqa: E731
             tasks = runs_in_background(

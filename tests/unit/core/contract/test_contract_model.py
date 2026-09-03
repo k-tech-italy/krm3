@@ -1,8 +1,8 @@
 import datetime
 import json
 import typing
+from contextlib import nullcontext as does_not_raise
 from datetime import date
-from ktcalendars.utils import dt
 from unittest.mock import patch
 
 import pytest
@@ -10,17 +10,19 @@ from constance.test import override_config
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from ktcalendars import KTDay
+from ktcalendars.utils import dt
 from psycopg.types.range import DateRange
 from testutils.factories import (
     ContractFactory,
+    DayEntryFactory,
     ResourceFactory,
     TaskFactory,
     UserFactory,
 )
 from testutils.permissions import add_permissions
 
+from krm3.core.forms import ContractForm
 from krm3.core.models import Contract, DayEntry
-from contextlib import nullcontext as does_not_raise
 
 if typing.TYPE_CHECKING:
     from _pytest.raises import RaisesExc
@@ -69,47 +71,59 @@ def test_contract_ordering():
     assert list(Contract.objects.values_list('id', flat=True)) == [c2.id, c1.id]
 
 
-# @pytest.mark.parametrize(
-#     'cnum, new_lower, new_upper, valid',
-#     [
-#         pytest.param(0, dt('20200401'), None, True, id='c1-start-ok'),
-#         pytest.param(0, dt('20200402'), None, False, id='c1-start-short'),
-#         pytest.param(3, None, dt('20200316'), True, id='c4-end-ok'),
-#         pytest.param(3, None, dt('20200315'), False, id='c4-end-short'),
-#         pytest.param(1, dt('20200702'), None, False, id='c2-start-short'),
-#         pytest.param(2, None, dt('22000101'), False, id='c3-end-short'),
-#     ],
-# )
-# def test_amend_contract_with_tasks(cnum, new_lower, new_upper, valid, contracts_and_tasks):
-#     contract = contracts_and_tasks['contracts'][cnum]
-#
-#     lower = contract.period.lower.strftime('%Y-%m-%d')
-#     upper = contract.period.upper.strftime('%Y-%m-%d') if contract.period.upper else ''
-#
-#     if new_lower:
-#         lower = new_lower
-#     elif new_upper:
-#         upper = new_upper
-#
-#     data = {'resource': contract.resource, 'period_0': lower, 'period_1': upper}
-#     form = ContractForm(instance=contract, data=data)
-#
-#     assert form.is_valid() is valid, form.errors
-#
-#
-# @pytest.mark.parametrize(
-#     'cnum, expected',
-#     [
-#         pytest.param(0, [0, 1], id='c1'),
-#         pytest.param(1, [1, 2], id='c2'),
-#         pytest.param(2, [2], id='c3'),
-#         pytest.param(3, [3], id='c4'),
-#         pytest.param(4, [], id='c5'),
-#     ],
-# )
-# def test_get_tasks(cnum, expected, contracts_and_tasks):
-#     contract = contracts_and_tasks['contracts'][cnum]
-#     assert contract.get_tasks() == [contracts_and_tasks['tasks'][x] for x in expected]
+def _contract_form_data(contract: Contract, start: date, end: date | None) -> dict:
+    return {
+        'resource': contract.resource_id,
+        'period_0': start.isoformat(),
+        'period_1': end.isoformat() if end else '',
+        'working_schedule': contract.working_schedule,
+        'meal_voucher': contract.meal_voucher,
+        'sunday_as_holiday': contract.sunday_as_holiday,
+        'overtime': contract.overtime,
+        'contract_type': contract.contract_type,
+        'base_in': contract.base_in_id or '',
+        'comment': contract.comment or '',
+    }
+
+
+def test_contract_form_saves_unchanged_open_ended_period():
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+
+    form = ContractForm(
+        instance=contract,
+        data=_contract_form_data(contract, dt('2026-01-01'), None),
+    )
+
+    assert form.is_valid(), form.errors
+
+
+def test_contract_form_allows_shorter_period_when_entries_remain_inside():
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    DayEntryFactory(contract=contract, resource=contract.resource, day=dt('2026-06-01'))
+
+    form = ContractForm(
+        instance=contract,
+        data=_contract_form_data(contract, dt('2026-02-01'), dt('2026-07-01')),
+    )
+
+    assert form.is_valid(), form.errors
+
+
+@pytest.mark.parametrize(
+    ('start', 'end', 'entry_day'),
+    (
+        pytest.param(dt('2026-02-01'), None, dt('2026-01-15'), id='later-start'),
+        pytest.param(dt('2026-01-01'), dt('2026-07-01'), dt('2026-07-01'), id='earlier-end'),
+    ),
+)
+def test_contract_form_rejects_period_that_excludes_day_entries(start, end, entry_day):
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    DayEntryFactory(contract=contract, resource=contract.resource, day=entry_day)
+
+    form = ContractForm(instance=contract, data=_contract_form_data(contract, start, end))
+
+    assert not form.is_valid()
+    assert form.non_field_errors() == ['Shrinking the contract period would leave day entries outside it.']
 
 
 @override_config(
@@ -144,8 +158,16 @@ def test_get_due_hours_holidays():
         'period': (dt('2023-01-01'), None),
         'working_schedule': {'mon': 4, 'tue': 2, 'wed': 2, 'thu': 2, 'fri': 2, 'sat': 2, 'sun': 2},
     }
-    ita = ContractFactory(country_calendar_code='IT', **base)
-    rome = ContractFactory(country_calendar_code='IT-RM', **base)
+    ita = ContractFactory(
+        base_in__country__country_calendar_code='IT',
+        base_in__subdivision_code=None,
+        **base,
+    )
+    rome = ContractFactory(
+        base_in__country__country_calendar_code='IT',
+        base_in__subdivision_code='RM',
+        **base,
+    )
     assert ita.get_ktday('2026-06-29').is_holiday is False
     assert ita.get_due_hours('2026-06-29') == 4
     assert rome.get_ktday(dt('2026-06-29')).is_holiday is True
@@ -155,21 +177,18 @@ def test_get_due_hours_holidays():
 @pytest.mark.parametrize(
     'day, expectation, expected_value, period',
     [
-        pytest.param('2023-01-31', err_date_outside_contract, None, 'bound', id="before-bound"),
-        pytest.param('2023-02-01', does_not_raise(), 3, 'bound', id="lower-bound"),
-        pytest.param('2023-02-28', does_not_raise(), 2, 'bound', id="upper-bound"),
-        pytest.param('2023-03-01', err_date_outside_contract, None, 'bound', id="after-bound"),
-        pytest.param('2023-01-31', err_date_outside_contract, None, 'unbounded', id="before-unbounded"),
-        pytest.param('2023-02-01', does_not_raise(), 3, 'unbounded', id="lower-unbounded"),
-        pytest.param('2023-02-28', does_not_raise(), 2, 'unbounded', id="upper-unbounded"),
-        pytest.param('2023-03-01', does_not_raise(), 3, 'unbounded', id="after-unbounded"),
+        pytest.param('2023-01-31', err_date_outside_contract, None, 'bound', id='before-bound'),
+        pytest.param('2023-02-01', does_not_raise(), 3, 'bound', id='lower-bound'),
+        pytest.param('2023-02-28', does_not_raise(), 2, 'bound', id='upper-bound'),
+        pytest.param('2023-03-01', err_date_outside_contract, None, 'bound', id='after-bound'),
+        pytest.param('2023-01-31', err_date_outside_contract, None, 'unbounded', id='before-unbounded'),
+        pytest.param('2023-02-01', does_not_raise(), 3, 'unbounded', id='lower-unbounded'),
+        pytest.param('2023-02-28', does_not_raise(), 2, 'unbounded', id='upper-unbounded'),
+        pytest.param('2023-03-01', does_not_raise(), 3, 'unbounded', id='after-unbounded'),
     ],
 )
 def test_get_due_hours_boundaries(
-        day: str,
-        expectation: 'RaisesExc[ValueError]',
-        expected_value: int | None,
-        period: str
+    day: str, expectation: 'RaisesExc[ValueError]', expected_value: int | None, period: str
 ):
     contract_period = (dt('2023-02-01'), dt('2023-03-01') if period == 'bound' else None)
     contract = ContractFactory(
@@ -446,8 +465,8 @@ def test_validate_rule_with_overtime_and_meal_voucher(contracts_and_tasks):
 def test_active_between(start_date, end_date, expected):
     contracts = [
         c1 := ContractFactory(period=(dt('20260101'), dt('20260201'))),
-        c2 := ContractFactory(period=(dt('20260115'), None)),
-        c3 := ContractFactory(period=(dt('20260301'), dt('20260501')), resource=c1.resource)
+        ContractFactory(period=(dt('20260115'), None)),
+        ContractFactory(period=(dt('20260301'), dt('20260501')), resource=c1.resource),
     ]
 
     assert list(Contract.objects.active_between(start_date, end_date).values_list('id', flat=True)) == [

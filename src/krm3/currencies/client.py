@@ -5,5 +5,5 @@ if oerai := settings.OPEN_EXCHANGE_RATES_APP_ID:
     init(settings.OPEN_EXCHANGE_RATES_APP_ID)
 
 
-def get_client():
+def get_client() -> OXRClient:
     return OXRClient(settings.OPEN_EXCHANGE_RATES_APP_ID)

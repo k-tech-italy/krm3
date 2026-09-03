@@ -8,6 +8,4 @@ terms:
 
 # ClosedEntry
 
-_Django Model: core.DayEntry_
-
-A <glossary:TimeEntry> whose hours have been invoiced to the client. Frozen, can be edited and/or deleted only by privileged users. Implemented as a <glossary:TimeEntry> linked to a closed <glossary:TimesheetSubmission>.
+A closed entry is a <glossary:DayEntry> or <glossary:TaskEntry> linked to a closed <glossary:TimesheetSubmission>. A TaskEntry inherits this state through its DayEntry. It cannot be edited or deleted while the submission remains closed. A privileged user must reopen the submission before modifying or deleting it.

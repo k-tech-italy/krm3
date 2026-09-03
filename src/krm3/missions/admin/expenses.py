@@ -70,6 +70,7 @@ class ExpenseInline(RestrictedReimbursementMixin, admin.TabularInline):  # noqa:
 
 @admin.register(Expense)
 class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']

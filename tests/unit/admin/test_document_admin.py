@@ -7,6 +7,7 @@ from django_webtest import DjangoTestApp
 from testutils.factories import DocumentFactory, DocumentTagFactory, ResourceFactory
 from webtest import Upload
 
+from krm3.core.models import ProtectedDocument
 from krm3.documents.admin import Krm3DocumentAdmin
 from krm3.documents.importers import KTPayslipImporter
 
@@ -39,8 +40,6 @@ def resources():
 
 
 def test_file_upload_view(app, resources):
-    from krm3.core.models import ProtectedDocument
-
     test_file = Path(__file__).parents[2] / 'examples' / 'KTPayslip_ANON.2022.pdf'
 
     response = app.get(reverse('admin:core_protecteddocument_import_payslips'))
@@ -93,8 +92,6 @@ def test_import_payslips_get_returns_form(app):
 
 def test_import_payslips_post_with_no_matching_resources_shows_error(app):
     """POST with PDF that matches no resources should show error message."""
-    from krm3.core.models import ProtectedDocument
-
     # No resources with fiscal codes set up - the PDF won't match anyone
     test_file = Path(__file__).parents[2] / 'examples' / 'KTPayslip_ANON.2022.pdf'
 

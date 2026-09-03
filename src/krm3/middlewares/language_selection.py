@@ -29,16 +29,17 @@ class UserLanguageMiddleware:
             )
 
         # We don't have a language in the cookie, check the resource
-        if not request_language and request.user.is_authenticated:
-            if (
-                hasattr(request.user, 'resource')
-                and (user_preferred_language := getattr(request.user.resource, 'preferred_language', None))
-            ):
-                return self._set_response_language(
-                    response=response,
-                    language=user_preferred_language,
-                    language_cookie_name=language_cookie_name
-                )
+        if (
+            not request_language
+            and request.user.is_authenticated
+            and hasattr(request.user, 'resource')
+            and (user_preferred_language := getattr(request.user.resource, 'preferred_language', None))
+        ):
+            return self._set_response_language(
+                response=response,
+                language=user_preferred_language,
+                language_cookie_name=language_cookie_name
+            )
 
         # Fall back to the original response
         return response
