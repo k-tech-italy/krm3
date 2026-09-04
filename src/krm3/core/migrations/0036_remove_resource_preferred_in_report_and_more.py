@@ -7,9 +7,12 @@ def forward(apps, schema_editor):  # noqa: ANN001
     resource_model = apps.get_model('core', 'Resource')
 
     for resource in resource_model.objects.all():
-        resource.contract_set.update(
-            employee=resource.preferred_in_report,
+        contract_type = (
+            'EMPLOYEE'
+            if resource.preferred_in_report
+            else 'CONTRACTOR'
         )
+        resource.contract_set.update(contract_type=contract_type)
 
 
 def backward(apps, schema_editor):  # noqa: ANN001
@@ -19,12 +22,13 @@ def backward(apps, schema_editor):  # noqa: ANN001
         contract = resource.contract_set.order_by('-period').first()
 
         if contract is not None:
-            resource.preferred_in_report = contract.employee
+            resource.preferred_in_report = (
+                contract.contract_type == 'EMPLOYEE'
+            )
             resource.save(update_fields=['preferred_in_report'])
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('core', '0035_cleanup_post_migration'),
     ]
@@ -32,10 +36,31 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='contract',
-            name='employee',
-            field=models.BooleanField(default=True),
+            name='contract_type',
+            field=models.CharField(
+                choices=[
+                    ('EMPLOYEE', 'Employee'),
+                    ('CONTRACTOR', 'Contractor'),
+                    ('OTHER', 'Other'),
+                ],
+                default='EMPLOYEE',
+                max_length=10,
+            ),
         ),
         migrations.RunPython(forward, backward),
+        migrations.AddConstraint(
+            model_name='contract',
+            constraint=models.CheckConstraint(
+                name='valid_contract_type',
+                condition=models.Q(
+                    contract_type__in=[
+                        'EMPLOYEE',
+                        'CONTRACTOR',
+                        'OTHER',
+                    ],
+                ),
+            ),
+        ),
         migrations.RemoveField(
             model_name='resource',
             name='preferred_in_report',

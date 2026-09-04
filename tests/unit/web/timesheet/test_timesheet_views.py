@@ -7,6 +7,7 @@ from django.contrib.auth.models import Permission
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, ResourceFactory, UserFactory
 from testutils.web import _assert_homepage_content
+from krm3.core.models import Contract
 
 
 @pytest.mark.parametrize(
@@ -49,9 +50,9 @@ def test_user_without_permission_can_only_see_their_reports(url, resource_client
 def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contract(permissions, url, client):
     contracted_user = UserFactory(username='ihaveavalidcontract', password='pass123')
 
-    _contract_for_contracted_resource = ContractFactory(resource=ResourceFactory(user=contracted_user) ,period=(_dt('2024-01-01'), None), employee=True)
-    _contract_for_employed_resource = ContractFactory(period=(_dt('2024-01-01'), None), employee=True)
-    _contract_for_expired_resource = ContractFactory(period=(_dt('2024-01-01'), _dt('2024-06-01')),employee=True)
+    _contract_for_contracted_resource = ContractFactory(resource=ResourceFactory(user=contracted_user) ,period=(_dt('2024-01-01'), None), contract_type=Contract.ContractType.EMPLOYEE)
+    _contract_for_employed_resource = ContractFactory(period=(_dt('2024-01-01'), None), contract_type=Contract.ContractType.EMPLOYEE)
+    _contract_for_expired_resource = ContractFactory(period=(_dt('2024-01-01'), _dt('2024-06-01')),contract_type=Contract.ContractType.CONTRACTOR)
 
     contracted_resource = _contract_for_contracted_resource.resource
     preferred_resource = _contract_for_employed_resource.resource

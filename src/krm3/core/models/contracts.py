@@ -51,7 +51,13 @@ class ContractQuerySet(models.QuerySet['Contract']):
         return self.filter(resource=resource, period__contains=KTDay(day).date).first()
 
 
+
 class Contract(models.Model):
+    class ContractType(models.TextChoices):
+        EMPLOYEE = 'EMPLOYEE', _('Employee')
+        CONTRACTOR = 'CONTRACTOR', _('Contractor')
+        OTHER = 'OTHER', _('Other')
+
     resource = models.ForeignKey('core.Resource', on_delete=models.PROTECT)
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     country_calendar_code = models.CharField(
@@ -72,7 +78,12 @@ class Contract(models.Model):
     )
     sunday_as_holiday = models.BooleanField(default=True, help_text=_('Sunday always a holiday'))
     overtime = models.BooleanField(default=True, help_text=_('Is overtime tracked'))
-    employee = models.BooleanField(default=True)
+    contract_type = models.CharField(
+        max_length=10,
+        choices=ContractType.choices,
+        default=ContractType.EMPLOYEE,
+    )
+
 
     objects = ContractQuerySet.as_manager()
 
@@ -85,7 +96,17 @@ class Contract(models.Model):
                     ('period', RangeOperators.OVERLAPS),
                     ('resource', RangeOperators.EQUAL),
                 ],
-            )
+            ),
+            models.CheckConstraint(
+                name='valid_contract_type',
+                condition=models.Q(
+                    contract_type__in=[
+                        'EMPLOYEE',
+                        'CONTRACTOR',
+                        'OTHER',
+                    ],
+                ),
+            ),
         ]
         permissions = [
             ('view_any_contract', "Can view(only) everybody's contracts"),

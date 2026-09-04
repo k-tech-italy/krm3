@@ -20,6 +20,7 @@ class City(NaturalKeyModel):
     name = models.CharField(max_length=80)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
 
+
     def __str__(self) -> str:
         return f'{self.name} ({self.country.name})'
 

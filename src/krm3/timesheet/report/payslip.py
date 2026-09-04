@@ -119,7 +119,10 @@ class TimesheetReport:
         contracts = Contract.objects.filter(period__overlap=self.report_data.period).order_by('period')
 
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            resources = resources.filter(contract__employee=True)
+            resources = resources.filter(
+                contract__period__overlap=self.report_data.period,
+                contract__contract_type=Contract.ContractType.EMPLOYEE,
+            ).distinct()
         else:
             resources = resources.filter(user=user)
 

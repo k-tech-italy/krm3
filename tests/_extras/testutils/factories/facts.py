@@ -95,7 +95,7 @@ class ContractFactory(AutoRegisterModelFactory[Contract]):
     period = (date(2020, 1, 1), None)
     country_calendar_code = settings.HOLIDAYS_CALENDAR
     sunday_as_holiday = True
-    employee = True
+    contract_type=Contract.ContractType.EMPLOYEE
 
     class Meta:
         model = 'core.Contract'

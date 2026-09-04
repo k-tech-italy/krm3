@@ -1,9 +1,11 @@
 from decimal import Decimal
 
+import pytest
 from bs4 import BeautifulSoup
 from django.urls import reverse
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
+from krm3.core.models import Contract
 
 
 def _get_resource_table(response, resource):
@@ -49,18 +51,29 @@ def test_timesheet_report_shows_day_entry_hours_and_totals(admin_client):
     assert rows['Travel'][0] == '2'
 
 
-def test_timesheet_report_only_shows_preferred_resources_to_privileged_users(admin_client):
-    employee_contract = ContractFactory(employee=True)
-    contractor_contract = ContractFactory(employee=False)
-    employee_resource = employee_contract.resource
-    contractor_resource = contractor_contract.resource
+@pytest.mark.parametrize(
+    'excluded_contract_type',
+    [
+        Contract.ContractType.CONTRACTOR,
+        Contract.ContractType.OTHER,
+    ],
+)
+def test_timesheet_report_only_shows_employees_to_privileged_users(
+    admin_client,
+    excluded_contract_type,
+):
+    employee_contract = ContractFactory(
+        contract_type=Contract.ContractType.EMPLOYEE,
+    )
+    excluded_contract = ContractFactory(
+        contract_type=excluded_contract_type,
+    )
 
     response = admin_client.get(reverse('report-month', args=['202506']))
 
     assert response.status_code == 200
-    assert _get_resource_table(response, employee_resource) is not None
-    assert _get_resource_table(response, contractor_resource) is None
-
+    assert _get_resource_table(response, employee_contract.resource) is not None
+    assert _get_resource_table(response, excluded_contract.resource) is None
 
 def test_timesheet_report_shows_sick_protocol_and_special_leave(admin_client):
     contract = ContractFactory()
@@ -120,8 +133,10 @@ def test_timesheet_report_marks_holidays_as_non_working_days(admin_client):
     assert 'non-workday' in day_cell.get('class', [])
 
 
-def test_resource_can_see_their_empty_timesheet_report_when_not_preferred(client):
-    contractor_contract = ContractFactory(employee=False)
+def test_resource_can_see_their_empty_timesheet_report_when_contractor(client):
+    contractor_contract = ContractFactory(
+        contract_type=Contract.ContractType.CONTRACTOR,
+    )
     resource = contractor_contract.resource
     client.login(username=resource.user.username, password=resource.user._password)
 

@@ -132,7 +132,7 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     list_display = [
         'resource',
         'get_period',
-        'employee',
+        'contract_type',
         'country_calendar_code',
         'working_schedule',
         'sunday_as_holiday',
