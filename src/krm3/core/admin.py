@@ -87,12 +87,12 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Country)
 class CountryAdmin(ModelAdmin):
-    search_fields = ['name']
+    search_fields = ['name', 'country_calendar_code']
 
 
 @admin.register(City)
 class CityAdmin(AdminFiltersMixin, ModelAdmin):
-    search_fields = ['name', 'country__name']
+    search_fields = ['name', 'country__name', 'subdivision_code']
     list_filter = [('country__name', AutoCompleteFilter)]
 
 
@@ -128,20 +128,19 @@ class ClientAdmin(ModelAdmin):
 @admin.register(Contract)
 class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ContractForm
-    search_fields = ['resource__last_name', 'resource__first_name']
+    search_fields = ['resource__last_name', 'resource__first_name', 'base__name']
     list_display = [
         'resource',
         'get_period',
         'contract_type',
-        'country_calendar_code',
+        'base',
         'working_schedule',
         'sunday_as_holiday',
         'meal_voucher',
-        'sunday_as_holiday',
         'document_link',
     ]
-    list_filter = [('resource', AutoCompleteFilter)]
-    autocomplete_fields = ['resource']
+    list_filter = [('resource', AutoCompleteFilter), ('base', AutoCompleteFilter),]
+    autocomplete_fields = ['resource', 'base']
     readonly_fields = ['document_link']
 
     formfield_overrides = {

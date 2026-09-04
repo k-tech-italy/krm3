@@ -60,11 +60,6 @@ class Contract(models.Model):
 
     resource = models.ForeignKey('core.Resource', on_delete=models.PROTECT)
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
-    country_calendar_code = models.CharField(
-        null=True,
-        blank=True,
-        help_text='Country calendar code as per https://holidays.readthedocs.io/en/latest/#available-countries',
-    )
     working_schedule = models.JSONField(blank=True, default=dict)
     meal_voucher = models.JSONField(blank=True, default=dict)
     comment = models.TextField(null=True, blank=True, help_text='Optional comment about the contract')
@@ -82,6 +77,13 @@ class Contract(models.Model):
         max_length=10,
         choices=ContractType.choices,
         default=ContractType.EMPLOYEE,
+    )
+    base = models.ForeignKey(
+        'core.City',
+        on_delete=models.PROTECT,
+        related_name='contracts',
+        null=True,
+        blank=True,
     )
 
 
@@ -129,12 +131,12 @@ class Contract(models.Model):
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError({'period': _('End date must be at least one day after start date.')})
 
-        if self.country_calendar_code:
+        if self.calendar_code:
             try:
-                get_country_holidays(country_calendar_code=self.country_calendar_code)
+                get_country_holidays(country_calendar_code=self.calendar_code)
             except NotImplementedError:
                 raise ValidationError(
-                    {'country_calendar_code': f'Wrong country_calendar_code {self.country_calendar_code}'}
+                    {'country_calendar_code': f'Wrong country_calendar_code {self.calendar_code}'}
                 )
 
     def build_day(
@@ -174,7 +176,15 @@ class Contract(models.Model):
     @cached_property
     def calendar_code(self) -> str:
         """Return the country calendar code for the contract or the default calendar code if not set."""
-        return self.country_calendar_code if self.country_calendar_code else settings.HOLIDAYS_CALENDAR
+        if self.base and self.base.country.country_calendar_code:
+            subdivision_code = self.base.subdivision_code
+            country_calendar_code = self.base.country.country_calendar_code
+
+            if subdivision_code:
+                return f"{country_calendar_code}-{subdivision_code}"
+            return country_calendar_code
+
+        return settings.HOLIDAYS_CALENDAR
 
     @cachedmethod(cache=lambda self: self.__dict__.setdefault('_meal_threshold_cache', {}))
     def meal_threshold(self, day: datetime.date | KTDay) -> D | None:

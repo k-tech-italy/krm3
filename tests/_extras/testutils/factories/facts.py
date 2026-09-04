@@ -53,7 +53,8 @@ class GroupFactory(DjangoModelFactory):
 
 
 class CountryFactory(DjangoModelFactory):
-    name = Faker('country')
+    name = 'Italy'
+    country_calendar_code = 'IT'
 
     class Meta:
         model = 'core.Country'
@@ -63,6 +64,7 @@ class CountryFactory(DjangoModelFactory):
 class CityFactory(DjangoModelFactory):
     name = Sequence(lambda n: f'City {n + 1}')
     country = SubFactory(CountryFactory)
+    subdivision_code = "RM"
 
     class Meta:
         model = 'core.City'
@@ -93,9 +95,9 @@ class ResourceFactory(DjangoModelFactory):
 class ContractFactory(AutoRegisterModelFactory[Contract]):
     resource = SubFactory(ResourceFactory)
     period = (date(2020, 1, 1), None)
-    country_calendar_code = settings.HOLIDAYS_CALENDAR
     sunday_as_holiday = True
     contract_type=Contract.ContractType.EMPLOYEE
+    base = SubFactory(CityFactory)
 
     class Meta:
         model = 'core.Contract'
