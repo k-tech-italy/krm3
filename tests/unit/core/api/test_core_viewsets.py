@@ -1,8 +1,21 @@
 import pytest
+from freezegun import freeze_time
 from ktcalendars import KTDateRange
 from rest_framework import status
 from rest_framework.reverse import reverse
 from testutils.factories import ContractFactory
+
+
+@freeze_time('2026-09-07')
+def test_can_request_active_resources_for_current_month_by_default(resource, regular_user, api_client):
+    ContractFactory(resource=resource, period=KTDateRange('2026-09-01', None))
+    ContractFactory(period=KTDateRange('2026-07-01', '2026-08-31'))
+
+    response = api_client(user=regular_user).get('/api/v1/core/resource/active/')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == [{'id': resource.id, 'first_name': resource.first_name, 'last_name': resource.last_name}]
+
 
 @pytest.mark.parametrize(
     'contracts, query_period, expected',
