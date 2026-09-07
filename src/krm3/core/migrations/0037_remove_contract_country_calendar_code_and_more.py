@@ -50,6 +50,9 @@ def backward(apps, schema_editor):  # noqa: ANN001
             contract.country_calendar_code = None
         else:
             country_code = contract.base_in.country.country_calendar_code
+            subdivision_code = contract.base_in.subdivision_code
+            if country_code and subdivision_code:
+                country_code = f'{country_code}-{subdivision_code}'
             contract.country_calendar_code = country_code
 
         contract.save(update_fields=['country_calendar_code'])
