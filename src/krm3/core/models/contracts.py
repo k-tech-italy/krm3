@@ -78,7 +78,7 @@ class Contract(models.Model):
         choices=ContractType.choices,
         default=ContractType.EMPLOYEE,
     )
-    base = models.ForeignKey(
+    base_in = models.ForeignKey(
         'core.City',
         on_delete=models.PROTECT,
         related_name='contracts',
@@ -176,9 +176,9 @@ class Contract(models.Model):
     @cached_property
     def calendar_code(self) -> str:
         """Return the country calendar code for the contract or the default calendar code if not set."""
-        if self.base and self.base.country.country_calendar_code:
-            subdivision_code = self.base.subdivision_code
-            country_calendar_code = self.base.country.country_calendar_code
+        if self.base_in and self.base_in.country.country_calendar_code:
+            subdivision_code = self.base_in.subdivision_code
+            country_calendar_code = self.base_in.country.country_calendar_code
 
             if subdivision_code:
                 return f"{country_calendar_code}-{subdivision_code}"

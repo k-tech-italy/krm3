@@ -9,49 +9,47 @@ def forward(apps, schema_editor):  # noqa: ANN001
     city_model = apps.get_model('core', 'City')
     contract_model = apps.get_model('core', 'Contract')
 
-    italy, _ = country_model.objects.update_or_create(
-        name='Italy',
-        defaults={
-            'country_calendar_code': 'IT',
-        },
+    bases = {}
+    locations = (
+        ('Italy', 'IT', 'Rome', 'RM', ('', 'IT', 'IT-RM')),
+        ('United Kingdom', 'GB', 'London', 'ENG', ('GB', 'GB-ENG')),
+        ('Poland', 'PL', 'Cracow', None, ('PL',)),
+        ('India', 'IN', 'Hyderabad', 'TS', ('IN', 'IN-TS')),
     )
-    rome, _ = city_model.objects.update_or_create(
-        name='Rome',
-        country=italy,
-        defaults={
-            'subdivision_code': 'RM',
-        },
-    )
+    for country_name, country_code, city_name, subdivision, aliases in locations:
+        country, _ = country_model.objects.update_or_create(
+            name=country_name,
+            defaults={'country_calendar_code': country_code},
+        )
+        city, _ = city_model.objects.update_or_create(
+            name=city_name,
+            country=country,
+            defaults={'subdivision_code': subdivision},
+        )
+        for alias in aliases:
+            bases[alias] = city
 
     for contract in contract_model.objects.all():
         country_code = (
             contract.country_calendar_code or ''
-        ).strip()
+        ).strip().upper()
 
-        if country_code:
-            base = city_model.objects.filter(
-                country__country_calendar_code=country_code,
-            ).first()
-        else:
-            base = rome
-
-        if base is not None:
-            contract.base = base
-            contract.save(update_fields=['base'])
+        contract.base_in = bases.get(country_code, bases['IT-RM'])
+        contract.save(update_fields=['base_in'])
 
 
 def backward(apps, schema_editor):  # noqa: ANN001
     contract_model = apps.get_model('core', 'Contract')
 
     contracts = contract_model.objects.select_related(
-        'base__country',
+        'base_in__country',
     )
 
     for contract in contracts:
-        if contract.base is None:
+        if contract.base_in is None:
             contract.country_calendar_code = None
         else:
-            country_code = contract.base.country.country_calendar_code
+            country_code = contract.base_in.country.country_calendar_code
             contract.country_calendar_code = country_code
 
         contract.save(update_fields=['country_calendar_code'])
@@ -86,7 +84,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='contract',
-            name='base',
+            name='base_in',
             field=models.ForeignKey(
                 blank=True,
                 null=True,

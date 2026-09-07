@@ -128,19 +128,19 @@ class ClientAdmin(ModelAdmin):
 @admin.register(Contract)
 class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     form = ContractForm
-    search_fields = ['resource__last_name', 'resource__first_name', 'base__name']
+    search_fields = ['resource__last_name', 'resource__first_name', 'base_in__name']
     list_display = [
         'resource',
         'get_period',
         'contract_type',
-        'base',
+        'base_in',
         'working_schedule',
         'sunday_as_holiday',
         'meal_voucher',
         'document_link',
     ]
-    list_filter = [('resource', AutoCompleteFilter), ('base', AutoCompleteFilter),]
-    autocomplete_fields = ['resource', 'base']
+    list_filter = [('resource', AutoCompleteFilter), ('base_in', AutoCompleteFilter),]
+    autocomplete_fields = ['resource', 'base_in']
     readonly_fields = ['document_link']
 
     formfield_overrides = {

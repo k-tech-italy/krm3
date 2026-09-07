@@ -97,7 +97,7 @@ class ContractFactory(AutoRegisterModelFactory[Contract]):
     period = (date(2020, 1, 1), None)
     sunday_as_holiday = True
     contract_type=Contract.ContractType.EMPLOYEE
-    base = SubFactory(CityFactory)
+    base_in = SubFactory(CityFactory)
 
     class Meta:
         model = 'core.Contract'
