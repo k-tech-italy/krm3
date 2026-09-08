@@ -42,11 +42,13 @@ class TaskEntryReadSerializer(BaseTaskEntrySerializer):
     class Meta(BaseTaskEntrySerializer.Meta):
         fields = (
             'id',
+            'task',
+            'task_title',
             'day_entry',
             'day_shift_hours',
             'on_call_hours',
             'travel_hours',
-            'night_hours',
+            'night_shift_hours',
             'comment',
             'metadata',
         )
@@ -313,9 +315,10 @@ class TimesheetSerializer(serializers.Serializer):
     tasks = serializers.SerializerMethodField()
     day_entries = DayEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
-    # schedule = serializers.DictField(child=serializers.IntegerField())
+    schedule = serializers.DictField(child=serializers.IntegerField())
     bank_hours = serializers.DecimalField(max_digits=4, decimal_places=2)
     timesheet_colors = serializers.DictField(child=serializers.CharField())
+    task_entries = TaskEntryReadSerializer(many=True)
 
     def get_tasks(self, timesheet: dto.TimesheetDTO) -> Mapping:
         return TimesheetTaskSerializer(timesheet.tasks, context={'requestor': timesheet.requested_by}, many=True).data

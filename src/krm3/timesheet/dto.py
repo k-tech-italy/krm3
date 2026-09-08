@@ -9,6 +9,7 @@ from django.contrib.postgres.fields import ranges
 from ktcalendars import KTDay
 from psycopg.types.range import DateRange
 
+from krm3.core.models import TaskEntry
 from krm3.core.models.auth import Resource, User
 from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task, TaskQuerySet
@@ -29,6 +30,7 @@ class TimesheetDTO:
         self.bank_hours = 0.0
         self.days = []
         self.contracts = Contract.objects.none()
+        self.task_entries = TaskEntry.objects.none()
 
     def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
         """Fetch the resource timesheet for a specific date interval."""
@@ -40,6 +42,9 @@ class TimesheetDTO:
 
         te_qs = DayEntry.objects.filter_acl(self.requested_by) if self.requested_by else DayEntry.objects.all()
         self.day_entries = te_qs.filter(resource=resource, day__range=(start_date, end_date))
+        self.task_entries = TaskEntry.objects.filter(
+            day_entry__in=self.day_entries,
+        ).select_related('task')
 
         self.contracts = Contract.objects.filter(
             resource=resource,
