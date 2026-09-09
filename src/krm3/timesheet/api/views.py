@@ -3,7 +3,7 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, cast, override
 
 from django.core import exceptions as django_exceptions
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
@@ -321,6 +321,17 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
         if self.request.method in ['POST', 'PUT']:
             return DayEntryCreateSerializer
         return DayEntryReadSerializer
+
+    def perform_create(self, serializer):
+        resource = serializer.validated_data['resource']
+        user = cast('User', self.request.user)
+
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied(
+                'You do not have permission to create day entries for this resource.'
+            )
+
+        serializer.save()
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = SpecialLeaveReason.objects.all()

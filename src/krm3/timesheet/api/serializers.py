@@ -2,6 +2,8 @@ import datetime
 import json
 from collections.abc import Mapping
 from decimal import Decimal
+
+from django.core.exceptions import ValidationError
 from ktcalendars import KTDay
 from typing import Any, override
 
@@ -110,72 +112,81 @@ class DayEntryReadSerializer(BaseDayEntrySerializer):
 class DayEntryCreateSerializer(BaseDayEntrySerializer):
     class Meta(BaseDayEntrySerializer.Meta):
         fields = (
-            'day_entry',
-            'day_shift_hours',
-            'night_shift_hours',
-            'on_call_hours',
-            'travel_hours',
+            'day',
+            'resource',
             'comment',
-            'metadata',
-            'bank_from',
-            'bank_to',
+            'bank',
+            'asked_holiday',
+            'leave_hours',
+            'special_leave_hours',
+            'special_leave_reason',
+            'is_sick',
+            'protocol_number',
+            'rest_hours',
         )
 
-    def validate_day_shift_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='day_shift_hours')
-
-    def validate_sick_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='sick_hours')
-
-    def validate_holiday_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='holiday_hours')
-
     def validate_leave_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='leave_hours')
+        return self._validate_hours(value)
 
     def validate_special_leave_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='special_leave_hours')
-
-    def validate_night_shift_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='night_shift_hours')
-
-    def validate_on_call_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='on_call_hours')
-
-    def validate_travel_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='travel_hours')
+        return self._validate_hours(value)
 
     def validate_rest_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='rest_hours')
+        return self._validate_hours(value)
 
-    def validate_bank_from_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='bank_from')
-
-    def validate_bank_to_hours(self, value: Hours) -> Hours:
-        return self._validate_hours(value, field='bank_to')
-
-    def _validate_hours(self, value: Hours, field: str) -> Hours:
-        if Decimal(value) < 0:
+    def _validate_hours(self, value: Hours) -> Hours:
+        if not 0 <= value <= 24:
             raise serializers.ValidationError(
-                _('Hours must not be negative, got {value}.').format(value=value), code=field
+                'Hours must be between 0 and 24.'
             )
         return value
 
     @override
     def create(self, validated_data: Any) -> DayEntry:
-        day = validated_data.pop('day')
-        resource = validated_data.pop('resource')
-        task = validated_data.pop('task', None)
-        reason = self._verify_reason_is_valid(validated_data.pop('special_leave_reason', None), day)
-        entry, _created = DayEntry.objects.update_or_create(
-            date=day,
-            resource=resource,
-            task=task,
-            special_leave_reason=reason,
-            defaults=validated_data,
-        )
-        return entry
+        day = validated_data['day']
+        resource = validated_data['resource']
 
+        if DayEntry.objects.filter(resource=resource, day=day).exists():
+            raise serializers.ValidationError({
+                'day': 'A day entry already exists for this resource and date.'
+            })
+
+        contract = Contract.objects.by_day(resource, day)
+        if contract is None:
+            raise serializers.ValidationError({
+                'day': 'No valid contract found for this date.'
+            })
+
+        reason = validated_data.get('special_leave_reason')
+        if reason is not None:
+            if reason.is_not_valid_yet(date=day) or reason.is_expired(date=day):
+                raise serializers.ValidationError({
+                    'special_leave_reason': 'The special leave reason is not valid for this date.'
+                })
+
+        timesheet: TimesheetSubmission | None = TimesheetSubmission.objects.filter(
+            resource=resource,
+            period__contains=day,
+        ).first()
+
+        entry = DayEntry(
+            **validated_data,
+            contract=contract,
+            timesheet=timesheet,
+            closed=bool(timesheet and timesheet.closed),
+            due_hours=contract.get_due_hours(day),
+            is_holiday=contract.get_ktday(day).is_holiday,
+        )
+
+        try:
+            entry.refresh(task_entries=[], drop_existing=False)
+            entry.full_clean()
+        except ValidationError as exc:
+            detail = exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
+            raise serializers.ValidationError(detail) from exc
+
+        entry.save()
+        return entry
 
 class TaskEntryCreateSerializer(BaseDayEntrySerializer):
     class Meta(BaseDayEntrySerializer.Meta):
