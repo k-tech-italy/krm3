@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import mixins, permissions, status, viewsets
+from rest_framework import serializers, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,6 +24,9 @@ from krm3.timesheet.api.serializers import (
     DayEntryCreateSerializer,
     DayEntryReadSerializer,
     TimesheetSerializer,
+    BaseTaskEntrySerializer,
+    TaskEntryCreateSerializer,
+    TaskEntryReadSerializer,
 )
 from krm3.timesheet.dto import TimesheetDTO
 from ktcalendars import KTDay, KTDateRange
@@ -117,10 +120,10 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     @override
-    def get_serializer_class(self) -> type[BaseDayEntrySerializer]:
-        if self.request.method in ['POST', 'PUT']:
-            return DayEntryCreateSerializer
-        return DayEntryReadSerializer
+    def get_serializer_class(self) -> type[BaseTaskEntrySerializer]:
+        if self.request.method in ['POST', 'PUT', 'PATCH']:
+            return TaskEntryCreateSerializer
+        return TaskEntryReadSerializer
 
     @override
     @extend_schema(
@@ -163,83 +166,30 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         ],
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        try:
-            resource_id = request.data.pop('resource_id')
-            resource = Resource.objects.get(pk=resource_id)
-            dates =  [KTDay(d).date for d in set(request.data.pop('dates'))]
-            contracts = resource.get_contract_map(start_day=dates[0], end_day=dates[-1])
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            # normalise keys for the serializer
-            request.data['task'] = request.data.pop('task_id', None)
-            request.data['resource'] = resource_id
-        except (KeyError, ObjectDoesNotExist) as e:
-            capture_exception(e)
-            if isinstance(e, KeyError):
-                return Response(data={'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(f'Object not found (e)', status=status.HTTP_404_NOT_FOUND)
+        resource = serializer.validated_data['resource_id']
+        user = cast('User', request.user)
 
-        if resource.user != request.user and not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
-            return Response(status=status.HTTP_403_FORBIDDEN)
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied(
+                'You do not have permission to create task entries for this resource.'
+            )
 
         with transaction.atomic():
-            try:
-                headers = self._create_time_entries(request, resource, contracts, dates, **request.data)
-            except _TaskEntryCreationFailure as e:
-                return Response(
-                    data={'error': f'Invalid task entry for {e.time_entry_date}: {"; ".join(e.messages)}.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            entries = serializer.save()
 
-        return Response(status=status.HTTP_201_CREATED, headers=headers)
+            response_data = TaskEntryReadSerializer(
+                entries,
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
 
-    def _create_time_entries(
-            self,
-            request: Request,
-            resource: Resource,
-            contracts: dict[KTDateRange, Contract],
-            dates: Sequence[str]) -> dict[str, str]:
-        """Generate new time entries for the `resource`.
-
-        :param request: the API request
-        :param resource: the resource requesting to log hours in the timesheet
-        :param dates: the dates for which the resource is logging hours
-        :raises _DayEntryCreationFailure: when any time entry fails validation
-        :return: the response headers on success
-        """
-        for dd in dates:
-            day_entry = DayEntry.objects.get_or_create()
-
-        # TODO: Provisional fix for #423. Will allow single day edits
-        if is_day_entry and len(dates) == 1:
-            DayEntry.objects.filter(resource_id=resource.pk, task__isnull=is_day_entry, day__in=dates).delete()
-
-        for formatted_date in dates:
-            time_entry_data = request.data.copy()
-            time_entry_data.setdefault('date', formatted_date)
-            date = datetime.date.fromisoformat(formatted_date)
-
-            if request.data.get('autofill', False):
-                contract = Contract.objects.get(
-                    resource=resource,
-                    period__overlap=(date, date + datetime.timedelta(days=1) if date else None),
-                )
-                if contract:
-                    time_entry_data['day_shift_hours'] = contract.get_remaining_due_hours(
-                        date, time_entry_data.get('task')
-                    )
-
-            serializer = self.get_serializer(data=time_entry_data, context={'request': request})
-            if serializer.is_valid(raise_exception=True):
-                try:
-                    self.perform_create(serializer)
-                except django_exceptions.ValidationError as e:
-                    raise _TaskEntryCreationFailure(time_entry_date=formatted_date, messages=e.messages) from e
-
-        if request.data.get('holiday_hours'):
-            self.notify_holiday(resource, dates)
-
-        return self.get_success_headers(serializer.data)
+        return Response(
+            response_data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(methods=['post'], detail=False)
     def clear(self, request: Request) -> Response:  # noqa: C901
@@ -285,11 +235,11 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def check_modify_allowed(self, request: Request) -> Response | None:
-        """Check if DayEntry can be modified by user and it is not belonging to a submitted Timesheet."""
-        day_entry: DayEntry = self.get_object()
-        if day_entry.resource.user != request.user and not request.user.has_perm('core.manage_any_timesheet'):
+        """Check if TaskEntry can be modified by user and it is not belonging to a submitted Timesheet."""
+        task_entry: TaskEntry = self.get_object()
+        if task_entry.day_entry.resource.user != request.user and not cast('User',request.user).has_perm('core.manage_any_timesheet'):
             return Response(status=status.HTTP_403_FORBIDDEN)
-        if day_entry.is_submitted:
+        if task_entry.is_submitted:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
         return None
 
