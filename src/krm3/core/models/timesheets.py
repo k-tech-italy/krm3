@@ -315,7 +315,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             self.is_sick = False
             self.rest_hours = D(0.0)
 
-    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True) -> None:
+    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True, save: bool =True) -> None:
         """Recalculate the day entry based on the given task entries.
 
         Invokes clean() after the calculation.
@@ -345,6 +345,8 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             self.overtime_hours = D(0.0)
 
         self.clean()
+        if save:
+            self.save()
 
     def add_task_entry(self, task_entry: TaskEntry | None = None, **kwargs) -> DayEntry:
         """Add a single TaskEntry to the DayEntry using the DayEntryProcessor and refreshes."""
