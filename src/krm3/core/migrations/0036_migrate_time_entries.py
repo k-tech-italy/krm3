@@ -9,7 +9,7 @@ def forward(apps: object, schema_editor: object) -> None:
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('core', '0033_timeentry_contract_alter_resource_preferred_language_and_more'),
+        ('core', '0035_timeentry_contract_alter_resource_preferred_language_and_more'),
     ]
 
     operations = [

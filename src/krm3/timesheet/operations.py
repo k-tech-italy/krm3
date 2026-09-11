@@ -60,7 +60,6 @@ class DayEntryProcessor:
                 )
 
         day_entry.refresh(task_entries_list)
-        day_entry.save()
         TaskEntry.objects.bulk_create(task_entries_list)
         return day_entry
 

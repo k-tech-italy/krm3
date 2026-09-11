@@ -91,8 +91,6 @@ def migrate_time_entries():
     ensure_contracts(TaskEntry)
     contract_solver = ContractSolver(resource_ids=resource_ids)
 
-    de_count = 0
-    te_count = 0
     for te in list(TaskEntry.objects.select_related('timesheet').all()):
         key = te.resource_id, te.date
         contract = contract_solver.solve(te.resource, te.date)
@@ -111,7 +109,6 @@ def migrate_time_entries():
         day_entries[key]['timesheet'] = timesheets.get(key)
 
         if te.task_id is None:  # it's a day_entry
-            de_count += 1
             day_entries[key]['asked_holiday'] = not day_entries[key]['is_holiday'] and bool(te.holiday_hours)
             day_entries[key]['leave_hours'] = te.leave_hours
             day_entries[key]['rest_hours'] = te.rest_hours
@@ -121,19 +118,15 @@ def migrate_time_entries():
             day_entries[key]['is_sick'] = bool(te.sick_hours)
             day_entries[key]['protocol_number'] = te.protocol_number
         else:  # it's a task_entry
-            te_count += 1
             day_entries[key]['task_entries'].append(te)
 
     TaskEntry.objects.filter(day_entry_id__isnull=True).delete()
 
     for de in day_entries.values():
-        de_count += 1
         task_entries = de.pop('task_entries')
         de = DayEntry(**de)
         de.refresh(task_entries=task_entries, drop_existing=False)
-        de.save()
         for te in task_entries:
-            te_count += 1
             te.day_entry = de
             te.save()
 

@@ -351,7 +351,6 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                         task_entries=None,
                         drop_existing=False,
                     )
-                    day_entry.save()
 
                     entries.append(task_entry)
 

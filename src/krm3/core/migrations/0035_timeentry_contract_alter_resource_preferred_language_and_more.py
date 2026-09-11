@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('core', '0032_contact_title_alter_contact_job_title_and_more'),
+        ('core', '0034_remove_contract_country_calendar_code_and_more'),
     ]
 
     operations = [

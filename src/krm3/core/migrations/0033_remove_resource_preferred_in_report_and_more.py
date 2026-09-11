@@ -30,7 +30,7 @@ def backward(apps, schema_editor):  # noqa: ANN001
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('core', '0035_cleanup_post_migration'),
+        ('core', '0032_contact_title_alter_contact_job_title_and_more'),
     ]
 
     operations = [

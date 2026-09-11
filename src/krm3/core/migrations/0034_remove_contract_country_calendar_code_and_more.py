@@ -60,7 +60,7 @@ def backward(apps, schema_editor):  # noqa: ANN001
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0036_remove_resource_preferred_in_report_and_more'),
+        ('core', '0033_remove_resource_preferred_in_report_and_more'),
     ]
 
     operations = [
