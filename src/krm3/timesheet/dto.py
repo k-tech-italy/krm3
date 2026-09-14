@@ -13,7 +13,7 @@ from krm3.core.models import TaskEntry
 from krm3.core.models.auth import Resource, User
 from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task, TaskQuerySet
-from krm3.core.models.timesheets import DayEntriesQuerySet, DayEntry
+from krm3.core.models.timesheets import DayEntryQuerySet, DayEntry
 
 if typing.TYPE_CHECKING:
     from krm3.config.fragments.constance import ConstanceTyping
@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
 class TimesheetDTO:
     def __init__(self, requested_by: User | None = None) -> None:
         self.tasks = TaskQuerySet().none()
-        self.day_entries = DayEntriesQuerySet().none()
+        self.day_entries = DayEntryQuerySet().none()
         self.requested_by = requested_by
         self.resource = None
         self.schedule = {}

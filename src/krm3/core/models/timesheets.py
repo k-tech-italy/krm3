@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal as D  # noqa: N817
+from decimal import Decimal
 from textwrap import shorten
-from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
+from typing import TYPE_CHECKING, Any, Iterable, Protocol, Self, override, cast
 
 from constance import config
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -19,6 +19,7 @@ from krm3.timesheet.operations import DayEntryProcessor
 from krm3.utils.db.postgresql.funcs import DateRangeIntersection, Unnest
 from krm3.utils.models import CleanValidatorsMixin
 from krm3.utils.numbers import safe_dec
+from typing_extensions import deprecated
 
 from .auth import Resource
 
@@ -173,21 +174,31 @@ class TimesheetSubmission(models.Model):
         return TimesheetSerializer(timesheet).data
 
 
+class TimeEntryAwareQuerySet[T](Protocol, QuerySet[T]):
+    def open(self) -> Self: ...
+    def closed(self) -> Self: ...
+    def filter_acl(self) -> Self: ...
+
+
 def acl_queryset_factory(prefix: str) -> QuerySet:
-    class TimeEntriesQuerySet(QuerySet):
+    class TimeEntryQuerySet[T](QuerySet[T]):
+        _prefix = f'{prefix.rstrip("_")}__' if prefix else ''
+
         def open(self) -> Self:
             """Select the open time entries in this queryset.
 
             :return: the filtered queryset.
             """
-            return self.filter(Q(**{f'{prefix}timesheet__isnull': True}) | Q(**{f'{prefix}timesheet__closed': False}))
+            return self.filter(
+                Q(**{f'{self._prefix}timesheet__isnull': True}) | Q(**{f'{self._prefix}timesheet__closed': False})
+            )
 
         def closed(self) -> Self:
             """Select the closed time entries in this queryset.
 
             :return: the filtered queryset.
             """
-            return self.filter(**{f'{prefix}timesheet__isnull': False, f'{prefix}timesheet__closed': True})
+            return self.filter(**{f'{self._prefix}timesheet__isnull': False, f'{self._prefix}timesheet__closed': True})
 
         def filter_acl(self, user: AbstractUser) -> Self:
             """Return the queryset for the owned records.
@@ -198,13 +209,13 @@ def acl_queryset_factory(prefix: str) -> QuerySet:
                 {'core.manage_any_timesheet', 'core.view_any_timesheet'}
             ):
                 return self.all()
-            return self.filter(**{f'{prefix}resource__user': user})
+            return self.filter(**{f'{self._prefix}resource__user': user})
 
-    return TimeEntriesQuerySet
+    return TimeEntryQuerySet
 
 
-TaskEntriesQuerySet: QuerySet[TaskEntry] = acl_queryset_factory(prefix='day_entry__')
-DayEntriesQuerySet: QuerySet[DayEntry] = acl_queryset_factory(prefix='')
+TaskEntryQuerySet: TimeEntryAwareQuerySet[TaskEntry] = acl_queryset_factory(prefix='day_entry__')
+DayEntryQuerySet: TimeEntryAwareQuerySet[DayEntry] = acl_queryset_factory(prefix='')
 
 
 class DayEntry(CleanValidatorsMixin, models.Model):
@@ -250,7 +261,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     )
     meal_voucher = models.PositiveIntegerField(default=0, help_text=_('Meal voucher for the day'))
 
-    objects = DayEntriesQuerySet.as_manager()
+    objects = DayEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = 'Day entries'
@@ -267,17 +278,26 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return f'{self.resource} - {self.day}'
 
     @property
-    def bank_from(self) -> D:
-        return -1 * self.bank if self.bank < 0 else D(0)
+    def bank_from(self) -> Decimal:
+        return -1 * self.bank if self.bank < 0 else Decimal(0)
 
     @property
-    def bank_to(self) -> D:
-        return self.bank if self.bank > 0 else D(0)
+    def bank_to(self) -> Decimal:
+        return self.bank if self.bank > 0 else Decimal(0)
 
     @property
+    @deprecated('Use `not is_workday` instead')
     def nwd(self) -> bool:
-        """Return True if the day is a non-working day."""
-        return self.is_holiday or self.due_hours == 0
+        """Return True if the day is a non-workday.
+
+        **Deprecated**. Use `not is_workday` instead.
+        """
+        return not self.is_workday
+
+    @property
+    def is_workday(self) -> bool:
+        """Return True if the day is a workday."""
+        return not self.is_holiday and self.due_hours > 0
 
     def get_ktday(self) -> KTDay:
         """Return the calendar-aware KTDay given the Resource's contract."""
@@ -294,28 +314,28 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         self.closed = self.timesheet.closed if self.timesheet else False
         self.is_holiday = self.contract.get_ktday(self.day).is_holiday
         self.due_hours = self.contract.get_due_hours(self.day)
-        self.overtime_hours = D(0.0)
+        self.overtime_hours = Decimal(0.0)
         self.meal_voucher = 0
         self.taskentry_set.set(kwargs.pop('task_entries', []))
 
-        self.travel_hours = D(0.0)
-        self.day_hours = D(0.0)
-        self.night_hours = D(0.0)
-        self.on_call_hours = D(0.0)
+        self.travel_hours = Decimal(0.0)
+        self.day_hours = Decimal(0.0)
+        self.night_hours = Decimal(0.0)
+        self.on_call_hours = Decimal(0.0)
 
         self.comment = kwargs.pop('comment', self.comment)
 
         if full:  # reset also non-calculated fields
-            self.bank_hours = D(0.0)
+            self.bank_hours = Decimal(0.0)
             self.asked_holiday = False
-            self.leave_hours = D(0.0)
-            self.special_leave_hours = D(0.0)
+            self.leave_hours = Decimal(0.0)
+            self.special_leave_hours = Decimal(0.0)
             self.special_leave_reason = None
             self.protocol_number = None
             self.is_sick = False
-            self.rest_hours = D(0.0)
+            self.rest_hours = Decimal(0.0)
 
-    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True, save: bool =True) -> None:
+    def refresh(self, task_entries: Iterable[TaskEntry] | None, drop_existing: bool = True, save: bool = True) -> None:
         """Recalculate the day entry based on the given task entries.
 
         Invokes clean() after the calculation.
@@ -328,10 +348,10 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         if task_entries is None:
             task_entries = list(self.taskentry_set.all())
 
-        self.day_hours = D(sum([safe_dec(te.day_shift_hours) for te in task_entries]))
-        self.night_hours = D(sum([safe_dec(te.night_shift_hours) for te in task_entries]))
-        self.travel_hours = D(sum([safe_dec(te.travel_hours) for te in task_entries]))
-        self.on_call_hours = D(sum([safe_dec(te.on_call_hours) for te in task_entries]))
+        self.day_hours = Decimal(sum([safe_dec(te.day_shift_hours) for te in task_entries]))
+        self.night_hours = Decimal(sum([safe_dec(te.night_shift_hours) for te in task_entries]))
+        self.travel_hours = Decimal(sum([safe_dec(te.travel_hours) for te in task_entries]))
+        self.on_call_hours = Decimal(sum([safe_dec(te.on_call_hours) for te in task_entries]))
 
         if meal_threshold := self.contract.meal_threshold(self.day):
             self.meal_voucher = 1 if self.worked_hours >= meal_threshold else 0
@@ -340,9 +360,9 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
         if self.contract.overtime:
             overtime = self.worked_hours - self.due_hours
-            self.overtime_hours = overtime if overtime > 0 else D(0.0)
+            self.overtime_hours = overtime if overtime > 0 else Decimal(0.0)
         else:
-            self.overtime_hours = D(0.0)
+            self.overtime_hours = Decimal(0.0)
 
         self.clean()
         if save:
@@ -364,18 +384,18 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return dp.del_task_entry(task_or_entry=task_or_entry)
 
     @property
-    def worked_hours(self) -> D:
+    def worked_hours(self) -> Decimal:
         """The sum of Day Shift + Night Shift + Travel Hours recorded in the TaskEntries."""
-        return D(self.day_hours + self.night_hours + self.travel_hours)
+        return Decimal(self.day_hours + self.night_hours + self.travel_hours)
 
     @property
-    def regular_hours(self) -> D:
-        return D(min(self.worked_hours - D(self.bank), self.due_hours))
+    def regular_hours(self) -> Decimal:
+        return Decimal(min(self.worked_hours - Decimal(self.bank), self.due_hours))
 
     @property
-    def remaining_hours(self) -> D:
+    def remaining_hours(self) -> Decimal:
         hours = self.due_hours - self.regular_hours
-        return D(max(0.0, hours))
+        return Decimal(max(0.0, hours))
 
     @property
     def is_leave(self) -> bool:
@@ -391,10 +411,10 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     def _verify_bank_hours_balance_limits(self) -> None:
         """Verify that the transaction won't exceed total balance limits (-16 to +16)."""
-        balance_upper = D(str(config.BANK_HOURS_UPPER_BOUND))
-        balance_lower = D(str(config.BANK_HOURS_LOWER_BOUND))
+        balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
+        balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
         current_balance = self.resource.get_bank_hours_balance(self.day)
-        new_balance = current_balance + D(self.bank)
+        new_balance = current_balance + Decimal(self.bank)
 
         if new_balance > balance_upper:
             raise ValidationError(
@@ -467,7 +487,7 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
     # this will need to be turned into not nullable after migrations
     day_entry = models.ForeignKey(DayEntry, on_delete=models.CASCADE)
 
-    objects = TaskEntriesQuerySet.as_manager()
+    objects = TaskEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = 'Task entries'
@@ -507,14 +527,14 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
         )
 
     @property
-    def total_task_hours(self) -> D:
+    def total_task_hours(self) -> Decimal:
         """Compute the total task-related hours logged on this entry.
 
         :return: the computed total.
         """
         # NOTE: could use sum() on a comprehension, but `sum()` may also
         #       return Literal[0], which trips up the type checker
-        return D(self.day_shift_hours) + D(self.night_shift_hours) + D(self.travel_hours)
+        return Decimal(self.day_shift_hours) + Decimal(self.night_shift_hours) + Decimal(self.travel_hours)
 
     @property
     def is_submitted(self) -> bool:

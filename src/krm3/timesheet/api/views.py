@@ -1,23 +1,21 @@
 import datetime
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, cast, override
 
-from django.core import exceptions as django_exceptions
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import serializers, mixins, permissions, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from krm3.core.models import Contract, Resource
-from krm3.core.models.timesheets import SpecialLeaveReason, TaskEntry, DayEntry
+from krm3.core.models import Resource
+from krm3.core.models.timesheets import SpecialLeaveReason, TaskEntry, DayEntry, TimeEntryAwareQuerySet
 from krm3.events import Event
 from krm3.events.dispatcher import EventDispatcher
-from krm3.sentry import capture_exception
 from krm3.timesheet.api.serializers import (
     BaseDayEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -29,12 +27,11 @@ from krm3.timesheet.api.serializers import (
     TaskEntryReadSerializer,
 )
 from krm3.timesheet.dto import TimesheetDTO
-from ktcalendars import KTDay, KTDateRange
 
 if TYPE_CHECKING:
     from krm3.core.models import User
     from krm3.core.models.timesheets import SpecialLeaveReasonQuerySet
-    from krm3.core.models.timesheets import TaskEntriesQuerySet
+
 
 class _TaskEntryCreationFailure(Exception):
     @override
@@ -173,9 +170,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         user = cast('User', request.user)
 
         if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
-            raise PermissionDenied(
-                'You do not have permission to create task entries for this resource.'
-            )
+            raise PermissionDenied('You do not have permission to create task entries for this resource.')
 
         with transaction.atomic():
             entries = serializer.save()
@@ -199,12 +194,13 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         if not isinstance(requested_entry_ids, list):
             return Response(data={'error': 'Time entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        entries: "TaskEntriesQuerySet" = (
+        entries = cast(
+            'TimeEntryAwareQuerySet[TaskEntry]',
             self.get_queryset()
             .filter(pk__in=requested_entry_ids)
             .annotate(task_is_not_null=ExpressionWrapper(Q(task__isnull=False), output_field=BooleanField()))
-            .order_by('task_is_not_null')
-        )  # pyright: ignore[reportAssignmentType]
+            .order_by('task_is_not_null'),
+        )
 
         if not cast('User', request.user).has_any_perm('core.manage_any_timesheet'):
             # since we already ACL-filtered the queryset, we need to
@@ -237,7 +233,9 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
     def check_modify_allowed(self, request: Request) -> Response | None:
         """Check if TaskEntry can be modified by user and it is not belonging to a submitted Timesheet."""
         task_entry: TaskEntry = self.get_object()
-        if task_entry.day_entry.resource.user != request.user and not cast('User',request.user).has_perm('core.manage_any_timesheet'):
+        if task_entry.day_entry.resource.user != request.user and not cast('User', request.user).has_perm(
+            'core.manage_any_timesheet'
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
         if task_entry.is_submitted:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
@@ -265,23 +263,21 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
         user = cast('User', self.request.user)
         return DayEntry.objects.filter_acl(user=user)  # pyright: ignore
 
-
     @override
     def get_serializer_class(self) -> type[BaseDayEntrySerializer]:
         if self.request.method in ['POST', 'PUT']:
             return DayEntryCreateSerializer
         return DayEntryReadSerializer
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: BaseDayEntrySerializer) -> None:
         resource = serializer.validated_data['resource']
         user = cast('User', self.request.user)
 
         if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
-            raise PermissionDenied(
-                'You do not have permission to create day entries for this resource.'
-            )
+            raise PermissionDenied('You do not have permission to create day entries for this resource.')
 
         serializer.save()
+
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = SpecialLeaveReason.objects.all()
