@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import abc
 import datetime
 from decimal import Decimal
 from textwrap import shorten
-from typing import TYPE_CHECKING, Any, Iterable, Protocol, Self, override, cast
+from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
 
 from constance import config
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -174,14 +175,22 @@ class TimesheetSubmission(models.Model):
         return TimesheetSerializer(timesheet).data
 
 
-class TimeEntryAwareQuerySet[T](Protocol, QuerySet[T]):
+type TimeEntry = DayEntry | TaskEntry
+
+
+class TimeEntryAwareQuerySet[T: TimeEntry](QuerySet[T], abc.ABC):
+    @abc.abstractmethod
     def open(self) -> Self: ...
+
+    @abc.abstractmethod
     def closed(self) -> Self: ...
+
+    @abc.abstractmethod
     def filter_acl(self) -> Self: ...
 
 
-def acl_queryset_factory(prefix: str) -> QuerySet:
-    class TimeEntryQuerySet[T](QuerySet[T]):
+def acl_queryset_factory[T: models.Model](prefix: str) -> type[TimeEntryAwareQuerySet[T]]:
+    class TimeEntryQuerySet(TimeEntryAwareQuerySet):
         _prefix = f'{prefix.rstrip("_")}__' if prefix else ''
 
         def open(self) -> Self:
@@ -214,8 +223,8 @@ def acl_queryset_factory(prefix: str) -> QuerySet:
     return TimeEntryQuerySet
 
 
-TaskEntryQuerySet: TimeEntryAwareQuerySet[TaskEntry] = acl_queryset_factory(prefix='day_entry__')
-DayEntryQuerySet: TimeEntryAwareQuerySet[DayEntry] = acl_queryset_factory(prefix='')
+TaskEntryQuerySet: type[TimeEntryAwareQuerySet[TaskEntry]] = acl_queryset_factory(prefix='day_entry__')
+DayEntryQuerySet: type[TimeEntryAwareQuerySet[DayEntry]] = acl_queryset_factory(prefix='')
 
 
 class DayEntry(CleanValidatorsMixin, models.Model):
