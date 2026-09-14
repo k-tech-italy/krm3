@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from ktcalendars.types import KTDayType
 
-    from krm3.core.models import Contract
+    from krm3.core.models import Contract, DayEntry
 
 
 class UserManager(BaseUserManager):
@@ -131,6 +131,10 @@ class Resource(models.Model):
     preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
 
     objects = ResourceQuerySet.as_manager()
+
+    if TYPE_CHECKING:
+        dayentry_set: models.Manager[DayEntry]
+        contract_set: models.Manager[Contract]
 
     class Meta:
         ordering = ['last_name', 'first_name']

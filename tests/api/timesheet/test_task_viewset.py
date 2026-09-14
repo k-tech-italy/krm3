@@ -16,6 +16,7 @@ from rest_framework.reverse import reverse
 from testutils.date_utils import _dt
 from testutils.factories import (
     ContractFactory,
+    DayEntryFactory,
     ExtraHolidayFactory,
     ProjectFactory,
     ResourceFactory,
@@ -123,6 +124,22 @@ class TestTaskAPIListView:
         if expected_status_code >= 400:
             assert response.data == {'error': 'Start date must be earlier than end date.'}
 
+    def test_returns_submission_state_for_requested_period(self, admin_user, api_client):
+        resource = ResourceFactory()
+        TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2024-01-01', '2024-01-08'),
+            closed=True,
+        )
+
+        response = api_client(user=admin_user).get(
+            self.url(),
+            data={'resource_id': resource.pk, 'start_date': '2024-01-01', 'end_date': '2024-01-07'},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['submitted'] is True
+
     @override_config(LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME='111111')
     @override_config(EXACT_SCHEDULE_COLOR_BRIGHT_THEME='222222')
     @override_config(MORE_THAN_SCHEDULE_COLOR_BRIGHT_THEME='333333')
@@ -190,6 +207,7 @@ class TestTaskAPIListView:
             return str(Decimal(n).quantize(Decimal('1.00')))
 
         expected_response = {
+            'submitted': False,
             'tasks': [
                 {
                     'id': task.pk,
@@ -784,6 +802,82 @@ class TestTimeEntryAPICreateView:
         response = api_client(user=admin_user).post(self.url(), data=time_entry_data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         assert TimeEntry.objects.filter(task=task).exists()
+
+    @pytest.mark.parametrize(
+        'covered_hours',
+        (
+            pytest.param({'leave_hours': 4}, id='leave'),
+            pytest.param({'special_leave_hours': 4}, id='special_leave'),
+            pytest.param({'rest_hours': 4}, id='rest'),
+            pytest.param({'bank': -4}, id='bank_withdrawal'),
+        ),
+    )
+    @pytest.mark.parametrize(
+        ('working_hours', 'expected_status'),
+        (
+            pytest.param(4, status.HTTP_201_CREATED, id='available_hours'),
+            pytest.param(5, status.HTTP_400_BAD_REQUEST, id='above_available_hours'),
+        ),
+    )
+    def test_limits_working_hours_when_due_hours_are_partially_covered(
+        self,
+        covered_hours,
+        working_hours,
+        expected_status,
+        admin_user,
+        api_client,
+    ):
+        resource = ResourceFactory()
+        day = datetime.date(2024, 1, 1)
+        contract = ContractFactory(resource=resource, period=(day, None))
+        DayEntryFactory(
+            resource=resource,
+            contract=contract,
+            day=day,
+            due_hours=8,
+            **covered_hours,
+        )
+        task = TaskFactory(resource=resource)
+
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': [day.isoformat()],
+                'dayShiftHours': working_hours,
+                'taskId': task.pk,
+                'resourceId': resource.pk,
+            },
+            format='json',
+        )
+
+        assert response.status_code == expected_status
+
+    def test_counts_working_hours_from_other_tasks_against_available_hours(self, admin_user, api_client):
+        resource = ResourceFactory()
+        day = datetime.date(2024, 1, 1)
+        contract = ContractFactory(resource=resource, period=(day, None))
+        day_entry = DayEntryFactory(
+            resource=resource,
+            contract=contract,
+            day=day,
+            due_hours=8,
+            leave_hours=4,
+        )
+        TaskEntryFactory(day_entry=day_entry, task=TaskFactory(resource=resource), day_shift_hours=2)
+        task = TaskFactory(resource=resource)
+
+        response = api_client(user=admin_user).post(
+            self.url(),
+            data={
+                'dates': [day.isoformat()],
+                'dayShiftHours': 3,
+                'taskId': task.pk,
+                'resourceId': resource.pk,
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @override_config(
         DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
