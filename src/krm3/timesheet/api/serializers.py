@@ -541,6 +541,27 @@ class StartEndDateRangeField(serializers.Field):
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     period = StartEndDateRangeField()
 
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        attrs = super().validate(attrs)
+        if self.instance is not None or not attrs.get('closed', True):
+            return attrs
+
+        period = attrs['period']
+        timesheet = dto.TimesheetDTO().fetch(attrs['resource'], period.lower, period.upper)
+        entries_by_day = {entry.day: entry for entry in timesheet.day_entries}
+        unfulfilled_days = []
+
+        for day, due_hours in timesheet.schedule.items():
+            entry = entries_by_day.get(day.date)
+            if entry is None or not entry.fulfills_due_hours(Decimal(str(due_hours))):
+                unfulfilled_days.append(day.date.isoformat())
+
+        if unfulfilled_days:
+            raise serializers.ValidationError({
+                'error': _('Due hours are not fulfilled for: {days}.').format(days=', '.join(unfulfilled_days))
+            })
+        return attrs
+
     def is_valid(self, *, raise_exception: bool = False) -> bool:
         user = self.context['request'].user
         resource = user.get_resource()

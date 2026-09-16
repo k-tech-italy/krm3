@@ -368,6 +368,23 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         """The sum of Day Shift + Night Shift + Travel Hours recorded in the TaskEntries."""
         return D(self.day_hours + self.night_hours + self.travel_hours)
 
+    def fulfills_due_hours(self, due_hours: D) -> bool:
+        """Return whether this entry fulfills the current contract's due hours."""
+        if self.is_sick or self.asked_holiday:
+            return True
+
+        fulfilled_hours = self.worked_hours + sum(
+            (
+                safe_dec(self.on_call_hours),
+                safe_dec(self.bank_from),
+                safe_dec(self.leave_hours),
+                safe_dec(self.special_leave_hours),
+                safe_dec(self.rest_hours),
+            ),
+            start=D(0),
+        )
+        return fulfilled_hours >= safe_dec(due_hours)
+
     @property
     def regular_hours(self) -> D:
         return D(min(self.worked_hours - D(self.bank), self.due_hours))

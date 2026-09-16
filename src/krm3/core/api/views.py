@@ -310,16 +310,15 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
             ret = ret.filter(resource_id=resource.id)
         return ret
 
-    def create(self, request: Request, *args, **kwargs) -> Response:
+    def perform_create(self, serializer: TimesheetSubmissionSerializer) -> None:
         """Create a new Timesheet submission or replace an existing opened one."""
-        period = request.data['period'][:]
-        period[1] = str(KTDay(period[1]) + 1)
+        period = serializer.validated_data['period']
         ts = TimesheetSubmission.objects.filter(
-            resource_id=request.data['resource'], period=period, closed=False
+            resource=serializer.validated_data['resource'], period=period, closed=False
         ).first()
         if ts:
             ts.delete()
-        return super().create(request, *args, **kwargs)
+        serializer.save()
 
 
 class ContactAPIViewSet(ModelViewSet):

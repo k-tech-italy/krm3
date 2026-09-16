@@ -1,9 +1,12 @@
 import typing
+from datetime import date
 
 import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from testutils.factories import (
+    ContractFactory,
+    DayEntryFactory,
     GroupFactory,
     ResourceFactory,
     TimesheetSubmissionFactory,
@@ -171,3 +174,86 @@ class TestTimesheetSubmissionModelAPIListView:
         assert response.status_code == status.HTTP_201_CREATED
         ts = TimesheetSubmission.objects.get(pk=response.data['id'])
         assert ts.timesheet is not None
+
+    def test_rejects_submission_when_logged_hours_do_not_meet_current_due_hours(
+        self, api_client, regular_user
+    ):
+        resource: Resource = ResourceFactory(user=regular_user)
+        contract = ContractFactory(
+            resource=resource,
+            working_schedule={'mon': 0, 'tue': 4, 'wed': 0, 'thu': 0, 'fri': 0, 'sat': 0, 'sun': 0},
+        )
+        DayEntryFactory(
+            resource=resource,
+            contract=contract,
+            day=date(2026, 9, 15),
+            due_hours=4,
+            day_hours=4,
+        )
+
+        contract.working_schedule = {
+            'mon': 0,
+            'tue': 8,
+            'wed': 0,
+            'thu': 0,
+            'fri': 0,
+            'sat': 0,
+            'sun': 0,
+        }
+        contract.save()
+
+        response = api_client(user=regular_user).post(
+            self.url(), data={'resource': resource.pk, 'period': ('2026-09-15', '2026-09-15')}, format='json'
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == {'error': ['Due hours are not fulfilled for: 2026-09-15.']}
+
+    @pytest.mark.parametrize('logged_hours', [8, 9], ids=['exact-hours', 'overtime'])
+    def test_accepts_submission_when_logged_hours_meet_or_exceed_current_due_hours(
+        self, logged_hours, api_client, regular_user
+    ):
+        resource: Resource = ResourceFactory(user=regular_user)
+        contract = ContractFactory(
+            resource=resource,
+            working_schedule={'mon': 0, 'tue': 8, 'wed': 0, 'thu': 0, 'fri': 0, 'sat': 0, 'sun': 0},
+        )
+        DayEntryFactory(
+            resource=resource,
+            contract=contract,
+            day=date(2026, 9, 15),
+            due_hours=8,
+            day_hours=logged_hours,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(), data={'resource': resource.pk, 'period': ('2026-09-15', '2026-09-15')}, format='json'
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_failed_resubmission_preserves_existing_open_submission(self, api_client, regular_user):
+        resource: Resource = ResourceFactory(user=regular_user)
+        contract = ContractFactory(
+            resource=resource,
+            working_schedule={'mon': 0, 'tue': 8, 'wed': 0, 'thu': 0, 'fri': 0, 'sat': 0, 'sun': 0},
+        )
+        DayEntryFactory(
+            resource=resource,
+            contract=contract,
+            day=date(2026, 9, 15),
+            due_hours=4,
+            day_hours=4,
+        )
+        existing = TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2026-09-15', '2026-09-16'),
+            closed=False,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(), data={'resource': resource.pk, 'period': ('2026-09-15', '2026-09-15')}, format='json'
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert TimesheetSubmission.objects.filter(pk=existing.pk, closed=False).exists()
