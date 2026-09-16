@@ -225,8 +225,23 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             )
 
         with transaction.atomic():
-            for entry in entries:
-                entry.delete()
+            day_entry_ids = list(
+                entries.values_list('day_entry_id', flat=True).distinct()
+            )
+
+            day_entries = list(
+                DayEntry.objects
+                .select_for_update()
+                .filter(pk__in=day_entry_ids)
+            )
+
+            entries.delete()
+
+            for day_entry in day_entries:
+                day_entry.refresh(
+                    task_entries=None,
+                    drop_existing=False,
+                )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

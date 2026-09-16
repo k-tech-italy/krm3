@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 DAYTIME_WORK_HOURS_MAX = 16
 NIGHTTIME_WORK_HOURS_MAX = 8
+TOTAL_WORK_HOURS_MAX = 24
 
 
 class SpecialLeaveReasonQuerySet(QuerySet):
@@ -285,14 +286,6 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     def __str__(self) -> str:
         return f'{self.resource} - {self.day}'
-
-    @property
-    def bank_from(self) -> Decimal:
-        return -1 * self.bank if self.bank < 0 else Decimal(0)
-
-    @property
-    def bank_to(self) -> Decimal:
-        return self.bank if self.bank > 0 else Decimal(0)
 
     @property
     @deprecated('Use `not is_workday` instead')
