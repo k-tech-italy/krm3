@@ -142,13 +142,13 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
         )
 
         if asked_holiday and is_sick:
-            raise serializers.ValidationError(
-                _('A day cannot be both holiday and sick.')
-            )
+            raise serializers.ValidationError({
+                'error': _('A day cannot be both holiday and sick.')
+            })
 
         if not is_sick and protocol_number is not None:
             raise serializers.ValidationError({
-                'protocol_number': _(
+                'error': _(
                     'Protocol number can only be set for a sick day.'
                 )
             })
@@ -167,7 +167,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
     def _validate_hours(self, value: Hours) -> Hours:
         if not 0 <= value <= 24:
             raise serializers.ValidationError({
-             'hour': _('Hours must be between 0 and 24.')
+                'error': _('Hours must be between 0 and 24.')
             })
         return value
 
@@ -178,20 +178,20 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
 
         if DayEntry.objects.filter(resource=resource, day=day).exists():
             raise serializers.ValidationError({
-                'day': _('A day entry already exists for this resource and date.')
+                'error': _('A day entry already exists for this resource and date.')
             })
 
         contract = Contract.objects.by_day(resource, day)
         if contract is None:
             raise serializers.ValidationError({
-                'day': _('No valid contract found for this date.')
+                'error': _('No valid contract found for this date.')
             })
 
         reason = validated_data.get('special_leave_reason')
         if reason is not None:
             if reason.is_not_valid_yet(date=day) or reason.is_expired(date=day):
                 raise serializers.ValidationError({
-                    'special_leave_reason': _('The special leave reason is not valid for this date.')
+                    'error': _('The special leave reason is not valid for this date.')
                 })
 
         timesheet: TimesheetSubmission | None = TimesheetSubmission.objects.filter(
@@ -273,7 +273,9 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
 
         request = self.context.get('request')
         if request is None:
-            raise exceptions.PermissionDenied()
+            raise exceptions.PermissionDenied({
+                'error': _('You do not have permission to perform this action.')
+            })
 
         if self.instance is None:
             resource = attrs['resource_id']
@@ -288,19 +290,19 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                 and not user.has_perm('core.manage_any_timesheet')
         ):
             raise exceptions.PermissionDenied({
-                'task_id': _('The task is not assigned to the selected resource.')
+                'error': _('The task is not assigned to the selected resource.')
             })
 
         if (
                 resource.user_id != user.pk
                 and not user.has_perm('core.manage_any_timesheet')
         ):
-            raise exceptions.PermissionDenied(
-                _(
+            raise exceptions.PermissionDenied({
+                'error': _(
                     'You do not have permission to create task entries '
                     'for this resource.'
                 )
-            )
+            })
 
         if self.instance is None:
             task = attrs['task_id']
@@ -311,7 +313,7 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
 
             if invalid_dates:
                 raise serializers.ValidationError({
-                    'dates': _(
+                    'error': _(
                         'Cannot create task entries outside the task period.'
                     ).format(
                         dates=', '.join(day.isoformat() for day in invalid_dates)
@@ -335,9 +337,9 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
     def _validate_hours(self, value: Hours, field: str) -> Hours:
         if Decimal(value) < 0:
             raise serializers.ValidationError(
-                _('Hours must not be negative, got {value}.').format(
+                {'error': _('Hours must not be negative, got {value}.').format(
                     value=value
-                ),
+                )},
                 code=field,
             )
 
@@ -377,17 +379,17 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
 
         if day > DAYTIME_WORK_HOURS_MAX:
             raise serializers.ValidationError(
-                {'day_shift_hours': _('Maximum 16 daytime hours per day.')}
+                {'error': _('Maximum 16 daytime hours per day.')}
             )
 
         if night > NIGHTTIME_WORK_HOURS_MAX:
             raise serializers.ValidationError(
-                {'night_shift_hours': _('Maximum 8 nighttime hours per day.')}
+                {'error': _('Maximum 8 nighttime hours per day.')}
             )
 
         if day + night + travel + on_call > TOTAL_WORK_HOURS_MAX:
             raise serializers.ValidationError(
-                {'total_hours': _('Maximum 24 total hours per day.')}
+                {'error': _('Maximum 24 total hours per day.')}
             )
 
     def _get_autofill_hours(self, day_entry: DayEntry) -> Decimal:
@@ -397,7 +399,6 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                 day_entry.day_hours
                 + day_entry.night_hours
                 + day_entry.travel_hours
-                + day_entry.on_call_hours
                 + day_entry.leave_hours
                 + day_entry.special_leave_hours
                 + day_entry.rest_hours
@@ -469,7 +470,7 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                 for day in dates:
                     if Contract.objects.by_day(resource, day) is None:
                         raise serializers.ValidationError({
-                            'dates': _('No valid contract found for {day}.').format(day=day)
+                            'error': _('No valid contract found for {day}.').format(day=day)
                         })
 
                     try:
@@ -501,7 +502,7 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
 
                     if day_entry.closed:
                         raise serializers.ValidationError({
-                            'day_entry': (
+                            'error': (
                                 'Cannot add task entries to a closed timesheet.'
                             )
                         })
@@ -593,14 +594,18 @@ def _verify_reason_is_valid(
             return None
 
         if reason.is_not_valid_yet(date=date):
-            raise serializers.ValidationError(
-                _('Reason for special leave is not valid yet: "{value}"').format(value=reason.title)
-            )
+            raise serializers.ValidationError({
+                'error': _('Reason for special leave is not valid yet: "{value}"').format(
+                    value=reason.title
+                )
+            })
 
         if reason.is_expired(date=date):
-            raise serializers.ValidationError(
-                _('Reason for special leave is expired: "{value}"').format(value=reason.title)
-            )
+            raise serializers.ValidationError({
+                'error': _('Reason for special leave is expired: "{value}"').format(
+                    value=reason.title
+                )
+            })
 
         return reason
 
