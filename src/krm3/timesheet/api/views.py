@@ -101,6 +101,31 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
 class TaskEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    @staticmethod
+    def _has_non_task_data(day_entry: DayEntry) -> bool:
+        """Return whether a day entry contains data unrelated to tasks."""
+        return any(
+            (
+                day_entry.bank,
+                day_entry.asked_holiday,
+                day_entry.leave_hours,
+                day_entry.special_leave_hours,
+                day_entry.is_sick,
+                day_entry.rest_hours,
+            )
+        )
+
+    def _refresh_or_delete_day_entry(self, day_entry: DayEntry) -> None:
+        """Delete an empty day entry or refresh its remaining task data."""
+        if not day_entry.taskentry_set.exists() and not self._has_non_task_data(day_entry):
+            day_entry.delete()
+            return
+
+        day_entry.refresh(
+            task_entries=None,
+            drop_existing=False,
+        )
+
     @override
     def get_queryset(self) -> QuerySet[TaskEntry]:
         user = cast('User', self.request.user)
@@ -115,6 +140,12 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         if resp := self.check_modify_allowed(request):
             return resp
         return super().destroy(request, *args, **kwargs)
+
+    @override
+    def perform_destroy(self, instance: TaskEntry) -> None:
+        day_entry = instance.day_entry
+        instance.delete()
+        self._refresh_or_delete_day_entry(day_entry)
 
     @override
     def get_serializer_class(self) -> type[BaseTaskEntrySerializer]:
@@ -238,10 +269,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             entries.delete()
 
             for day_entry in day_entries:
-                day_entry.refresh(
-                    task_entries=None,
-                    drop_existing=False,
-                )
+                self._refresh_or_delete_day_entry(day_entry)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
