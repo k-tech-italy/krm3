@@ -124,8 +124,9 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """
-        Validate holiday and sickness data consistency.
-        A day cannot be both holiday and sick; protocol is allowed only for sick days.
+        Validate holiday, sickness, and special leave data consistency.
+        A day cannot be both holiday and sick; protocol is allowed only for sick days;
+        special leave hours require a reason.
         Omitted update fields keep their stored values.
         """
         asked_holiday = attrs.get(
@@ -140,6 +141,14 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             'protocol_number',
             self.instance.protocol_number if self.instance else None,
         )
+        special_leave_hours = attrs.get(
+            'special_leave_hours',
+            self.instance.special_leave_hours if self.instance else 0,
+        )
+        special_leave_reason = attrs.get(
+            'special_leave_reason',
+            self.instance.special_leave_reason if self.instance else None,
+        )
 
         if asked_holiday and is_sick:
             raise serializers.ValidationError({
@@ -151,6 +160,11 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
                 'error': _(
                     'Protocol number can only be set for a sick day.'
                 )
+            })
+
+        if special_leave_hours > 0 and special_leave_reason is None:
+            raise serializers.ValidationError({
+                'error': _('A special leave reason is required when special leave hours are set.')
             })
 
         return attrs

@@ -321,6 +321,87 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
 
         serializer.save()
 
+    def _ids_from_request(self, request: Request) -> list[Any] | Response:
+        """Read and validate the 'ids' list from the request body."""
+        requested_entry_ids = request.data.get('ids', [])
+        if not requested_entry_ids:
+            return Response(data={'error': 'No day entry ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(requested_entry_ids, list):
+            return Response(data={'error': 'Day entry ids must be in a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        return requested_entry_ids
+
+    def _acl_error(self, request: Request, ids: list[Any], entries: list[DayEntry]) -> Response | None:
+        """Return a 403 Response if the user has no rights on the requested day entries, otherwise None."""
+        user = cast('User', request.user)
+        if not user.has_any_perm('core.manage_any_timesheet'):
+            fetched_entry_ids = {entry.pk for entry in entries}
+            is_missing_acl_filtered_entries = set(ids) != fetched_entry_ids
+            is_user_unauthorized = any(entry.resource.user != user for entry in entries)
+
+            if is_missing_acl_filtered_entries or is_user_unauthorized:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+        return None
+
+    @action(methods=['post'], detail=False, url_path='delete', url_name='delete')
+    def delete_non_task_data(self, request: Request) -> Response:
+        """Delete non-task data from multiple day entries while preserving their task entries."""
+        ids = self._ids_from_request(request)
+        if isinstance(ids, Response):
+            return ids
+
+        with transaction.atomic():
+            entries = list(self.get_queryset().filter(pk__in=ids).prefetch_related('taskentry_set'))
+
+            if (error := self._acl_error(request, ids, entries)):
+                return error
+
+            if any(entry.closed for entry in entries):
+                return Response(
+                    data={'error': 'Found closed day entry. Closed day entries are frozen and cannot be cleared.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            for entry in entries:
+                if not entry.taskentry_set.exists():
+                    entry.delete()
+                    continue
+
+                entry.bank = 0
+                entry.asked_holiday = False
+                entry.leave_hours = 0
+                entry.special_leave_hours = 0
+                entry.special_leave_reason = None
+                entry.protocol_number = None
+                entry.is_sick = False
+                entry.rest_hours = 0
+                entry.comment = None
+                entry.refresh(task_entries=None, drop_existing=False)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'], detail=False)
+    def clear(self, request: Request) -> Response:
+        """Delete multiple day entries and their related task entries."""
+        ids = self._ids_from_request(request)
+        if isinstance(ids, Response):
+            return ids
+
+        with transaction.atomic():
+            entries = list(self.get_queryset().filter(pk__in=ids))
+
+            if (error := self._acl_error(request, ids, entries)):
+                return error
+
+            if any(entry.closed for entry in entries):
+                return Response(
+                    data={'error': 'Found closed day entry. Closed day entries are frozen and cannot be deleted.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            DayEntry.objects.filter(pk__in=[entry.pk for entry in entries]).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SpecialLeaveReasonViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = SpecialLeaveReason.objects.all()
