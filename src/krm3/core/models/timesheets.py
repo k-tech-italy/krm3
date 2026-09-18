@@ -288,6 +288,49 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return f'{self.resource} - {self.day}'
 
     @property
+    def effective_hours(self) -> Decimal:
+        """Return the hours covered by work, absences and bank operations."""
+        return Decimal(
+            self.worked_hours
+            + self.leave_hours
+            + self.special_leave_hours
+            + self.rest_hours
+            - self.bank
+        )
+
+    def verify_bank_hours_against_scheduled_hours(self) -> None:
+        """Ensure that bank operations do not cross the scheduled hours."""
+        if self.bank > 0 and self.effective_hours < self.due_hours:
+            message = _(
+                'Cannot deposit {bank_hours} bank hours. '
+                'Total hours would become {task_hours} '
+                'which is below scheduled hours ({scheduled_hours})'
+            ).format(
+                bank_hours=self.bank,
+                task_hours=self.effective_hours,
+                scheduled_hours=self.due_hours,
+            )
+
+            raise ValidationError(
+                f'Invalid day entry for {self.day}: {message}',
+                code='bank_deposit_below_scheduled_hours',
+            )
+
+        if self.bank < 0 and self.effective_hours > self.due_hours:
+            message = _(
+                'Cannot withdraw bank hours when task hours ({task_hours}) '
+                'are higher or equal scheduled hours ({scheduled_hours})'
+            ).format(
+                task_hours=self.effective_hours,
+                scheduled_hours=self.due_hours,
+            )
+
+            raise ValidationError(
+                f'Invalid day entry for {self.day}: {message}',
+                code='bank_withdraw_above_scheduled_hours',
+            )
+
+    @property
     @deprecated('Use `not is_workday` instead')
     def nwd(self) -> bool:
         """Return True if the day is a non-workday.

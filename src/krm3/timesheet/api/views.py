@@ -100,6 +100,7 @@ class TimesheetAPIViewSet(viewsets.GenericViewSet):
 
 class TaskEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     @staticmethod
     def _has_non_task_data(day_entry: DayEntry) -> bool:
@@ -131,11 +132,6 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         user = cast('User', self.request.user)
         return TaskEntry.objects.filter_acl(user=user)  # pyright: ignore
 
-    def update(self, request: Request, *args, **kwargs) -> Response:
-        if resp := self.check_modify_allowed(request):
-            return resp
-        return super().update(request, *args, **kwargs)
-
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         if resp := self.check_modify_allowed(request):
             return resp
@@ -149,7 +145,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
 
     @override
     def get_serializer_class(self) -> type[BaseTaskEntrySerializer]:
-        if self.request.method in ['POST', 'PUT', 'PATCH']:
+        if self.request.method == 'POST':
             return TaskEntryCreateSerializer
         return TaskEntryReadSerializer
 
@@ -300,6 +296,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
 
 class DayEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     @override
     def get_queryset(self) -> QuerySet[DayEntry]:
@@ -308,7 +305,7 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
 
     @override
     def get_serializer_class(self) -> type[BaseDayEntrySerializer]:
-        if self.request.method in ['POST', 'PUT']:
+        if self.request.method == 'POST':
             return DayEntryCreateSerializer
         return DayEntryReadSerializer
 
@@ -320,6 +317,52 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
             raise PermissionDenied('You do not have permission to create day entries for this resource.')
 
         serializer.save()
+
+    @override
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        dates = serializer.validated_data.pop('dates', None)
+        if dates is None:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        resource = serializer.validated_data['resource']
+        user = cast('User', request.user)
+        if resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to modify day entries for this resource.')
+
+        saved_entries = []
+        with transaction.atomic():
+            Resource.objects.select_for_update().get(pk=resource.pk)
+            existing_entries = {
+                entry.day: entry
+                for entry in DayEntry.objects.select_for_update().filter(resource=resource, day__in=dates)
+            }
+
+            if any(entry.closed for entry in existing_entries.values()):
+                return Response(
+                    data={'error': _('Closed day entries cannot be modified.')},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            for day in dates:
+                entry_data = serializer.validated_data.copy()
+                entry_data['day'] = day
+                entry = existing_entries.get(day)
+                if entry is None:
+                    saved_entries.append(serializer.create(entry_data))
+                else:
+                    saved_entries.append(serializer.update(entry, entry_data))
+
+        response_data = DayEntryReadSerializer(
+            saved_entries,
+            many=True,
+            context=self.get_serializer_context(),
+        ).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def _ids_from_request(self, request: Request) -> list[Any] | Response:
         """Read and validate the 'ids' list from the request body."""

@@ -107,9 +107,17 @@ class DayEntryReadSerializer(BaseDayEntrySerializer):
 
 
 class DayEntryCreateSerializer(BaseDayEntrySerializer):
+    dates = serializers.ListField(
+        child=serializers.DateField(),
+        allow_empty=False,
+        required=False,
+        write_only=True,
+    )
+
     class Meta(BaseDayEntrySerializer.Meta):
         fields = (
             'day',
+            'dates',
             'resource',
             'comment',
             'bank',
@@ -121,6 +129,9 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             'protocol_number',
             'rest_hours',
         )
+        extra_kwargs = {
+            'day': {'required': False},
+        }
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """
@@ -129,6 +140,17 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
         special leave hours require a reason.
         Omitted update fields keep their stored values.
         """
+        day = attrs.get('day')
+        dates = attrs.get('dates')
+
+        if bool(day) == bool(dates):
+            raise serializers.ValidationError({
+                'error': _('Provide either day or dates, but not both.')
+            })
+
+        if dates:
+            attrs['dates'] = sorted(set(dates))
+
         asked_holiday = attrs.get(
             'asked_holiday',
             self.instance.asked_holiday if self.instance else False,
@@ -231,6 +253,30 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
 
         entry.save()
         return entry
+
+    @override
+    def update(
+            self,
+            instance: DayEntry,
+            validated_data: dict[str, Any],
+    ) -> DayEntry:
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        try:
+            instance.verify_bank_hours_against_scheduled_hours()
+
+            with transaction.atomic():
+                if instance.asked_holiday or instance.is_sick:
+                    instance.refresh(task_entries=[])
+                else:
+                    instance.save()
+        except ValidationError as exc:
+            detail = exc.message_dict if hasattr(exc, 'message_dict') else {'error': exc.messages[0]}
+            raise serializers.ValidationError(detail) from exc
+
+        return instance
+
 
 class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
     resource_id = serializers.PrimaryKeyRelatedField(
@@ -535,16 +581,19 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                             hours=hours_to_fill,
                         )
                     else:
-                        self._validate_daily_hour_limits(
-                            day_entry=day_entry,
-                            candidate_hours=entry_data,
-                        )
-
-                        task_entry = TaskEntry.objects.create(
-                            day_entry=day_entry,
-                            task=task,
-                            **entry_data,
-                        )
+                        task_entry = day_entry.taskentry_set.filter(task=task).first()
+                        if task_entry is None:
+                            self._validate_daily_hour_limits(
+                                day_entry=day_entry,
+                                candidate_hours=entry_data,
+                            )
+                            task_entry = TaskEntry.objects.create(
+                                day_entry=day_entry,
+                                task=task,
+                                **entry_data,
+                            )
+                        else:
+                            task_entry = self.update(task_entry, entry_data)
 
                     day_entry.refresh(
                         task_entries=None,
