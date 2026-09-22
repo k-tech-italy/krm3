@@ -37,6 +37,12 @@ from krm3.timesheet import dto, utils
 type Hours = Decimal | float | int
 
 
+def _model_validation_error_detail(exc: ValidationError) -> dict[str, str | list[str]]:
+    if hasattr(exc, 'message_dict'):
+        return exc.message_dict
+    return {'error': '; '.join(exc.messages)}
+
+
 class BaseDayEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = DayEntry
@@ -212,6 +218,9 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
         day = validated_data['day']
         resource = validated_data['resource']
 
+        if validated_data.get('special_leave_hours', 0) == 0:
+            validated_data['special_leave_reason'] = None
+
         if DayEntry.objects.filter(resource=resource, day=day).exists():
             raise serializers.ValidationError({
                 'error': _('A day entry already exists for this resource and date.')
@@ -248,8 +257,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             entry.refresh(task_entries=[], drop_existing=False)
             entry.full_clean()
         except ValidationError as exc:
-            detail = exc.message_dict if hasattr(exc, 'message_dict') else exc.messages
-            raise serializers.ValidationError(detail) from exc
+            raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
 
         entry.save()
         return entry
@@ -263,6 +271,9 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
         for field, value in validated_data.items():
             setattr(instance, field, value)
 
+        if instance.special_leave_hours == 0:
+            instance.special_leave_reason = None
+
         try:
             instance.verify_bank_hours_against_scheduled_hours()
 
@@ -272,8 +283,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
                 else:
                     instance.save()
         except ValidationError as exc:
-            detail = exc.message_dict if hasattr(exc, 'message_dict') else {'error': exc.messages[0]}
-            raise serializers.ValidationError(detail) from exc
+            raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
 
         return instance
 
@@ -626,12 +636,7 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
 
 
         except ValidationError as exc:
-            detail = (
-                exc.message_dict
-                if hasattr(exc, 'message_dict')
-                else exc.messages
-            )
-            raise serializers.ValidationError(detail) from exc
+            raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
 
         return entries
 

@@ -19,7 +19,7 @@ class CleanValidatorsMixin:
             try:
                 getattr(self, validator_name)()
             except ValidationError as e:
-                errors.append(f'{validator_name}: {e}')
+                errors.extend(e.messages)
 
         if errors:
             raise ValidationError(errors)
