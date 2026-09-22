@@ -326,6 +326,35 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
         )
         read_only_fields = ('id','day_entry', 'task')
 
+    @staticmethod
+    def _get_non_working_dates(
+            resource: Resource,
+            dates: list[datetime.date],
+    ) -> list[datetime.date]:
+        unique_dates = sorted(set(dates))
+        if len(unique_dates) <= 1:
+            return []
+
+        day_entries = {
+            entry.day: entry
+            for entry in DayEntry.objects.filter(resource=resource, day__in=unique_dates)
+        }
+        non_working_dates = []
+
+        for day in unique_dates:
+            contract = Contract.objects.by_day(resource, day)
+            if contract is None:
+                continue
+
+            day_entry = day_entries.get(day)
+            if contract.get_due_hours(day) == 0 or (
+                day_entry is not None
+                and (day_entry.asked_holiday or day_entry.is_holiday or day_entry.is_sick)
+            ):
+                non_working_dates.append(day)
+
+        return non_working_dates
+
     def get_fields(self):
         """Select fields according to whether entries are being created or updated."""
         fields = super().get_fields()
@@ -390,6 +419,28 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                         dates=', '.join(day.isoformat() for day in invalid_dates)
                     )
                 })
+
+            non_working_dates = self._get_non_working_dates(resource, attrs['dates'])
+            if non_working_dates:
+                non_working_dates_set = set(non_working_dates)
+                working_dates = sorted({
+                    day for day in attrs['dates']
+                    if day not in non_working_dates_set
+                })
+
+                if not working_dates:
+                    raise serializers.ValidationError({
+                        'error': _(
+                            'The selected dates are non-working days: {dates}. '
+                            'Add them individually if needed.'
+                        ).format(
+                            dates=', '.join(
+                                day.isoformat() for day in non_working_dates
+                            )
+                        )
+                    })
+
+                attrs['dates'] = working_dates
 
         return attrs
 
