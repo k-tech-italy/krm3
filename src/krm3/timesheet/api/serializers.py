@@ -276,6 +276,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
 
         try:
             instance.verify_bank_hours_against_scheduled_hours()
+            instance.verify_bank_hours_restrictions_with_day_entries()
 
             with transaction.atomic():
                 if instance.asked_holiday or instance.is_sick:

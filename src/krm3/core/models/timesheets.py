@@ -426,6 +426,10 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         """Validate bank hours against the scheduled hours."""
         self._verify_bank_hours_against_scheduled_hours()
 
+    def verify_bank_hours_restrictions_with_day_entries(self) -> None:
+        """Validate bank operations against holidays, sickness, and absence hours."""
+        self._verify_bank_hours_restrictions_with_day_entries()
+
     def _verify_bank_hours_against_scheduled_hours(self) -> None:
         """Ensure bank operations do not cross the scheduled-hours threshold."""
         if self.bank > 0 and self.effective_hours < self.due_hours:

@@ -107,6 +107,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
         """Return whether a day entry contains data unrelated to tasks."""
         return any(
             (
+                day_entry.comment,
                 day_entry.bank,
                 day_entry.asked_holiday,
                 day_entry.leave_hours,
