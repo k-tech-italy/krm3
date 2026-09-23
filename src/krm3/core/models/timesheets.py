@@ -290,12 +290,12 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     @property
     def effective_hours(self) -> Decimal:
         """Return the hours covered by work, absences and bank operations."""
-        return Decimal(
-            self.worked_hours
-            + self.leave_hours
-            + self.special_leave_hours
-            + self.rest_hours
-            - self.bank
+        return (
+            safe_dec(self.worked_hours)
+            + safe_dec(self.leave_hours)
+            + safe_dec(self.special_leave_hours)
+            + safe_dec(self.rest_hours)
+            - safe_dec(self.bank)
         )
 
     @property
@@ -491,6 +491,13 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         if self.timesheet and self.timesheet.closed:
             raise ValidationError(_('Cannot modify entries for submitted timesheets'), code='timesheet_submitted')
 
+    def _verify_total_hours(self) -> None:
+        if self.effective_hours > TOTAL_WORK_HOURS_MAX:
+            raise ValidationError(
+                _('Maximum 24 total hours per day.'),
+                code='total_hours_above_limit',
+            )
+
     def _verify_bank_hours_restrictions_with_day_entries(self) -> None:
         """Verify bank hours restrictions with different types of day entries."""
         if self.bank != 0.0 and (self.asked_holiday or self.is_sick):
@@ -517,12 +524,19 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     def _verify_at_most_one_absence(self) -> None:
         is_one_of_the_leave_types = self.is_leave or self.is_special_leave
         has_too_many_day_entry_hours_logged = (
-            len([cond for cond in (self.is_sick, self.is_holiday, is_one_of_the_leave_types) if cond]) > 1
+            len([cond for cond in (self.is_sick, self.asked_holiday, is_one_of_the_leave_types) if cond]) > 1
         )
         if has_too_many_day_entry_hours_logged:
             raise ValidationError(
                 _('You cannot log more than one kind of non-task hours in a day'),
                 code='multiple_absence_kind',
+            )
+
+    def _verify_holiday_request(self) -> None:
+        if self.is_holiday and self.asked_holiday:
+            raise ValidationError(
+                _('Cannot request holiday on a public holiday.'),
+                code='holiday_requested_on_public_holiday',
             )
 
 
@@ -700,3 +714,10 @@ class ExtraHoliday(models.Model):
             raise ValidationError({'period': _('Open-ended period not supported')})
         if self.period.upper < self.period.lower + datetime.timedelta(days=1):
             raise ValidationError({'period': _('End date must be at least one day after start date')})
+
+
+@receiver([models.signals.post_save, models.signals.post_delete], sender=ExtraHoliday)
+def clear_extra_holiday_cache(sender: type[ExtraHoliday], **kwargs: Any) -> None:
+    from krm3.utils._extra_holidays import extra_holidays  # noqa: PLC0415
+
+    extra_holidays.clear()

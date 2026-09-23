@@ -144,8 +144,16 @@ def test_get_due_hours_holidays():
         'period': (dt('2023-01-01'), None),
         'working_schedule': {'mon': 4, 'tue': 2, 'wed': 2, 'thu': 2, 'fri': 2, 'sat': 2, 'sun': 2},
     }
-    ita = ContractFactory(country_calendar_code='IT', **base)
-    rome = ContractFactory(country_calendar_code='IT-RM', **base)
+    ita = ContractFactory(
+        base_in__country__country_calendar_code='IT',
+        base_in__subdivision_code=None,
+        **base,
+    )
+    rome = ContractFactory(
+        base_in__country__country_calendar_code='IT',
+        base_in__subdivision_code='RM',
+        **base,
+    )
     assert ita.get_ktday('2026-06-29').is_holiday is False
     assert ita.get_due_hours('2026-06-29') == 4
     assert rome.get_ktday(dt('2026-06-29')).is_holiday is True

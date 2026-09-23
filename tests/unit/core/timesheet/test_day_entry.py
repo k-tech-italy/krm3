@@ -22,7 +22,8 @@ from testutils.factories import ContractFactory, DayEntryFactory
 )
 def test_get_ktday_uses_contract_calendar(day, expectation):
     contract = ContractFactory(
-        country_calendar_code='IT-RM',
+        base_in__country__country_calendar_code='IT',
+        base_in__subdivision_code='RM',
         period=(dt('2026-01-01'), dt('2027-01-01')),
     )
     day_entry = DayEntryFactory(

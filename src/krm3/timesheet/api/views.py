@@ -241,7 +241,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             is_missing_acl_filtered_entries = set(requested_entry_ids) != fetched_entry_ids
 
             authorized_resource = Resource.objects.get(user=request.user)
-            is_user_unauthorized = entries.exclude(resource=authorized_resource).exists()
+            is_user_unauthorized = entries.exclude(day_entry__resource=authorized_resource).exists()
 
             if is_missing_acl_filtered_entries or is_user_unauthorized:
                 return Response(status=status.HTTP_403_FORBIDDEN)
@@ -281,6 +281,10 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
         return None
 
+class DayEntryAPIViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
     def notify_holiday(self, resource: Resource, dates: Iterable[str]) -> None:
         sorted_dates = sorted(dates)
         EventDispatcher().send(
@@ -293,11 +297,6 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
                 },
             )
         )
-
-
-class DayEntryAPIViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     @override
     def get_queryset(self) -> QuerySet[DayEntry]:

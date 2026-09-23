@@ -275,8 +275,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             instance.special_leave_reason = None
 
         try:
-            instance.verify_bank_hours_against_scheduled_hours()
-            instance.verify_bank_hours_restrictions_with_day_entries()
+            instance.full_clean()
 
             with transaction.atomic():
                 if instance.asked_holiday or instance.is_sick:
@@ -654,6 +653,15 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                     entry_data = validated_data.copy()
 
                     if autofill:
+                        if (
+                            day_entry.is_sick
+                            or day_entry.asked_holiday
+                            or day_entry.is_holiday
+                        ):
+                            raise serializers.ValidationError({
+                                'error': _('Cannot autofill an absence day.')
+                            })
+
                         hours_to_fill = self._get_autofill_hours(day_entry)
 
                         if hours_to_fill == 0:

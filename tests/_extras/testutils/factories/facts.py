@@ -1,5 +1,6 @@
 import typing
 from datetime import date, timedelta
+from decimal import Decimal
 
 import factory
 from dateutil.relativedelta import relativedelta
@@ -276,8 +277,21 @@ class TimesheetSubmissionFactory(DjangoModelFactory):
 
 class DayEntryFactory(DjangoModelFactory):
     day = Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
-    contract = factory.LazyAttribute(lambda o: ContractFactory(resource=o.resource))
     resource = SubFactory(ResourceFactory)
+    contract = SubFactory(
+        ContractFactory,
+        resource=factory.SelfAttribute('..resource'),
+    )
+    bank = Decimal('0.00')
+    due_hours = Decimal('0.00')
+    travel_hours = Decimal('0.00')
+    day_hours = Decimal('0.00')
+    night_hours = Decimal('0.00')
+    on_call_hours = Decimal('0.00')
+    leave_hours = Decimal('0.00')
+    special_leave_hours = Decimal('0.00')
+    rest_hours = Decimal('0.00')
+    overtime_hours = Decimal('0.00')
 
     class Meta:
         model = 'core.DayEntry'
@@ -307,6 +321,10 @@ class TaskEntryFactory(DjangoModelFactory):
         manager = cls._get_manager(model_class)
 
         resource = resource or (task.resource if task else None) or ResourceFactory()
+        task = task or TaskFactory(
+            resource=resource,
+            contract=True,
+        )
 
         if day_entry:
             if isinstance(day_entry, bool) and day_entry:
@@ -320,9 +338,20 @@ class TaskEntryFactory(DjangoModelFactory):
                     day=Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31)),
                 )
             else:
-                kwargs['day_entry'] = DayEntryFactory(resource=resource, day=date)
+                contract = Contract.objects.by_day(resource, date)
+                if contract is None:
+                    contract = ContractFactory(
+                        resource=resource,
+                        period=(date, None),
+                    )
 
-        kwargs['task'] = task if task else TaskFactory(resource=resource)
+                kwargs['day_entry'] = DayEntryFactory(
+                    resource=resource,
+                    contract=contract,
+                    day=date,
+                )
+
+        kwargs['task'] = task
 
         return manager.create(**kwargs)
 

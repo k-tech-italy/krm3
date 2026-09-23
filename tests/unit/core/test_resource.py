@@ -36,12 +36,16 @@ def contracts_list() -> list['Contract']:
     ],
 )
 def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_code, expected):
+    country_code, _, subdivision_code = country_code.partition('-')
+
     resource = ResourceFactory()
     for period in contracts:
         ContractFactory(
             resource=resource,
             period=period,
-            country_calendar_code=country_code,
+            base_in__country__name=country_code,
+            base_in__country__country_calendar_code=country_code,
+            base_in__subdivision_code=subdivision_code or None,
             working_schedule={'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7},
         )
     start_day, end_day = dt('20230625'), dt('20230630')
@@ -107,8 +111,12 @@ def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_co
     ],
 )
 def test_get_schedule_with_contract(start_day, end_day, country_calendar_code, custom_schedule, expected_schedule):
+    country_code, _, subdivision_code = country_calendar_code.partition('-')
+
     contract = ContractFactory(
-        country_calendar_code=country_calendar_code,
+        base_in__country__name=country_code,
+        base_in__country__country_calendar_code=country_code,
+        base_in__subdivision_code=subdivision_code or None,
         period=(start_day, end_day + datetime.timedelta(days=1)),
         working_schedule=custom_schedule,
     )

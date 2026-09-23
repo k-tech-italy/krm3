@@ -210,4 +210,9 @@ class Contract(models.Model):
         result = day in self.period
         if not result and not silent:
             raise ValueError(_('Date outside contract period'))
+        if result:
+            from krm3.utils._extra_holidays import extra_holidays  # noqa: PLC0415
+
+            if extra_holidays.is_holiday(day.date, self):
+                day.ktcalendar.holidays.append(day.date)
         return day if result else None

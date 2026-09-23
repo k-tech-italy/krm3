@@ -10,8 +10,7 @@ from functools import lru_cache
 
 import holidays
 from django.conf import settings
-
-from krm3.utils.dates import KrmDay
+from ktcalendars import KTDay
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Contract
@@ -40,10 +39,10 @@ class ExtraHolidays:
 
     def __init__(self, cache_size: int = CACHE_SIZE) -> None:
         self._cache_size = cache_size
-        self.cache: OrderedDict[tuple[int, int], dict[KrmDay, list[str]]] = OrderedDict()
+        self.cache: OrderedDict[tuple[int, int], dict[KTDay, list[str]]] = OrderedDict()
         self.lock = threading.Lock()
 
-    def get(self, month: int, year: int) -> dict[KrmDay, list[str]]:
+    def get(self, month: int, year: int) -> dict[KTDay, list[str]]:
         key = (month, year)
         with self.lock:
             if key in self.cache:
@@ -56,7 +55,7 @@ class ExtraHolidays:
         self.set(month, year, value)
         return value
 
-    def set(self, month: int, year: int, value: dict[KrmDay, list[str]]) -> None:
+    def set(self, month: int, year: int, value: dict[KTDay, list[str]]) -> None:
         key = (month, year)
         with self.lock:
             if key in self.cache:
@@ -74,7 +73,7 @@ class ExtraHolidays:
             self.cache.clear()
 
     @staticmethod
-    def _fetch(month: int, year: int) -> dict[KrmDay, list[str]]:
+    def _fetch(month: int, year: int) -> dict[KTDay, list[str]]:
         from krm3.core.models import ExtraHoliday  # imported lazily to avoid circular import with core.models
 
         first = datetime.date(year, month, 1)
@@ -86,10 +85,10 @@ class ExtraHolidays:
         calendar_code = (
             settings.HOLIDAYS_CALENDAR
             if contract is None
-            else (contract.country_calendar_code or settings.HOLIDAYS_CALENDAR)
+            else contract.calendar_code
         )
 
-        codes = self.get(day.month, day.year).get(KrmDay(day), [])
+        codes = self.get(day.month, day.year).get(KTDay(day), [])
 
         return calendar_code in codes or (len(calendar_code) > 2 and calendar_code[:2] in codes)
 
