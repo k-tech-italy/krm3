@@ -4,7 +4,7 @@ from typing import Protocol, override
 import openpyxl
 from django.utils.translation import gettext as _
 
-from krm3.core.models import Resource, User
+from krm3.core.models import Contract, Resource, User
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.utils.numbers import safe_dec
 from krm3.web.report_styles import (
@@ -172,7 +172,9 @@ class TimesheetReportExport(TimesheetReport):
 
     @override
     def _get_resources(self, user: User) -> list[Resource]:
-        # FIXME: preferred_in_report has been removed from Resource, moved to employee field in Contract
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            return [*Resource.objects.filter(preferred_in_report=True)]
+            employee_resource_ids = self.valid_contracts.filter(
+                contract_type=Contract.ContractType.EMPLOYEE,
+            ).values_list('resource_id', flat=True)
+            return [*Resource.objects.filter(id__in=employee_resource_ids)]
         return [user.get_resource()]

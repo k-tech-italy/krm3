@@ -60,7 +60,7 @@ class TestTaskAPIListView:
         'task_end_date',
         (pytest.param(_dt('2024-12-31'), id='known_end'), pytest.param(None, id='open_ended')),
     )
-    def test_returns_valid_time_entry_data(
+    def test_returns_valid_timesheet_data(
         self,
         task_end_date,
         timesheet_api_user,
@@ -68,11 +68,9 @@ class TestTaskAPIListView:
         timesheet_api_staff_user,
     ):
         project = ProjectFactory(period=(_dt('2022-01-01'), None))
-
         task_start_date = _dt('2023-01-01')
-
-        time_entry_start_date = _dt('2024-01-01')
-        time_entry_end_date = _dt('2024-01-07')
+        period_start = _dt('2024-01-01')
+        period_end = _dt('2024-01-07')
 
         resource: Resource = ResourceFactory()
         ContractFactory(resource=resource, period=(_dt('2020-01-01'), None))
@@ -85,47 +83,48 @@ class TestTaskAPIListView:
             ),
         )
 
-        def _make_time_entry(**kwargs):
-            return TaskEntryFactory(task=kwargs.pop('task', task), resource=resource, **kwargs)
+        TaskEntryFactory(task=task, resource=resource, date=_dt('2023-07-01'), comment='Too early')
+        TaskEntryFactory(task=task, resource=resource, date=_dt('2024-07-01'), comment='Too late')
 
-        date_within_range = _dt('2024-01-03')
-
-        _early_time_entry = _make_time_entry(date=_dt('2023-07-01'), comment='Too early')
-        _late_time_entry = _make_time_entry(date=_dt('2024-07-01'), comment='Too late')
-        day_entry_within_range = DayEntryFactory(
+        entry_date = _dt('2024-01-03')
+        day_entry = DayEntryFactory(
             resource=resource,
-            day=date_within_range,
+            day=entry_date,
             leave_hours=2,
             comment='Within range (day)',
         )
-        task_entry_within_range = TaskEntryFactory(
+        task_entry = TaskEntryFactory(
             task=task,
-            day_entry=day_entry_within_range,
+            day_entry=day_entry,
             day_shift_hours=1,
             comment='Within range',
         )
-        # Timesheets are assigned to closed entry via 'link_entries' - Timesheet post-save signal
+
         TimesheetSubmissionFactory(
-            resource=resource, closed=True, period=((_dt('2024-01-03'), _dt('2024-01-05')))
+            resource=resource,
+            closed=True,
+            period=(_dt('2024-01-03'), _dt('2024-01-05')),
         )
         TimesheetSubmissionFactory(
-            resource=resource, closed=False, period=((_dt('2024-01-05'), _dt('2024-01-07')))
+            resource=resource,
+            closed=False,
+            period=(_dt('2024-01-05'), _dt('2024-01-07')),
         )
 
         api_data = {
             'resource_id': resource.pk,
-            'start_date': time_entry_start_date.isoformat(),
-            'end_date': time_entry_end_date.isoformat(),
+            'start_date': period_start.isoformat(),
+            'end_date': period_end.isoformat(),
         }
-        response = api_client(user=timesheet_api_user).get(
-            self.url(),
-            data=api_data,
-        )
+        response = api_client(user=timesheet_api_user).get(self.url(), data=api_data)
 
         assert response.status_code == status.HTTP_200_OK
 
-        def _as_quantized_decimal(n: int | float | Decimal) -> str:
-            return str(Decimal(n).quantize(Decimal('1.00')))
+        day_entry.refresh_from_db()
+        task_entry.refresh_from_db()
+
+        def _as_quantized_decimal(number: int | float | Decimal) -> str:
+            return str(Decimal(number).quantize(Decimal('1.00')))
 
         expected_response = {
             'submitted': False,
@@ -147,187 +146,10 @@ class TestTaskAPIListView:
                     'adminUrl': '',
                 }
             ],
-            'timeEntries': [
-                {
-                    'id': task_entry_within_range.id,
-                    'date': date_within_range.isoformat(),
-                    'lastModified': task_entry_within_range.day_entry.last_modified.isoformat(),
-                    'dayShiftHours': _as_quantized_decimal(task_entry_within_range.day_shift_hours),
-                    'sickHours': _as_quantized_decimal(0),
-                    'holidayHours': _as_quantized_decimal(0),
-                    'leaveHours': _as_quantized_decimal(task_entry_within_range.day_entry.leave_hours),
-                    'specialLeaveHours': _as_quantized_decimal(
-                        task_entry_within_range.day_entry.special_leave_hours
-                    ),
-                    'specialLeaveReason': task_entry_within_range.day_entry.special_leave_reason_id,
-                    'nightShiftHours': _as_quantized_decimal(task_entry_within_range.night_shift_hours),
-                    'onCallHours': _as_quantized_decimal(task_entry_within_range.on_call_hours),
-                    'travelHours': _as_quantized_decimal(task_entry_within_range.travel_hours),
-                    'restHours': _as_quantized_decimal(task_entry_within_range.day_entry.rest_hours),
-                    'bankFrom': _as_quantized_decimal(0),
-                    'bankTo': _as_quantized_decimal(0),
-                    'comment': 'Within range',
-                    'protocolNumber': None,
-                    'task': task.pk,
-                    'taskTitle': task.title,
-                },
-                {
-                    'id': day_entry_within_range.id,
-                    'date': day_entry_within_range.day.isoformat(),
-                    'lastModified': day_entry_within_range.last_modified.isoformat(),
-                    'dayShiftHours': _as_quantized_decimal(day_entry_within_range.day_hours),
-                    'sickHours': _as_quantized_decimal(int(day_entry_within_range.is_sick)),
-                    'holidayHours': _as_quantized_decimal(int(day_entry_within_range.asked_holiday)),
-                    'leaveHours': _as_quantized_decimal(day_entry_within_range.leave_hours),
-                    'specialLeaveHours': _as_quantized_decimal(day_entry_within_range.special_leave_hours),
-                    'specialLeaveReason': day_entry_within_range.special_leave_reason,
-                    'nightShiftHours': _as_quantized_decimal(day_entry_within_range.night_hours),
-                    'onCallHours': _as_quantized_decimal(day_entry_within_range.on_call_hours),
-                    'travelHours': _as_quantized_decimal(day_entry_within_range.travel_hours),
-                    'restHours': _as_quantized_decimal(day_entry_within_range.rest_hours),
-                    'bankFrom': _as_quantized_decimal(max(-day_entry_within_range.bank, 0)),
-                    'bankTo': _as_quantized_decimal(max(day_entry_within_range.bank, 0)),
-                    'comment': 'Within range (day)',
-                    'protocolNumber': None,
-                    'task': None,
-                    'taskTitle': None,
-                },
+            'days': [
+                (period_start + datetime.timedelta(days=offset)).isoformat()
+                for offset in range((period_end - period_start).days + 1)
             ],
-            'days': {
-                '2024-01-01': {
-                    'hol': True,
-                    'nwd': True,
-                    'closed': False,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-02': {
-                    'hol': False,
-                    'nwd': False,
-                    'closed': False,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-03': {
-                    'hol': False,
-                    'nwd': False,
-                    'closed': True,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 1.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 2.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-04': {
-                    'hol': False,
-                    'nwd': False,
-                    'closed': True,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-05': {
-                    'hol': False,
-                    'nwd': False,
-                    'closed': False,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-06': {
-                    'hol': True,
-                    'nwd': True,
-                    'closed': False,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-                '2024-01-07': {
-                    'hol': True,
-                    'nwd': True,
-                    'closed': False,
-                    'mealVoucher': None,
-                    'bankFrom': 0.0,
-                    'bankTo': 0.0,
-                    'dayShiftHours': 0.0,
-                    'holidayHours': 0.0,
-                    'leaveHours': 0.0,
-                    'nightShiftHours': 0.0,
-                    'onCallHours': 0.0,
-                    'overtime': 0.0,
-                    'restHours': 0.0,
-                    'sickHours': 0.0,
-                    'specialLeaveHours': 0.0,
-                    'specialLeaveReason': None,
-                    'travelHours': 0.0,
-                },
-            },
             'schedule': {
                 '2024-01-01': 0,
                 '2024-01-02': 2,
@@ -337,7 +159,7 @@ class TestTaskAPIListView:
                 '2024-01-06': 0,
                 '2024-01-07': 2,
             },
-            'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance(time_entry_end_date)),
+            'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance(period_end)),
             'timesheetColors': {
                 'lessThanScheduleColorBrightTheme': '111111',
                 'exactScheduleColorBrightTheme': '222222',
@@ -346,36 +168,17 @@ class TestTaskAPIListView:
                 'exactScheduleColorDarkTheme': '555555',
                 'moreThanScheduleColorDarkTheme': '666666',
             },
+            'dayEntries': camelize(DayEntryReadSerializer([day_entry], many=True).data),
+            'taskEntries': camelize(TaskEntryReadSerializer([task_entry], many=True).data),
         }
-
-        day_entry_within_range.refresh_from_db()
-        task_entry_within_range.refresh_from_db()
-        expected_response.pop('timeEntries')
-        expected_response['days'] = [
-            (time_entry_start_date + datetime.timedelta(days=offset)).isoformat()
-            for offset in range((time_entry_end_date - time_entry_start_date).days + 1)
-        ]
-        expected_response['dayEntries'] = camelize(
-            DayEntryReadSerializer([day_entry_within_range], many=True).data
-        )
-        expected_response['taskEntries'] = camelize(
-            TaskEntryReadSerializer([task_entry_within_range], many=True).data
-        )
 
         assert response.json() == expected_response
 
         expected_response['tasks'][0]['adminUrl'] = reverse('admin:core_task_change', args=[task.pk])
 
         assert (
-            api_client(user=timesheet_api_staff_user)
-            .get(
-                self.url(),
-                data=api_data,
-            )
-            .json()
-            == expected_response
+            api_client(user=timesheet_api_staff_user).get(self.url(), data=api_data).json() == expected_response
         ), 'check that for the task, a staff user receives a URL'
-
     def test_schedule_with_contract(self, admin_user, api_client):
         start_date = _dt('2020-05-01')
         end_date = _dt('2020-05-09')

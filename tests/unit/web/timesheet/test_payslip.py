@@ -1,12 +1,11 @@
 from django.urls import reverse
-from testutils.factories import ResourceFactory
-
-from testutils.factories import TimesheetSubmissionFactory
+from testutils.factories import ContractFactory, ResourceFactory, TimesheetSubmissionFactory
 
 
 def test_payslip_report_with_timesheet_submissions(admin_client):
     """Test payslip report includes timesheet submissions in coverage."""
     resource = ResourceFactory()
+    ContractFactory(resource=resource)
 
     TimesheetSubmissionFactory(resource=resource)
 

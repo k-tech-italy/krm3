@@ -5,16 +5,8 @@ from decimal import Decimal
 import pytest
 from django import test as django_test
 from rest_framework import status
-from rest_framework.reverse import reverse
 
-from testutils.factories import (
-    ContractFactory,
-    DayEntryFactory,
-    ResourceFactory,
-    SpecialLeaveReasonFactory,
-    TaskEntryFactory,
-    TaskFactory,
-)
+from testutils.factories import TaskFactory
 
 from krm3.core.models import DayEntry, TaskEntry
 

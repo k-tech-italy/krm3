@@ -26,6 +26,7 @@ def test_resource_user_can_see_all_report_links(resource_client, url):
     ],
 )
 def test_user_without_permission_can_only_see_their_reports(url, resource_client):
+    ContractFactory(resource=resource_client._resource, period=(_dt('2020-01-01'), None))
     another_user = UserFactory(username='user01', password='pass123')
     another_resource = ResourceFactory(user=another_user, profile=another_user.profile)
     response = resource_client.get(url)

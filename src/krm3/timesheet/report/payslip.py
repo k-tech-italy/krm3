@@ -68,7 +68,7 @@ class TimesheetReportDay:
 
     @property
     def nwd(self) -> bool:
-        return self.entry is None or self.entry.nwd
+        return self.entry is None or not self.entry.is_workday
 
     @property
     def submitted(self) -> bool:

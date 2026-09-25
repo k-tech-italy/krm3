@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -10,8 +11,7 @@ from krm3.utils.numbers import safe_dec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from krm3.core.models import Contract, Resource
-    from krm3.core.models import TimesheetSubmission
+    from krm3.core.models import Contract, DayEntry, Resource, TaskEntry, TimesheetSubmission
     from ktcalendars.types import KTDayType
 
 te_calc_map = {
@@ -39,7 +39,7 @@ class Krm3Day(KTDay):
         self.data_due_hours = Decimal.from_float(0)
         self.contract: 'Contract | None' = None
         self.holiday: bool = False
-        self.time_entries: Iterable[TimeEntry] = []
+        self.time_entries: Iterable[TaskEntry] = []
         self.data_bank = None
         self.data_bank_from = None
         self.data_bank_to = None
@@ -72,17 +72,47 @@ class Krm3Day(KTDay):
     def day_of_week_short_i18n(self) -> str:
         return i18n.short_day_of_week(self.date)
 
-    def apply(self, time_entries: list[TimeEntry]) -> None:
-        """Compute the krm3day data from the time_entries list."""
-        self.time_entries = time_entries
-        self.has_data = bool(time_entries)
-        meal_voucher_threshold = None
-        if self.contract and (thresholds := self.contract.meal_voucher):
-            meal_voucher_threshold = thresholds.get('sun' if self.nwd else self.day_of_week_short.lower())
-        for k, v in TimesheetRule.calculate(
-            not self.nwd, float(self.data_due_hours), meal_voucher_threshold, time_entries
-        ).items():
-            setattr(self, f'data_{k}', v)
+    def apply(self, day_entry: DayEntry | None, task_entries: list[TaskEntry]) -> None:
+        """Populate report data from the day-level and task-level entries."""
+        self.time_entries = task_entries
+        self.has_data = day_entry is not None or bool(task_entries)
+        if day_entry is None:
+            return
+
+        def value_or_none(value: Decimal | int) -> Decimal | int | None:
+            return value if value else None
+
+        due_hours = safe_dec(day_entry.due_hours) or safe_dec(self.data_due_hours)
+        worked_hours = sum((safe_dec(entry.total_task_hours) for entry in task_entries), start=Decimal(0))
+        bank = safe_dec(day_entry.bank)
+
+        self.data_due_hours = due_hours
+        self.data_bank = value_or_none(bank)
+        self.data_bank_to = value_or_none(max(bank, Decimal(0)))
+        self.data_bank_from = value_or_none(max(-bank, Decimal(0)))
+        self.data_day_shift = value_or_none(
+            sum((safe_dec(entry.day_shift_hours) for entry in task_entries), start=Decimal(0))
+        )
+        self.data_night_shift = value_or_none(
+            sum((safe_dec(entry.night_shift_hours) for entry in task_entries), start=Decimal(0))
+        )
+        self.data_on_call = value_or_none(
+            sum((safe_dec(entry.on_call_hours) for entry in task_entries), start=Decimal(0))
+        )
+        self.data_travel = value_or_none(
+            sum((safe_dec(entry.travel_hours) for entry in task_entries), start=Decimal(0))
+        )
+        self.data_holiday = due_hours if day_entry.asked_holiday else None
+        self.data_leave = value_or_none(day_entry.leave_hours)
+        self.data_special_leave_hours = value_or_none(day_entry.special_leave_hours)
+        self.data_special_leave_reason = day_entry.special_leave_reason
+        self.data_protocol_number = day_entry.protocol_number
+        self.data_rest = value_or_none(day_entry.rest_hours)
+        self.data_sick = due_hours if day_entry.is_sick else None
+        self.data_overtime = value_or_none(day_entry.overtime_hours)
+        self.data_meal_voucher = value_or_none(day_entry.meal_voucher)
+        regular_hours = min(max(worked_hours - bank, Decimal(0)), due_hours)
+        self.data_regular_hours = value_or_none(regular_hours)
 
     @classmethod
     def from_submission(cls, submission: TimesheetSubmission) -> Iterator:
@@ -91,81 +121,174 @@ class Krm3Day(KTDay):
         :param submission: the `TimesheetSubmission` to convert
         :return: a lazy sequence of `Krm3Day`s covering the submission's time period
         """
-        from krm3.core.models import Contract, TaskEntry
+        from krm3.core.models import Contract, DayEntry, SpecialLeaveReason, TaskEntry
+
         timesheet_data = submission.timesheet or {}
+        if 'day_entries' not in timesheet_data:
+            yield from cls._from_legacy_submission(submission)
+            return
 
-        # NOTE: there is no point in computing totals from serialized
-        #       data if we have to populate the objects with model
-        #       instances anyway - just get the instances up front.
-        #       DRF serializers are also out of the question due to
-        #       only allowing to deserialize model instances via
-        #       `create()` or `update()`.
-        time_entries = TimeEntry.objects.filter(
-            id__in=(entry_data['id'] for entry_data in timesheet_data.get('time_entries', []))
+        serialized_day_entries = timesheet_data.get('day_entries', [])
+        serialized_task_entries = timesheet_data.get('task_entries', [])
+        serialized_days = timesheet_data.get('days', [])
+        schedule = timesheet_data.get('schedule', {})
+
+        contracts = list(
+            Contract.objects.filter(resource=submission.resource, period__overlap=submission.period).order_by('period')
         )
-        contracts = Contract.objects.filter(
-            id__in=(contract_data['id'] for contract_data in timesheet_data.get('contracts', []))
-        )
+        contracts_by_id = {contract.pk: contract for contract in contracts}
+        special_leave_reason_ids = {
+            entry_data['special_leave_reason']
+            for entry_data in serialized_day_entries
+            if entry_data.get('special_leave_reason') is not None
+        }
+        special_leave_reasons = SpecialLeaveReason.objects.in_bulk(special_leave_reason_ids)
 
-        def _extract(key: str, from_: Iterable[dict]) -> Iterator:
-            return (entry[key] for entry in from_)
+        def decimal_value(value: str | int | float | Decimal | None) -> Decimal:
+            return Decimal(str(value or 0))
 
-        for date, day_data in timesheet_data.get('days', {}).items():
-            day = Krm3Day(day=date)
+        day_entries_by_id: dict[int, DayEntry] = {}
+        day_entries_by_date: dict[datetime.date, DayEntry] = {}
+        for entry_data in serialized_day_entries:
+            entry_date = datetime.date.fromisoformat(entry_data['day'])
+            day_entry = DayEntry(
+                id=entry_data['id'],
+                day=entry_date,
+                resource=submission.resource,
+                contract=contracts_by_id[entry_data['contract']],
+                bank=decimal_value(entry_data.get('bank')),
+                due_hours=decimal_value(entry_data.get('due_hours')),
+                travel_hours=decimal_value(entry_data.get('travel_hours')),
+                day_hours=decimal_value(entry_data.get('day_hours')),
+                night_hours=decimal_value(entry_data.get('night_hours')),
+                on_call_hours=decimal_value(entry_data.get('on_call_hours')),
+                is_holiday=bool(entry_data.get('is_holiday')),
+                asked_holiday=bool(entry_data.get('asked_holiday')),
+                leave_hours=decimal_value(entry_data.get('leave_hours')),
+                special_leave_hours=decimal_value(entry_data.get('special_leave_hours')),
+                special_leave_reason=special_leave_reasons.get(entry_data.get('special_leave_reason')),
+                protocol_number=entry_data.get('protocol_number'),
+                is_sick=bool(entry_data.get('is_sick')),
+                rest_hours=decimal_value(entry_data.get('rest_hours')),
+                overtime_hours=decimal_value(entry_data.get('overtime_hours')),
+                meal_voucher=int(entry_data.get('meal_voucher') or 0),
+            )
+            day_entries_by_id[entry_data['id']] = day_entry
+            day_entries_by_date[entry_date] = day_entry
 
-            this_day_time_entries = time_entries.filter(date=date)
-            this_day_time_entry_data = [
-                entry_data for entry_data in timesheet_data.get('time_entries', []) if entry_data['date'] == date
-            ]
+        task_entries_by_day_entry_id: dict[int, list[TaskEntry]] = {}
+        for entry_data in serialized_task_entries:
+            day_entry_id = entry_data['day_entry']
+            day_entry = day_entries_by_id.get(day_entry_id)
+            if day_entry is None:
+                continue
+            task_entry = TaskEntry(
+                id=entry_data['id'],
+                day_entry=day_entry,
+                task_id=entry_data['task'],
+                day_shift_hours=decimal_value(entry_data.get('day_shift_hours')),
+                night_shift_hours=decimal_value(entry_data.get('night_shift_hours')),
+                on_call_hours=decimal_value(entry_data.get('on_call_hours')),
+                travel_hours=decimal_value(entry_data.get('travel_hours')),
+                comment=entry_data.get('comment'),
+                metadata=entry_data.get('metadata'),
+            )
+            task_entries_by_day_entry_id.setdefault(day_entry_id, []).append(task_entry)
 
-            try:
-                contract = contracts.filter(period__contains=date).get()
-            except Contract.DoesNotExist:
-                contract = None
+        for serialized_day in serialized_days:
+            day_date = datetime.date.fromisoformat(serialized_day)
+            day_entry = day_entries_by_date.get(day_date)
+            contract = day_entry.contract if day_entry is not None else next(
+                (candidate for candidate in contracts if day_date in candidate.period), None
+            )
+            contract_day = contract.get_ktday(day_date, silent=True) if contract is not None else None
 
+            day = cls(day=day_date)
             day.submitted = True
             day.resource = submission.resource
             day.contract = contract
-            day.holiday = day_data.get('hol')
-            day.nwd = day_data.get('nwd')
-            day.time_entries = this_day_time_entries
-            bank_deposits = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
-            bank_withdrawals = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
-            day.data_bank = bank_deposits - bank_withdrawals
-            day.data_day_shift = sum(map(Decimal, _extract('day_shift_hours', this_day_time_entry_data)))
-            day.data_night_shift = sum(map(Decimal, _extract('night_shift_hours', this_day_time_entry_data)))
-            day.data_on_call = sum(map(Decimal, _extract('on_call_hours', this_day_time_entry_data)))
-            day.data_travel = sum(map(Decimal, _extract('travel_hours', this_day_time_entry_data)))
-            day.data_holiday = sum(map(Decimal, _extract('holiday_hours', this_day_time_entry_data)))
-            day.data_leave = sum(map(Decimal, _extract('leave_hours', this_day_time_entry_data)))
-            day.data_special_leave_hours = sum(map(Decimal, _extract('special_leave_hours', this_day_time_entry_data)))
-            try:
-                day.data_special_leave_reason = (
-                    this_day_time_entries.filter(special_leave_reason__isnull=False).get().special_leave_reason
-                )
-            except TimeEntry.DoesNotExist:
-                day.data_special_leave_reason = None
-            day.data_rest = sum(map(Decimal, _extract('rest_hours', this_day_time_entry_data)))
-            day.data_sick = sum(map(Decimal, _extract('sick_hours', this_day_time_entry_data)))
-            day.data_protocol_number = (
-                this_day_time_entry_data[0].get('protocol_number') if this_day_time_entry_data else None
+            day.holiday = day_entry.is_holiday if day_entry is not None else bool(contract_day and contract_day.is_holiday)
+            day.data_due_hours = (
+                day_entry.due_hours if day_entry is not None else decimal_value(schedule.get(serialized_day))
             )
-            day.data_bank_from = sum(map(Decimal, _extract('bank_from', this_day_time_entry_data)))
-            day.data_bank_to = sum(map(Decimal, _extract('bank_to', this_day_time_entry_data)))
+            day.nwd = contract is None or day.holiday or day.data_due_hours == 0
+            task_entries = task_entries_by_day_entry_id.get(day_entry.pk, []) if day_entry is not None else []
+            day.apply(day_entry, task_entries)
+            yield day
 
-            # NOTE: due to how the source Timesheet DTO is created, we will always have a schedule
-            day.data_due_hours = timesheet_data.get('schedule', {}).get(date)
+    @classmethod
+    def _from_legacy_submission(cls, submission: TimesheetSubmission) -> Iterator:
+        """Convert a submission saved before DayEntry and TaskEntry were introduced."""
+        from krm3.core.models import Contract, SpecialLeaveReason
 
-            # XXX: there are no default settings, so this will be 0 or None if thresholds are not set explicitly
-            day.data_meal_voucher_threshold = day_data.get('meal_voucher')
-            day.data_meal_voucher = int(
-                0 < (day.data_meal_voucher_threshold or 0) <= utils.worked_hours(this_day_time_entries)
+        timesheet_data = submission.timesheet or {}
+        serialized_days = timesheet_data.get('days', {})
+        serialized_entries = timesheet_data.get('time_entries', [])
+        schedule = timesheet_data.get('schedule', {})
+
+        contracts = list(
+            Contract.objects.filter(resource=submission.resource, period__overlap=submission.period).order_by('period')
+        )
+        special_leave_reason_ids = {
+            entry_data['special_leave_reason']
+            for entry_data in serialized_entries
+            if entry_data.get('special_leave_reason') is not None
+        }
+        special_leave_reasons = SpecialLeaveReason.objects.in_bulk(special_leave_reason_ids)
+
+        def decimal_value(value: str | int | float | Decimal | None) -> Decimal:
+            return Decimal(str(value or 0))
+
+        entries_by_date: dict[str, list[dict]] = {}
+        for entry_data in serialized_entries:
+            entries_by_date.setdefault(entry_data['date'], []).append(entry_data)
+
+        for serialized_day, day_data in serialized_days.items():
+            day_date = datetime.date.fromisoformat(serialized_day)
+            contract = next((candidate for candidate in contracts if day_date in candidate.period), None)
+            day_entries = entries_by_date.get(serialized_day, [])
+
+            def total(field: str) -> Decimal:
+                return sum((decimal_value(entry.get(field)) for entry in day_entries), start=Decimal(0))
+
+            bank_to = total('bank_to')
+            bank_from = total('bank_from')
+            bank = bank_to - bank_from
+            due_hours = decimal_value(schedule.get(serialized_day))
+            task_hours = total('day_shift_hours') + total('night_shift_hours') + total('travel_hours')
+            worked_hours = task_hours + max(bank_from - bank_to, Decimal(0))
+            special_leave_reason_id = next(
+                (entry.get('special_leave_reason') for entry in day_entries if entry.get('special_leave_reason')), None
             )
-            day.data_regular_hours = utils.regular_hours(day.time_entries, day.data_due_hours)
-            day.data_overtime = utils.overtime(day.time_entries, day.data_due_hours)
-            # FIXME: this is a pure function of internal state - use a property instead
-            day.has_data = this_day_time_entries.exists()
 
+            day = cls(day=day_date)
+            day.submitted = True
+            day.resource = submission.resource
+            day.contract = contract
+            day.holiday = bool(day_data.get('hol'))
+            day.nwd = bool(day_data.get('nwd'))
+            day.data_due_hours = due_hours
+            day.data_bank = bank or None
+            day.data_bank_to = bank_to or None
+            day.data_bank_from = bank_from or None
+            day.data_day_shift = total('day_shift_hours') or None
+            day.data_night_shift = total('night_shift_hours') or None
+            day.data_on_call = total('on_call_hours') or None
+            day.data_travel = total('travel_hours') or None
+            day.data_holiday = total('holiday_hours') or None
+            day.data_leave = total('leave_hours') or None
+            day.data_special_leave_hours = total('special_leave_hours') or None
+            day.data_special_leave_reason = special_leave_reasons.get(special_leave_reason_id)
+            day.data_protocol_number = next(
+                (entry.get('protocol_number') for entry in day_entries if entry.get('protocol_number')), None
+            )
+            day.data_rest = total('rest_hours') or None
+            day.data_sick = total('sick_hours') or None
+            day.data_overtime = decimal_value(day_data.get('overtime')) or None
+            day.data_meal_voucher = decimal_value(day_data.get('meal_voucher')) or None
+            regular_hours = min(worked_hours, due_hours)
+            day.data_regular_hours = regular_hours or None
+            day.has_data = bool(day_entries)
             yield day
 
 

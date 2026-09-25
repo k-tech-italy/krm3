@@ -26,58 +26,64 @@ class TestTimesheetTaskReport:
 
         self.task_3 = TaskFactory(period=(_dt('2025-06-05'), _dt('2025-07-11')), resource=self.r2)
 
+        day_entry_16 = DayEntryFactory(day=_dt('2025-06-16'), resource=self.r1, contract=contract_1)
+        day_entry_17 = DayEntryFactory(day=_dt('2025-06-17'), resource=self.r1, contract=contract_1)
+        day_entry_22 = DayEntryFactory(day=_dt('2025-06-22'), resource=self.r1, contract=contract_1)
+        day_entry_23 = DayEntryFactory(day=_dt('2025-06-23'), resource=self.r1, contract=contract_1)
+        day_entry_25 = DayEntryFactory(day=_dt('2025-06-25'), resource=self.r1, contract=contract_1)
+
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-16')),
+            day_entry=day_entry_16,
             day_shift_hours=6,
             night_shift_hours=2,
             task=self.task_1,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-17')),
+            day_entry=day_entry_17,
             day_shift_hours=7,
             night_shift_hours=2,
             task=self.task_1,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-25')),
+            day_entry=day_entry_25,
             day_shift_hours=0,
             travel_hours=5,
             task=self.task_1,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-22')),
+            day_entry=day_entry_22,
             day_shift_hours=0,
             on_call_hours=5,
             task=self.task_1,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-22')),
+            day_entry=day_entry_22,
             day_shift_hours=0,
             on_call_hours=3,
             task=self.task_2,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-23')),
+            day_entry=day_entry_23,
             day_shift_hours=0,
             on_call_hours=4,
             task=self.task_2,
             resource=self.r1,
         )
         TaskEntryFactory(
-            day_entry=DayEntryFactory(day=_dt('2025-06-17')),
+            day_entry=day_entry_17,
             day_shift_hours=5,
             night_shift_hours=3,
             task=self.task_2,
             resource=self.r1,
         )
-        DayEntryFactory(day=_dt('2025-06-18'), asked_holiday=True, resource=self.r1)
-        DayEntryFactory(day=_dt('2025-06-19'), is_sick=True, resource=self.r1)
-        DayEntryFactory(day=_dt('2025-06-20'), leave_hours=3, resource=self.r1)
+        DayEntryFactory(day=_dt('2025-06-18'), asked_holiday=True, resource=self.r1, contract=contract_1)
+        DayEntryFactory(day=_dt('2025-06-19'), is_sick=True, resource=self.r1, contract=contract_1)
+        DayEntryFactory(day=_dt('2025-06-20'), leave_hours=3, resource=self.r1, contract=contract_1)
 
         self.start_date = _dt('2025-06-01')
         self.end_date = _dt('2025-06-30')
@@ -246,12 +252,11 @@ class TestTimesheetTaskReport:
 
 
 @freeze_time('2025-08-22')
-def test_task_report_view_current_month(admin_user, client):
-    task = TaskFactory()
+def test_task_report_view_current_month(admin_client):
+    task = TaskFactory(contract=True)
     TaskEntryFactory(resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task)
-    client.login(username=admin_user.username, password=admin_user._password)
     url = reverse('task_report')
-    response = client.get(url)
+    response = admin_client.get(url)
     _assert_homepage_content(response)
     assert response.status_code == 200
     content = response.content.decode()
