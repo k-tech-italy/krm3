@@ -3,11 +3,11 @@ from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
-from django.db.models import QuerySet
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
+from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from rangefilter.filters import DateRangeFilter
@@ -59,7 +59,6 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
         return HttpResponseRedirect(url)
 
 
-
 class ResourceAdminMixin:
     @admin.display(description='Resource', ordering='resource')
     def get_resource(self, obj: TaskEntry) -> str:
@@ -91,26 +90,40 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
             return qs
         return qs.filter(resource__user=request.user)
 
-    def has_view_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_view_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
         if request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_change_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
+        if obj.is_submitted:
+            return False
         if request.user.has_perm('core.manage_any_timesheet'):
             return True
         return obj.resource.user == request.user
 
-    def has_delete_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+    def has_delete_permission(self, request: HttpRequest, obj: DayEntry | None = None) -> bool:
         if obj is None:
             return True
+        if obj.is_submitted:
+            return False
         if request.user.has_perm('core.manage_any_timesheet'):
             return True
         return obj.resource.user == request.user
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[DayEntry]) -> None:
+        if queryset.closed().exists():
+            self.message_user(
+                request,
+                'Closed time entries cannot be deleted. Reopen the timesheet first.',
+                level=messages.ERROR,
+            )
+            return
+        super().delete_queryset(request, queryset)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         if request.user.has_perm('core.manage_any_timesheet'):
@@ -142,6 +155,26 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
         if not requestor.has_perm('core.manage_any_timesheet'):
             qs = qs.filter(day_entry__resource__user=requestor)
         return qs
+
+    def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+        if obj is not None and obj.is_submitted:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
+        if obj is not None and obj.is_submitted:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet[TaskEntry]) -> None:
+        if queryset.closed().exists():
+            self.message_user(
+                request,
+                'Closed time entries cannot be deleted. Reopen the timesheet first.',
+                level=messages.ERROR,
+            )
+            return
+        super().delete_queryset(request, queryset)
 
     # def get_form(self, request: HttpRequest, obj: TaskEntry | None = None, **kwargs) -> type[forms.ModelForm]:
     #     form = super().get_form(request, obj, **kwargs)

@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from ktcalendars import KTDay
 from ktcalendars.utils import dt
 
-from testutils.factories import ContractFactory, DayEntryFactory
+from testutils.factories import ContractFactory, DayEntryFactory, TaskEntryFactory
 
 
 @pytest.mark.parametrize(
@@ -93,3 +93,37 @@ def test_effective_hours_include_absences_and_bank_operations():
     )
 
     assert day_entry.effective_hours == Decimal('8.00')
+
+
+@pytest.mark.parametrize(
+    ('worked_hours', 'bank', 'due_hours', 'expected'),
+    (
+        pytest.param('2.00', '4.00', '8.00', '0.00', id='minimum-zero'),
+        pytest.param('6.00', '0.00', '8.00', '6.00', id='within-limits'),
+        pytest.param('10.00', '0.00', '8.00', '8.00', id='maximum-due-hours'),
+    ),
+)
+def test_regular_hours_are_clamped_between_zero_and_due_hours(worked_hours, bank, due_hours, expected):
+    day_entry = DayEntryFactory.build(
+        day_hours=Decimal(worked_hours),
+        night_hours=Decimal('0.00'),
+        travel_hours=Decimal('0.00'),
+        bank=Decimal(bank),
+        due_hours=Decimal(due_hours),
+    )
+
+    assert day_entry.regular_hours == Decimal(expected)
+
+
+@pytest.mark.parametrize(
+    'absence_data',
+    (
+        pytest.param({'is_sick': True}, id='sick'),
+        pytest.param({'asked_holiday': True}, id='requested-holiday'),
+    ),
+)
+def test_task_entry_cannot_be_created_during_full_day_absence(absence_data):
+    day_entry = DayEntryFactory(**absence_data)
+
+    with pytest.raises(ValidationError, match='Task entries cannot be added'):
+        TaskEntryFactory(day_entry=day_entry)

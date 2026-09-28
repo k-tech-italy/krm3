@@ -181,6 +181,42 @@ def test_admin_can_clear_any_task_entries(admin_user, api_client):
     assert not DayEntry.objects.filter(pk__in=day_entry_ids).exists()
 
 
+def test_clear_returns_bad_request_and_rolls_back_when_bank_deposit_would_be_invalid(admin_user, api_client):
+    entry_date = date(2024, 1, 1)
+    contract = ContractFactory(
+        period=(entry_date, None),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    day_entry = DayEntryFactory(
+        resource=contract.resource,
+        contract=contract,
+        day=entry_date,
+        due_hours=8,
+        day_hours=16,
+        bank=8,
+    )
+    task = TaskFactory(resource=contract.resource, period=contract.period)
+    entry = TaskEntryFactory(
+        task=task,
+        day_entry=day_entry,
+        day_shift_hours=16,
+    )
+
+    response = api_client(user=admin_user).post(_task_entry_clear_url(), data={'ids': [entry.pk]}, format='json')
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        'error': (
+            'Invalid day entry for 2024-01-01: Cannot deposit 8.00 bank hours. '
+            'Total hours would become -8.00, which is below scheduled hours (8.00).'
+        )
+    }
+    assert TaskEntry.objects.filter(pk=entry.pk).exists()
+    day_entry.refresh_from_db()
+    assert day_entry.bank == 8
+    assert day_entry.day_hours == 16
+
+
 @pytest.mark.parametrize(
     ('permissions', 'expected_status'),
     [
@@ -415,6 +451,37 @@ def test_rejects_task_entry_without_hours(api_client):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert not TaskEntry.objects.filter(task=task, day_entry__day=entry_date).exists()
+
+
+@pytest.mark.parametrize(
+    'day_entry_data',
+    (
+        pytest.param({'is_sick': True}, id='sick'),
+        pytest.param({'asked_holiday': True}, id='requested-holiday'),
+    ),
+)
+def test_rejects_manual_task_entry_on_full_day_absence(day_entry_data, api_client):
+    entry_date = date(2024, 1, 8)
+    contract = ContractFactory(period=(entry_date, None))
+    task = TaskFactory(resource=contract.resource, period=contract.period)
+    day_entry = DayEntryFactory(
+        resource=contract.resource,
+        contract=contract,
+        day=entry_date,
+        due_hours=8,
+        **day_entry_data,
+    )
+
+    response = _post_task_entry(
+        api_client,
+        task,
+        entry_date,
+        autofill=False,
+        day_shift_hours=8,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not TaskEntry.objects.filter(task=task, day_entry=day_entry).exists()
 
 
 @pytest.mark.parametrize(
@@ -748,6 +815,28 @@ def test_task_entry_create_permissions(
         day_entry__resource=resource,
         task=task,
     ).exists() is should_create
+
+
+def test_manager_cannot_create_task_entry_for_another_resources_task(resources, api_client):
+    target_resource = resources['regular']
+    task_resource = resources['other']
+    target_date = _dt('20250830')
+    ContractFactory(resource=target_resource, period=(target_date, None))
+    task = TaskFactory(resource=task_resource, period=(target_date, None), contract=True)
+
+    response = api_client(user=resources['manager'].user).post(
+        reverse('timesheet-api:api-task-entry-list'),
+        data={
+            'dates': [target_date],
+            'task_id': task.pk,
+            'day_shift_hours': 2,
+            'resource_id': target_resource.pk,
+        },
+        content_type='application/json',
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert not TaskEntry.objects.filter(task=task, day_entry__resource=target_resource).exists()
 
 
 @pytest.mark.parametrize(

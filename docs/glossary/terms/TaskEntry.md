@@ -10,10 +10,12 @@ terms:
 
 _Django Model: core.TaskEntry_
 
-TaskEntry is a <glossary:TimeEntry> with a specified Task and it represents work on a particular task (e.g., shift, travel, on-call duty).
+`TaskEntry` records task-related hours for one <glossary:Task> on a particular day. It belongs to a <glossary:DayEntry>, which supplies the Resource, date, Contract, and day-level information. `TaskEntry` is one of the two concrete models covered by the generic <glossary:TimeEntry> type.
 
-### TaskEntry may include:
-- day shift hours
-- night shift hours
-- travel hours
-- on call hours
+## Fields
+
+- `task`: The Task the hours are recorded against.
+- `day_entry`: The parent DayEntry for the day.
+- `day_shift_hours`, `night_shift_hours`, `travel_hours`, and `on_call_hours`: Hours recorded for this Task on that day.
+- `comment`: An optional note about the entry.
+- `metadata`: Additional structured data associated with the entry.

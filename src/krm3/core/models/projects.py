@@ -8,6 +8,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange
 from natural_keys import NaturalKeyModel, NaturalKeyModelManager
+from psycopg.types.range import DateRange
 
 from .auth import Resource
 from .contacts import Client
@@ -48,6 +49,15 @@ class PeriodBoundCheckerMixin:
         return super().clean()
 
 
+def period_contains(parent: DateRange, child: DateRange) -> bool:
+    """Return whether the child period is fully contained within the parent period."""
+    if child.lower < parent.lower:
+        return False
+    if parent.upper is None:
+        return True
+    return child.upper is not None and child.upper <= parent.upper
+
+
 class ProjectManager(NaturalKeyModelManager):
     def filter_acl(self, user: User) -> models.QuerySet[Project]:
         """Return the queryset for the owned records.
@@ -70,6 +80,9 @@ class Project(PeriodBoundCheckerMixin, NaturalKeyModel):
 
     mission_set: RelatedManager[Mission]
 
+    if TYPE_CHECKING:
+        task_set: RelatedManager[Task]
+
     class Meta:
         permissions = [
             ('view_any_project', "Can view(only) everybody's projects"),
@@ -81,6 +94,14 @@ class Project(PeriodBoundCheckerMixin, NaturalKeyModel):
 
     def is_accessible(self, user: User) -> bool:
         return user.can_manage_or_view_any_project() or self.mission_set.filter(resource__profile__user=user).exists()
+
+    def clean(self) -> None:
+        super().clean()
+        if self.pk and self.period and self.task_set.exclude(period__contained_by=self.period).exists():
+            raise ValidationError(
+                {'period': _('The project period would exclude existing tasks.')},
+                code='project-period-excludes-tasks',
+            )
 
 
 class POState(models.TextChoices):
@@ -197,6 +218,11 @@ class Task(PeriodBoundCheckerMixin, models.Model):
 
     def clean(self) -> None:
         super().clean()
+        if self.project_id and self.period and not period_contains(self.project.period, self.period):
+            raise ValidationError(
+                {'period': _('Task period must be contained within the project period.')},
+                code='task-period-outside-project',
+            )
         period = KTDateRange(self.period)
         if self.resource and self.period and not self.resource.has_contract_cover(*period.as_dates()):
             raise ValidationError(_('Missing contract cover for the range {}').format(period))

@@ -149,6 +149,16 @@ def test_accepts_special_leave_only_when_reason_is_valid_for_all_dates(dates, ex
             status.HTTP_400_BAD_REQUEST,
             id='holiday-and-special-leave',
         ),
+        pytest.param(
+            {'is_sick': True, 'rest_hours': 4},
+            status.HTTP_400_BAD_REQUEST,
+            id='sick-and-rest',
+        ),
+        pytest.param(
+            {'asked_holiday': True, 'rest_hours': 4},
+            status.HTTP_400_BAD_REQUEST,
+            id='holiday-and-rest',
+        ),
     ),
 )
 def test_accepts_at_most_one_absence_kind(entry_data, expected_status, api_client):
@@ -521,7 +531,16 @@ def _clear_url():
 
 def test_delete_removes_non_task_data_and_preserves_tasks(api_client):
     special_leave_reason = SpecialLeaveReasonFactory()
-    day_entry = DayEntryFactory(
+    day_entry = DayEntryFactory()
+    task_entry = TaskEntryFactory(
+        resource=day_entry.resource,
+        day_entry=day_entry,
+        day_shift_hours=4,
+        night_shift_hours=1,
+        travel_hours=1,
+        on_call_hours=2,
+    )
+    type(day_entry).objects.filter(pk=day_entry.pk).update(
         bank=2,
         asked_holiday=True,
         leave_hours=3,
@@ -532,14 +551,7 @@ def test_delete_removes_non_task_data_and_preserves_tasks(api_client):
         rest_hours=1,
         comment='Remove me',
     )
-    task_entry = TaskEntryFactory(
-        resource=day_entry.resource,
-        day_entry=day_entry,
-        day_shift_hours=4,
-        night_shift_hours=1,
-        travel_hours=1,
-        on_call_hours=2,
-    )
+    day_entry.refresh_from_db()
 
     response = api_client(user=day_entry.resource.user).post(
         _delete_url(), data={'ids': [day_entry.pk]}, format='json'

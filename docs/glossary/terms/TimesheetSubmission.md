@@ -10,10 +10,11 @@ terms:
 
 _Django Model: core.TimesheetSubmission_
 
-A **TimesheetSubmission** represents a block of <glossary:TimeEntry> records for a specific <glossary:Resource> over a given period, submitted for approval or processing. Once a timesheet is closed, the entries within it are considered final and can be edited and/or deleted only by privileged users.
+A **TimesheetSubmission** represents a <glossary:Resource>'s timesheet for a given period. It is linked to the period's <glossary:DayEntry> records; each day's <glossary:TaskEntry> records are related through their DayEntry. While the submission is closed, those entries cannot be edited or deleted. A privileged user must reopen the submission before modifying or deleting them.
 
 ## Fields
 
 - `period`: The date range that this timesheet covers.
 - `closed`: A boolean indicating whether the timesheet is closed for editing.
 - `resource`: The <glossary:Resource> to whom this timesheet belongs.
+- `timesheet`: The serialized timesheet data captured when the submission is closed.

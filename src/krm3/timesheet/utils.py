@@ -9,6 +9,15 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
+def calculate_regular_hours(
+    worked_hours: Decimal,
+    bank: Decimal,
+    due_hours: Decimal,
+) -> Decimal:
+    """Return regular hours, clamped between zero and the due hours."""
+    return min(max(worked_hours - bank, Decimal(0)), due_hours)
+
+
 def worked_hours(time_entries: Iterable[TimeEntry]) -> Decimal:
     """Return the total of all the given time entries' task hours."""
     bank_from = sum(entry.bank_from or 0 for entry in time_entries)

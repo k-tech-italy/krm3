@@ -2,7 +2,7 @@ import datetime
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, cast, override
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.utils.translation import gettext as _
@@ -25,6 +25,7 @@ from krm3.timesheet.api.serializers import (
     BaseTaskEntrySerializer,
     TaskEntryCreateSerializer,
     TaskEntryReadSerializer,
+    _model_validation_error_detail,
 )
 from krm3.timesheet.dto import TimesheetDTO
 
@@ -252,21 +253,21 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        with transaction.atomic():
-            day_entry_ids = list(
-                entries.values_list('day_entry_id', flat=True).distinct()
+        try:
+            with transaction.atomic():
+                day_entry_ids = list(entries.values_list('day_entry_id', flat=True).distinct())
+
+                day_entries = list(DayEntry.objects.select_for_update().filter(pk__in=day_entry_ids))
+
+                entries.delete()
+
+                for day_entry in day_entries:
+                    self._refresh_or_delete_day_entry(day_entry)
+        except DjangoValidationError as exc:
+            return Response(
+                data=_model_validation_error_detail(exc),
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-            day_entries = list(
-                DayEntry.objects
-                .select_for_update()
-                .filter(pk__in=day_entry_ids)
-            )
-
-            entries.delete()
-
-            for day_entry in day_entries:
-                self._refresh_or_delete_day_entry(day_entry)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

@@ -386,7 +386,6 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
         if (
                 self.instance is None
                 and attrs['task_id'].resource_id != resource.pk
-                and not user.has_perm('core.manage_any_timesheet')
         ):
             raise exceptions.PermissionDenied({
                 'error': _('The task is not assigned to the selected resource.')
@@ -650,16 +649,19 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                             )
                         })
 
+                    if day_entry.is_sick or day_entry.asked_holiday:
+                        raise serializers.ValidationError({
+                            'error': _(
+                                'Cannot add task entries to a sick day or requested holiday.'
+                            )
+                        })
+
                     entry_data = validated_data.copy()
 
                     if autofill:
-                        if (
-                            day_entry.is_sick
-                            or day_entry.asked_holiday
-                            or day_entry.is_holiday
-                        ):
+                        if day_entry.is_holiday:
                             raise serializers.ValidationError({
-                                'error': _('Cannot autofill an absence day.')
+                                'error': _('Cannot autofill a public holiday.')
                             })
 
                         hours_to_fill = self._get_autofill_hours(day_entry)

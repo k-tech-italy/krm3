@@ -1,11 +1,15 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+from django.core.exceptions import ValidationError
 from testutils.factories import (
     ContractFactory,
     DayEntryFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
+    TaskEntryFactory,
+    TaskFactory,
     TimesheetSubmissionFactory,
 )
 
@@ -37,6 +41,54 @@ def test_submission_state_is_synchronized_with_day_entries():
     day_entry.refresh_from_db()
     assert day_entry.timesheet is None
     assert day_entry.closed is False
+
+
+def test_closed_entries_cannot_be_deleted_until_submission_is_reopened():
+    resource = ResourceFactory()
+    contract = ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 2, 1)))
+    task = TaskFactory(resource=resource, period=contract.period)
+    day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2024, 1, 3))
+    task_entry = TaskEntryFactory(day_entry=day_entry, task=task)
+    submission = TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2024-01-01', '2024-02-01'),
+        closed=True,
+    )
+
+    day_entry.refresh_from_db()
+    task_entry.refresh_from_db()
+
+    with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
+        day_entry.delete()
+    with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
+        task_entry.delete()
+    with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
+        day_entry.__class__.objects.filter(pk=day_entry.pk).delete()
+    with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
+        task_entry.__class__.objects.filter(pk=task_entry.pk).delete()
+
+    submission.closed = False
+    submission.save()
+    task_entry.delete()
+    day_entry.delete()
+
+    assert not task_entry.__class__.objects.filter(pk=task_entry.pk).exists()
+    assert not day_entry.__class__.objects.filter(pk=day_entry.pk).exists()
+
+
+def test_task_entry_cannot_be_created_in_closed_submission():
+    resource = ResourceFactory()
+    contract = ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 2, 1)))
+    task = TaskFactory(resource=resource, period=contract.period)
+    day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2024, 1, 3))
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2024-01-01', '2024-02-01'),
+        closed=True,
+    )
+
+    with pytest.raises(ValidationError, match='Cannot modify time entries for submitted timesheets'):
+        TaskEntryFactory(day_entry=day_entry, task=task)
 
 
 def test_submission_report_uses_current_day_and_task_entry_format():

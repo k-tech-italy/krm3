@@ -10,7 +10,7 @@ The period are stored as a "double date" rather than two separate fields.
 **IMPORTANT:**
 - For technical reason the "periods" are stored as "closed-open" intervals, meaning that the lower bound is included but the upper bound not.
 The conventioanl notation is "[)"
-This means for example that to identify 2026 February period the user must enter [2026-01-01, 2026-03-01) .
+This means for example that to identify 2026 February period the user must enter [2026-02-01, 2026-03-01) .
 - The upper bound can optionally be left blank meaning it is an unbounbed interval (we know when the period starts but we don't know yet when it ends)
 
 ## Dates and period "compatibility"

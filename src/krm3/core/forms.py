@@ -44,17 +44,27 @@ class ContractForm(ModelForm):
         return value
 
     def clean(self) -> dict | None:
-        ret = super().clean()
-        if self.instance.id and (new_period := self.cleaned_data.get('period')) and (self.cleaned_data.get('resource')):
-            old_period = [self.instance.period.lower, self.instance.period.upper]
-            new_period = [new_period.lower, new_period.upper]
+        cleaned_data = super().clean()
+        new_period = self.cleaned_data.get('period')
 
-            # check if interval becomes smaller
-            if new_period[1] < old_period[1] or new_period[0] > old_period[0]:
-                boundaries = self.instance.period_as_tuple()
-                if self.instance.dayentry_set.filter(Q(day_lt=boundaries[0]) | Q(day_gte=boundaries[1])).exists():
-                    raise ValidationError('Shrinking contract period would leave orphan tasks', code='orphan-tasks')
-        return ret
+        if self.instance.pk and new_period:
+            old_period = self.instance.period
+            start_was_shortened = new_period.lower > old_period.lower
+            end_was_shortened = new_period.upper is not None and (
+                old_period.upper is None or new_period.upper < old_period.upper
+            )
+
+            if start_was_shortened or end_was_shortened:
+                outside_period = Q(day__lt=new_period.lower)
+                if new_period.upper is not None:
+                    outside_period |= Q(day__gte=new_period.upper)
+
+                if self.instance.dayentry_set.filter(outside_period).exists():
+                    raise ValidationError(
+                        'Shrinking the contract period would leave day entries outside it.',
+                        code='orphan-day-entries',
+                    )
+        return cleaned_data
 
     class Meta:
         model = Contract

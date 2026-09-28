@@ -1,8 +1,8 @@
 import datetime
 import json
 import typing
+from contextlib import nullcontext as does_not_raise
 from datetime import date
-from ktcalendars.utils import dt
 from unittest.mock import patch
 
 import pytest
@@ -10,17 +10,19 @@ from constance.test import override_config
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from ktcalendars import KTDay
+from ktcalendars.utils import dt
 from psycopg.types.range import DateRange
 from testutils.factories import (
     ContractFactory,
+    DayEntryFactory,
     ResourceFactory,
     TaskFactory,
     UserFactory,
 )
 from testutils.permissions import add_permissions
 
+from krm3.core.forms import ContractForm
 from krm3.core.models import Contract, DayEntry
-from contextlib import nullcontext as does_not_raise
 
 if typing.TYPE_CHECKING:
     from _pytest.raises import RaisesExc
@@ -67,6 +69,63 @@ def test_contract_ordering():
     c1 = ContractFactory(period=(dt('20250601'), dt('20250630')))
     c2 = ContractFactory(period=(dt('20250503'), dt('20250601')))
     assert list(Contract.objects.values_list('id', flat=True)) == [c2.id, c1.id]
+
+
+def _contract_form_data(contract: Contract, start: date, end: date | None) -> dict:
+    return {
+        'resource': contract.resource_id,
+        'period_0': start.isoformat(),
+        'period_1': end.isoformat() if end else '',
+        'working_schedule': contract.working_schedule,
+        'meal_voucher': contract.meal_voucher,
+        'sunday_as_holiday': contract.sunday_as_holiday,
+        'overtime': contract.overtime,
+        'contract_type': contract.contract_type,
+        'base_in': contract.base_in_id or '',
+        'comment': contract.comment or '',
+    }
+
+
+def test_contract_form_saves_unchanged_open_ended_period():
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+
+    form = ContractForm(
+        instance=contract,
+        data=_contract_form_data(contract, dt('2026-01-01'), None),
+    )
+
+    assert form.is_valid(), form.errors
+
+
+def test_contract_form_allows_shorter_period_when_entries_remain_inside():
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    DayEntryFactory(contract=contract, resource=contract.resource, day=dt('2026-06-01'))
+
+    form = ContractForm(
+        instance=contract,
+        data=_contract_form_data(contract, dt('2026-02-01'), dt('2026-07-01')),
+    )
+
+    assert form.is_valid(), form.errors
+
+
+@pytest.mark.parametrize(
+    ('start', 'end', 'entry_day'),
+    (
+        pytest.param(dt('2026-02-01'), None, dt('2026-01-15'), id='later-start'),
+        pytest.param(dt('2026-01-01'), dt('2026-07-01'), dt('2026-07-01'), id='earlier-end'),
+    ),
+)
+def test_contract_form_rejects_period_that_excludes_day_entries(start, end, entry_day):
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    DayEntryFactory(contract=contract, resource=contract.resource, day=entry_day)
+
+    form = ContractForm(instance=contract, data=_contract_form_data(contract, start, end))
+
+    assert not form.is_valid()
+    assert form.non_field_errors() == [
+        'Shrinking the contract period would leave day entries outside it.'
+    ]
 
 
 # @pytest.mark.parametrize(

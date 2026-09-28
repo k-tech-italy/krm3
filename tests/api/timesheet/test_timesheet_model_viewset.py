@@ -50,7 +50,6 @@ class TestTimesheetSubmissionModelAPIListView:
     @pytest.mark.parametrize(
         'who, result',
         [
-            pytest.param('regular', 'own', id='regular'),
             pytest.param('manager', 'full', id='manager'),
             pytest.param('group-manager', 'full', id='group-manager'),
             pytest.param('admin', 'full', id='admin'),
@@ -86,6 +85,51 @@ class TestTimesheetSubmissionModelAPIListView:
         assert TimesheetSubmission.objects.count() == 0
 
     @pytest.mark.parametrize(
+        ('who', 'method'),
+        [
+            pytest.param('regular', 'put', id='regular-put'),
+            pytest.param('regular', 'patch', id='regular-patch'),
+            pytest.param('regular', 'delete', id='regular-delete'),
+            pytest.param('viewer', 'put', id='viewer-put'),
+            pytest.param('viewer', 'patch', id='viewer-patch'),
+            pytest.param('viewer', 'delete', id='viewer-delete'),
+        ],
+    )
+    def test_unprivileged_users_cannot_modify_submission(
+        self, who, method, api_client, regular_user, viewer
+    ):
+        user = regular_user if who == 'regular' else viewer
+        resource = ResourceFactory(user=user)
+        submission = TimesheetSubmissionFactory(resource=resource, closed=True)
+        client = api_client(user=user)
+
+        if method == 'delete':
+            response = client.delete(self.url(submission.pk))
+        else:
+            response = getattr(client, method)(
+                self.url(submission.pk),
+                data={'closed': False},
+                format='json',
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        submission.refresh_from_db()
+        assert submission.closed is True
+
+    def test_manager_can_reopen_submission(self, api_client, manager):
+        submission = TimesheetSubmissionFactory(closed=True)
+
+        response = api_client(user=manager).patch(
+            self.url(submission.pk),
+            data={'closed': False},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        submission.refresh_from_db()
+        assert submission.closed is False
+
+    @pytest.mark.parametrize(
         'who',
         [pytest.param('regular', id='regular'), pytest.param('viewer', id='viewer')],
     )
@@ -110,7 +154,7 @@ class TestTimesheetSubmissionModelAPIListView:
             data={'resource': resource.pk, 'period': ('2024-01-08', '2024-01-14')},
             format='json',
         )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.parametrize(
         'who, result',

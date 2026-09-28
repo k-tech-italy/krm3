@@ -1,5 +1,5 @@
 import logging
-from typing import Any, cast
+from typing import Any, cast, override
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import (
@@ -13,6 +13,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ktcalendars import KTDay
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAuthenticated
 from rest_framework.request import Request
@@ -299,6 +300,26 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     queryset = TimesheetSubmission.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TimesheetSubmissionSerializer
+
+    @staticmethod
+    def _check_manage_permission(request: Request) -> None:
+        if not cast('User', request.user).has_perm('core.manage_any_timesheet'):
+            raise PermissionDenied('You do not have permission to modify timesheet submissions.')
+
+    @override
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().update(request, *args, **kwargs)
+
+    @override
+    def partial_update(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().partial_update(request, *args, **kwargs)
+
+    @override
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        self._check_manage_permission(request)
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)

@@ -94,10 +94,11 @@ def test_report_creation(admin_client):  # noqa: PLR0915
         resource=r1,
     )
 
+    task_2 = TaskFactory(resource=r2)
     TaskEntryFactory(
         date=_dt('2025-06-13'),
         night_shift_hours=7,
-        task=task_1,
+        task=task_2,
         resource=r2,
     )
 

@@ -111,7 +111,11 @@ class Krm3Day(KTDay):
         self.data_sick = due_hours if day_entry.is_sick else None
         self.data_overtime = value_or_none(day_entry.overtime_hours)
         self.data_meal_voucher = value_or_none(day_entry.meal_voucher)
-        regular_hours = min(max(worked_hours - bank, Decimal(0)), due_hours)
+        regular_hours = utils.calculate_regular_hours(
+            worked_hours=worked_hours,
+            bank=bank,
+            due_hours=due_hours,
+        )
         self.data_regular_hours = value_or_none(regular_hours)
 
     @classmethod

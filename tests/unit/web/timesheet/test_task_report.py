@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from freezegun import freeze_time
 from testutils.date_utils import _dt
-from testutils.factories import ContractFactory, DayEntryFactory, TaskEntryFactory, TaskFactory
+from testutils.factories import ContractFactory, DayEntryFactory, ProjectFactory, TaskEntryFactory, TaskFactory
 from testutils.web import _assert_homepage_content
 
 from krm3.timesheet.report.task import TimesheetTaskReportOnline
@@ -20,11 +20,27 @@ class TestTimesheetTaskReport:
         self.r1 = contract_1.resource
         self.r2 = contract_2.resource
 
-        self.task_1 = TaskFactory(period=(_dt('2025-06-15'), _dt('2025-07-31')), resource=self.r1)
+        project_1 = ProjectFactory(name='Task report project 1')
+        project_2 = ProjectFactory(name='Task report project 2')
+        project_3 = ProjectFactory(name='Task report project 3')
 
-        self.task_2 = TaskFactory(period=(_dt('2025-06-05'), _dt('2025-06-11')), resource=self.r1)
+        self.task_1 = TaskFactory(
+            project=project_1,
+            period=(_dt('2025-06-15'), _dt('2025-07-31')),
+            resource=self.r1,
+        )
 
-        self.task_3 = TaskFactory(period=(_dt('2025-06-05'), _dt('2025-07-11')), resource=self.r2)
+        self.task_2 = TaskFactory(
+            project=project_2,
+            period=(_dt('2025-06-05'), _dt('2025-06-11')),
+            resource=self.r1,
+        )
+
+        self.task_3 = TaskFactory(
+            project=project_3,
+            period=(_dt('2025-06-05'), _dt('2025-07-11')),
+            resource=self.r2,
+        )
 
         day_entry_16 = DayEntryFactory(day=_dt('2025-06-16'), resource=self.r1, contract=contract_1)
         day_entry_17 = DayEntryFactory(day=_dt('2025-06-17'), resource=self.r1, contract=contract_1)
