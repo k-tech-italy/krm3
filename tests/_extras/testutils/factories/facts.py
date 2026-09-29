@@ -309,13 +309,13 @@ class TaskEntryFactory(DjangoModelFactory):
         model_class,
         /,
         resource: 'Resource | None' = None,
-        date: date | bool | None = None,
+        day: date | bool | None = None,
         day_entry: 'DayEntry | bool | None' = None,
         task: 'Task | None' = None,
         **kwargs,
     ) -> 'Task':
         """Create a contract if required."""
-        if day_entry and date:
+        if day_entry and day:
             raise NotImplementedError
 
         manager = cls._get_manager(model_class)
@@ -331,24 +331,24 @@ class TaskEntryFactory(DjangoModelFactory):
                 kwargs['day_entry'] = DayEntryFactory(resource=resource)
             else:
                 kwargs['day_entry'] = day_entry
-        elif date:
-            if isinstance(date, bool):
+        elif day:
+            if isinstance(day, bool):
                 kwargs['day_entry'] = DayEntryFactory(
                     resource=resource,
                     day=Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31)),
                 )
             else:
-                contract = Contract.objects.by_day(resource, date)
+                contract = Contract.objects.by_day(resource, dat)
                 if contract is None:
                     contract = ContractFactory(
                         resource=resource,
-                        period=(date, None),
+                        period=(day, None),
                     )
 
                 kwargs['day_entry'] = DayEntryFactory(
                     resource=resource,
                     contract=contract,
-                    day=date,
+                    day=day,
                 )
 
         kwargs['task'] = task

@@ -20,13 +20,13 @@ def _inject_task_entry_fields() -> tuple[models.Model, models.Model]:
     SpecialLeaveReason = apps.get_model('core', 'SpecialLeaveReason')
     fields = [
         models.DateTimeField(auto_now=True, name='last_modified'),
-        models.DateField(name='date'),
+        models.DateField(name='day', blank=True, null=True),
         models.DecimalField(max_digits=4, decimal_places=2, default=0.0, name='holiday_hours'),
         models.DecimalField(max_digits=4, decimal_places=2, default=0.0, name='leave_hours'),
         models.DecimalField(max_digits=4, decimal_places=2, default=0.0, name='rest_hours'),
         models.DecimalField(max_digits=4, decimal_places=2, default=0.0, name='sick_hours'),
         models.DecimalField(max_digits=4, decimal_places=2, default=0.0, name='special_leave_hours'),
-        models.ForeignKey(Resource, on_delete=models.deletion.PROTECT, name='resource'),
+        models.ForeignKey(Resource, blank=True, null=True, on_delete=models.deletion.PROTECT, name='resource'),
         models.ForeignKey(
             TimesheetSubmission, blank=True, null=True, on_delete=models.deletion.SET_NULL, name='timesheet'
         ),
@@ -62,7 +62,7 @@ def migrate_dates() -> None:
 
 
 def ensure_contracts(TaskEntry):
-    for rec in TaskEntry.objects.values('resource_id').annotate(min_date=Min('date')):
+    for rec in TaskEntry.objects.values('resource_id').annotate(min_date=Min('day')):
         if Contract.objects.filter(resource_id=rec['resource_id']).first() is None:
             Contract.objects.create(resource_id=rec['resource_id'], period=(rec['min_date'], None))
 
@@ -84,7 +84,7 @@ def migrate_time_entries():
 
     day_entries = {
         k: {'task_entries': []}
-        for k in list(TaskEntry.objects.distinct('resource_id', 'date').values_list('resource_id', 'date'))
+        for k in list(TaskEntry.objects.distinct('resource_id', 'day').values_list('resource_id', 'day'))
     }
 
     resource_ids = {r[0] for r in day_entries.keys()}

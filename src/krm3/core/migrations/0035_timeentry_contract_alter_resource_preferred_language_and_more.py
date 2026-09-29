@@ -11,6 +11,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RenameField(
+            model_name='timeentry',
+            old_name='date',
+            new_name='day',
+        ),
         migrations.RemoveField(
             model_name='task',
             name='basket_title',
@@ -18,8 +23,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='task',
             name='basket',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT,
-                                    to='core.basket'),
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='core.basket'
+            ),
         ),
         migrations.AddField(
             model_name='contract',
@@ -33,9 +39,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='timeentry',
             name='timesheet',
-            field=models.ForeignKey(blank=True,
-                                    null=True, on_delete=django.db.models.deletion.SET_NULL,
-                                    to='core.timesheetsubmission', ),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to='core.timesheetsubmission',
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(
@@ -213,8 +222,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='taskentry',
             name='task',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT,
-                                    related_name='task_entries', to='core.task'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name='task_entries',
+                to='core.task',
+            ),
         ),
         migrations.AddConstraint(
             model_name='taskentry',
@@ -254,5 +268,4 @@ class Migration(migrations.Migration):
                 help_text='N.B.: End date is the day after the actual end date'
             ),
         ),
-
     ]

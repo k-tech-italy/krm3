@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RemoveField(
             model_name='taskentry',
-            name='date',
+            name='day',
         ),
         migrations.RemoveField(
             model_name='po',
