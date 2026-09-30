@@ -270,7 +270,7 @@ class TestTimesheetTaskReport:
 @freeze_time('2025-08-22')
 def test_task_report_view_current_month(admin_client):
     task = TaskFactory(contract=True)
-    TaskEntryFactory(resource=task.resource, day_shift_hours=8, date=datetime.date.today(), task=task)
+    TaskEntryFactory(resource=task.resource, day_shift_hours=8, day=datetime.date.today(), task=task)
     url = reverse('task_report')
     response = admin_client.get(url)
     _assert_homepage_content(response)

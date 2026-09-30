@@ -338,7 +338,7 @@ class TaskEntryFactory(DjangoModelFactory):
                     day=Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31)),
                 )
             else:
-                contract = Contract.objects.by_day(resource, dat)
+                contract = Contract.objects.by_day(resource, day)
                 if contract is None:
                     contract = ContractFactory(
                         resource=resource,

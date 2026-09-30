@@ -83,8 +83,8 @@ class TestTaskAPIListView:
             ),
         )
 
-        TaskEntryFactory(task=task, resource=resource, date=_dt('2023-07-01'), comment='Too early')
-        TaskEntryFactory(task=task, resource=resource, date=_dt('2024-07-01'), comment='Too late')
+        TaskEntryFactory(task=task, resource=resource, day=_dt('2023-07-01'), comment='Too early')
+        TaskEntryFactory(task=task, resource=resource, day=_dt('2024-07-01'), comment='Too late')
 
         entry_date = _dt('2024-01-03')
         day_entry = DayEntryFactory(

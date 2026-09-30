@@ -155,7 +155,7 @@ def test_rejects_task_entry_ids_not_in_a_list(admin_user, api_client):
 
 
 def test_rejects_clearing_task_entries_from_closed_timesheet(admin_user, api_client):
-    entry = TaskEntryFactory(date=date(2024, 1, 2))
+    entry = TaskEntryFactory(day=date(2024, 1, 2))
     TimesheetSubmissionFactory(
         resource=entry.day_entry.resource,
         period=(entry.day_entry.day, entry.day_entry.day + timedelta(days=1)),
@@ -169,8 +169,8 @@ def test_rejects_clearing_task_entries_from_closed_timesheet(admin_user, api_cli
 
 
 def test_admin_can_clear_any_task_entries(admin_user, api_client):
-    first_entry = TaskEntryFactory(date=date(2024, 1, 1))
-    second_entry = TaskEntryFactory(date=date(2024, 1, 2))
+    first_entry = TaskEntryFactory(day=date(2024, 1, 1))
+    second_entry = TaskEntryFactory(day=date(2024, 1, 2))
     entry_ids = [first_entry.pk, second_entry.pk]
     day_entry_ids = [first_entry.day_entry_id, second_entry.day_entry_id]
 
@@ -261,8 +261,8 @@ def test_clear_permissions_for_entries_owned_by_different_users(
 ):
     own_resource = ResourceFactory(user=regular_user)
     other_resource = ResourceFactory()
-    own_entry = TaskEntryFactory(resource=own_resource, date=date(2024, 1, 1))
-    other_entry = TaskEntryFactory(resource=other_resource, date=date(2024, 1, 1))
+    own_entry = TaskEntryFactory(resource=own_resource, day=date(2024, 1, 1))
+    other_entry = TaskEntryFactory(resource=other_resource, day=date(2024, 1, 1))
     entry_ids = [own_entry.pk, other_entry.pk]
 
     for permission in permissions:
@@ -661,7 +661,7 @@ def test_rejects_task_entry_above_daily_hour_limits(hours_data, api_client):
 def test_upsert_replaces_existing_task_entry_hours(api_client):
     entry_date = date(2024, 1, 1)
     task = TaskFactory(period=(entry_date, None), contract=True)
-    existing = TaskEntryFactory(resource=task.resource, date=entry_date, task=task, day_shift_hours=16)
+    existing = TaskEntryFactory(resource=task.resource, day=entry_date, task=task, day_shift_hours=16)
 
     response = _post_task_entry(api_client, task, entry_date, day_shift_hours=10)
 
@@ -691,7 +691,7 @@ def test_rejects_negative_task_entry_hours(hours_field, api_client):
 def test_upsert_replaces_hours_for_same_task_and_day(hours_field, api_client):
     entry_date = date(2024, 1, 2)
     task = TaskFactory(period=(entry_date, None), contract=True)
-    existing = TaskEntryFactory(resource=task.resource, date=entry_date, task=task, day_shift_hours=4)
+    existing = TaskEntryFactory(resource=task.resource, day=entry_date, task=task, day_shift_hours=4)
 
     response = _post_task_entry(api_client, task, entry_date, **{hours_field: 4})
 
@@ -730,13 +730,13 @@ def task_entry_scenario(resources):
             't2': t2,
         },
         'task_entries': {
-            1: TaskEntryFactory(resource=resources['admin'], date=_dt('20250824'), task=t1, day_shift_hours=2),
-            2: TaskEntryFactory(resource=resources['admin'], date=_dt('20250825'), task=t1, day_shift_hours=2),
-            3: TaskEntryFactory(resource=resources['admin'], date=_dt('20250826'), task=t1, day_shift_hours=2),
-            4: TaskEntryFactory(resource=resources['admin'], date=_dt('20250827'), task=t1, day_shift_hours=2),
-            5: TaskEntryFactory(resource=resources['admin'], date=_dt('20250828'), task=t1, day_shift_hours=2),
-            6: TaskEntryFactory(resource=resources['admin'], date=_dt('20250829'), task=t1, day_shift_hours=2),
-            7: TaskEntryFactory(resource=resources['regular'], date=_dt('20250827'), task=t2, day_shift_hours=2),
+            1: TaskEntryFactory(resource=resources['admin'], day=_dt('20250824'), task=t1, day_shift_hours=2),
+            2: TaskEntryFactory(resource=resources['admin'], day=_dt('20250825'), task=t1, day_shift_hours=2),
+            3: TaskEntryFactory(resource=resources['admin'], day=_dt('20250826'), task=t1, day_shift_hours=2),
+            4: TaskEntryFactory(resource=resources['admin'], day=_dt('20250827'), task=t1, day_shift_hours=2),
+            5: TaskEntryFactory(resource=resources['admin'], day=_dt('20250828'), task=t1, day_shift_hours=2),
+            6: TaskEntryFactory(resource=resources['admin'], day=_dt('20250829'), task=t1, day_shift_hours=2),
+            7: TaskEntryFactory(resource=resources['regular'], day=_dt('20250827'), task=t2, day_shift_hours=2),
         },
     }
 
