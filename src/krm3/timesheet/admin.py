@@ -15,7 +15,6 @@ from rangefilter.filters import DateRangeFilter
 from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, DayEntry
 from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
-from django import forms
 
 
 from django.utils.html import format_html
@@ -79,7 +78,7 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
         ('special_leave_hours', NumberFilter),
         ('rest_hours', NumberFilter),
         ('leave_hours', NumberFilter),
-        # ('holiday_hours', NumberFilter),
+        'asked_holiday',
         ('bank', NumberFilter),
     ]
     list_select_related = ('resource', 'timesheet')
@@ -135,10 +134,11 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
 class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
     _resource_accessor = lambda adminmodel, obj: obj.day_entry.resource
 
-    list_display = ('get_day', 'get_resource', 'get_task')
+    list_display = ('id', 'get_day', 'get_resource', 'get_task')
 
     list_filter = [
         ('task__project', AutoCompleteFilter),
+        ('day_entry__resource', AutoCompleteFilter),
         ('task', AutoCompleteFilter),
         ('day_entry__day', DateRangeFilter),
         ('day_shift_hours', NumberFilter),
@@ -149,7 +149,7 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
     ]
     list_select_related = ('task__project', 'day_entry__resource', 'timesheet')
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> 'QuerySet[TaskEntry]':
         requestor = request.user
         qs = super().get_queryset(request).select_related('day_entry')
         if not requestor.has_perm('core.manage_any_timesheet'):
@@ -175,26 +175,6 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
             )
             return
         super().delete_queryset(request, queryset)
-
-    # def get_form(self, request: HttpRequest, obj: TaskEntry | None = None, **kwargs) -> type[forms.ModelForm]:
-    #     form = super().get_form(request, obj, **kwargs)
-    #
-    #     is_add_view = obj is None
-    #     user = request.user
-    #
-    #     if not user.has_perm('core.manage_any_timesheet'):
-    #         try:
-    #             resource = Resource.objects.get(user=user)
-    #             if is_add_view:
-    #                 if 'resource' in form.base_fields:
-    #                     form.base_fields['resource'].queryset = Resource.objects.filter(pk=resource.pk)
-    #             else:
-    #                 pass
-    #         except Resource.DoesNotExist:
-    #             if is_add_view and 'resource' in form.base_fields:
-    #                 form.base_fields['resource'].queryset = Resource.objects.none()
-    #
-    #     return form
 
     @button(html_attrs=NORMAL)
     def report(self, _request: HttpRequest) -> HttpResponseRedirect:
