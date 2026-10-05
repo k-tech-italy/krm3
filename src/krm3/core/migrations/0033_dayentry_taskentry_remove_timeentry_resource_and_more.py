@@ -306,6 +306,9 @@ REVERSE_TASK_ENTRIES_SQL = """
 -- Restore task-level TimeEntries during rollback.
 DELETE FROM core_timeentry;
 
+DROP TABLE IF EXISTS core_day_entry_b;
+DROP TABLE IF EXISTS core_task_entry_b;
+    
 CREATE TABLE core_day_entry_b AS SELECT * FROM core_dayentry;
 CREATE TABLE core_task_entry_b AS SELECT * FROM core_taskentry;
 
