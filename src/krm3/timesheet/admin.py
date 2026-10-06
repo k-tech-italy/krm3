@@ -174,7 +174,7 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
     def get_queryset(self, request: HttpRequest) -> 'QuerySet[TaskEntry]':
         requestor = request.user
         qs = super().get_queryset(request).select_related('day_entry')
-        if not requestor.has_perm('core.manage_any_timesheet'):
+        if not requestor.has_any_perm('core.view_any_timesheet', 'core.manage_any_timesheet'):
             qs = qs.filter(day_entry__resource__user=requestor)
         return qs
 

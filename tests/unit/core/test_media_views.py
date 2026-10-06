@@ -87,7 +87,7 @@ class TestServeExpenseImage:
         user = UserFactory()
         ResourceFactory(user=user)
         add_permissions(user, 'core.view_any_expense')
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         filename = 'receipt.jpg'
         image = MagicMock(spec=File)
@@ -105,7 +105,7 @@ class TestServeExpenseImage:
         user = UserFactory()
         ResourceFactory(user=user)
         add_permissions(user, 'core.manage_any_expense')
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         filename = 'receipt.jpg'
         image = MagicMock(spec=File)
@@ -122,7 +122,7 @@ class TestServeExpenseImage:
         """User whose resource matches the expense's mission resource can access."""
         user = UserFactory()
         resource = ResourceFactory(user=user)
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         # Create expense with mission belonging to this resource
         mission = MissionFactory(resource=resource)
@@ -141,7 +141,7 @@ class TestServeExpenseImage:
         """User without permission should get 403 Forbidden."""
         user = UserFactory()
         ResourceFactory(user=user)  # User has a resource but not matching the expense
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         # Create expense belonging to a different resource
         other_resource = ResourceFactory()
@@ -225,7 +225,7 @@ class TestServeContractDocument:
         user = UserFactory()
         ResourceFactory(user=user)
         add_permissions(user, 'core.view_any_contract')
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         filename = 'contract.pdf'
         contract = ContractFactory(document=None)
@@ -245,7 +245,7 @@ class TestServeContractDocument:
         user = UserFactory()
         ResourceFactory(user=user)
         add_permissions(user, 'core.manage_any_contract')
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         filename = 'contract.pdf'
         contract = ContractFactory(document=None)
@@ -264,7 +264,7 @@ class TestServeContractDocument:
         """User whose resource matches the contract's resource can access."""
         user = UserFactory()
         resource = ResourceFactory(user=user)
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         filename = 'contract.pdf'
         contract = ContractFactory(resource=resource, document=None)
@@ -283,7 +283,7 @@ class TestServeContractDocument:
         """User without permission should get 403 Forbidden."""
         user = UserFactory()
         ResourceFactory(user=user)  # User has a resource but not matching the contract
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         # Create contract belonging to a different resource
         other_resource = ResourceFactory()
@@ -322,7 +322,7 @@ class TestServeDocumentFile:
     def test_returns_404_when_document_has_no_file(self, client, db):
         """Test 404 when document exists but has no file (user must have access as admin)."""
         user = UserFactory()
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
         doc = DocumentFactory(document=None, admin=user)
         url = reverse('media-auth:document-file', args=[doc.pk])
 
@@ -333,7 +333,7 @@ class TestServeDocumentFile:
     def test_returns_x_accel_redirect_for_valid_file(self, client, db):
         """Test valid access by document admin."""
         user = UserFactory()
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         doc = DocumentFactory(admin=user)
 
@@ -348,7 +348,7 @@ class TestServeDocumentFile:
     def test_document_admin_can_access(self, client, db):
         """User who is admin of the document can access."""
         user = UserFactory()
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         doc = DocumentFactory(admin=user)
 
@@ -361,7 +361,7 @@ class TestServeDocumentFile:
     def test_user_with_direct_grant_can_access(self, client, db):
         """User with a direct DocumentGrant can access."""
         user = UserFactory()
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         doc = DocumentFactory()  # admin is someone else
         DocumentGrantFactory(user=user, document=doc, granted_permissions=['R'])
@@ -377,7 +377,7 @@ class TestServeDocumentFile:
         user = UserFactory()
         group = GroupFactory()
         user.groups.add(group)
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         doc = DocumentFactory()  # admin is someone else
         DocumentGrantFactory(user=None, group=group, document=doc, granted_permissions=['R'])
@@ -391,7 +391,7 @@ class TestServeDocumentFile:
     def test_user_without_permission_gets_403(self, client, db):
         """User without permission should get 403 Forbidden."""
         user = UserFactory()
-        client.login(username=user.username, password='password')
+        client.login_to_admin(username=user.username, password='password')
 
         # Create document where user is NOT admin and has NO grant
         other_user = UserFactory()

@@ -116,7 +116,7 @@ def test_availability_report_only_resources_with_contract(client):
     TaskFactory(project=project, resource=r_past, period=(_dt('20200101'), _dt('20201231')))
     TaskFactory(project=project, resource=r_future, period=(_dt('2025-09-01'), _dt('2026-01-01')))
 
-    client.login(username=r_current.user.username, password=r_current.user._password)
+    client.login_to_admin(username=r_current.user.username, password=r_current.user._password)
 
     url = reverse('availability')
     response = client.get(f'{url}?project={project.id}')

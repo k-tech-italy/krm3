@@ -17,7 +17,7 @@ class TestDocumentListView:
     def test_authenticated_user_can_access_view(self, client):
         """Test that authenticated users can access the document list view."""
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         url = reverse('document_list')
         response = client.get(url)
@@ -34,7 +34,7 @@ class TestDocumentListView:
         monkeypatch.setattr(Document.objects, 'accessible_by', mock_accessible_by)
 
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         url = reverse('document_list')
         response = client.get(url)
@@ -68,7 +68,7 @@ class TestDocumentListView:
         DocumentGrantFactory(user=user1, document=doc3, granted_permissions=['R'])
 
         # Login as user1
-        client.login(username='user1', password='pass123')
+        client.login_to_admin(username='user1', password='pass123')
 
         url = reverse('document_list')
         response = client.get(url)
@@ -92,7 +92,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create invalid base64 that decodes to invalid UTF-8 bytes
         # Using bytes that are not valid UTF-8 sequences
@@ -119,7 +119,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create base64 that decodes to valid UTF-8 but invalid JSON
         invalid_json_string = 'this is not valid JSON {{'
@@ -146,7 +146,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a valid JSON filter with an unsupported field
         filter_dict = {
@@ -184,7 +184,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a valid filter
         filter_dict = {
@@ -220,7 +220,7 @@ class TestDocumentListView:
         """Test that _apply_sorting defaults to '-upload_date' (descending) when sort param is not present."""
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Make the request without a sort parameter
         url = reverse('document_list')
@@ -254,7 +254,7 @@ class TestDocumentListView:
 
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create documents based on the field being tested
         match create_documents_func:
@@ -323,7 +323,7 @@ class TestDocumentListView:
         """Test that invalid sort field preserves the param but falls back to default '-upload_date' ordering."""
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Make the request with an invalid sort parameter
         url = reverse('document_list')
@@ -342,7 +342,7 @@ class TestDocumentListView:
         """Test that _paginate_queryset defaults to page 1 when page parameter is not present."""
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create some documents (less than 10, so only 1 page)
         for _ in range(5):
@@ -364,7 +364,7 @@ class TestDocumentListView:
         """Test that _paginate_queryset falls back to page 1 when page parameter is not an integer."""
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create 15 documents (will result in 2 pages with 10 items per page)
         DocumentFactory.create_batch(15, admin=user)
@@ -385,7 +385,7 @@ class TestDocumentListView:
         """Test that _paginate_queryset returns last page when requested page is out of range."""
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create 25 documents (will result in 3 pages with 10 items per page)
         DocumentFactory.create_batch(25, admin=user)
@@ -407,7 +407,7 @@ class TestDocumentListView:
         """Test that _paginate_queryset correctly paginates with 10 documents per page."""
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create 35 documents (will result in 4 pages: 10, 10, 10, 5)
         DocumentFactory.create_batch(35, admin=user)
@@ -446,7 +446,7 @@ class TestDocumentListView:
         """Test that _get_available_tags handles exceptions and returns empty list."""
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Mock DocumentTag.objects to raise an exception
         def mock_values_list(*_):
@@ -474,7 +474,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create tags in non-alphabetical order
         DocumentTagFactory(title='zebra-tag')
@@ -504,7 +504,7 @@ class TestDocumentListView:
 
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create tags
         tag_invoice = DocumentTagFactory(title='invoice')
@@ -622,7 +622,7 @@ class TestDocumentListView:
         """Test that HTMX requests return only the partial template (document table) instead of full page."""
         # Create a user and login
         user = UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create some documents to display
         DocumentFactory.create_batch(3, admin=user)
@@ -657,7 +657,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a filter with invalid date format for upload_date
         filter_dict = {
@@ -689,7 +689,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a filter with invalid date range (start date after end date)
         filter_dict = {
@@ -721,7 +721,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a filter with invalid date format for reference_period
         filter_dict = {
@@ -753,7 +753,7 @@ class TestDocumentListView:
 
         # Create a user and login
         UserFactory(username='testuser', password='pass123')
-        client.login(username='testuser', password='pass123')
+        client.login_to_admin(username='testuser', password='pass123')
 
         # Create a filter with invalid date range (start date after end date)
         filter_dict = {

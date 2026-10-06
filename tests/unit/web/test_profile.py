@@ -6,7 +6,7 @@ from testutils.factories import ResourceFactory, UserFactory
 def test_user_profile_view_with_non_existent_user_id_returns_404(client):
     """Test that accessing a profile with a non-existent user ID returns 404."""
     UserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
+    client.login_to_admin(username='user00', password='pass123')
 
     url = reverse('user_resource', args=[9999])
     response = client.get(url)
@@ -17,7 +17,7 @@ def test_user_profile_view_with_non_existent_user_id_returns_404(client):
 def test_user_profile_view_user_without_resource_returns_404(client):
     """Test that accessing a profile for a user without an associated resource returns 404."""
     user = UserFactory(username='user00', password='pass123')
-    client.login(username='user00', password='pass123')
+    client.login_to_admin(username='user00', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.get(url)
@@ -35,7 +35,7 @@ def test_user_profile_view_read_only_mode_for_other_user(client):
     other_resource = ResourceFactory(user=other_user, first_name='OtherFirst', last_name='OtherLast')
 
     # Login as viewer
-    client.login(username='viewer', password='pass123')
+    client.login_to_admin(username='viewer', password='pass123')
 
     # Access other user's profile
     url = reverse('user_resource', args=[other_user.pk])
@@ -86,7 +86,7 @@ def test_user_profile_view_post_to_other_user_resource_returns_403(client):
     victim_resource = ResourceFactory(user=victim, first_name='VictimFirst', last_name='VictimLast')
 
     # Login as attacker
-    client.login(username='attacker', password='pass123')
+    client.login_to_admin(username='attacker', password='pass123')
 
     # Attempt to POST to victim's profile
     url = reverse('user_resource', args=[victim.pk])
@@ -112,7 +112,7 @@ def test_user_profile_view_post_with_empty_fields_shows_validation_errors(client
     user = UserFactory(username='testuser', password='pass123')
     resource = ResourceFactory(user=user, first_name='OriginalFirst', last_name='OriginalLast')
 
-    client.login(username='testuser', password='pass123')
+    client.login_to_admin(username='testuser', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.post(
@@ -149,7 +149,7 @@ def test_user_profile_view_post_with_empty_body_shows_validation_errors(client):
     user = UserFactory(username='testuser', password='pass123')
     resource = ResourceFactory(user=user, first_name='OriginalFirst', last_name='OriginalLast')
 
-    client.login(username='testuser', password='pass123')
+    client.login_to_admin(username='testuser', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.post(url, {})
@@ -180,7 +180,7 @@ def test_user_profile_view_get_shows_prepopulated_fields(client):
     user = UserFactory(username='testuser', password='pass123', email='test@example.com')
     ResourceFactory(user=user, first_name='TestFirst', last_name='TestLast')
 
-    client.login(username='testuser', password='pass123')
+    client.login_to_admin(username='testuser', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.get(url)
@@ -207,7 +207,7 @@ def test_user_profile_view_post_updates_all_fields(client):
     user = UserFactory(username='oldusername', password='pass123', email='old@example.com')
     resource = ResourceFactory(user=user, first_name='OldFirstName', last_name='OldLastName')
 
-    client.login(username='oldusername', password='pass123')
+    client.login_to_admin(username='oldusername', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.post(
@@ -256,7 +256,7 @@ def test_user_profile_view_displays_profile_picture_and_qr_code(client):
 
     ResourceFactory(user=user, profile=user_profile, first_name='John', last_name='Doe', vcard_text=vcard_text)
 
-    client.login(username='userwitpic', password='pass123')
+    client.login_to_admin(username='userwitpic', password='pass123')
 
     url = reverse('user_resource', args=[user.pk])
     response = client.get(url)

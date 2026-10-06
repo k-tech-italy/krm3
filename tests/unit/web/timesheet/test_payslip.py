@@ -9,7 +9,7 @@ def test_payslip_report_with_timesheet_submissions(admin_client):
 
     TimesheetSubmissionFactory(resource=resource)
 
-    admin_client.login(username='user00', password='pass123')
+    admin_client.login_to_admin(username='user00', password='pass123')
     url = reverse('export_report', args=['202001'])
     response = admin_client.get(url)
 

@@ -32,12 +32,11 @@ if typing.TYPE_CHECKING:
 pytestmark = [pytest.mark.selenium, pytest.mark.django_db]
 
 
-def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user):
     TaskEntryFactory(day_entry=True)
     TaskEntryFactory(day_entry=True)
 
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
     assert len(table_rows) == 2
@@ -46,17 +45,15 @@ def test_admin_should_see_all_time_entries(browser: 'AppTestBrowser', admin_user
 def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTestBrowser', staff_user):
     resource_1 = ResourceFactory(user=staff_user)
     staff_user.user_permissions.add(
-        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_taskentry')
     )
 
     TaskEntryFactory(day_entry=True)
     TaskEntryFactory(day_entry=True)
     TaskEntryFactory(day_entry=True, resource=resource_1)
 
-    TaskEntry.objects.filter(resource=resource_1)
-    browser.admin_user = staff_user
-    browser.login()
-
+    TaskEntry.objects.filter(day_entry__resource=resource_1)
+    browser.login_to_admin(staff_user)
 
     browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
 
@@ -67,40 +64,38 @@ def test_staff_user_with_perms_should_see_time_all_time_entries(browser: 'AppTes
 def test_staff_user_without_perms_should_see_only_own_entries(browser: 'AppTestBrowser', staff_user):
     resource_1 = ResourceFactory(user=staff_user)
 
-    permission = Permission.objects.get(codename='view_timeentry')
+    permission = Permission.objects.get(codename='view_taskentry')
     staff_user.user_permissions.add(permission)
 
-    task_1 = TaskFactory()
-    task_2 = TaskFactory()
-    task_3 = TaskFactory(resource=resource_1)
+    task_1 = TaskFactory(contract=True)
+    task_2 = TaskFactory(contract=True)
+    task_3 = TaskFactory(resource=resource_1, contract=True)
 
-    TaskEntryFactory(task=task_1)
-    TaskEntryFactory(task=task_2)
-    TaskEntryFactory(task=task_3, resource=resource_1)
+    TaskEntryFactory(task=task_1, day=True)
+    TaskEntryFactory(task=task_2, day=True)
+    TaskEntryFactory(task=task_3, resource=resource_1, day=True)
 
-    browser.admin_user = staff_user
-    browser.login()
-    browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
+    browser.login_to_admin(staff_user)
+    browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
 
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
     assert len(table_rows) == 1
 
 
-def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', admin_user_with_plain_password):
-    task = TaskFactory()
-    time_entry = TaskEntryFactory(task=task, day_shift_hours=4)
+def test_admin_should_be_able_to_edit_any_time_entry(browser: 'AppTestBrowser', admin_user):
+    task = TaskFactory(contract=True)
+    task_entry = TaskEntryFactory(task=task, day_shift_hours=4, day=True)
 
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
-    browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{time_entry.id}/change/"]')
+    browser.login_to_admin(admin_user)
+    browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{task_entry.id}/change/"]')
 
     day_shift_input = browser.find_element(By.XPATH, '//input[@name="day_shift_hours"]')
     day_shift_input.clear()
     day_shift_input.send_keys('7')
 
     browser.click('//input[@value="Save"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{time_entry.id}/change/"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{task_entry.id}/change/"]')
 
     browser.assert_element('//input[@name="day_shift_hours" and @value="7.00"]')
 
@@ -111,33 +106,32 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_edit_onl
     resource = ResourceFactory(user=staff_user)
 
     staff_user.user_permissions.add(
-        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+        Permission.objects.get(codename='view_any_timesheet'), Permission.objects.get(codename='view_taskentry')
     )
 
-    task_1 = TaskFactory()
-    owned_time_entry = TaskEntryFactory(task=task_1, day_shift_hours=4, resource=resource)
+    task_1 = TaskFactory(resource=resource, contract=True)
+    owned_time_entry = TaskEntryFactory(task=task_1, day_shift_hours=4, resource=resource, day=True)
 
-    task_2 = TaskFactory()
-    not_owned_time_entry = TaskEntryFactory(task=task_2, day_shift_hours=5)
+    task_2 = TaskFactory(resource=resource, contract=True)
+    not_owned_time_entry = TaskEntryFactory(task=task_2, day_shift_hours=5, day=True)
 
-    browser.admin_user = staff_user
-    browser.login()
+    browser.login_to_admin(staff_user)
 
-    browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
+    browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
 
-    browser.click(f'//a[@href="/admin/core/timeentry/{not_owned_time_entry.id}/change/"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{not_owned_time_entry.id}/change/"]')
     time.sleep(2)
     browser.assert_element_absent('//input[@name="day_shift_hours"]')
 
-    browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{owned_time_entry.id}/change/"]')
+    browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{owned_time_entry.id}/change/"]')
 
     day_shift_input = browser.find_element(By.XPATH, '//input[@name="day_shift_hours"]')
     day_shift_input.clear()
     day_shift_input.send_keys('3')
 
     browser.click('//input[@value="Save"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{owned_time_entry.id}/change/"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{owned_time_entry.id}/change/"]')
 
     browser.assert_element('//input[@name="day_shift_hours" and @value="3.00"]')
 
@@ -146,35 +140,31 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_edit_any_ti
     browser: 'AppTestBrowser', staff_user
 ):
     staff_user.user_permissions.add(
-        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='change_timeentry')
+        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='change_taskentry')
     )
-    task = TaskFactory()
-    time_entry = TaskEntryFactory(task=task, day_shift_hours=4)
+    task = TaskFactory(contract=True)
+    time_entry = TaskEntryFactory(task=task, day_shift_hours=4, day=True)
 
-    browser.admin_user = staff_user
-    browser.login()
-    browser.click('//a[@href="/admin/core/timeentry/" and text() = "Time entries"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{time_entry.id}/change/"]')
+    browser.login_to_admin(staff_user)
+    browser.click('//a[@href="/admin/core/taskentry/" and text() = "Task entries"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{time_entry.id}/change/"]')
 
     day_shift_input = browser.find_element(By.XPATH, '//input[@name="day_shift_hours"]')
     day_shift_input.clear()
     day_shift_input.send_keys('2')
 
     browser.click('//input[@value="Save"]')
-    browser.click(f'//a[@href="/admin/core/timeentry/{time_entry.id}/change/"]')
+    browser.click(f'//a[@href="/admin/core/taskentry/{time_entry.id}/change/"]')
 
     browser.assert_element('//input[@name="day_shift_hours" and @value="2.00"]')
 
 
-def test_admin_should_be_able_to_add_time_entry_for_any_resource(
-    browser: 'AppTestBrowser', admin_user_with_plain_password
-):
+def test_admin_should_be_able_to_add_time_entry_for_any_resource(browser: 'AppTestBrowser', admin_user):
     task = TaskFactory()
 
-    ResourceFactory(user=admin_user_with_plain_password)
+    ResourceFactory(user=admin_user)
 
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
 
     browser.click('//a[@href="/admin/core/timeentry/add/"]')
 
@@ -202,16 +192,15 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_en
     browser: 'AppTestBrowser', staff_user
 ):
     staff_user.user_permissions.add(
-        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='view_timeentry')
+        Permission.objects.get(codename='manage_any_timesheet'), Permission.objects.get(codename='view_taskentry')
     )
-    task = TaskFactory()
+    task = TaskFactory(contract=True)
 
     ResourceFactory(user=staff_user)
 
-    browser.admin_user = staff_user
-    browser.login()
+    browser.login_to_admin(staff_user)
 
-    browser.click('//a[@href="/admin/core/timeentry/add/"]')
+    browser.click('//a[@href="/admin/core/taskentry/add/"]')
 
     day_shift_input = browser.find_element(By.XPATH, '//input[@name="day_shift_hours"]')
     day_shift_input.clear()
@@ -235,15 +224,14 @@ def test_staff_user_with_manage_any_timesheet_perm_should_be_able_to_add_time_en
 def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time_entry_only_for_owned_resource(
     browser: 'AppTestBrowser', staff_user
 ):
-    staff_user.user_permissions.add(Permission.objects.get(codename='add_timeentry'))
+    staff_user.user_permissions.add(Permission.objects.get(codename='add_taskentry'))
 
     owned_resource = ResourceFactory(user=staff_user)
     task = TaskFactory(resource=owned_resource)
 
-    browser.admin_user = staff_user
-    browser.login()
+    browser.login_to_admin(staff_user)
 
-    browser.click('//a[@href="/admin/core/timeentry/add/"]')
+    browser.click('//a[@href="/admin/core/taskentry/add/"]')
 
     day_shift_input = browser.find_element(By.XPATH, '//input[@name="day_shift_hours"]')
     day_shift_input.clear()
@@ -268,8 +256,8 @@ def test_staff_user_without_manage_any_timesheet_perm_should_be_able_to_add_time
     DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
 )
 @freeze_time('2025-07-14')
-def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user_with_plain_password):
-    resource = ResourceFactory(user=admin_user_with_plain_password)
+def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser', admin_user):
+    resource = ResourceFactory(user=admin_user)
     _contract = ContractFactory(resource=resource)
 
     TaskEntryFactory(resource=resource, task=TaskFactory(resource=resource), day_shift_hours=2, date='2025-07-04')
@@ -296,11 +284,10 @@ def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser'
         special_leave_reason=special_leave_reason_2,
         day_shift_hours=0,
     )
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
 
-    browser.click('//a[@href="/admin/core/timeentry/"]')
-    browser.click('//a[@href="/admin/core/timeentry/report/?"]')
+    browser.click('//a[@href="/admin/core/taskentry/"]')
+    browser.click('//a[@href="/admin/core/taskentry/report/?"]')
 
     reason_1_row = browser.find_elements(
         By.XPATH, f'//tr[./td[contains(text(), "Special leave ({special_leave_reason_1.title})")]]/td'
@@ -316,11 +303,9 @@ def test_special_leave_reasons_are_displayed_in_report(browser: 'AppTestBrowser'
     assert reason_2_row[6].text == '3'
 
 
-def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user):
     mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
-    admin_user_with_plain_password.user_permissions.add(Permission.objects.get(codename='manage_any_mission'))
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
 
     browser.click('//a[@href="/admin/core/mission/"]')
     browser.click('//a[@href="/admin/core/mission/{}/change/"]'.format(mission.pk))
@@ -331,7 +316,7 @@ def test_admin_submit_mission(browser: 'AppTestBrowser', admin_user_with_plain_p
     assert mission.number is not None
 
 
-def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user):
     """Test that the expense list displays image link when image exists and '-' when not."""
     from unittest.mock import MagicMock
     from django.core.files import File
@@ -348,8 +333,7 @@ def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_
     expense_with_image.image = image
     expense_with_image.save()
 
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/expense/"]')
 
     # Check that expense without image shows '-'
@@ -359,11 +343,10 @@ def test_expense_list_displays_image_link(browser: 'AppTestBrowser', admin_user_
     browser.assert_element('//td[@class="field-image_link"]//a[text()="View"]')
 
 
-def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user):
     mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
     expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/expense/"]')
     browser.click('//input[@name="_selected_action"]')
     browser.click('//select[@name="action"]/option[text()="Reset reimbursement"]')
@@ -376,11 +359,10 @@ def test_admin_missions_reset_reibursments(browser: 'AppTestBrowser', admin_user
     assert expense.amount_reimbursement is None
 
 
-def test_admin_missions_create_reibursments_mission_in_draft(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_missions_create_reibursments_mission_in_draft(browser: 'AppTestBrowser', admin_user):
     mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, to_date=datetime.date.today())
     expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/expense/"]')
     browser.click('//input[@name="_selected_action"]')
     browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
@@ -393,7 +375,7 @@ def test_admin_missions_create_reibursments_mission_in_draft(browser: 'AppTestBr
     assert expense.reimbursement is None
 
 
-def test_admin_missions_create_reibursments_already_exists(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_missions_create_reibursments_already_exists(browser: 'AppTestBrowser', admin_user):
     mission = MissionFactory(
         number=314,
         status=Mission.MissionStatus.SUBMITTED,
@@ -404,8 +386,7 @@ def test_admin_missions_create_reibursments_already_exists(browser: 'AppTestBrow
         amount_reimbursement=100,
         reimbursement=ReimbursementFactory(),
     )
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/expense/"]')
     browser.click('//input[@name="_selected_action"]')
     browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
@@ -416,7 +397,7 @@ def test_admin_missions_create_reibursments_already_exists(browser: 'AppTestBrow
     )
 
 
-def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser', admin_user):
     mission = MissionFactory(
         number=314,
         status=Mission.MissionStatus.SUBMITTED,
@@ -429,8 +410,7 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
     )
     expense.image = "fake_image.jpg"
     expense.save()
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/expense/"]')
     browser.click('//input[@name="_selected_action"]')
     browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
@@ -447,15 +427,13 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
 
 
 
-def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user_with_plain_password):
+def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user):
     """
     Test that Contract document field only accepts PDF files and rejects other file types.
     """
 
     contract = ContractFactory()
-
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
 
     browser.click('//a[@href="/admin/core/contract/"]')
     browser.click(f'//a[@href="/admin/core/contract/{contract.id}/change/"]')
@@ -533,11 +511,10 @@ def test_timesheet_submission_date_range_filter(
     upper_bound,
     expected_submissions,
     browser: 'AppTestBrowser',
-    admin_user_with_plain_password,
+    admin_user,
     submissions,
 ):
-    browser.admin_user = admin_user_with_plain_password
-    browser.login()
+    browser.login_to_admin(admin_user)
     browser.click('//a[@href="/admin/core/timesheetsubmission/"]')
     lower_bound_period = browser.find_element(By.XPATH, '//input[@name="period__range__gte"]')
     upper_bound_period = browser.find_element(By.XPATH, '//input[@name="period__range__lte"]')

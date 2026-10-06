@@ -127,13 +127,9 @@ def staff_user(db):
     return UserFactory(is_staff=True)
 
 
-# This admin_user_with_plain_password has the _password attribute set (plaintext),
-# unlike the default Django fixture admin_user.
-# Useful for Selenium login where the raw password is needed.
-
 @pytest.fixture
 def admin_client(admin_user, client):
-    res = client.login(username='admin', password='password')
+    res = client.login_to_admin(username='admin', password='password')
     assert res is True
     return client
 
@@ -269,7 +265,7 @@ def resource_client(client):
 
     user = UserFactory()
     client._resource = ResourceFactory(user=user)
-    client.login(username=user.username, password=user._password)
+    client.login_to_admin(username=user.username, password=user._password)
     return client
 
 

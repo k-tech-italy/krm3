@@ -73,7 +73,7 @@ def test_user_with_permissions_can_see_reports_of_all_resources_with_valid_contr
 
     for permission in permissions:
         contracted_user.user_permissions.add(Permission.objects.get(codename=permission))
-    client.login(username='ihaveavalidcontract', password='pass123')
+    client.login_to_admin(username='ihaveavalidcontract', password='pass123')
     response = client.get(url)
     assert response.status_code == 200
     content = response.content.decode()

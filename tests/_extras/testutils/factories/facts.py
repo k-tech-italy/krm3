@@ -69,6 +69,7 @@ class CityFactory(DjangoModelFactory):
 
     class Meta:
         model = 'core.City'
+        django_get_or_create = ('name', 'country')
 
 
 class CurrencyFactory(DjangoModelFactory):

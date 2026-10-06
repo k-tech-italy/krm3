@@ -139,7 +139,7 @@ def test_resource_can_see_their_empty_timesheet_report_when_contractor(client):
         contract_type=Contract.ContractType.CONTRACTOR,
     )
     resource = contractor_contract.resource
-    client.login(username=resource.user.username, password=resource.user._password)
+    client.login_to_admin(username=resource.user.username, password=resource.user._password)
 
     response = client.get(reverse('report-month', args=['202506']))
 
