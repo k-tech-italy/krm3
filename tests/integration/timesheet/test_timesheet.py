@@ -101,8 +101,6 @@ def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', freeze_fro
     task: Task = TaskFactory(period=(_dt('2025-05-01'), _dt('2025-06-01')), contract=True)
 
     browser.login_as_user(task.resource.user)
-    import time
-    time.sleep(10)
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
