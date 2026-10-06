@@ -197,9 +197,11 @@ WITH days AS (
         time_entry.date
 ),
 day_values AS (
-    SELECT *
+    -- Keep only the most recent task-less TimeEntry per resource and date
+    SELECT DISTINCT ON (resource_id, date) *
     FROM core_timeentry
     WHERE task_id IS NULL
+    ORDER BY resource_id, date, last_modified DESC, id DESC
 )
 INSERT INTO core_dayentry (
     day,
@@ -308,7 +310,7 @@ DELETE FROM core_timeentry;
 
 DROP TABLE IF EXISTS core_day_entry_b;
 DROP TABLE IF EXISTS core_task_entry_b;
-    
+
 CREATE TABLE core_day_entry_b AS SELECT * FROM core_dayentry;
 CREATE TABLE core_task_entry_b AS SELECT * FROM core_taskentry;
 
@@ -872,6 +874,10 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.PROTECT, related_name='task_entries', to='core.task'
             ),
+        ),
+        migrations.AddConstraint(
+            model_name='dayentry',
+            constraint=models.UniqueConstraint(fields=('resource', 'day'), name='unique_resource_day'),
         ),
         migrations.AddConstraint(
             model_name='dayentry',

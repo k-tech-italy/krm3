@@ -123,52 +123,7 @@ def test_contract_form_rejects_period_that_excludes_day_entries(start, end, entr
     form = ContractForm(instance=contract, data=_contract_form_data(contract, start, end))
 
     assert not form.is_valid()
-    assert form.non_field_errors() == [
-        'Shrinking the contract period would leave day entries outside it.'
-    ]
-
-
-# @pytest.mark.parametrize(
-#     'cnum, new_lower, new_upper, valid',
-#     [
-#         pytest.param(0, dt('20200401'), None, True, id='c1-start-ok'),
-#         pytest.param(0, dt('20200402'), None, False, id='c1-start-short'),
-#         pytest.param(3, None, dt('20200316'), True, id='c4-end-ok'),
-#         pytest.param(3, None, dt('20200315'), False, id='c4-end-short'),
-#         pytest.param(1, dt('20200702'), None, False, id='c2-start-short'),
-#         pytest.param(2, None, dt('22000101'), False, id='c3-end-short'),
-#     ],
-# )
-# def test_amend_contract_with_tasks(cnum, new_lower, new_upper, valid, contracts_and_tasks):
-#     contract = contracts_and_tasks['contracts'][cnum]
-#
-#     lower = contract.period.lower.strftime('%Y-%m-%d')
-#     upper = contract.period.upper.strftime('%Y-%m-%d') if contract.period.upper else ''
-#
-#     if new_lower:
-#         lower = new_lower
-#     elif new_upper:
-#         upper = new_upper
-#
-#     data = {'resource': contract.resource, 'period_0': lower, 'period_1': upper}
-#     form = ContractForm(instance=contract, data=data)
-#
-#     assert form.is_valid() is valid, form.errors
-#
-#
-# @pytest.mark.parametrize(
-#     'cnum, expected',
-#     [
-#         pytest.param(0, [0, 1], id='c1'),
-#         pytest.param(1, [1, 2], id='c2'),
-#         pytest.param(2, [2], id='c3'),
-#         pytest.param(3, [3], id='c4'),
-#         pytest.param(4, [], id='c5'),
-#     ],
-# )
-# def test_get_tasks(cnum, expected, contracts_and_tasks):
-#     contract = contracts_and_tasks['contracts'][cnum]
-#     assert contract.get_tasks() == [contracts_and_tasks['tasks'][x] for x in expected]
+    assert form.non_field_errors() == ['Shrinking the contract period would leave day entries outside it.']
 
 
 @override_config(
@@ -222,21 +177,18 @@ def test_get_due_hours_holidays():
 @pytest.mark.parametrize(
     'day, expectation, expected_value, period',
     [
-        pytest.param('2023-01-31', err_date_outside_contract, None, 'bound', id="before-bound"),
-        pytest.param('2023-02-01', does_not_raise(), 3, 'bound', id="lower-bound"),
-        pytest.param('2023-02-28', does_not_raise(), 2, 'bound', id="upper-bound"),
-        pytest.param('2023-03-01', err_date_outside_contract, None, 'bound', id="after-bound"),
-        pytest.param('2023-01-31', err_date_outside_contract, None, 'unbounded', id="before-unbounded"),
-        pytest.param('2023-02-01', does_not_raise(), 3, 'unbounded', id="lower-unbounded"),
-        pytest.param('2023-02-28', does_not_raise(), 2, 'unbounded', id="upper-unbounded"),
-        pytest.param('2023-03-01', does_not_raise(), 3, 'unbounded', id="after-unbounded"),
+        pytest.param('2023-01-31', err_date_outside_contract, None, 'bound', id='before-bound'),
+        pytest.param('2023-02-01', does_not_raise(), 3, 'bound', id='lower-bound'),
+        pytest.param('2023-02-28', does_not_raise(), 2, 'bound', id='upper-bound'),
+        pytest.param('2023-03-01', err_date_outside_contract, None, 'bound', id='after-bound'),
+        pytest.param('2023-01-31', err_date_outside_contract, None, 'unbounded', id='before-unbounded'),
+        pytest.param('2023-02-01', does_not_raise(), 3, 'unbounded', id='lower-unbounded'),
+        pytest.param('2023-02-28', does_not_raise(), 2, 'unbounded', id='upper-unbounded'),
+        pytest.param('2023-03-01', does_not_raise(), 3, 'unbounded', id='after-unbounded'),
     ],
 )
 def test_get_due_hours_boundaries(
-        day: str,
-        expectation: 'RaisesExc[ValueError]',
-        expected_value: int | None,
-        period: str
+    day: str, expectation: 'RaisesExc[ValueError]', expected_value: int | None, period: str
 ):
     contract_period = (dt('2023-02-01'), dt('2023-03-01') if period == 'bound' else None)
     contract = ContractFactory(
@@ -513,8 +465,8 @@ def test_validate_rule_with_overtime_and_meal_voucher(contracts_and_tasks):
 def test_active_between(start_date, end_date, expected):
     contracts = [
         c1 := ContractFactory(period=(dt('20260101'), dt('20260201'))),
-        c2 := ContractFactory(period=(dt('20260115'), None)),
-        c3 := ContractFactory(period=(dt('20260301'), dt('20260501')), resource=c1.resource)
+        ContractFactory(period=(dt('20260115'), None)),
+        ContractFactory(period=(dt('20260301'), dt('20260501')), resource=c1.resource),
     ]
 
     assert list(Contract.objects.active_between(start_date, end_date).values_list('id', flat=True)) == [

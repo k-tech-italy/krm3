@@ -22,7 +22,7 @@ from testutils.factories import (
     MissionFactory,
     ExpenseFactory,
     ReimbursementFactory,
-    ContractFactory,
+    ContractFactory, TimesheetSubmissionFactory,
 )
 from django.contrib.auth.models import Permission
 

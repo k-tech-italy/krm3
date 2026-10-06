@@ -248,7 +248,9 @@ def export_report(request: HttpRequest, report_data: dict, date: str) -> HttpRes
             current_row += 2
 
         holidays = []
-        overlapping_contracts: 'list[Contract]' = resource.get_contract_map(min(data['days']).date, max(data['days']).date)
+        overlapping_contracts: 'list[Contract]' = resource.get_contract_map(
+            min(data['days']).date, max(data['days']).date
+        )
 
         for day in data['days']:
             contract = resource.contract_for_date(overlapping_contracts, day)

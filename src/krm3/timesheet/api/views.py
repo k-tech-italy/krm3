@@ -365,6 +365,20 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
         ).data
         return Response(response_data, status=status.HTTP_200_OK)
 
+    @override
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Delete a single day entry, only if owned by the user or the user can manage any timesheet."""
+        day_entry: DayEntry = self.get_object()
+        user = cast('User', request.user)
+        if day_entry.resource.user != user and not user.has_perm('core.manage_any_timesheet'):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if day_entry.closed:
+            return Response(
+                data={'error': _('Closed day entries cannot be modified.')},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
+
     def _ids_from_request(self, request: Request) -> list[Any] | Response:
         """Read and validate the 'ids' list from the request body."""
         requested_entry_ids = request.data.get('ids', [])

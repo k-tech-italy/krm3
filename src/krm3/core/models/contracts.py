@@ -129,7 +129,7 @@ class Contract(models.Model):
         if self.period.lower is None:
             raise ValidationError({'period': _('Start date is required.')})
         if self.period.upper is not None and self.period.upper < self.period.lower + datetime.timedelta(days=1):
-            raise ValidationError({'period': _('End date must be at least one day after start date.')})
+            raise ValidationError({'period': _('End date must be at least one day after start date')})
 
         if self.calendar_code:
             try:

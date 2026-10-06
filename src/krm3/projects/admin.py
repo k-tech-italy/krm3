@@ -65,12 +65,11 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             'all': ('admin/required_field.css',),
         }
     form = TaskForm
-    list_display = ('project', 'title', 'resource', 'basket', 'period')
-    search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name', 'basket')
+    list_display = ('project', 'title', 'resource', 'period')
+    search_fields = ('title', 'project__name', 'resource__first_name', 'resource__last_name')
     list_filter = [
         ('project', AutoCompleteFilter),
         ('resource', AutoCompleteFilter),
-        ('basket', AutoCompleteFilter),
     ]
     autocomplete_fields = ['project', 'resource']
 

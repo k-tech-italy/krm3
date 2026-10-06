@@ -13,7 +13,7 @@ class CleanValidatorsMixin:
         self.custom_clean()
 
     def custom_clean(self) -> None:
-        """Run custom validators"""
+        """Run custom validators."""
         errors = []
         for validator_name in sorted([x for x in self.__class__.__dict__ if x.startswith('_verify_')]):
             try:

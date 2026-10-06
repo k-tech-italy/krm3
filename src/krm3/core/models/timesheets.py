@@ -285,6 +285,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     class Meta:
         verbose_name_plural = 'Day entries'
         constraints = [
+            models.UniqueConstraint(fields=('resource', 'day'), name='unique_resource_day'),
             models.CheckConstraint(
                 condition=models.Q(special_leave_hours__range=(0, 24)), name='special_leave_hours_range'
             ),
@@ -499,7 +500,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         """Verify that the transaction won't exceed total balance limits (-16 to +16)."""
         balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
         balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
-        current_balance = self.resource.get_bank_hours_balance(self.day)
+        current_balance = self.resource.get_bank_hours_balance((KTDay(self.day) - 1).date)
         new_balance = current_balance + Decimal(self.bank)
 
         if new_balance > balance_upper:

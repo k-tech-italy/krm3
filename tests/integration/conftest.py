@@ -1,18 +1,14 @@
 import datetime
-import os
-import signal
-import subprocess
-from pathlib import Path
+import typing
 from typing import Generator
 
 import pytest
 from seleniumbase import config as sb_config
 from seleniumbase.core import session_helper
 
-import typing
-
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppSeleniumTC
+
 
 @pytest.fixture
 def browser(live_server, request) -> Generator['AppSeleniumTC', None, None]:

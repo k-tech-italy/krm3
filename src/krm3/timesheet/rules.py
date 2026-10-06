@@ -31,6 +31,13 @@ te_calc_map = {
 }
 
 
+_decimal_value = lambda value: Decimal(str(value or 0))
+
+
+def _total(field: str, day_entries: list[dict]) -> Decimal:
+    return sum((_decimal_value(entry.get(field)) for entry in day_entries), start=Decimal(0))
+
+
 class Krm3Day(KTDay):
     def __init__(self, day: KTDayType = None, **kwargs) -> None:
         self.lang: str = 'IT'
@@ -125,7 +132,7 @@ class Krm3Day(KTDay):
         :param submission: the `TimesheetSubmission` to convert
         :return: a lazy sequence of `Krm3Day`s covering the submission's time period
         """
-        from krm3.core.models import Contract, DayEntry, SpecialLeaveReason, TaskEntry
+        from krm3.core.models import Contract, DayEntry, SpecialLeaveReason, TaskEntry  # noqa: PLC0415
 
         timesheet_data = submission.timesheet or {}
         if 'day_entries' not in timesheet_data:
@@ -148,9 +155,6 @@ class Krm3Day(KTDay):
         }
         special_leave_reasons = SpecialLeaveReason.objects.in_bulk(special_leave_reason_ids)
 
-        def decimal_value(value: str | int | float | Decimal | None) -> Decimal:
-            return Decimal(str(value or 0))
-
         day_entries_by_id: dict[int, DayEntry] = {}
         day_entries_by_date: dict[datetime.date, DayEntry] = {}
         for entry_data in serialized_day_entries:
@@ -160,21 +164,21 @@ class Krm3Day(KTDay):
                 day=entry_date,
                 resource=submission.resource,
                 contract=contracts_by_id[entry_data['contract']],
-                bank=decimal_value(entry_data.get('bank')),
-                due_hours=decimal_value(entry_data.get('due_hours')),
-                travel_hours=decimal_value(entry_data.get('travel_hours')),
-                day_hours=decimal_value(entry_data.get('day_hours')),
-                night_hours=decimal_value(entry_data.get('night_hours')),
-                on_call_hours=decimal_value(entry_data.get('on_call_hours')),
+                bank=_decimal_value(entry_data.get('bank')),
+                due_hours=_decimal_value(entry_data.get('due_hours')),
+                travel_hours=_decimal_value(entry_data.get('travel_hours')),
+                day_hours=_decimal_value(entry_data.get('day_hours')),
+                night_hours=_decimal_value(entry_data.get('night_hours')),
+                on_call_hours=_decimal_value(entry_data.get('on_call_hours')),
                 is_holiday=bool(entry_data.get('is_holiday')),
                 asked_holiday=bool(entry_data.get('asked_holiday')),
-                leave_hours=decimal_value(entry_data.get('leave_hours')),
-                special_leave_hours=decimal_value(entry_data.get('special_leave_hours')),
+                leave_hours=_decimal_value(entry_data.get('leave_hours')),
+                special_leave_hours=_decimal_value(entry_data.get('special_leave_hours')),
                 special_leave_reason=special_leave_reasons.get(entry_data.get('special_leave_reason')),
                 protocol_number=entry_data.get('protocol_number'),
                 is_sick=bool(entry_data.get('is_sick')),
-                rest_hours=decimal_value(entry_data.get('rest_hours')),
-                overtime_hours=decimal_value(entry_data.get('overtime_hours')),
+                rest_hours=_decimal_value(entry_data.get('rest_hours')),
+                overtime_hours=_decimal_value(entry_data.get('overtime_hours')),
                 meal_voucher=int(entry_data.get('meal_voucher') or 0),
             )
             day_entries_by_id[entry_data['id']] = day_entry
@@ -190,10 +194,10 @@ class Krm3Day(KTDay):
                 id=entry_data['id'],
                 day_entry=day_entry,
                 task_id=entry_data['task'],
-                day_shift_hours=decimal_value(entry_data.get('day_shift_hours')),
-                night_shift_hours=decimal_value(entry_data.get('night_shift_hours')),
-                on_call_hours=decimal_value(entry_data.get('on_call_hours')),
-                travel_hours=decimal_value(entry_data.get('travel_hours')),
+                day_shift_hours=_decimal_value(entry_data.get('day_shift_hours')),
+                night_shift_hours=_decimal_value(entry_data.get('night_shift_hours')),
+                on_call_hours=_decimal_value(entry_data.get('on_call_hours')),
+                travel_hours=_decimal_value(entry_data.get('travel_hours')),
                 comment=entry_data.get('comment'),
                 metadata=entry_data.get('metadata'),
             )
@@ -202,8 +206,10 @@ class Krm3Day(KTDay):
         for serialized_day in serialized_days:
             day_date = datetime.date.fromisoformat(serialized_day)
             day_entry = day_entries_by_date.get(day_date)
-            contract = day_entry.contract if day_entry is not None else next(
-                (candidate for candidate in contracts if day_date in candidate.period), None
+            contract = (
+                day_entry.contract
+                if day_entry is not None
+                else next((candidate for candidate in contracts if day_date in candidate.period), None)
             )
             contract_day = contract.get_ktday(day_date, silent=True) if contract is not None else None
 
@@ -211,9 +217,11 @@ class Krm3Day(KTDay):
             day.submitted = True
             day.resource = submission.resource
             day.contract = contract
-            day.holiday = day_entry.is_holiday if day_entry is not None else bool(contract_day and contract_day.is_holiday)
+            day.holiday = (
+                day_entry.is_holiday if day_entry is not None else bool(contract_day and contract_day.is_holiday)
+            )
             day.data_due_hours = (
-                day_entry.due_hours if day_entry is not None else decimal_value(schedule.get(serialized_day))
+                day_entry.due_hours if day_entry is not None else _decimal_value(schedule.get(serialized_day))
             )
             day.nwd = contract is None or day.holiday or day.data_due_hours == 0
             task_entries = task_entries_by_day_entry_id.get(day_entry.pk, []) if day_entry is not None else []
@@ -223,7 +231,7 @@ class Krm3Day(KTDay):
     @classmethod
     def _from_legacy_submission(cls, submission: TimesheetSubmission) -> Iterator:
         """Convert a submission saved before DayEntry and TaskEntry were introduced."""
-        from krm3.core.models import Contract, SpecialLeaveReason
+        from krm3.core.models import Contract, SpecialLeaveReason  # noqa: PLC0415
 
         timesheet_data = submission.timesheet or {}
         serialized_days = timesheet_data.get('days', {})
@@ -240,9 +248,6 @@ class Krm3Day(KTDay):
         }
         special_leave_reasons = SpecialLeaveReason.objects.in_bulk(special_leave_reason_ids)
 
-        def decimal_value(value: str | int | float | Decimal | None) -> Decimal:
-            return Decimal(str(value or 0))
-
         entries_by_date: dict[str, list[dict]] = {}
         for entry_data in serialized_entries:
             entries_by_date.setdefault(entry_data['date'], []).append(entry_data)
@@ -252,14 +257,11 @@ class Krm3Day(KTDay):
             contract = next((candidate for candidate in contracts if day_date in candidate.period), None)
             day_entries = entries_by_date.get(serialized_day, [])
 
-            def total(field: str) -> Decimal:
-                return sum((decimal_value(entry.get(field)) for entry in day_entries), start=Decimal(0))
-
-            bank_to = total('bank_to')
-            bank_from = total('bank_from')
+            bank_to = _total('bank_to', day_entries)
+            bank_from = _total('bank_from', day_entries)
             bank = bank_to - bank_from
-            due_hours = decimal_value(schedule.get(serialized_day))
-            task_hours = total('day_shift_hours') + total('night_shift_hours') + total('travel_hours')
+            due_hours = _decimal_value(schedule.get(serialized_day))
+            task_hours = _total('day_shift_hours') + _total('night_shift_hours') + _total('travel_hours')
             worked_hours = task_hours + max(bank_from - bank_to, Decimal(0))
             special_leave_reason_id = next(
                 (entry.get('special_leave_reason') for entry in day_entries if entry.get('special_leave_reason')), None
@@ -275,21 +277,21 @@ class Krm3Day(KTDay):
             day.data_bank = bank or None
             day.data_bank_to = bank_to or None
             day.data_bank_from = bank_from or None
-            day.data_day_shift = total('day_shift_hours') or None
-            day.data_night_shift = total('night_shift_hours') or None
-            day.data_on_call = total('on_call_hours') or None
-            day.data_travel = total('travel_hours') or None
-            day.data_holiday = total('holiday_hours') or None
-            day.data_leave = total('leave_hours') or None
-            day.data_special_leave_hours = total('special_leave_hours') or None
+            day.data_day_shift = _total('day_shift_hours') or None
+            day.data_night_shift = _total('night_shift_hours') or None
+            day.data_on_call = _total('on_call_hours') or None
+            day.data_travel = _total('travel_hours') or None
+            day.data_holiday = _total('holiday_hours') or None
+            day.data_leave = _total('leave_hours') or None
+            day.data_special_leave_hours = _total('special_leave_hours') or None
             day.data_special_leave_reason = special_leave_reasons.get(special_leave_reason_id)
             day.data_protocol_number = next(
                 (entry.get('protocol_number') for entry in day_entries if entry.get('protocol_number')), None
             )
-            day.data_rest = total('rest_hours') or None
-            day.data_sick = total('sick_hours') or None
-            day.data_overtime = decimal_value(day_data.get('overtime')) or None
-            day.data_meal_voucher = decimal_value(day_data.get('meal_voucher')) or None
+            day.data_rest = _total('rest_hours') or None
+            day.data_sick = _total('sick_hours') or None
+            day.data_overtime = _decimal_value(day_data.get('overtime')) or None
+            day.data_meal_voucher = _decimal_value(day_data.get('meal_voucher')) or None
             regular_hours = min(worked_hours, due_hours)
             day.data_regular_hours = regular_hours or None
             day.has_data = bool(day_entries)
@@ -299,7 +301,7 @@ class Krm3Day(KTDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: 'Iterable[TimeEntry]'
+        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: 'Iterable[DayEntry]'
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 

@@ -12,14 +12,12 @@ register = template.Library()
 
 @register.simple_tag
 def report_section(block: 'ReportBlock') -> SafeString | str:
-    header = block.rows[0]
-
-    ret = format_html(tpl_block, block.resource.last_name, block.resource.first_name)
-    return ret
+    return format_html(tpl_block, block.resource.last_name, block.resource.first_name)
 
 
 tpl_block = """<div class="overflow-x-auto rounded-md shadow mb-4">
-                <table class="min-w-full leading-normal text-right text-zinc-900 border-2 font-semibold border-collapse">
+                <table class="min-w-full leading-normal text-right text-zinc-900 border-2
+                 font-semibold border-collapse">
                     <thead>
                     <tr class="bg-gray-400! dark:bg-blue-900! ">
                         <td class="text-left p-1 border border-1" colspan="2"><strong>{}</strong> {}</td>

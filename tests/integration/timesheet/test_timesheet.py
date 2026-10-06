@@ -1,4 +1,3 @@
-import datetime
 import re
 import typing
 
@@ -20,6 +19,7 @@ from testutils.factories import (
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
+    from krm3.core.models import Task
 
 pytestmark = pytest.mark.selenium
 
@@ -94,19 +94,15 @@ def test_timesheet_no_data_only_next_month(
 @freeze_time('2025-06-06')
 @pytest.mark.selenium
 @pytest.mark.django_db
-def test_timesheet_no_data_only_prev_month(
-    browser: 'AppTestBrowser', regular_user, resource_factory, freeze_frontend_time
-):
+def test_timesheet_no_data_only_prev_month(browser: 'AppTestBrowser', freeze_frontend_time):
     freeze_frontend_time('2025-06-06T00:00:00Z')
-    resource = resource_factory(user=regular_user)
 
     # Task che è finito nel mese precedente
-    TaskFactory(
-        resource=resource,
-        period=(_dt('2025-05-01'), _dt('2025-06-01')),
-    )
+    task: Task = TaskFactory(period=(_dt('2025-05-01'), _dt('2025-06-01')), contract=True)
 
-    browser.login_as_user(regular_user)
+    browser.login_as_user(task.resource.user)
+    import time
+    time.sleep(10)
     browser.click('[href*="timesheet"]')
     browser.assert_element("//div[text()='No tasks available']")
 
@@ -179,7 +175,6 @@ def test_entries_exceed_24h(browser: 'AppTestBrowser', regular_user, resource_fa
     TaskFactory(
         resource=resource,
         period=(_dt('2025-06-01'), _dt('2025-07-01')),
-
     )
     TaskFactory(
         resource=resource,
@@ -684,9 +679,7 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     resource = ResourceFactory(user=regular_user)
     TaskFactory(resource=resource)
 
-    TimesheetSubmissionFactory(
-        resource=resource, closed=True, period=(_dt('2025-07-01'), _dt('2025-07-31'))
-    )
+    TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2025-07-01'), _dt('2025-07-31')))
 
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')

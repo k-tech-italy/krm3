@@ -5,13 +5,12 @@ from datetime import date
 
 import pytest
 from constance.test import override_config
-from django.test import override_settings
 from ktcalendars import KTDateRange, KTDay
 from ktcalendars.utils import dt
 from testutils.factories import ContractFactory, ResourceFactory
 
 if typing.TYPE_CHECKING:
-    from krm3.core.models import Contract, Resource
+    from krm3.core.models import Contract
 
 
 @pytest.fixture
@@ -30,9 +29,7 @@ def contracts_list() -> list['Contract']:
         pytest.param(
             [[dt('20230620'), dt('20230626')], [dt('20230629'), None]], 'IT-RM', [7, 0, 0, 0, 0, 5], id='edges'
         ),
-        pytest.param(
-            [[dt('20230627'), dt('20230630')]], 'IT', [0, 0, 2, 3, 4, 0], id='inside'
-        ),
+        pytest.param([[dt('20230627'), dt('20230630')]], 'IT', [0, 0, 2, 3, 4, 0], id='inside'),
     ],
 )
 def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_code, expected):
@@ -51,9 +48,7 @@ def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_co
     start_day, end_day = dt('20230625'), dt('20230630')
     schedule = resource.get_schedule(start_day, end_day)
 
-    assert schedule == {
-        d: expected[i] for i, d in enumerate(KTDateRange.from_start_end(start_day, end_day))
-    }
+    assert schedule == {d: expected[i] for i, d in enumerate(KTDateRange.from_start_end(start_day, end_day))}
 
 
 @override_config(

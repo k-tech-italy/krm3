@@ -1,10 +1,8 @@
-import datetime
-
 import pytest
+from testutils.date_utils import _dt
+from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
 
 from krm3.core.models import Contract
-from testutils.date_utils import _dt
-from testutils.factories import ProjectFactory, ContractFactory, TaskFactory
 
 
 @pytest.fixture
@@ -16,6 +14,7 @@ def contracts():
     c5: Contract = ContractFactory.create(resource=c4.resource, period=(_dt('2020-05-01'), _dt('2020-10-01')))
 
     return [c1, c2, c3, c4, c5]
+
 
 @pytest.fixture
 def contracts_and_tasks(contracts: list[Contract]):

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from ktcalendars import KTDay
 from ktcalendars.utils import dt
 
@@ -127,3 +128,10 @@ def test_task_entry_cannot_be_created_during_full_day_absence(absence_data):
 
     with pytest.raises(ValidationError, match='Task entries cannot be added'):
         TaskEntryFactory(day_entry=day_entry)
+
+
+def test_resource_cannot_have_two_day_entries_on_the_same_day():
+    day_entry = DayEntryFactory()
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        DayEntryFactory(resource=day_entry.resource, contract=day_entry.contract, day=day_entry.day)

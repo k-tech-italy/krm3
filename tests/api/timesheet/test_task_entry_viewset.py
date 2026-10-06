@@ -1,13 +1,23 @@
 import json
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
 from constance.test import override_config
+from django.contrib.auth.models import Permission
 from rest_framework import status
 from rest_framework.reverse import reverse
+from testutils.date_utils import _dt
+from testutils.factories import (
+    ContractFactory,
+    DayEntryFactory,
+    ResourceFactory,
+    TaskEntryFactory,
+    TaskFactory,
+    TimesheetSubmissionFactory,
+)
 
-from krm3.core.models import TaskEntry
-from testutils.factories import ContractFactory, DayEntryFactory, TaskFactory
+from krm3.core.models import DayEntry, TaskEntry
 
 
 def _non_working_days_url():
@@ -24,9 +34,7 @@ def _payload(task, dates):
 
 
 @override_config(
-    DEFAULT_RESOURCE_SCHEDULE=json.dumps(
-        {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}
-    )
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0})
 )
 def test_allows_single_non_working_day(api_client):
     task = TaskFactory(period=(date(2026, 9, 1), date(2026, 10, 1)), contract=True)
@@ -46,9 +54,7 @@ def test_allows_single_non_working_day(api_client):
 
 
 @override_config(
-    DEFAULT_RESOURCE_SCHEDULE=json.dumps(
-        {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}
-    )
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0})
 )
 def test_skips_non_working_days_in_mixed_multi_date_request(api_client):
     task = TaskFactory(period=(date(2026, 9, 1), date(2026, 10, 1)), contract=True)
@@ -62,15 +68,11 @@ def test_skips_non_working_days_in_mixed_multi_date_request(api_client):
     )
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert set(
-        TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)
-    ) == {monday}
+    assert set(TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)) == {monday}
 
 
 @override_config(
-    DEFAULT_RESOURCE_SCHEDULE=json.dumps(
-        {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}
-    )
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0})
 )
 def test_rejects_multi_date_request_when_all_days_are_non_working(api_client):
     task = TaskFactory(period=(date(2026, 9, 1), date(2026, 10, 1)), contract=True)
@@ -84,10 +86,7 @@ def test_rejects_multi_date_request_when_all_days_are_non_working(api_client):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json() == {
-        'error': [
-            'The selected dates are non-working days: 2026-09-12, 2026-09-13. '
-            'Add them individually if needed.'
-        ]
+        'error': ['The selected dates are non-working days: 2026-09-12, 2026-09-13. Add them individually if needed.']
     }
     assert not TaskEntry.objects.filter(task=task).exists()
 
@@ -120,20 +119,7 @@ def test_skips_absence_in_mixed_multi_date_request(api_client, day_entry_data):
     )
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert set(
-        TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)
-    ) == {monday}
-
-from datetime import date, timedelta
-
-import pytest
-from django.contrib.auth.models import Permission
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import ResourceFactory, TaskEntryFactory, TimesheetSubmissionFactory
-
-from krm3.core.models import DayEntry, TaskEntry
+    assert set(TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)) == {monday}
 
 
 def _task_entry_clear_url():
@@ -271,19 +257,7 @@ def test_clear_permissions_for_entries_owned_by_different_users(
     response = api_client(user=regular_user).post(_task_entry_clear_url(), data={'ids': entry_ids}, format='json')
 
     assert response.status_code == expected_status
-    assert TaskEntry.objects.filter(pk__in=entry_ids).exists() is (
-        expected_status != status.HTTP_204_NO_CONTENT
-    )
-
-from datetime import date
-from decimal import Decimal
-
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import TaskFactory
-
-from krm3.core.models import TaskEntry
+    assert TaskEntry.objects.filter(pk__in=entry_ids).exists() is (expected_status != status.HTTP_204_NO_CONTENT)
 
 
 def test_creates_task_entry_and_parent_day_entry(resource, api_client):
@@ -617,9 +591,7 @@ def test_autofill_counts_entries_from_multiple_tasks(
     ),
 )
 @override_config(
-    DEFAULT_RESOURCE_SCHEDULE=json.dumps(
-        {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8}
-    )
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 8, 'sun': 8})
 )
 def test_accepts_task_entries_for_multiple_days(hours_data, api_client):
     dates = [date(2024, 1, day) for day in range(7, 12)]
@@ -700,15 +672,6 @@ def test_upsert_replaces_hours_for_same_task_and_day(hours_field, api_client):
     assert getattr(existing, hours_field) == Decimal(4)
     if hours_field != 'day_shift_hours':
         assert existing.day_shift_hours == Decimal(0)
-
-import pytest
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.date_utils import _dt
-from testutils.factories import TaskFactory, TaskEntryFactory
-
-from krm3.core.models import TaskEntry
 
 
 def test_task_entry_list_rejects_anonymous_user(api_client):
@@ -810,11 +773,14 @@ def test_task_entry_create_permissions(
         content_type='application/json',
     )
     assert response.status_code == expected_status, response.data.get('detail')
-    assert TaskEntry.objects.filter(
-        day_entry__day=target_date,
-        day_entry__resource=resource,
-        task=task,
-    ).exists() is should_create
+    assert (
+        TaskEntry.objects.filter(
+            day_entry__day=target_date,
+            day_entry__resource=resource,
+            task=task,
+        ).exists()
+        is should_create
+    )
 
 
 def test_manager_cannot_create_task_entry_for_another_resources_task(resources, api_client):

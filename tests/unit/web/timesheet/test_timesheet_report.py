@@ -4,7 +4,7 @@ import pytest
 from bs4 import BeautifulSoup
 from django.urls import reverse
 from testutils.date_utils import _dt
-from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
+from testutils.factories import ContractFactory, DayEntryFactory, SpecialLeaveReasonFactory
 from krm3.core.models import Contract
 
 
@@ -34,9 +34,9 @@ def test_timesheet_report_shows_day_entry_hours_and_totals(admin_client):
         contract=contract,
         resource=resource,
         day=_dt('2025-06-05'),
-        due_hours=Decimal('8'),
-        day_hours=Decimal('6'),
-        travel_hours=Decimal('2'),
+        due_hours=Decimal(8),
+        day_hours=Decimal(6),
+        travel_hours=Decimal(2),
     )
 
     response = admin_client.get(reverse('report-month', args=['202506']))
@@ -75,6 +75,7 @@ def test_timesheet_report_only_shows_employees_to_privileged_users(
     assert _get_resource_table(response, employee_contract.resource) is not None
     assert _get_resource_table(response, excluded_contract.resource) is None
 
+
 def test_timesheet_report_shows_sick_protocol_and_special_leave(admin_client):
     contract = ContractFactory()
     resource = contract.resource
@@ -83,7 +84,7 @@ def test_timesheet_report_shows_sick_protocol_and_special_leave(admin_client):
         contract=contract,
         resource=resource,
         day=_dt('2025-06-09'),
-        due_hours=Decimal('8'),
+        due_hours=Decimal(8),
         is_sick=True,
         protocol_number='SICK-123',
     )
@@ -91,8 +92,8 @@ def test_timesheet_report_shows_sick_protocol_and_special_leave(admin_client):
         contract=contract,
         resource=resource,
         day=_dt('2025-06-10'),
-        due_hours=Decimal('8'),
-        special_leave_hours=Decimal('4'),
+        due_hours=Decimal(8),
+        special_leave_hours=Decimal(4),
         special_leave_reason=reason,
     )
 
@@ -115,7 +116,7 @@ def test_timesheet_report_marks_holidays_as_non_working_days(admin_client):
         contract=contract,
         resource=resource,
         day=_dt('2025-06-02'),
-        due_hours=Decimal('0'),
+        due_hours=Decimal(0),
         is_holiday=True,
     )
 

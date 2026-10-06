@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
@@ -82,6 +84,26 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
         ('bank', NumberFilter),
     ]
     list_select_related = ('resource', 'timesheet')
+    calculated_fields = (
+        'closed',
+        'timesheet',
+        'due_hours',
+        'is_holiday',
+        'day_hours',
+        'night_hours',
+        'travel_hours',
+        'on_call_hours',
+        'overtime_hours',
+        'meal_voucher',
+    )
+
+    def get_readonly_fields(self, request: HttpRequest, obj: DayEntry | None = None) -> Sequence[str]:
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if request.user.is_superuser:
+            return readonly_fields
+        if obj is not None:
+            readonly_fields = (*readonly_fields, 'resource', 'contract')
+        return (*readonly_fields, *self.calculated_fields)
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[TaskEntry]:
         qs = DayEntry.objects.all()

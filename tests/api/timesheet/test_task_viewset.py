@@ -26,6 +26,7 @@ from krm3.timesheet.api.serializers import DayEntryReadSerializer, TaskEntryRead
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource, Task
 
+
 class TestTaskAPIListView:
     @staticmethod
     def url():
@@ -134,13 +135,15 @@ class TestTaskAPIListView:
                     'title': task.title,
                     'basket': task.basket_id,
                     'color': task.color,
-                    'period': json.dumps({
-                        'bounds': '[)',
-                        'lower': task_start_date.isoformat(),
-                        'upper': (
-                            (task_end_date + datetime.timedelta(days=1)).isoformat() if task_end_date else None
-                        ),
-                    }),
+                    'period': json.dumps(
+                        {
+                            'bounds': '[)',
+                            'lower': task_start_date.isoformat(),
+                            'upper': (
+                                (task_end_date + datetime.timedelta(days=1)).isoformat() if task_end_date else None
+                            ),
+                        }
+                    ),
                     'projectName': task.project.name,
                     'clientName': task.project.client.name,
                     'adminUrl': '',
@@ -176,9 +179,10 @@ class TestTaskAPIListView:
 
         expected_response['tasks'][0]['adminUrl'] = reverse('admin:core_task_change', args=[task.pk])
 
-        assert (
-            api_client(user=timesheet_api_staff_user).get(self.url(), data=api_data).json() == expected_response
-        ), 'check that for the task, a staff user receives a URL'
+        assert api_client(user=timesheet_api_staff_user).get(self.url(), data=api_data).json() == expected_response, (
+            'check that for the task, a staff user receives a URL'
+        )
+
     def test_schedule_with_contract(self, admin_user, api_client):
         start_date = _dt('2020-05-01')
         end_date = _dt('2020-05-09')
@@ -424,9 +428,7 @@ class TestTaskAPIListView:
 
         task_period = (start_date, end_date + datetime.timedelta(days=1))
         user_task = TaskFactory(resource=user_resource, project=project, period=task_period)
-        other_user_task = TaskFactory(
-            resource=other_user_resource, project=project, period=task_period
-        )
+        other_user_task = TaskFactory(resource=other_user_resource, project=project, period=task_period)
 
         client = api_client(user=admin_user)
 
@@ -497,9 +499,7 @@ class TestTaskAPIListView:
         ContractFactory(resource=other_user_resource, period=project.period)
         task_period = (start_date, end_date + datetime.timedelta(days=1))
         user_task = TaskFactory(resource=user_resource, project=project, period=task_period)
-        other_user_task = TaskFactory(
-            resource=other_user_resource, project=project, period=task_period
-        )
+        other_user_task = TaskFactory(resource=other_user_resource, project=project, period=task_period)
 
         client = api_client(user=regular_user)
 
@@ -525,15 +525,6 @@ class TestTaskAPIListView:
         assert (status_code := other_user_response.status_code) == expected_status_code
         if status_code == status.HTTP_200_OK:
             assert other_user_response.json().get('tasks', [])[0].get('id') == other_user_task.id
-
-
-import datetime
-
-import pytest
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import ResourceFactory
 
 
 class TestTimesheetRequestValidation:

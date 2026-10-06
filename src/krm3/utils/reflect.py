@@ -6,14 +6,14 @@ from inspect import isclass
 
 
 @lru_cache(100)
-def fqn(o, silent=False, from_module=None):
+def fqn(o, silent=False, from_module=None):  # noqa: ANN001, ANN201
     """Return the fully qualified class name of an object or a class.
 
     :param o: object or class
     :return: class name
     """
     parts = []
-    if isinstance(o, (str, bytes)):
+    if isinstance(o, str | bytes):
         return o
     if not hasattr(o, '__module__'):
         if silent:
@@ -27,9 +27,9 @@ def fqn(o, silent=False, from_module=None):
     return '.'.join(parts)
 
 
-def package_name(c):  # noqa: D103
+def package_name(c):  # noqa: D103, ANN001, ANN201
     return fqn(c).split('.')[0]
 
 
-def classname(c):  # noqa: D103
+def classname(c):  # noqa: D103, ANN001, ANN201
     return fqn(c).split('.')[-1]

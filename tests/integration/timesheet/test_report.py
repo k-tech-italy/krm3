@@ -1,8 +1,9 @@
-import datetime
 import typing
 
 import pytest
 from freezegun import freeze_time
+
+from testutils.date_utils import _dt
 from testutils.factories import ResourceFactory, SpecialLeaveReasonFactory, TaskEntryFactory, TimesheetSubmissionFactory
 
 if typing.TYPE_CHECKING:
@@ -19,9 +20,7 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_not_submitted(
 ):
     freeze_frontend_time('2025-03-02T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskEntryFactory(
-        date=_dt('2026-03-02'), day_shift_hours=0, sick_hours=8, protocol_number='12', resource=resource
-    )
+    TaskEntryFactory(date=_dt('2026-03-02'), day_shift_hours=0, sick_hours=8, protocol_number='12', resource=resource)
     TaskEntryFactory(date=_dt('2026-03-03'), day_shift_hours=0, sick_hours=8, resource=resource)
 
     browser.login_as_user(regular_user)
@@ -41,13 +40,9 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_submitted(
 ):
     freeze_frontend_time('2025-03-02T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    TaskEntryFactory(
-        date=_dt('2026-03-01'), day_shift_hours=0, sick_hours=8, protocol_number='12', resource=resource
-    )
+    TaskEntryFactory(date=_dt('2026-03-01'), day_shift_hours=0, sick_hours=8, protocol_number='12', resource=resource)
     TaskEntryFactory(date=_dt('2026-03-03'), day_shift_hours=0, sick_hours=8, resource=resource)
-    TimesheetSubmissionFactory(
-        resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31'))
-    )
+    TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
     browser.login_as_user(regular_user)
 
     browser.click('[href*="be"]')
@@ -97,9 +92,7 @@ def test_special_leave_reason_is_visible_in_report_while_submitted(
         special_leave_reason=special_leave_reason,
         resource=resource,
     )
-    TimesheetSubmissionFactory(
-        resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31'))
-    )
+    TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
     browser.login_as_user(regular_user)
 
     browser.click('[href*="be"]')

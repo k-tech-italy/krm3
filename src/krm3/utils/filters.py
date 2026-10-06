@@ -10,7 +10,7 @@ class RecentFilter(admin.SimpleListFilter):
     parameter_name = 'recent'  # URL query parameter name
     _field = 'to_date'
 
-    def lookups(self, request, model_admin):
+    def lookups(self, request, model_admin):  # noqa: ANN001, ANN201
         """
         Return a list of tuples.
 
@@ -22,7 +22,7 @@ class RecentFilter(admin.SimpleListFilter):
             ('False', _('All')),
         )
 
-    def value(self):
+    def value(self):  # noqa: ANN001, ANN201
         """
         Override the value method to return 'False' as the default.
 
@@ -32,15 +32,15 @@ class RecentFilter(admin.SimpleListFilter):
             return self.used_parameters[self.parameter_name]
         return 'True'
 
-    def queryset(self, request, queryset):
+    def queryset(self, request, queryset):  # noqa: ANN001, ANN201
         """
         Return the filtered queryset based on the value provided in the query string and retrievable via `self.value()`.
-        """
+        """  # noqa: D200
         if self.value() == 'True':
             return queryset.filter(**{f'{self._field}__gte': today() - relativedelta(days=config.RECENT_DAYS)})
         return queryset
 
     @classmethod
-    def factory(cls, field_name: str):
+    def factory(cls, field_name: str):  # noqa: ANN206
         """Create a filter class for the given field name."""
         return type(f'{cls.__name__}For{field_name.title()}', (cls,), {'_field': field_name})

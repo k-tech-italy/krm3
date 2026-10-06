@@ -5,11 +5,17 @@ from decimal import Decimal
 import pytest
 from django import test as django_test
 from rest_framework import status
-
-from testutils.factories import TaskFactory
+from rest_framework.reverse import reverse
+from testutils.factories import (
+    ContractFactory,
+    DayEntryFactory,
+    ResourceFactory,
+    SpecialLeaveReasonFactory,
+    TaskEntryFactory,
+    TaskFactory,
+)
 
 from krm3.core.models import DayEntry, TaskEntry
-
 
 def _url():
     return reverse('timesheet-api:api-day-entry-list')
@@ -513,13 +519,6 @@ def test_bulk_rejects_all_changes_when_an_entry_is_closed(api_client):
     closed_entry.refresh_from_db()
     assert closed_entry.leave_hours == Decimal('2.00')
 
-from decimal import Decimal
-
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import DayEntryFactory, SpecialLeaveReasonFactory, TaskEntryFactory
-
 
 def _delete_url():
     return reverse('timesheet-api:api-day-entry-delete')
@@ -553,9 +552,7 @@ def test_delete_removes_non_task_data_and_preserves_tasks(api_client):
     )
     day_entry.refresh_from_db()
 
-    response = api_client(user=day_entry.resource.user).post(
-        _delete_url(), data={'ids': [day_entry.pk]}, format='json'
-    )
+    response = api_client(user=day_entry.resource.user).post(_delete_url(), data={'ids': [day_entry.pk]}, format='json')
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     day_entry.refresh_from_db()
@@ -578,9 +575,7 @@ def test_delete_removes_non_task_data_and_preserves_tasks(api_client):
 def test_delete_removes_day_entries_without_tasks(api_client):
     day_entry = DayEntryFactory(leave_hours=2, comment='Remove me')
 
-    response = api_client(user=day_entry.resource.user).post(
-        _delete_url(), data={'ids': [day_entry.pk]}, format='json'
-    )
+    response = api_client(user=day_entry.resource.user).post(_delete_url(), data={'ids': [day_entry.pk]}, format='json')
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not type(day_entry).objects.filter(pk=day_entry.pk).exists()
@@ -626,6 +621,38 @@ def test_delete_requires_a_non_empty_id_list(api_client, regular_user):
     assert missing_response.data == {'error': 'No day entry ids provided.'}
     assert invalid_response.status_code == status.HTTP_400_BAD_REQUEST
     assert invalid_response.data == {'error': 'Day entry ids must be in a list.'}
+
+
+def _detail_url(day_entry):
+    return reverse('timesheet-api:api-day-entry-detail', args=[day_entry.pk])
+
+
+@pytest.mark.parametrize(
+    ('role', 'expected_status'),
+    [
+        ('owner', status.HTTP_204_NO_CONTENT),
+        ('manager', status.HTTP_204_NO_CONTENT),
+        ('viewer', status.HTTP_403_FORBIDDEN),
+        ('regular', status.HTTP_404_NOT_FOUND),
+    ],
+)
+def test_destroy_is_allowed_only_to_owner_or_manager(api_client, resources, role, expected_status):
+    day_entry = DayEntryFactory(resource=resources['other'])
+    user = day_entry.resource.user if role == 'owner' else resources[role].user
+
+    response = api_client(user=user).delete(_detail_url(day_entry))
+
+    assert response.status_code == expected_status
+    assert DayEntry.objects.filter(pk=day_entry.pk).exists() is (expected_status != status.HTTP_204_NO_CONTENT)
+
+
+def test_destroy_rejects_closed_day_entry(api_client):
+    day_entry = DayEntryFactory(closed=True)
+
+    response = api_client(user=day_entry.resource.user).delete(_detail_url(day_entry))
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert DayEntry.objects.filter(pk=day_entry.pk).exists()
 
 
 def test_clear_deletes_day_entries_and_their_tasks(api_client):
@@ -678,12 +705,6 @@ def test_clear_requires_a_non_empty_id_list(api_client, regular_user):
     assert invalid_response.status_code == status.HTTP_400_BAD_REQUEST
     assert invalid_response.data == {'error': 'Day entry ids must be in a list.'}
 
-import pytest
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import DayEntryFactory
-
 
 @pytest.fixture
 def day_entry_scenario(resources):
@@ -724,14 +745,6 @@ def test_day_entry_list_permissions(usr, visible_entries, day_entry_scenario, ap
     assert response.status_code == status.HTTP_200_OK
     assert {entry['id'] for entry in response.data['results']} == expected_ids
 
-from datetime import date
-
-import pytest
-from rest_framework import status
-from rest_framework.reverse import reverse
-
-from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, SpecialLeaveReasonFactory
-
 
 def _day_entry_url():
     return reverse('timesheet-api:api-day-entry-list')
@@ -753,11 +766,7 @@ def test_create_rejects_special_leave_hours_without_reason(api_client):
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data == {
-        'error': [
-            'A special leave reason is required when special leave hours are set.'
-        ]
-    }
+    assert response.data == {'error': ['A special leave reason is required when special leave hours are set.']}
 
 
 def test_create_accepts_special_leave_hours_with_reason(api_client):
