@@ -22,16 +22,15 @@ RUN apt-get update && \
 
 WORKDIR /code
 
-COPY pyproject.toml dist/image-requirements.txt ./
+COPY dist/image-requirements.txt ./
 RUN pip install --no-cache-dir -U pip uwsgi && \
-    pip install --no-cache-dir -r image-requirements.txt
+    pip install --no-cache-dir -r image-requirements.txt && \
+    rm image-requirements.txt
 
-ADD . /code
-RUN rm -rf src/krm3/fe/static node_modules package*.* && \
-    mv krm3-fe/dist src/krm3/fe/static && \
-    pip install --no-cache-dir . --no-deps && \
-    DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages && \
-    rm -rf src dist docker build *.egg-info
+#RUN rm -rf src/krm3/fe/static node_modules package*.* && \
+#    mv krm3-fe/dist src/krm3/fe/static && \
+#    DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages && \
+#    rm -rf src dist docker build *.egg-info
 
 
 # --- Stage 2: Final Image ---
@@ -45,7 +44,8 @@ ENV DJANGO_SETTINGS_MODULE="krm3.config.settings" \
     KRM3_CELERY_BROKER="" \
     KRM3_DATABASE_URL="" \
     KRM3_REDIS_CACHE_URL="" \
-    KRM3_STATIC_ROOT="/tmp/static"
+    KRM3_STATIC_ROOT="/tmp/static" \
+    PYTHONPATH=/code/src
 
 RUN apt-get update && \
     apt-get install -y --no-install-suggests --no-install-recommends \
@@ -57,8 +57,8 @@ RUN apt-get update && \
 
 RUN groupadd -g 1024 -r ktech && \
     useradd -m -g ktech krm3 && \
-    mkdir -p /code /krm3 /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx && \
-    chown krm3:ktech /code /krm3 /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx
+    mkdir -p /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx && \
+    chown krm3:ktech /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx
 
 COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/etc/circus.conf /etc/circus.conf
@@ -73,14 +73,20 @@ RUN chown -R krm3:ktech /etc/nginx /var/log/nginx /var/lib/nginx /tmp/nginx && \
 WORKDIR /code
 
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
-COPY CHANGELOG.md /usr/local/lib/python3.12/site-packages/krm3/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-COPY --from=builder --chown=krm3:ktech /code/ ./
+COPY --chown=krm3:ktech src/krm3 src/krm3
+COPY CHANGELOG.md src/krm3/
+COPY --chown=krm3:ktech pyproject.toml uv.lock ./
+
 
 ADD tools/zapdata/demo tools/zapdata/demo
 
-RUN chgrp -R ktech /usr/local/lib/python3.12/site-packages/krm3/LOCALE && chmod -R g+w /usr/local/lib/python3.12/site-packages/krm3/LOCALE
+
+# RUN chgrp -R ktech src/krm3/LOCALE && chmod -R g+w src/krm3/LOCALE
+COPY krm3-fe/dist src/krm3/fe/static
+
+# RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages
 
 USER krm3
 SHELL ["/bin/bash", "-c"]
@@ -95,7 +101,8 @@ FROM final AS test
 USER root
 WORKDIR /code
 
-COPY dist/test-requirements.txt ./
+COPY dist/test-requirements.txt README.md ./
+
 RUN pip install --no-cache-dir -r test-requirements.txt
 
 RUN apt-get update && apt-get install -y --no-install-suggests --no-install-recommends \
@@ -104,8 +111,11 @@ RUN apt-get update && apt-get install -y --no-install-suggests --no-install-reco
 
 ENV BROWSERCMD=/usr/bin/chromium
 
-COPY --chown=krm3:ktech src /code/src
-RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages -i .tox -i .venv
-
+#COPY --chown=krm3:ktech src /code/src
 ENV PYTHONPATH=/code/src
+
+#COPY --from=final /code/src ./
+#
+#RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages -i .tox -i .venv
+
 USER krm3
