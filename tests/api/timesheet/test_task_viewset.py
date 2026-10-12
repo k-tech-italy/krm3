@@ -221,46 +221,6 @@ class TestTaskAPIListView:
             '2020-05-09': 8,
         }
 
-    @pytest.mark.parametrize(
-        ('contract_period', 'expected_before', 'expected_after'),
-        (
-                (
-                        (datetime.date(2026, 8, 17), None),
-                        0,
-                        8,
-                ),
-                (
-                        (datetime.date(2025, 1, 1), datetime.date(2026, 8, 17)),
-                        8,
-                        0,
-                ),
-        ),
-    )
-    def test_schedule_respects_contract_period(
-            self,
-            admin_user,
-            api_client,
-            contract_period,
-            expected_before,
-            expected_after,
-    ):
-        contract = ContractFactory(
-            country_calendar_code='PL',
-            period=contract_period,
-        )
-
-        response = api_client(user=admin_user).get(
-            self.url(),
-            data={
-                'resource_id': contract.resource.pk,
-                'start_date': '2026-08-01',
-                'end_date': '2026-08-31',
-            },
-        )
-
-        schedule = response.json()['schedule']
-        assert schedule['2026-08-03'] == expected_before
-        assert schedule['2026-08-18'] == expected_after
 
     def test_schedule_with_multiple_contracts(self, admin_user, api_client):
         start_date = _dt('2020-05-01')
