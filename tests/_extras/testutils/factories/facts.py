@@ -12,7 +12,6 @@ from ktcalendars import KTDateRange, KTDay
 
 from krm3.config import settings
 from krm3.core.models import Contract
-from krm3.currencies.models import Currency
 
 from .base import AutoRegisterModelFactory
 
@@ -144,7 +143,7 @@ class MissionFactory(DjangoModelFactory):
     project = SubFactory(ProjectFactory)
     city = SubFactory(CityFactory)
     resource = SubFactory(ResourceFactory)
-    default_currency = factory.Iterator(Currency.objects.all())
+    default_currency = SubFactory(CurrencyFactory)
     year = factory.LazyAttribute(lambda obj: obj.from_date.year)
     status = 'SUBMITTED'
 
