@@ -86,6 +86,7 @@ dependencies = [
     "urllib3>=2.6.3", # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
     "pyrefly>=0.60.0",
     "ktcalendars[psycopg]>=4.0.0",
+    "cachetools>=7.1.7",
 ]
 
 [project.optional-dependencies]
