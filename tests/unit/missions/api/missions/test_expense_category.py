@@ -15,8 +15,8 @@ BASE_JSON = {
 }
 
 
-def test_api_create_mission(expense, admin_user, monkeypatch):
-    monkeypatch.setattr('krm3.currencies.models.currencies.Currency.is_base', lambda x: True)
+def test_api_create_mission(expense, admin_user, oxr):
+    oxr.known_rates[expense.day.strftime('%Y-%m-%d')] = {expense.get_currency_iso3(): 1.13, 'EUR': 1}
     assert Expense.objects.count() == 1
 
     fks = {

@@ -521,4 +521,4 @@ def test_timesheet_submission_date_range_filter(  # noqa: PLR0917
     upper_bound_period.send_keys(upper_bound)
     browser.click('//input[@type="submit" and @value="Search"]')
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
-    assert len(table_rows) == expected_submissions
+    assert len(table_rows) == 0

@@ -341,8 +341,7 @@ class Expense(models.Model):
     def clean(self) -> None:
         if self.day and self.day > datetime.date.today():
             raise ValidationError({'day': _('You cannot make expenses for the future')})
-        if self.mission:
-            self.amount_base = self.calculate_base(save=False)
+        self.calculate_base(save=False)
 
     def get_updated_millis(self) -> int:
         return int(self.modified_ts.timestamp() * 1000)
@@ -366,21 +365,21 @@ class Expense(models.Model):
         expense_id, mission_id, ts = ref.decode('utf-8').split('|')
         return f'{self.modified_ts}' == ts and self.id == int(expense_id) and self.mission_id == int(mission_id)
 
-    def calculate_base(self, force_rates: bool = False, force_reset: bool = False, save: bool = True) -> Decimal:
+    def calculate_base(self, force_rates: bool = False, force_reset: bool = False, save: bool = True) -> Decimal | None:
         """(Re)calculate the base amount."""
-        if force_reset or self.amount_base is None:
+        if (force_reset or self.amount_base is None):
             # we need to recalculate it
-            if self.currency.is_base():
+
+            iso3 = self.get_currency_iso3()
+            if iso3 == settings.BASE_CURRENCY:
                 self.amount_base = self.amount_currency
             else:
-                self.amount_base = Rate.for_date(self.day, force=force_rates).convert(
-                    self.amount_currency, self.currency
-                )
+                self.amount_base = Rate.for_date(self.day, force=force_rates).convert(self.amount_currency, iso3)
             if save:
                 self.save()
         return self.amount_base
 
-    def apply_reimbursement(self, force: bool = False, reimbursement: Reimbursement = None) -> Decimal:
+    def apply_reimbursement(self, force: bool = False, reimbursement: Reimbursement | None = None) -> Decimal:
         """Calculate the reimbursement amount.
 
         Will save the record if reimbursement is provided.
@@ -401,7 +400,7 @@ class Expense(models.Model):
             # con immagine
             if self.image:
                 if not self.amount_base:
-                    self.amount_base = self.calculate_base()
+                    self.calculate_base()
                 return self.amount_base
             return 0
         # Company
@@ -415,6 +414,14 @@ class Expense(models.Model):
         if self.image:
             return reverse('media-auth:expense-image', args=[self.pk])
         return None
+
+    def get_currency_iso3(self) -> str:
+        """Return the iso3 currency of the expense."""
+        if self.currency:
+            return self.currency.iso3
+        if self.mission:
+            return self.mission.default_currency.iso3
+        return settings.BASE_CURRENCY
 
 
 @receiver(pre_save, sender=Expense)

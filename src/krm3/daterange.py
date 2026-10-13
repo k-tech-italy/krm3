@@ -24,11 +24,8 @@ class DateRangeFilterBase(DateRangeFilter):
 
     @override
     def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
-        if not self.form.is_valid():
-            return queryset
-
-        if not self.form.cleaned_data:
-            return queryset
+        if not self.form.is_valid() or not self.form.cleaned_data:
+            return queryset.none()
 
         lower = self.form.cleaned_data.get(self.lookup_kwarg_gte)
         if lower is not None:
