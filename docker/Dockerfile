@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir -U pip uwsgi && \
     pip install --no-cache-dir -r image-requirements.txt && \
     rm image-requirements.txt
 
+COPY src/krm3/LOCALE /code/LOCALE
+RUN find /code/LOCALE -name '*.po' -exec sh -c 'msgfmt --check-format -o "${1%.po}.mo" "$1"' _ {} \;
+
 #RUN rm -rf src/krm3/fe/static node_modules package*.* && \
 #    mv krm3-fe/dist src/krm3/fe/static && \
 #    DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages && \
@@ -74,19 +77,17 @@ WORKDIR /code
 
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder --chown=krm3:ktech /code/LOCALE src/krm3/LOCALE
 
 COPY --chown=krm3:ktech src/krm3 src/krm3
 COPY CHANGELOG.md src/krm3/
-COPY --chown=krm3:ktech pyproject.toml uv.lock ./
-
+# COPY --chown=krm3:ktech pyproject.toml uv.lock ./
 
 ADD tools/zapdata/demo tools/zapdata/demo
-
 
 # RUN chgrp -R ktech src/krm3/LOCALE && chmod -R g+w src/krm3/LOCALE
 COPY krm3-fe/dist src/krm3/fe/static
 
-RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages
 
 USER krm3
 SHELL ["/bin/bash", "-c"]
