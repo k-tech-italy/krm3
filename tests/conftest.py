@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import sys
 import typing
 from pathlib import Path
@@ -345,3 +347,19 @@ def django_client_and_auth_resource(resource, staff_user):
     resource.save()
     client.force_login(resource.user)
     return client, resource
+
+
+@pytest.fixture
+def oxr(monkeypatch):
+    """Fake Open Exchange Rates client. Fill `oxr.known_rates[day]` with USD-based rates."""
+    client = MagicMock()
+    client.known_rates = {}
+
+    def get_historical(day, symbols=None):
+        if day not in client.known_rates:
+            raise RuntimeError(f'Misconfigured test: no rates for {day}')
+        return {'rates': {'USD': 1, **client.known_rates[day]}}
+
+    client.get_historical.side_effect = get_historical
+    monkeypatch.setattr('krm3.currencies.client.get_client', lambda: client)
+    return client
