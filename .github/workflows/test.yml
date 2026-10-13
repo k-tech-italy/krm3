@@ -40,7 +40,7 @@ jobs:
       version: ${{ steps.changes.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - id: changes
         name: Check for file changes
@@ -87,13 +87,13 @@ jobs:
       RUNNER_TOOL_CACHE: /tmp/
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest
           enable-cache: true
@@ -106,7 +106,7 @@ jobs:
 
       - name: Restore cached vEnv
         id: cache-venv-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ./uv-cache
@@ -118,7 +118,7 @@ jobs:
 
       - name: Save vEnv
         id: cache-venv-save
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ./uv-cache
@@ -141,10 +141,10 @@ jobs:
           uv export --no-emit-project --group dev --format requirements-txt --prune opencv-python > dist/test-requirements.txt
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build test Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -180,7 +180,7 @@ jobs:
         run: cp src/krm3/core/static/release.json krm3-fe/dist
 
       - name: Upload built frontend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: built-frontend
           path: |
@@ -189,7 +189,7 @@ jobs:
             if-no-files-found: warn
 
       - name: Archive selenium results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: selenium-log-report
@@ -203,7 +203,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         continue-on-error: true
         with:
           env_vars: OS,PYTHON
@@ -223,10 +223,10 @@ jobs:
       version: ${{ steps.build.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest
           enable-cache: true
@@ -238,7 +238,7 @@ jobs:
           python-version: 3.12.1
 
       - name: Download built frontend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: built-frontend
           path: krm3-fe/dist/
@@ -259,17 +259,17 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
         with:
           driver: docker-container
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -285,7 +285,7 @@ jobs:
           outputs: type=docker,dest=/tmp/image.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docker-image
           path: /tmp/image.tar
@@ -302,10 +302,10 @@ jobs:
       scan_result: ${{ steps.scan.outcome }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download Docker image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docker-image
           path: /tmp/
@@ -332,13 +332,13 @@ jobs:
           exit-code: "1"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: actions/download-artifact@v8
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
 
       - name: Upload Trivy scan results as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-scan-results
