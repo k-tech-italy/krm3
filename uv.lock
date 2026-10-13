@@ -1410,6 +1410,7 @@ version = "3.7.2"
 source = { editable = "." }
 dependencies = [
     { name = "bs4" },
+    { name = "cachetools" },
     { name = "cryptography" },
     { name = "django" },
     { name = "django-admin-extra-buttons" },
@@ -1520,6 +1521,7 @@ image = [
 [package.metadata]
 requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
+    { name = "cachetools", specifier = ">=7.1.7" },
     { name = "cryptography", specifier = "==46.0.5" },
     { name = "django", specifier = ">=5.2.11,<6" },
     { name = "django-admin-extra-buttons", specifier = ">=2.1.1" },
