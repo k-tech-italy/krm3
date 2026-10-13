@@ -57,8 +57,8 @@ RUN apt-get update && \
 
 RUN groupadd -g 1024 -r ktech && \
     useradd -m -g ktech krm3 && \
-    mkdir -p /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx && \
-    chown krm3:ktech /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx
+    mkdir -p /krm3/logs /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx && \
+    chown krm3:ktech /krm3 /code /data /etc/nginx/sites-available /etc/nginx/sites-enabled /var/log/nginx /var/lib/nginx /tmp/nginx
 
 COPY docker/etc/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/etc/circus.conf /etc/circus.conf
@@ -86,7 +86,7 @@ ADD tools/zapdata/demo tools/zapdata/demo
 # RUN chgrp -R ktech src/krm3/LOCALE && chmod -R g+w src/krm3/LOCALE
 COPY krm3-fe/dist src/krm3/fe/static
 
-# RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages
+RUN DJANGO_SETTINGS_MODULE=krm3.config.settings django-admin compilemessages
 
 USER krm3
 SHELL ["/bin/bash", "-c"]
