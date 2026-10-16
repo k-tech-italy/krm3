@@ -99,6 +99,8 @@ class Mission(models.Model):
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
     def clean(self) -> None:
+        if self.year is None and self.from_date is not None:
+            self.year = self.from_date.year
         if (self.number and self.status == Mission.MissionStatus.DRAFT) or (
             self.number is None and self.status != Mission.MissionStatus.DRAFT
         ):
@@ -111,8 +113,31 @@ class Mission(models.Model):
         if not self.title:
             self.title = Mission.calculate_title(self)
 
+    def submit(self) -> None:
+        """Transition the mission from DRAFT to SUBMITTED.
+
+        The number is assigned only if not already set (see `calculate_number`).
+        """
+        if self.status != Mission.MissionStatus.DRAFT:
+            raise ValidationError(
+                _('Cannot change status {status} to {target}').format(
+                    status=self.status, target=Mission.MissionStatus.SUBMITTED
+                ),
+                code='status',
+            )
+        if self.year is None and self.from_date is not None:
+            self.year = self.from_date.year
+        self.status = Mission.MissionStatus.SUBMITTED
+        if self.number is None:
+            self.number = Mission.calculate_number(self.pk, self.year)
+        self.save()
+
     @staticmethod
     def calculate_number(instance_id: int | None, year: int) -> int:
+        """Return the lowest free number among the non-DRAFT missions of `year`.
+
+        Numbering is per year, so it restarts from 1 every new year.
+        """
         qs = Mission.objects.filter(
             number__isnull=False,
             year=year,
