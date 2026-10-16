@@ -1,6 +1,7 @@
+import copy
 from typing import Any
 
-from django.db.models import Max
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from krm3.core.api.views import ResourceSerializer
@@ -53,6 +54,23 @@ class MissionNestedSerializer(serializers.ModelSerializer):
 
 
 class MissionCreateSerializer(serializers.ModelSerializer):
+    """Create/update a mission.
+
+    `number` is read-only: missions are created in DRAFT and the number is
+    assigned when they are submitted (see `Mission.submit`).
+    """
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        # validate on a copy, so the model invariants surface as 400 instead of 500
+        instance = copy.copy(self.instance) if self.instance else Mission()
+        for attr, value in attrs.items():
+            setattr(instance, attr, value)
+        try:
+            instance.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
+        return attrs
+
     class Meta:
         model = Mission
         fields = (
@@ -66,13 +84,4 @@ class MissionCreateSerializer(serializers.ModelSerializer):
             'city',
             'resource',
         )
-
-    def create(self, validated_data: dict[str, Any]) -> Mission:
-        number = validated_data.get('number')  # TODO from city ID to country default_currencies
-
-        if number is None:
-            last_number = Mission.objects.aggregate(Max('number'))['number__max']
-            new_number = 1 if last_number is None else last_number + 1
-            validated_data['number'] = new_number
-
-        return super().create(validated_data)
+        read_only_fields = ('number',)
