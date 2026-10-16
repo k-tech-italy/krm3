@@ -13,3 +13,7 @@ _Django Model: core.Reimbursement_
 A **Reimbursement** is a report document of a set of <glossary:Expense>s belonging to one or more <glossary:Mission>s.
 The goal is to calculate the reimbursement owed from the <glossary:Resource> to
 the Company or from Company to the <glossary:Resource>.
+
+The amount of each <glossary:Expense> is its `amount_reimbursement`
+(see [Reimbursement amount](Expense.md#reimbursement-amount)): their sum gives the
+total, positive when owed to the <glossary:Resource>, negative when owed to the Company.
