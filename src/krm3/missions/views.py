@@ -2,6 +2,8 @@ import logging
 from cgi import parse_multipart
 from io import BytesIO
 
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import permission_required
 from django.core.files.base import ContentFile
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import reverse
@@ -19,6 +21,8 @@ from krm3.core.models import Reimbursement, Expense
 logger = logging.getLogger(__name__)
 
 
+@method_decorator(staff_member_required, name='dispatch')
+@method_decorator(permission_required('core.add_reimbursement', raise_exception=True), name='dispatch')
 class ReimburseMissionsView(FormView):
     form_class = MissionsReimbursementForm
     http_method_names = ['post']
@@ -43,6 +47,8 @@ class ReimburseMissionsView(FormView):
         return self.form_invalid(form)
 
 
+@method_decorator(staff_member_required, name='dispatch')
+@method_decorator(permission_required('core.view_reimbursement', raise_exception=True), name='dispatch')
 class ReimbursementResultsView(View):
     http_method_names = ['get']
 
