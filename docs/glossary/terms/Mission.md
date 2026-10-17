@@ -40,7 +40,22 @@ A **Mission** is a container for all the activities and expenses related to a sp
    mission of the same `year` (gaps left by deleted missions are filled first).
    Numbering is per `year`, so it restarts from 1 every new year.
 
-Validation rules:
+### Status transitions
+
+| From              | To        | Where                                                   | Rules                                                                                  |
+|-------------------|-----------|---------------------------------------------------------|----------------------------------------------------------------------------------------|
+| Draft             | Submitted | Mission page, admin *Submit* button, API, admin form    | The `number` is assigned if empty                                                      |
+| Draft             | Cancelled | Admin form only                                         | The `number` is assigned if empty (Cancelled missions keep their number)               |
+| Submitted         | Cancelled | Admin form only                                         | Rejected if any of its <glossary:Expense>s is already reimbursed                       |
+| Cancelled         | Submitted | Admin form only                                         | The `number` is kept                                                                   |
+| Submitted, Cancelled | Draft  | Admin form only                                         | The `number` must be cleared by hand; rejected if any expense is already reimbursed    |
+
+Cancelling a mission or moving it back to Draft is not available from the mission page or
+the API.
+
+Expenses of Draft missions cannot be included in a <glossary:Reimbursement>.
+
+### Validation rules
 
 - a Draft mission must not have a `number`; a Submitted or Cancelled mission must have one;
 - `to_date` must not be earlier than `from_date`.
