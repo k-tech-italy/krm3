@@ -1,6 +1,9 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import QuerySet
+from django.utils.translation import gettext_lazy as _
 from rest_framework import mixins, serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -29,9 +32,21 @@ class MissionAPIViewSet(ModelViewSet):
 
     def get_serializer_class(self) -> type[serializers.BaseSerializer]:
         """Change serializer to MissionCreateSerializer for object creation."""
-        if self.request.method in ['POST', 'PATCH']:
+        if self.request.method in ['POST', 'PATCH'] and self.action != 'submit':
             return MissionCreateSerializer
         return super().get_serializer_class()
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request: Request, pk: str | None = None) -> Response:
+        """Transition the mission from DRAFT to SUBMITTED, assigning its number."""
+        mission: Mission = self.get_object()
+        if mission.resource.user_id != request.user.pk and not request.user.has_perm('core.manage_any_mission'):
+            raise PermissionDenied(_('You cannot submit this mission'))
+        try:
+            mission.submit()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
+        return Response(self.get_serializer(mission).data)
 
 
 class ExpenseAPIViewSet(ModelViewSet):

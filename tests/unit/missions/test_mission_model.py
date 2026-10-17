@@ -96,3 +96,50 @@ def test_calculate_number():
     mission.save()
 
     assert Mission.calculate_number(None, 2024) == 2
+
+
+def test_year_defaults_to_from_date_year():
+    mission: Mission = MissionFactory.build(
+        number=None, year=None, status=Mission.MissionStatus.DRAFT, from_date=_dt('2023-12-30')
+    )
+    mission.clean()
+    assert mission.year == 2023
+
+
+def test_submit_assigns_number_restarting_every_year():
+    for number in (1, 2):
+        MissionFactory(number=number, status=Mission.MissionStatus.SUBMITTED, from_date=_dt('2023-03-01'))
+
+    draft_2023 = MissionFactory(number=None, year=None, status=Mission.MissionStatus.DRAFT, from_date=_dt('2023-06-01'))
+    draft_2024 = MissionFactory(number=None, year=None, status=Mission.MissionStatus.DRAFT, from_date=_dt('2024-01-02'))
+    assert draft_2023.number is None
+    assert draft_2024.number is None
+
+    draft_2023.submit()
+    draft_2024.submit()
+    draft_2023.refresh_from_db()
+    draft_2024.refresh_from_db()
+
+    assert (draft_2023.status, draft_2023.year, draft_2023.number) == (Mission.MissionStatus.SUBMITTED, 2023, 3)
+    assert (draft_2024.status, draft_2024.year, draft_2024.number) == (Mission.MissionStatus.SUBMITTED, 2024, 1)
+
+
+def test_submit_keeps_number_if_already_set():
+    mission = MissionFactory(number=None, status=Mission.MissionStatus.DRAFT, from_date=_dt('2023-06-01'))
+    mission.number = 7
+    mission.submit()
+    mission.refresh_from_db()
+    assert mission.number == 7
+
+
+@pytest.mark.parametrize(
+    'status',
+    [
+        pytest.param(Mission.MissionStatus.SUBMITTED, id='submitted'),
+        pytest.param(Mission.MissionStatus.CANCELLED, id='cancelled'),
+    ],
+)
+def test_submit_rejects_non_draft(status):
+    mission = MissionFactory(number=1, status=status)
+    with pytest.raises(ValidationError, match='Cannot change status'):
+        mission.submit()

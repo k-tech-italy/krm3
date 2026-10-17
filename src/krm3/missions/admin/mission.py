@@ -13,6 +13,7 @@ from adminfilters.mixin import AdminFiltersMixin
 from adminfilters.num import NumberFilter
 from django import forms
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.db import models
@@ -141,13 +142,10 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     @button(html_attrs=NORMAL, visible=lambda btn: btn.original.status == Mission.MissionStatus.DRAFT)
     def submit(self, request: 'HttpRequest', pk: int) -> None:
         mission = Mission.objects.get(pk=pk)
-        if mission.status == Mission.MissionStatus.DRAFT:
-            mission.status = Mission.MissionStatus.SUBMITTED
-            if mission.number is None:
-                mission.number = Mission.calculate_number(mission.id, mission.year)
-            mission.save()
-        else:
-            messages.warning(request, f'Cannot change status {mission.status} to {Mission.MissionStatus.SUBMITTED}')
+        try:
+            mission.submit()
+        except ValidationError as e:
+            messages.warning(request, '; '.join(e.messages))
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(Reimbursement.objects.filter(expenses__mission=btn.original)))
     def view_linked_reimbursements(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
