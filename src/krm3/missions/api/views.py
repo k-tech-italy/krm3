@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
+from krm3.core.api.permissions import FeatureFlagEnabled
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from .serializers.expense import (
@@ -20,7 +21,8 @@ from .serializers.mission import MissionCreateSerializer, MissionNestedSerialize
 
 
 class MissionAPIViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    feature_flag = 'TRASFERTE_ENABLED'
     serializer_class = MissionNestedSerializer
     queryset = Mission.objects.all()
 
@@ -35,7 +37,8 @@ class MissionAPIViewSet(ModelViewSet):
 
 
 class ExpenseAPIViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    feature_flag = 'TRASFERTE_ENABLED'
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
 
@@ -49,7 +52,7 @@ class ExpenseAPIViewSet(ModelViewSet):
         return super().get_serializer_class()
 
     # TODO: Should really be an eTag?
-    @action(detail=True, permission_classes=[])
+    @action(detail=True, permission_classes=[FeatureFlagEnabled])
     def check_ts(self, request: Request, pk: str) -> Response:
         """Check if the record has been modified.
 
@@ -68,18 +71,21 @@ class ExpenseAPIViewSet(ModelViewSet):
 
 
 class ExpenseCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    feature_flag = 'TRASFERTE_ENABLED'
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
 
 class PaymentCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    feature_flag = 'TRASFERTE_ENABLED'
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
 class DocumentTypeAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    feature_flag = 'TRASFERTE_ENABLED'
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)
