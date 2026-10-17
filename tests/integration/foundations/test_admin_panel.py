@@ -502,7 +502,7 @@ def submissions():
         pytest.param('', '2026-03-01', 3, id='upper_bound'),
         pytest.param('2025-01-01', '2025-02-01', 0, id='out_of_bound'),
         pytest.param('', '', 4, id='no_bound'),
-        pytest.param('random', 'string', 4, id='wrong_date'),
+        pytest.param('random', 'string', 0, id='wrong_date'),
     ],
 )
 def test_timesheet_submission_date_range_filter(  # noqa: PLR0917
@@ -521,4 +521,4 @@ def test_timesheet_submission_date_range_filter(  # noqa: PLR0917
     upper_bound_period.send_keys(upper_bound)
     browser.click('//input[@type="submit" and @value="Search"]')
     table_rows = browser.find_elements(By.XPATH, '//table[@id="result_list"]/tbody/tr')
-    assert len(table_rows) == 0
+    assert len(table_rows) == expected_submissions
