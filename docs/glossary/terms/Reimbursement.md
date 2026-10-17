@@ -17,3 +17,44 @@ the Company or from Company to the <glossary:Resource>.
 The amount of each <glossary:Expense> is its `amount_reimbursement`
 (see [Reimbursement amount](Expense.md#reimbursement-amount)): their sum gives the
 total, positive when owed to the <glossary:Resource>, negative when owed to the Company.
+
+## Fields
+
+- `number`: The reimbursement number, unique within the `year`.
+- `year`: The fiscal year of the reimbursement.
+- `month`: The month of the reimbursement (free text, by default the current month
+  abbreviation, e.g. `Oct`). Reports group reimbursements by `year` and `month`.
+- `title`: The title of the reimbursement, by default `R_<year>_<number>_<month>_<resource last name>`
+  (e.g. `R_2025_004_Oct_Rossi`).
+- `resource`: The <glossary:Resource> the reimbursement is for.
+- `issue_date`: The date the reimbursement was created, set automatically.
+- `paid_date`: The date the reimbursement was settled, set by hand once paid. The admin can
+  filter reimbursements that are still unpaid.
+
+The <glossary:Expense>s included in a reimbursement point to it through their
+`reimbursement` field.
+
+## How reimbursements are created
+
+Reimbursements are created from the Expense admin with the *Create reimbursement* action:
+
+1. Select the expenses to reimburse. All of them must be not yet reimbursed and must not
+   belong to a Draft <glossary:Mission>.
+2. The preview shows the selected expenses grouped by Resource and Mission. Choose the
+   `year` (it must be within the years of the selected missions) and the `month`.
+3. On confirmation **one Reimbursement per Resource** is created, numbered after the
+   highest number already used in that `year`, with the default `title`. Each selected
+   expense gets its `amount_reimbursement` calculated (if still empty) and is linked to the
+   Resource's reimbursement.
+
+A reimbursement can also be created by hand from the Reimbursement admin: if `number` is
+left blank it gets the lowest number not yet used in the `year`.
+
+## Viewing reimbursements
+
+- *Overview* (Reimbursement admin button): the expenses of a reimbursement with totals by
+  payment type and expense category, exportable as PDF or table.
+- *Reimbursement report* (Reimbursement admin action): a summary of the selected
+  reimbursements by month, Resource and Mission. See
+  [the reimbursement process](../../missions/index.md#reimbursement-report) for how missions
+  are labelled.
