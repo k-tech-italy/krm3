@@ -98,6 +98,60 @@ class TestMissionApiCreate:
 
         assert response.status_code == 400
 
+    @pytest.mark.parametrize(
+        ('perms', 'own_resource', 'expected'),
+        [
+            pytest.param((), True, 403, id='no-add-permission'),
+            pytest.param(('add_mission',), True, 201, id='own-resource'),
+            pytest.param(('add_mission',), False, 400, id='other-resource'),
+            pytest.param(('add_mission', 'manage_any_mission'), False, 201, id='manager-other-resource'),
+        ],
+    )
+    def test_create_permissions(self, api_client, regular_user, resource, perms, own_resource, expected):
+        from testutils.factories import ResourceFactory  # noqa: PLC0415
+
+        regular_user.user_permissions.add(*Permission.objects.filter(codename__in=perms))
+        user = get_user_model().objects.get(id=regular_user.id)  # invalidate cache
+        resource.user = user
+        resource.save()
+        target = resource if own_resource else ResourceFactory()
+
+        response = api_client(user=user).post(
+            reverse('missions-api:mission-list'), self._payload(resource=target.id), format='json'
+        )
+
+        assert response.status_code == expected, response.data
+        if expected == 400:
+            assert 'resource' in response.data
+        assert Mission.objects.filter(resource=target).exists() == (expected == 201)
+
+
+class TestMissionApiUpdate:
+    @pytest.mark.parametrize(
+        ('perms', 'expected'),
+        [
+            pytest.param((), 400, id='owner-cannot-move-to-other-resource'),
+            pytest.param(('manage_any_mission',), 200, id='manager-can-move'),
+        ],
+    )
+    def test_change_resource(self, api_client, regular_user, resource, perms, expected):
+        from testutils.factories import ResourceFactory  # noqa: PLC0415
+
+        regular_user.user_permissions.add(*Permission.objects.filter(codename__in=perms))
+        user = get_user_model().objects.get(id=regular_user.id)  # invalidate cache
+        resource.user = user
+        resource.save()
+        mission = MissionFactory(resource=resource, number=None, status='DRAFT')
+        other = ResourceFactory()
+
+        response = api_client(user=user).patch(
+            reverse('missions-api:mission-detail', args=[mission.pk]), {'resource': other.id}, format='json'
+        )
+
+        assert response.status_code == expected, response.data
+        mission.refresh_from_db()
+        assert (mission.resource_id == other.id) == (expected == 200)
+
 
 class TestMissionApiSubmit:
     @staticmethod
