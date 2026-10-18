@@ -26,6 +26,16 @@ A **Mission** is a container for all the activities and expenses related to a sp
 - `city`: The city where the mission takes place.
 - `resource`: The Resource assigned to the mission.
 
+## Access
+
+| Permission           | Missions of the user's own Resource | Missions of other Resources |
+|----------------------|-------------------------------------|-----------------------------|
+| none                 | view, modify, delete                | no access                   |
+| `view_any_mission`   | view, modify, delete                | view only                   |
+| `manage_any_mission` | view, modify, delete                | view, modify, delete        |
+
+Creating a mission also requires `add_mission`.
+
 ## Lifecycle and numbering
 
 1. A mission is created in **Draft** status by default, without a `number`
