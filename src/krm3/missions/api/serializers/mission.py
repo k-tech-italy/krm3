@@ -2,6 +2,7 @@ import copy
 from typing import Any
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from krm3.core.api.views import ResourceSerializer
@@ -58,9 +59,21 @@ class MissionCreateSerializer(serializers.ModelSerializer):
 
     `number` is read-only: missions are created in DRAFT and the number is
     assigned when they are submitted (see `Mission.submit`).
+    Users without `core.manage_any_mission` can only use their own resource.
     """
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        # only mission managers can create or move missions for other resources
+        request = self.context.get('request')
+        resource = attrs.get('resource')
+        if (
+            resource is not None
+            and request is not None
+            and not request.user.has_perm('core.manage_any_mission')
+            and resource.user_id != request.user.pk
+        ):
+            raise serializers.ValidationError({'resource': [_('You can only use your own resource')]})
+
         # validate on a copy, so the model invariants surface as 400 instead of 500
         instance = copy.copy(self.instance) if self.instance else Mission()
         for attr, value in attrs.items():

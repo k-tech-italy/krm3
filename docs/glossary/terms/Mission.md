@@ -29,7 +29,9 @@ A **Mission** is a container for all the activities and expenses related to a sp
 ## Lifecycle and numbering
 
 1. A mission is created in **Draft** status by default, without a `number`
-   (missions created through the API are always Draft).
+   (missions created through the API are always Draft). Creating a mission requires the
+   `add_mission` permission; users without `manage_any_mission` can only create (or move)
+   missions for their own <glossary:Resource>.
 2. When it transitions from **Draft** to **Submitted**, the `number` is calculated and
    assigned, **only if it is still empty**. A mission can be submitted by the
    <glossary:Resource> it belongs to or by a user with the `manage_any_mission` permission,

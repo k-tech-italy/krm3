@@ -38,6 +38,11 @@ class MissionAPIViewSet(ModelViewSet):
             return MissionCreateSerializer
         return super().get_serializer_class()
 
+    def create(self, request: Request, *args, **kwargs) -> Response:  # noqa: ANN002, ANN003
+        if not request.user.has_perm('core.add_mission'):
+            raise PermissionDenied(_('You cannot create missions'))
+        return super().create(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'])
     def submit(self, request: Request, pk: str | None = None) -> Response:
         """Transition the mission from DRAFT to SUBMITTED, assigning its number."""
