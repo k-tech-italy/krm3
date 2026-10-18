@@ -24,7 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 
-from krm3.core.api.permissions import IsSelfOrReadOnly
+from krm3.core.api.permissions import ResourceMatch
 from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
@@ -247,7 +247,7 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
 
     def get_permissions(self) -> list[Any]:
         if self.action == 'preferred_language':
-            return [IsAuthenticated(), IsSelfOrReadOnly()]
+            return [IsAuthenticated(), ResourceMatch()]
         return super().get_permissions()
 
 

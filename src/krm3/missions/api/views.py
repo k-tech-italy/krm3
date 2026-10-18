@@ -9,7 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from krm3.core.api.permissions import FeatureFlagEnabled
+from krm3.core.api.permissions import FeatureFlagEnabled, IsOwnerOrManager
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
 from .serializers.expense import (
@@ -24,8 +24,10 @@ from .serializers.mission import MissionCreateSerializer, MissionNestedSerialize
 
 
 class MissionAPIViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
     feature_flag = 'TRASFERTE_ENABLED'
+    owner_field = 'resource.user_id'
+    manage_permission = 'core.manage_any_mission'
     serializer_class = MissionNestedSerializer
     queryset = Mission.objects.all()
 
@@ -46,9 +48,7 @@ class MissionAPIViewSet(ModelViewSet):
     @action(detail=True, methods=['post'])
     def submit(self, request: Request, pk: str | None = None) -> Response:
         """Transition the mission from DRAFT to SUBMITTED, assigning its number."""
-        mission: Mission = self.get_object()
-        if mission.resource.user_id != request.user.pk and not request.user.has_perm('core.manage_any_mission'):
-            raise PermissionDenied(_('You cannot submit this mission'))
+        mission: Mission = self.get_object()  # owner or manager only (IsOwnerOrManager)
         try:
             mission.submit()
         except DjangoValidationError as exc:
@@ -57,8 +57,10 @@ class MissionAPIViewSet(ModelViewSet):
 
 
 class ExpenseAPIViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated, FeatureFlagEnabled]
+    permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
     feature_flag = 'TRASFERTE_ENABLED'
+    owner_field = 'mission.resource.user_id'
+    manage_permission = 'core.manage_any_expense'
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
 

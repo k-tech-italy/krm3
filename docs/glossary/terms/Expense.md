@@ -28,6 +28,14 @@ An **Expense** is the record about a single monetary transaction executed in the
 - `reimbursement`: The <glossary:Reimbursement> this expense is part of.
 - `image`: An uploaded image of the receipt.
 
+## Access
+
+| Permission           | Expenses of the user's own Missions | Expenses of other Resources' Missions |
+|----------------------|-------------------------------------|---------------------------------------|
+| none                 | view, add, modify, delete           | no access                             |
+| `view_any_expense`   | view, add, modify, delete           | view only                             |
+| `manage_any_expense` | view, add, modify, delete           | view, add, modify, delete             |
+
 ## Reimbursement amount
 
 `amount_reimbursement` tells who owes what for the expense:
