@@ -3,6 +3,7 @@ import typing
 from cryptography.fernet import InvalidToken
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
@@ -47,6 +48,17 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
 
 class ExpenseCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict[str, typing.Any]) -> dict[str, typing.Any]:
+        # only expense managers can add (or move) expenses to missions of other resources
+        request = self.context.get('request')
+        mission = attrs.get('mission')
+        if (
+            mission is not None
+            and request is not None
+            and not request.user.has_perm('core.manage_any_expense')
+            and mission.resource.user_id != request.user.pk
+        ):
+            raise serializers.ValidationError({'mission': [_('You can only add expenses to your own missions')]})
+
         instance = self.instance or Expense()
         for attr, value in attrs.items():
             setattr(instance, attr, value)
