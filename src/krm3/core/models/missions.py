@@ -17,16 +17,15 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 
-from .geo import City
-from .auth import Resource
-from .projects import Project
-
 from krm3.core.storage import PrivateMediaStorage
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
 from krm3.utils.queryset import ActiveManagerMixin
 
+from .auth import Resource
+from .geo import City
+from .projects import Project
 
 if typing.TYPE_CHECKING:
     from krm3.core.models.auth import User
@@ -339,7 +338,8 @@ class Expense(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.day}, {self.amount_currency} for {self.category}'
+        cat = self.category if self.category else ''
+        return f'{self.day}, {self.amount_currency} for {cat}'
 
     def save(
         self,
@@ -380,7 +380,7 @@ class Expense(models.Model):
 
     def calculate_base(self, force_rates: bool = False, force_reset: bool = False, save: bool = True) -> Decimal | None:
         """(Re)calculate the base amount."""
-        if (force_reset or self.amount_base is None):
+        if force_reset or self.amount_base is None:
             # we need to recalculate it
 
             iso3 = self.get_currency_iso3()
@@ -430,9 +430,9 @@ class Expense(models.Model):
 
     def get_currency_iso3(self) -> str:
         """Return the iso3 currency of the expense."""
-        if self.currency:
+        if self.currency_id:
             return self.currency.iso3
-        if self.mission:
+        if self.mission_id:
             return self.mission.default_currency.iso3
         return settings.BASE_CURRENCY
 
