@@ -65,7 +65,8 @@ Creating a mission also requires `add_mission`.
 Cancelling a mission or moving it back to Draft is not available from the mission page or
 the API.
 
-Expenses of Draft missions cannot be included in a <glossary:Reimbursement>.
+Expenses of non-Submitted missions (Draft or Cancelled) cannot be included in a
+<glossary:Reimbursement>: only expenses of Submitted missions are eligible.
 
 ### Validation rules
 
