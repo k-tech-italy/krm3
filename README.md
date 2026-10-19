@@ -1,10 +1,39 @@
-# TL;DR;
+# KRM3
+
+KRM3 is K-Tech's resource management platform: timesheets, missions and expense
+reimbursements, contracts, projects, documents, currencies and contacts. The backend is a
+Django application (Python, PostgreSQL); the frontend is a React single-page application kept in
+the `krm3-fe` git submodule.
+
+This file explains how to set up a local development environment. To contribute (branching,
+commits, running the checks, pull requests) see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## TL;DR;
+
+```shell
+git clone https://github.com/k-tech-italy/krm3.git && cd krm3
+git submodule init && git submodule update
+(cd krm3-fe && yarn install && yarn build)
+uv sync                       # Python version from .python-version
+cp .env.example .env          # then set KRM3_DATABASE_URL and KRM3_LOCAL_DEVELOPMENT=True
+uv run pre-commit install            # installs the pre-commit, commit-msg and pre-push hooks
+uv run ./manage.py migrate && uv run ./manage.py createsuperuser
+uv run ./manage.py tailwind install  # first time only; keep `./manage.py tailwind start` running
+uv run ./manage.py runserver localhost:8000
+```
+
+(`uv run` is not needed when the virtualenv is active, e.g. with direnv.)
+
+Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-tests).
 
 ## Mandatory requirements
 
 - [UV](https://docs.astral.sh/uv/getting-started/installation/) as package manager, venv manager, and for managing Python binaries
 - [Ruff](https://docs.astral.sh/ruff/installation/) as code linter/verifier
-- [PostgreSQL](https://postgresql.org) as the database.
+- [PostgreSQL](https://postgresql.org) as the database
+- [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) to build the frontend and the Tailwind theme
+- [Commitizen](https://commitizen-tools.github.io/commitizen/) for Conventional Commits
+  (`uv tool install commitizen`), see [Commits](./CONTRIBUTING.md#commits)
 
 ## Optional requirements
 
@@ -17,29 +46,28 @@
     ```shell
     git clone https://github.com/k-tech-italy/krm3.git
     cd krm3
-
-    # switch to your working branch - use the `-c` flag to create a new one
-    git switch <your working branch>
     ```
+
+  To work on a change, create a branch as described in [Branching](./CONTRIBUTING.md#branching).
+
 * Initialise the frontend
 
 ```shell
     git submodule init
     git submodule update
 
-    # go into the FE repo and install dependencies and build
+    # go into the FE folder and install dependencies and build
     cd krm3-fe
+    git switch <your working FE branch>
     yarn install
     yarn build
-
-    git switch <your working branch>
   ```
 
 * Prepare the Python environment for the project.
 
     ```shell
     # Install Python binaries
-    # see https://github.com/k-tech-italy/krm3/blob/uv/.python-version for the version to install
+    # see .python-version for the version to install
     uv python install 3.12
 
     # Create the virtualenv
@@ -69,9 +97,10 @@
     ```
   Whenever you make a change to your `.env` or `.envrc` files, you need to run `direnv reload` or `direnv allow` to apply them.
 
-- Install pre-commit-hooks
+- Install the git hooks. This installs the `pre-commit`, `commit-msg` and `pre-push` hooks
+  configured in `.pre-commit-config.yaml` (see [Git hooks](./CONTRIBUTING.md#git-hooks) for
+  what they check).
   ```bash
-  # Install pre-commit checks
   pre-commit install
   ```
 
@@ -85,7 +114,7 @@
 terminal the watcher process for building the theme ...
 
   ```bash
-  ./manage.py tailwind isntall  # only the first time
+  ./manage.py tailwind install  # only the first time
   ./manage.py tailwind start
   ```
 
@@ -98,3 +127,15 @@ terminal the watcher process for building the theme ...
 Hint: See
 - src/krm3/theme/static_src/src/styles.scss for the master theme styles.css
 (NB: `@source "../../../**/*.{html,js}"` to capture styles from Django apps)
+
+## Keeping the frontend up to date
+
+To bring the frontend and the backend environment up to date in one go, run:
+
+```bash
+make refresh-fe
+```
+
+It runs `git pull`, `yarn install` and `yarn build` in `krm3-fe/`, then `git pull`, `uv sync` and
+`./manage.py tailwind build` in this repository. Because it pulls both repositories, commit or
+stash your local changes first.
