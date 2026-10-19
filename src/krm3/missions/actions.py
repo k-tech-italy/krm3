@@ -31,7 +31,7 @@ def reset_reimbursement(modeladmin: 'ModelAdmin', request: 'HttpRequest', querys
 def create_reimbursement(
     modeladmin: 'ModelAdmin', request: 'HttpRequest', expenses: typing.Union['QuerySet', list['Expense']]
 ) -> 'HttpResponse | None':
-    if expenses.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
+    if expenses.exclude(mission__status=Mission.MissionStatus.SUBMITTED).exists():
         messages.warning(request, 'Please select only expenses of SUBMITTED missions.')
         return None
 
@@ -62,7 +62,7 @@ def create_reimbursement(
 def get_rates(
     modeladmin: 'ModelAdmin', request: 'HttpRequest', queryset: 'QuerySet[Expense]', silent: bool = False
 ) -> str | None:
-    if queryset.filter(mission__status=Mission.MissionStatus.DRAFT).exists():
+    if queryset.exclude(mission__status=Mission.MissionStatus.SUBMITTED).exists():
         messages.warning(request, 'Please select only expenses of SUBMITTED missions.')
         return None
 

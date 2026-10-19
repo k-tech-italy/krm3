@@ -25,7 +25,7 @@ from testutils.factories import (
 )
 
 from krm3.core.models import TaskEntry
-from krm3.core.models.missions import Mission
+from krm3.core.models.missions import Expense, Mission
 
 if typing.TYPE_CHECKING:
     from testutils.selenium import AppTestBrowser
@@ -424,6 +424,38 @@ def test_admin_missions_create_reibursments_get_preview(browser: 'AppTestBrowser
     expense.refresh_from_db()
     assert expense.reimbursement is not None
 
+
+def test_admin_missions_create_reibursments_mission_cancelled(browser: 'AppTestBrowser', admin_user):
+    mission = MissionFactory(number=314, status=Mission.MissionStatus.CANCELLED, to_date=datetime.date.today())
+    expense = ExpenseFactory(mission=mission, amount_reimbursement=100)
+    browser.login_to_admin(admin_user)
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Create reimbursement"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//li[contains(text(), "Please select only expenses of SUBMITTED missions.")]',
+    )
+    expense.refresh_from_db()
+    assert expense.reimbursement is None
+
+
+def test_admin_missions_get_rates_mission_cancelled(browser: 'AppTestBrowser', admin_user):
+    mission = MissionFactory(number=314, status=Mission.MissionStatus.CANCELLED, to_date=datetime.date.today())
+    expense = ExpenseFactory(mission=mission)
+    Expense.objects.filter(pk=expense.pk).update(amount_base=None)
+    browser.login_to_admin(admin_user)
+    browser.click('//a[@href="/admin/core/expense/"]')
+    browser.click('//input[@name="_selected_action"]')
+    browser.click('//select[@name="action"]/option[text()="Get the rates for the dates"]')
+    browser.click('//button[@title="Run the selected action"]')
+    browser.find_elements(
+        By.XPATH,
+        '//li[contains(text(), "Please select only expenses of SUBMITTED missions.")]',
+    )
+    expense.refresh_from_db()
+    assert expense.amount_base is None
 
 
 def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_user):
