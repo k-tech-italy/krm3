@@ -68,14 +68,7 @@ class MissionAdminForm(forms.ModelForm):
 
 
 class ExpenseAdminForm(forms.ModelForm):
-    def clean(self) -> dict[str, typing.Any] | None:
-        ret = super().clean()
-
-        if not self.cleaned_data.get('currency') and (mission := self.cleaned_data.get('mission')):
-            self.cleaned_data['currency'] = mission.default_currency
-
-        return ret
-
+    # a blank currency is resolved by Expense.clean() (mission default currency, else base currency)
     class Meta:
         model = Expense
         fields = '__all__'  # noqa: DJ007
