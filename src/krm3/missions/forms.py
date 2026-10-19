@@ -27,15 +27,20 @@ class MissionAdminForm(forms.ModelForm):
         ret = super().clean()
 
         # set year from from_date
-        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data['year']:
+        if (from_date := self.cleaned_data.get('from_date')) and not self.cleaned_data.get('year'):
             self.cleaned_data['year'] = from_date.year
 
         # take settings.BASE_CURRENCY if no currency specified
         if not self.cleaned_data.get('default_currency'):
             self.cleaned_data['default_currency'] = Currency.objects.get(pk=settings.BASE_CURRENCY)
 
+        # a missing status already has its own field error: skip the status-dependent logic
+        status = self.cleaned_data.get('status')
+        if status is None:
+            return ret
+
         # if SUBMITTED
-        if self.cleaned_data.get('status') != Mission.MissionStatus.DRAFT:
+        if status != Mission.MissionStatus.DRAFT:
             # if we have from_date and number is empty
             if (from_date := self.cleaned_data.get('from_date')) and self.cleaned_data.get('number', None) is None:
                 self.cleaned_data['number'] = self.calculate_number()
@@ -49,13 +54,11 @@ class MissionAdminForm(forms.ModelForm):
 
         if (
             'status' in self.changed_data
-            and self.instance
-            and self.cleaned_data['status'] != Mission.MissionStatus.SUBMITTED
+            and self.instance.pk
+            and status != Mission.MissionStatus.SUBMITTED
             and self.instance.expenses.filter(reimbursement__isnull=False).exists()
         ):
-            raise ValidationError(
-                f'You cannot set to {self.cleaned_data["status"]} a mission with reimbursed exception'
-            )
+            raise ValidationError(f'You cannot set to {status} a mission with reimbursed exception')
 
         return ret
 
