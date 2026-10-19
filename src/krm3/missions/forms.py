@@ -113,31 +113,18 @@ class MissionsReimbursementForm(forms.Form):
 
 
 class ReimbursementAdminForm(forms.ModelForm):
-    title = forms.CharField(
-        required=False, widget=forms.TextInput(attrs={'size': 60}), help_text='Set automatically if left blank'
-    )
+    """Edit an existing reimbursement.
 
-    def calculate_number(self) -> int:
-        return Reimbursement.calculate_number(self.instance and self.instance.id, self.cleaned_data['year'])
+    Reimbursements are only created by the *Create reimbursement* expense action.
+    """
 
-    def get_initial_for_field(self, field: forms.Field, field_name: str) -> typing.Any:
-        if field_name == 'year':
-            return datetime.date.today().year
-        return super().get_initial_for_field(field, field_name)
-
-    def clean_number(self) -> None:
+    def clean_number(self) -> int:
         number = self.cleaned_data['number']
-        if number and number <= 0:
+        if number is not None and number <= 0:
             raise ValidationError('Number must be > 0')
-
-    def clean(self) -> dict[str, typing.Any]:
-        """Clean data."""
-        ret = super().clean()
-        if self.cleaned_data.get('number', None) is None:
-            self.cleaned_data['number'] = self.calculate_number()
-
-        return ret
+        return number
 
     class Meta:
         model = Reimbursement
         fields = '__all__'  # noqa: DJ007
+        widgets = {'title': forms.TextInput(attrs={'size': 60})}

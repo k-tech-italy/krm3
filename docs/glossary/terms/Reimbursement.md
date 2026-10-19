@@ -36,7 +36,8 @@ The <glossary:Expense>s included in a reimbursement point to it through their
 
 ## How reimbursements are created
 
-Reimbursements are created from the Expense admin with the *Create reimbursement* action:
+Reimbursements are created **only** from the Expense admin with the *Create reimbursement*
+action:
 
 1. Select the expenses to reimburse. All of them must be not yet reimbursed and must not
    belong to a Draft <glossary:Mission>.
@@ -47,8 +48,8 @@ Reimbursements are created from the Expense admin with the *Create reimbursement
    expense gets its `amount_reimbursement` calculated (if still empty) and is linked to the
    Resource's reimbursement.
 
-A reimbursement can also be created by hand from the Reimbursement admin: if `number` is
-left blank it gets the lowest number not yet used in the `year`.
+Reimbursements cannot be added directly from the Reimbursement admin, not even by
+superusers. Existing reimbursements can still be edited there, e.g. to set `paid_date`.
 
 ## Viewing reimbursements
 

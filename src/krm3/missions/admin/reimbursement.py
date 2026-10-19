@@ -151,6 +151,10 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[Reimbursement]:
         return super().get_queryset(request).prefetch_related('expenses')
 
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Reimbursements are only created by the *Create reimbursement* expense action."""
+        return False
+
     def get_object(self, request: HttpRequest, object_id: int, *args, **kwargs) -> Reimbursement:
         queryset = self.get_queryset(request)
         # Custom logic to retrieve the object

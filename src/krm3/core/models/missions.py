@@ -253,10 +253,10 @@ class Reimbursement(models.Model):
         SPESE_TRASFERTA = 'Spese trasferta'
         TOTALE_SPESE = 'Totale spese'
 
-    number = models.PositiveIntegerField(blank=True, help_text='Set automatically if left blank')
+    number = models.PositiveIntegerField(blank=True, help_text='Assigned by the Create reimbursement action')
     year = models.PositiveIntegerField(blank=True)
     month = models.CharField(max_length=20, null=True)
-    title = models.CharField(max_length=120, help_text='Set automatically if left blank')
+    title = models.CharField(max_length=120, help_text='Assigned by the Create reimbursement action')
     issue_date = models.DateField(auto_now_add=True)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     paid_date = models.DateField(blank=True, null=True)
@@ -278,19 +278,6 @@ class Reimbursement(models.Model):
     ) -> None:
         self.full_clean()
         super().save(force_insert, force_update, using, update_fields)
-
-    def clean(self) -> None:
-        if self.number is None and self.year:
-            self.number = Reimbursement.calculate_number(self.id, self.year)
-
-    @staticmethod
-    def calculate_number(instance_id: int | None, year: int) -> int:
-        qs = Reimbursement.objects.filter(year=year)
-        if instance_id:
-            qs = qs.exclude(pk=instance_id)
-        nums = [0] + sorted(qs.values_list('number', flat=True))
-        ret = list(itertools.takewhile(lambda v: v[0] == 0 or v[1] == nums[v[0] - 1] + 1, enumerate(nums)))[-1]
-        return ret[1] + 1
 
     @property
     def expense_count(self) -> int:
