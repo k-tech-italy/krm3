@@ -16,7 +16,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
-from django.db import models
+from django.db import IntegrityError, models
 from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.http import HttpResponse, HttpResponseRedirect
@@ -95,6 +95,43 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             },
         )
     ]
+
+    def changeform_view(
+        self,
+        request: 'HttpRequest',
+        object_id: str | None = None,
+        form_url: str = '',
+        extra_context: dict | None = None,
+    ) -> HttpResponse:
+        """Report form errors through the messages framework; never escalate validation errors."""
+        try:
+            response = super().changeform_view(request, object_id, form_url, extra_context)
+        except (ValidationError, IntegrityError) as e:
+            messages.error(request, '; '.join(getattr(e, 'messages', None) or [str(e)]))
+            return HttpResponseRedirect(request.get_full_path())
+        if request.method == 'POST' and isinstance(response, TemplateResponse):
+            for message in self._form_error_messages(response.context_data or {}):
+                messages.error(request, message)
+        return response
+
+    @staticmethod
+    def _form_error_messages(context: dict) -> list[str]:
+        errors = []
+        if adminform := context.get('adminform'):
+            form = adminform.form
+            for field, field_errors in form.errors.items():
+                label = form.fields[field].label if field in form.fields else None
+                errors.extend(f'{label}: {error}' if label else error for error in field_errors)
+        for inline in context.get('inline_admin_formsets', []):
+            formset = inline.formset
+            errors.extend(formset.non_form_errors())
+            for form_errors in formset.errors:
+                errors.extend(
+                    f'{formset.model._meta.verbose_name}: {error}'
+                    for field_errors in form_errors.values()
+                    for error in field_errors
+                )
+        return errors
 
     def get_changeform_initial_data(self, request: 'HttpRequest') -> dict:
         ret = super().get_changeform_initial_data(request)
