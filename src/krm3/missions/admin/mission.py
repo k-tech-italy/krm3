@@ -54,7 +54,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     save_on_top = True
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']
-    actions = ['export', 'reimburse']
+    actions = ['export']
     search_fields = ['resource__first_name', 'resource__last_name', 'title', 'project__name', 'city__name']
 
     inlines = [ExpenseInline]
