@@ -21,7 +21,7 @@
                     <li>Mission: {{ expense.mission }}</li>
                     <li>Day: {{ expense.day }}</li>
                     <li>
-                        Amount: {{ expense.amount_currency }} {{ amount.currency.symbol }} {{ amount.currency.iso3 }}
+                        Amount: {{ expense.amount_currency }} {{ expense.get_currency_iso3 }}
                     </li>
                     <li>Detail: {{ expense.detail }}</li>
                     <li>Category: {{ expense.category }}</li>

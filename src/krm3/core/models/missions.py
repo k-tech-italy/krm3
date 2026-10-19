@@ -308,7 +308,11 @@ class Expense(models.Model):
     day = models.DateField()
     amount_currency = models.DecimalField(max_digits=10, decimal_places=2, help_text='Amount in currency')
     currency = models.ForeignKey(
-        Currency, on_delete=models.PROTECT, blank=True, help_text='Leave blank to inherit from mission.default_currency'
+        Currency,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text='Leave blank to default to the mission.default_currency',
     )
     amount_base = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True, help_text=f'Amount in {settings.BASE_CURRENCY}'
@@ -428,11 +432,14 @@ class Expense(models.Model):
         return None
 
     def get_currency_iso3(self) -> str:
-        """Return the iso3 currency of the expense."""
-        if self.currency:
-            return self.currency.iso3
-        if self.mission:
-            return self.mission.default_currency.iso3
+        """Return the iso3 currency of the expense, resolved at runtime when left blank.
+
+        Falls back to the mission's `default_currency`, then to `settings.BASE_CURRENCY`.
+        """
+        if self.currency_id:
+            return self.currency_id
+        if self.mission_id and self.mission.default_currency_id:
+            return self.mission.default_currency_id
         return settings.BASE_CURRENCY
 
 

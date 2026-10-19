@@ -138,7 +138,7 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
         else:
             cell_html = '%s'
         # for below line, you may consider using 'format_html', instead of python's string formatting
-        return format_html(cell_html % f'{obj.amount_currency} {obj.currency.iso3}')
+        return format_html(cell_html % f'{obj.amount_currency} {obj.get_currency_iso3()}')
 
     @admin.display(description='Amt. reimbursement', ordering='amount_reimbursement')
     def colored_amount_reimbursement(self, obj: Expense) -> str:
