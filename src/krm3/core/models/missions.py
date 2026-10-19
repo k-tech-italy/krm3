@@ -155,13 +155,14 @@ class Mission(models.Model):
             mission = Mission(**cleaned_data)
         else:
             mission = cleaned_data
+        # check the FK ids: reading an unset non-null FK raises RelatedObjectDoesNotExist
         if (
             mission.from_date
             and not mission.title
-            and mission.city
+            and mission.city_id
             and mission.to_date
             and mission.number
-            and mission.resource
+            and mission.resource_id
         ):
             city = mission.city.name.lower()
             return (
