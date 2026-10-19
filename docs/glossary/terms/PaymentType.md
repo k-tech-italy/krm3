@@ -4,6 +4,7 @@ template: term.html
 terms:
   - glossary:
     - PaymentType
+    - PaymentCategory
 ---
 
 # Payment Type
@@ -11,6 +12,15 @@ terms:
 _Django Model: core.PaymentCategory_
 
 A hierarchical classification of payment modality for the <glossary:Expense>s
+
+The same concept has different names in different places:
+
+| Where | Name |
+|-------|------|
+| Model | `core.PaymentCategory` ("payment categories" in the admin) |
+| Expense field | `payment_type` |
+| API | `/api/v1/missions/payment_category/` |
+| These docs | Payment Type (also findable as PaymentCategory) |
 
 Examples:
 
