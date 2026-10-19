@@ -134,6 +134,7 @@ def command(  # noqa: PLR0912, PLR0913, PLR0917, C901
                 except Exception as e:  # noqa: BLE001
                     click.secho(f'WARNING: {e}', fg='yellow')
 
+        extra["interactive"] = False
         call_command('remove_stale_contenttypes', **extra)
 
     except Exception as e:
