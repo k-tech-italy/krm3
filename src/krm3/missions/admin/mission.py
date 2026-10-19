@@ -222,7 +222,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
     def overview(self, request: 'HttpRequest', pk: int) -> 'HttpResponse':
         mission = self.get_object(request, pk)
         sorting = request.GET.get('sort')
-        expenses = list(mission.expenses.select_related('reimbursement', 'payment_type', 'category', 'currency'))
+        expenses = mission.expenses.select_related('reimbursement', 'payment_type', 'category', 'currency')
         reimbursements = list({e.reimbursement for e in expenses})
         if None in reimbursements:
             reimbursements.remove(None)
