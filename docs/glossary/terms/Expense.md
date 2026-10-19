@@ -18,7 +18,8 @@ An **Expense** is the record about a single monetary transaction executed in the
 - `mission`: The <glossary:Mission> this expense belongs to.
 - `day`: The date of the expense.
 - `amount_currency`: The amount in the original currency.
-- `currency`: The currency of the expense.
+- `currency`: The currency of the expense. If left blank, it is set when the expense is saved to the
+  Mission's `default_currency`, or to the base currency (`settings.BASE_CURRENCY`) when the Mission has none.
 - `amount_base`: The amount converted to the base currency.
 - `amount_reimbursement`: The amount owed for this expense, in the base currency. See [Reimbursement amount](#reimbursement-amount).
 - `detail`: A short description of the expense.
