@@ -199,6 +199,7 @@ class RateFactory(DjangoModelFactory):
 
 
 class ReimbursementFactory(DjangoModelFactory):
+    number = Sequence(lambda n: n + 1)
     title = Sequence(lambda n: f'Tit {n + 1}')
     year = 2024
     month = 'April'
