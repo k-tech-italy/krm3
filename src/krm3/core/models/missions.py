@@ -354,6 +354,9 @@ class Expense(models.Model):
     def clean(self) -> None:
         if self.day and self.day > datetime.date.today():
             raise ValidationError({'day': _('You cannot make expenses for the future')})
+        if not self.currency_id:
+            # a blank currency is stored as the mission default currency, else the base currency
+            self.currency_id = self.get_currency_iso3()
         self.calculate_base(save=False)
 
     def get_updated_millis(self) -> int:
@@ -429,10 +432,13 @@ class Expense(models.Model):
         return None
 
     def get_currency_iso3(self) -> str:
-        """Return the iso3 currency of the expense."""
+        """Return the iso3 currency of the expense.
+
+        Falls back to the mission default currency, then to `settings.BASE_CURRENCY`.
+        """
         if self.currency_id:
             return self.currency.iso3
-        if self.mission_id:
+        if self.mission_id and self.mission.default_currency_id:
             return self.mission.default_currency.iso3
         return settings.BASE_CURRENCY
 
