@@ -69,8 +69,8 @@ Squash work-in-progress commits before merging if needed.
 `commit-msg` and `pre-push` hooks from `.pre-commit-config.yaml`. They check, among other
 things:
 
-- on commit: Ruff, missing Django migrations, forbidden patterns (e.g. `.showbrowser(`),
-  trailing whitespace and end-of-file fixes, compiled translations;
+- on commit: Ruff, missing Django migrations, forbidden patterns (e.g. trailing whitespace
+  and end-of-file fixes, compiled translations;
 - on the commit message: the Conventional Commits format (Commitizen);
 - on push: that the version matches the release and that no files under `src/` or `tests/`
   are left untracked.
