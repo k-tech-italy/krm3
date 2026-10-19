@@ -134,7 +134,7 @@ def prepare_reimbursement_report_data(queryset: QuerySet[Reimbursement]) -> dict
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
-    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
+    acl_permissions = ('core.view_any_mission', 'core.manage_any_mission')
     list_display = ['number', 'year', 'month', 'title', 'issue_date', 'paid_date', 'expense_num', 'resource']
     form = ReimbursementAdminForm
     inlines = [ExpenseInline]

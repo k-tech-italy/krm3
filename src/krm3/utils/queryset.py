@@ -16,7 +16,7 @@ class ACLMixin:
 
     def get_list_filter(self, request: HttpRequest):  # noqa: ANN001, ANN201
         ret = admin.ModelAdmin.get_list_filter(self, request).copy()
-        if request.user.has_any_perm(self.acl_permissions):
+        if request.user.has_any_perm(*self.acl_permissions):
             ret.insert(
                 1,
                 (self._resource_link, AutoCompleteFilter),
