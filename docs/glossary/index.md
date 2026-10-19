@@ -9,6 +9,7 @@
 - [Contract](terms/Contract.md)
 ## D
 - [DayEntry](terms/DayEntry.md)
+- [DocumentType](terms/DocumentType.md)
 ## E
 - [Expense](terms/Expense.md)
 - [ExpenseCategory](terms/ExpenseCategory.md)

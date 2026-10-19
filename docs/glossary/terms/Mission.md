@@ -71,4 +71,5 @@ Expenses of non-Submitted missions (Draft or Cancelled) cannot be included in a
 ### Validation rules
 
 - a Draft mission must not have a `number`; a Submitted or Cancelled mission must have one;
+- the pair (`number`, `year`) is unique;
 - `to_date` must not be earlier than `from_date`.
