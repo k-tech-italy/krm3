@@ -50,7 +50,7 @@ if typing.TYPE_CHECKING:
 
 @admin.register(Mission)
 class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
-    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
+    acl_permissions = ('core.view_any_mission', 'core.manage_any_mission')
     save_on_top = True
     form = MissionAdminForm
     autocomplete_fields = ['project', 'city', 'resource']
@@ -98,7 +98,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     def get_changeform_initial_data(self, request: 'HttpRequest') -> dict:
         ret = super().get_changeform_initial_data(request)
-        if not request.user.has_perm('missions.manage_any_mission'):
+        if not request.user.has_perm('core.manage_any_mission'):
             ret['resource'] = request.user.resource
         return ret
 
@@ -162,7 +162,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
 
     @button(
         html_attrs=NORMAL,
-        visible=lambda button: button.request.user.has_perm('missions.manage_any_mission'),
+        visible=lambda button: button.request.user.has_perm('core.manage_any_mission'),
     )
     def import_missions(self, request: 'HttpRequest') -> 'HttpResponse':  # noqa: D102
         if request.method == 'POST':

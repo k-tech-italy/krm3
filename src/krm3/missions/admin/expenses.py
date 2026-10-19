@@ -45,9 +45,7 @@ if typing.TYPE_CHECKING:
 class RestrictedReimbursementMixin:
     def get_readonly_fields(self, request: 'HttpRequest', obj: Any = None) -> list[str]:
         ret = list(super().get_readonly_fields(request, obj))
-        if not request.user.has_perm('missions.view_any_mission') and not request.user.has_perm(
-            'missions.manage_any_mission'
-        ):
+        if not request.user.has_any_perm('core.view_any_mission', 'core.manage_any_mission'):
             ret.append('reimbursement')
         return ret
 
@@ -70,7 +68,7 @@ class ExpenseInline(RestrictedReimbursementMixin, admin.TabularInline):  # noqa:
 
 @admin.register(Expense)
 class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
-    acl_permissions = ('missions.view_any_mission', 'missions.manage_any_mission')
+    acl_permissions = ('core.view_any_expense', 'core.manage_any_expense')
     readonly_fields = ['amount_base']
     form = ExpenseAdminForm
     autocomplete_fields = ['mission', 'currency', 'category', 'payment_type', 'reimbursement']
