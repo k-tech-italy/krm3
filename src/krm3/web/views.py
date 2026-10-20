@@ -21,13 +21,14 @@ from django.db.models import Min
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.http import urlencode
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import ResourceForm
-from krm3.core.models import Project, Resource, Task
+from krm3.core.models import Contract, Project, Resource, Task
 from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.reports.availability import AvailabilityReport
 from krm3.timesheet.report.payslip import TimesheetReportOnline
@@ -40,7 +41,6 @@ if typing.TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
 
     from krm3.core.models import (
-        Contract,
         User as UserType,
     )
 
@@ -314,7 +314,9 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             filename = f'report_{slugify(title)}.xlsx'
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            report = TimesheetReportExport(ctx['start'], ctx['end'], cast('UserType', self.request.user))
+            report = TimesheetReportExport(
+                ctx['start'], ctx['end'], cast('UserType', self.request.user), **self._get_filter_kwargs()
+            )
 
             # FIXME: `response` is incompatible with `payslip_report.StreamWriter`
             report.write_excel(response, _('Resource report {title}').format(title=title))
@@ -353,10 +355,28 @@ class ReportView(LoginRequiredMixin, ReportMixin, TemplateView):
             + f'{start_of_month.strftime(" %Y")}',
         }
 
+    def _get_filter_kwargs(self) -> dict[str, list[str]]:
+        """Return the report filters selected in the request, only for users allowed to see every resource."""
+        if not self.request.user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
+            return {}
+        contract_types = [
+            value for value in self.request.GET.getlist('contract_type') if value in Contract.ContractType.values
+        ]
+        return {'contract_types': contract_types or [Contract.ContractType.EMPLOYEE]}
+
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs) | self._get_base_context()
 
-        report_blocks = TimesheetReportOnline(ctx['start'], ctx['end'], cast('UserType', self.request.user))
+        report_kwargs = self._get_filter_kwargs()
+        ctx['can_filter_all'] = bool(report_kwargs)
+        if report_kwargs:
+            ctx['contract_types'] = Contract.ContractType.choices
+            ctx['selected_contract_types'] = report_kwargs['contract_types']
+            ctx['filter_query'] = urlencode({'contract_type': report_kwargs['contract_types']}, doseq=True)
+
+        report_blocks = TimesheetReportOnline(
+            ctx['start'], ctx['end'], cast('UserType', self.request.user), **report_kwargs
+        )
         ctx['report_blocks'] = report_blocks.report_html()
         return ctx
 
