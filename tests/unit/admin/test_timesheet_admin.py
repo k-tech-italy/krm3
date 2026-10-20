@@ -1,6 +1,8 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
+import pytest
 from django.test import RequestFactory
+from django.urls import reverse
 from testutils.factories import DayEntryFactory, TaskEntryFactory, TimesheetSubmissionFactory
 
 from krm3.timesheet.admin import DayEntryAdmin, TaskEntryAdmin
@@ -26,3 +28,28 @@ def test_admin_cannot_change_or_delete_entries_in_closed_submission(admin_user):
     assert day_entry_admin.has_delete_permission(request, day_entry) is False
     assert task_entry_admin.has_change_permission(request, task_entry) is False
     assert task_entry_admin.has_delete_permission(request, task_entry) is False
+
+
+@pytest.mark.parametrize(
+    ('params', 'expected'),
+    [
+        pytest.param('', {'jan', 'feb'}, id='no-filter'),
+        pytest.param('?period__range__gte=2025-02-01', {'feb'}, id='lower-only'),
+        pytest.param('?period__range__lte=2025-01-31', {'jan'}, id='upper-only'),
+        pytest.param(
+            '?period__range__gte=2025-01-15&period__range__lte=2025-02-15', {'jan', 'feb'}, id='overlapping-both'
+        ),
+        pytest.param('?period__range__gte=random&period__range__lte=string', set(), id='invalid-dates'),
+    ],
+)
+def test_timesheet_submission_changelist_period_filter(admin_client, params, expected):
+    submissions = {
+        'jan': TimesheetSubmissionFactory(period=(date(2025, 1, 1), date(2025, 2, 1))),
+        'feb': TimesheetSubmissionFactory(period=(date(2025, 2, 1), date(2025, 3, 1))),
+    }
+
+    response = admin_client.get(reverse('admin:core_timesheetsubmission_changelist') + params)
+
+    assert response.status_code == 200
+    shown = {obj.pk for obj in response.context['cl'].result_list}
+    assert shown == {submissions[key].pk for key in expected}
