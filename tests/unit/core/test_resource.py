@@ -27,7 +27,7 @@ def contracts_list() -> list['Contract']:
     [
         pytest.param([[dt('20230620'), dt('20230625')], [dt('20230701'), None]], 'IT-RM', [0] * 6, id='outside'),
         pytest.param(
-            [[dt('20230620'), dt('20230626')], [dt('20230629'), None]], 'IT-RM', [7, 0, 0, 0, 0, 5], id='edges'
+            [[dt('20230620'), dt('20230626')], [dt('20230629'), None]], 'IT-RM', [0, 0, 0, 0, 0, 5], id='edges'
         ),
         pytest.param([[dt('20230627'), dt('20230630')]], 'IT', [0, 0, 2, 3, 4, 0], id='inside'),
     ],
@@ -86,7 +86,7 @@ def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_co
                 KTDay('2020-11-12'): 4,
                 KTDay('2020-11-13'): 5,
                 KTDay('2020-11-14'): 6,
-                KTDay('2020-11-15'): 7,
+                KTDay('2020-11-15'): 0,  # Sunday, the default weekly holiday
             },
         ),
         (
@@ -100,7 +100,7 @@ def test_get_schedule_returns_zero_if_there_is_no_contract(contracts, country_co
                 KTDay('2020-11-12'): 5,
                 KTDay('2020-11-13'): 6,
                 KTDay('2020-11-14'): 7,
-                KTDay('2020-11-15'): 8,
+                KTDay('2020-11-15'): 0,  # Sunday, the default weekly holiday
             },
         ),
     ],

@@ -18,7 +18,8 @@ The values appear in the daily entries and in the [Timesheet Report](timesheet_r
 To determine if a day is a holiday for a Resource:
 
 - The holiday calendar is derived from the Contract's base city and its Country's `country_calendar_code`, including the city's subdivision code when present. If no country calendar code is available, the site's default calendar is used.
-- Sundays are considered holidays if the flag `Contract.sunday_as_holiday` is True (the default). Contracts of resources working shifts may set it to False so Sunday is treated as a regular day.
+- The day of the week set in `Contract.holiday_day` (Sunday by default) is always a holiday, even if it is a weekend day.
+  Contracts of resources working shifts may leave it empty so that no day of the week is a holiday by itself.
 
 ## Due Hours
 

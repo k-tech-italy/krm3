@@ -160,7 +160,7 @@ class TestTaskAPIListView:
                 '2024-01-04': 4,
                 '2024-01-05': 5,
                 '2024-01-06': 0,
-                '2024-01-07': 2,
+                '2024-01-07': 0,  # Sunday, the default weekly holiday
             },
             'bankHours': _as_quantized_decimal(resource.get_bank_hours_balance(period_end)),
             'timesheetColors': {
@@ -291,7 +291,7 @@ class TestTaskAPIListView:
                     '2020-05-07': 6,
                     '2020-05-08': 7,
                     '2020-05-09': 8,
-                    '2020-05-10': 2,
+                    '2020-05-10': 0,  # Sunday, the default weekly holiday
                 },
             ),
             (
@@ -324,7 +324,7 @@ class TestTaskAPIListView:
                     '2020-05-07': 6,
                     '2020-05-08': 7,
                     '2020-05-09': 8,
-                    '2020-05-10': 2,
+                    '2020-05-10': 0,  # Sunday, the default weekly holiday
                 },
             ),
         ],
