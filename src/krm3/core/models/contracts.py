@@ -22,8 +22,6 @@ from krm3.core.storage import PrivateMediaStorage
 from krm3.missions.media import contract_directory_path
 from krm3.timesheet.operations import DayEntryProcessor
 
-SUNDAY = 6
-
 if TYPE_CHECKING:
     from krm3.core.models import Contract, DayEntry, Resource, TaskEntry
     from krm3.core.models.auth import User
@@ -60,6 +58,17 @@ class Contract(models.Model):
         CONTRACTOR = 'CONTRACTOR', _('Contractor')
         OTHER = 'OTHER', _('Other')
 
+    class Weekday(models.IntegerChoices):
+        """Days of the week, numbered as `datetime.date.weekday()`."""
+
+        MONDAY = 0, _('Monday')
+        TUESDAY = 1, _('Tuesday')
+        WEDNESDAY = 2, _('Wednesday')
+        THURSDAY = 3, _('Thursday')
+        FRIDAY = 4, _('Friday')
+        SATURDAY = 5, _('Saturday')
+        SUNDAY = 6, _('Sunday')
+
     resource = models.ForeignKey('core.Resource', on_delete=models.PROTECT)
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     working_schedule = models.JSONField(blank=True, default=dict)
@@ -73,7 +82,13 @@ class Contract(models.Model):
         validators=[FileExtensionValidator(['pdf'])],
         help_text='Optional PDF document (PDF files only)',
     )
-    sunday_as_holiday = models.BooleanField(default=True, help_text=_('Sunday always a holiday'))
+    holiday_day = models.PositiveSmallIntegerField(
+        choices=Weekday.choices,
+        default=Weekday.SUNDAY,
+        null=True,
+        blank=True,
+        help_text=_('Day of the week always considered a holiday, even on weekends. Empty for none'),
+    )
     overtime = models.BooleanField(default=True, help_text=_('Is overtime tracked'))
     contract_type = models.CharField(
         max_length=10,
@@ -217,6 +232,6 @@ class Contract(models.Model):
 
             if extra_holidays.is_holiday(day.date, self):
                 day.ktcalendar.holidays.append(day.date)
-            if self.sunday_as_holiday and day.date.weekday() == SUNDAY:
+            if self.holiday_day is not None and day.date.weekday() == self.holiday_day:
                 day.ktcalendar.holidays.append(day.date)
         return day if result else None

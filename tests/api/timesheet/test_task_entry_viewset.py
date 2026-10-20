@@ -609,7 +609,8 @@ def test_accepts_task_entries_for_multiple_days(hours_data, api_client):
     )
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert set(TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)) == set(dates)
+    # 2024-01-07 is a Sunday, the contract's weekly holiday: skipped in a multiple-day selection
+    assert set(TaskEntry.objects.filter(task=task).values_list('day_entry__day', flat=True)) == set(dates[1:])
 
 
 @pytest.mark.parametrize(

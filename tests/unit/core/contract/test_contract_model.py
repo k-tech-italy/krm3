@@ -78,7 +78,7 @@ def _contract_form_data(contract: Contract, start: date, end: date | None) -> di
         'period_1': end.isoformat() if end else '',
         'working_schedule': contract.working_schedule,
         'meal_voucher': contract.meal_voucher,
-        'sunday_as_holiday': contract.sunday_as_holiday,
+        'holiday_day': contract.holiday_day,
         'overtime': contract.overtime,
         'contract_type': contract.contract_type,
         'base_in': contract.base_in_id or '',
@@ -138,7 +138,7 @@ def test_contract_form_rejects_period_that_excludes_day_entries(start, end, entr
         pytest.param(3, (3, 3), id='thu'),
         pytest.param(4, (4, 4), id='fri'),
         pytest.param(5, (5, 0), id='sat'),
-        pytest.param(6, (6, 0), id='sun'),
+        pytest.param(6, (0, 0), id='sun'),  # the default weekly holiday
     ],
 )
 @pytest.mark.parametrize('with_schedule', [[True], [False]])
@@ -472,3 +472,30 @@ def test_active_between(start_date, end_date, expected):
     assert list(Contract.objects.active_between(start_date, end_date).values_list('id', flat=True)) == [
         contracts[i].id for i in expected
     ]
+
+
+@pytest.mark.parametrize(
+    ('holiday_day', 'holidays'),
+    [
+        pytest.param(Contract.Weekday.SUNDAY, {'2024-05-12'}, id='sunday'),
+        pytest.param(Contract.Weekday.SATURDAY, {'2024-05-11'}, id='saturday'),
+        pytest.param(Contract.Weekday.WEDNESDAY, {'2024-05-08'}, id='working-day'),
+        pytest.param(None, set(), id='none'),
+    ],
+)
+def test_holiday_day_is_a_holiday_every_week(holiday_day, holidays):
+    contract = ContractFactory(
+        period=(dt('2024-01-01'), None),
+        holiday_day=holiday_day,
+        working_schedule={'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7},
+    )
+    week = [KTDay('2024-05-06') + offset for offset in range(7)]  # Monday to Sunday, no public holidays in Rome
+
+    assert {str(day.date) for day in week if contract.get_ktday(day).is_holiday} == holidays
+    for day in week:
+        expected_hours = 0 if str(day.date) in holidays else day.date.weekday() + 1
+        assert contract.get_due_hours(day) == expected_hours
+
+
+def test_holiday_day_defaults_to_sunday():
+    assert Contract().holiday_day == Contract.Weekday.SUNDAY

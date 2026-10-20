@@ -281,3 +281,30 @@ def test_timesheet_report_download_link_keeps_contract_type_filter(admin_client)
     soup = BeautifulSoup(response.content, 'html.parser')
     hrefs = {a['href'] for a in soup.find_all('a', class_='button')}
     assert reverse('export_report', args=['202506']) + '?contract_type=CONTRACTOR&contract_type=OTHER' in hrefs
+
+
+@pytest.mark.parametrize(
+    ('holiday_day', 'expected_days'),
+    [
+        pytest.param(Contract.Weekday.SUNDAY, {1, 8, 15, 22, 29}, id='sunday'),
+        pytest.param(Contract.Weekday.WEDNESDAY, {4, 11, 18, 25}, id='wednesday'),
+        pytest.param(None, set(), id='none'),
+    ],
+)
+def test_timesheet_report_marks_the_weekly_holiday(admin_client, holiday_day, expected_days):
+    # June 2025 in GB-ENG has no public holidays
+    contract = ContractFactory(
+        holiday_day=holiday_day,
+        base_in__country__country_calendar_code='GB',
+        base_in__subdivision_code='ENG',
+    )
+
+    response = admin_client.get(reverse('report-month', args=['202506']))
+    table = _get_resource_table(response, contract.resource)
+    header_cells = table.find('thead').find_all('tr')[0].find_all('td')[1:]
+    assert {day for day, cell in enumerate(header_cells, 1) if cell.get_text(strip=True) == 'X'} == expected_days
+
+    response = admin_client.get(reverse('export_report', args=['202506']))
+    sheet = openpyxl.load_workbook(BytesIO(response.content)).active
+    header_row = next(row for row in sheet.iter_rows(values_only=True) if contract.resource.first_name in str(row[0]))
+    assert {day for day, value in enumerate(header_row[2:], 1) if value == 'X'} == expected_days

@@ -1,6 +1,6 @@
 import pytest
 
-from krm3.core.models import TaskEntry
+from krm3.core.models import Contract, TaskEntry
 from krm3.timesheet.operations import DayEntryProcessor
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, TaskFactory
@@ -11,7 +11,7 @@ def contract():
     return ContractFactory(
         working_schedule={'mon': 4, 'tue': 4, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 0, 'sun': 0},
         meal_voucher={'mon': 2, 'tue': 3, 'wed': 2, 'thu': 2, 'fri': 2, 'sat': 1, 'sun': 2},
-        sunday_as_holiday=True,
+        holiday_day=Contract.Weekday.SUNDAY,
     )
 
 
@@ -38,7 +38,7 @@ def test_build_day_reset(contract, tasks):
             {'task': tasks[0], 'night_shift_hours': 1},
         ],
     ) # Sunday
-    assert day_entry.is_holiday is False
+    assert day_entry.is_holiday is True  # the contract's weekly holiday
     assert day_entry.due_hours == 0
     assert day_entry.meal_voucher == 0
     assert day_entry.remaining_hours == 0

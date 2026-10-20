@@ -96,7 +96,7 @@ class ResourceFactory(DjangoModelFactory):
 class ContractFactory(AutoRegisterModelFactory[Contract]):
     resource = SubFactory(ResourceFactory)
     period = (date(2020, 1, 1), None)
-    sunday_as_holiday = True
+    holiday_day = Contract.Weekday.SUNDAY
     contract_type=Contract.ContractType.EMPLOYEE
     base_in = SubFactory(CityFactory)
 

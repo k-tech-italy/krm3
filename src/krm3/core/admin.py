@@ -135,13 +135,14 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
         'contract_type',
         'base_in',
         'working_schedule',
-        'sunday_as_holiday',
+        'holiday_day',
         'meal_voucher',
         'document_link',
     ]
     list_filter = [('resource', AutoCompleteFilter), ('base_in', AutoCompleteFilter)]
     autocomplete_fields = ['resource', 'base_in']
     readonly_fields = ['document_link']
+    radio_fields = {'holiday_day': admin.HORIZONTAL}
 
     formfield_overrides = {
         # Tell Django to use our custom widget for all DateRangeFields in this admin.
