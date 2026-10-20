@@ -108,7 +108,14 @@ class TimesheetReportData:
 
 
 class TimesheetReport:
-    def __init__(self, from_date: datetime.date, to_date: datetime.date, user: User, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        from_date: datetime.date,
+        to_date: datetime.date,
+        user: User,
+        contract_types: Iterable[str] = (Contract.ContractType.EMPLOYEE,),
+        **kwargs: Any,
+    ) -> None:
         self.report_data = TimesheetReportData(from_date, to_date)
         resources = resources_in_period(
             start_date=from_date,
@@ -121,7 +128,7 @@ class TimesheetReport:
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
             resources = resources.filter(
                 contract__period__overlap=self.report_data.period,
-                contract__contract_type=Contract.ContractType.EMPLOYEE,
+                contract__contract_type__in=contract_types,
             ).distinct()
         else:
             resources = resources.filter(user=user)

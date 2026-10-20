@@ -7,7 +7,12 @@ The report is available as first menu entry in the menu `Reports`.
 # Layout
 
 There are several tables in the report: one for each Resource, sorted by Resource surname and name.
-Users with global timesheet viewing permissions see resources with an employee contract overlapping the selected period. Other users see their own resource.
+Users with global timesheet viewing permissions see resources with a contract overlapping the selected period whose
+contract type is among the ones selected in the *Contract types* filter (Employee by default). Other users see their
+own resource and do not have the filter.
+
+The *Contract types* filter is kept when moving to the previous or next month and applies to the downloaded Excel
+report too. If no contract type is selected, the report falls back to Employee.
 
 Example of table:
 ![TimesheetReportExample.png](../assets/TimesheetReportExample.png)

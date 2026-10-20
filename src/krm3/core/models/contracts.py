@@ -22,6 +22,8 @@ from krm3.core.storage import PrivateMediaStorage
 from krm3.missions.media import contract_directory_path
 from krm3.timesheet.operations import DayEntryProcessor
 
+SUNDAY = 6
+
 if TYPE_CHECKING:
     from krm3.core.models import Contract, DayEntry, Resource, TaskEntry
     from krm3.core.models.auth import User
@@ -214,5 +216,7 @@ class Contract(models.Model):
             from krm3.utils._extra_holidays import extra_holidays  # noqa: PLC0415
 
             if extra_holidays.is_holiday(day.date, self):
+                day.ktcalendar.holidays.append(day.date)
+            if self.sunday_as_holiday and day.date.weekday() == SUNDAY:
                 day.ktcalendar.holidays.append(day.date)
         return day if result else None

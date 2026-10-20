@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import Protocol, override
 
@@ -171,10 +172,12 @@ class TimesheetReportExport(TimesheetReport):
         wb.save(stream)
 
     @override
-    def _get_resources(self, user: User) -> list[Resource]:
+    def _get_resources(
+        self, user: User, contract_types: Iterable[str] = (Contract.ContractType.EMPLOYEE,)
+    ) -> list[Resource]:
         if user.has_any_perm('core.manage_any_timesheet', 'core.view_any_timesheet'):
-            employee_resource_ids = self.valid_contracts.filter(
-                contract_type=Contract.ContractType.EMPLOYEE,
+            resource_ids = self.valid_contracts.filter(
+                contract_type__in=contract_types,
             ).values_list('resource_id', flat=True)
-            return [*Resource.objects.filter(id__in=employee_resource_ids)]
+            return [*Resource.objects.filter(id__in=resource_ids)]
         return [user.get_resource()]

@@ -1,10 +1,13 @@
 from decimal import Decimal
+from io import BytesIO
 
+import openpyxl
 import pytest
 from bs4 import BeautifulSoup
 from django.urls import reverse
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, DayEntryFactory, SpecialLeaveReasonFactory
+from testutils.permissions import add_permissions
 from krm3.core.models import Contract
 
 
@@ -147,3 +150,134 @@ def test_resource_can_see_their_empty_timesheet_report_when_contractor(client):
     table = _get_resource_table(response, resource)
     assert table is not None
     assert 'No time entries available' in table.get_text()
+
+
+@pytest.fixture
+def contracts_by_type():
+    return {contract_type: ContractFactory(contract_type=contract_type) for contract_type in Contract.ContractType}
+
+
+@pytest.mark.parametrize(
+    ('query', 'expected_types'),
+    [
+        pytest.param('', {'EMPLOYEE'}, id='default-employee'),
+        pytest.param('?contract_type=CONTRACTOR', {'CONTRACTOR'}, id='contractor-only'),
+        pytest.param(
+            '?contract_type=EMPLOYEE&contract_type=CONTRACTOR&contract_type=OTHER',
+            {'EMPLOYEE', 'CONTRACTOR', 'OTHER'},
+            id='all-types',
+        ),
+        pytest.param('?contract_type=INVALID', {'EMPLOYEE'}, id='invalid-falls-back-to-employee'),
+    ],
+)
+def test_timesheet_report_contract_type_filter(admin_client, contracts_by_type, query, expected_types):
+    response = admin_client.get(reverse('report-month', args=['202506']) + query)
+
+    assert response.status_code == 200
+    shown = {
+        contract_type
+        for contract_type, contract in contracts_by_type.items()
+        if _get_resource_table(response, contract.resource) is not None
+    }
+    assert shown == expected_types
+    soup = BeautifulSoup(response.content, 'html.parser')
+    checked = {checkbox['value'] for checkbox in soup.select('input[name="contract_type"][checked]')}
+    assert checked == expected_types
+
+
+@pytest.mark.parametrize(
+    ('permission', 'can_filter'),
+    [
+        pytest.param(None, False, id='no-permission'),
+        pytest.param('core.view_any_timesheet', True, id='view-any'),
+        pytest.param('core.manage_any_timesheet', True, id='manage-any'),
+    ],
+)
+def test_timesheet_report_contract_type_filter_requires_permission(client, contracts_by_type, permission, can_filter):
+    own_contract = ContractFactory(contract_type=Contract.ContractType.EMPLOYEE)
+    user = own_contract.resource.user
+    if permission:
+        add_permissions(user, permission)
+    client.force_login(user)
+
+    response = client.get(reverse('report-month', args=['202506']) + '?contract_type=CONTRACTOR')
+
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.content, 'html.parser')
+    assert (soup.find(id='filter-section') is not None) is can_filter
+    contractor = contracts_by_type[Contract.ContractType.CONTRACTOR].resource
+    assert (_get_resource_table(response, contractor) is not None) is can_filter
+    assert (_get_resource_table(response, own_contract.resource) is not None) is not can_filter
+
+
+def test_timesheet_report_month_navigation_keeps_contract_type_filter(admin_client):
+    response = admin_client.get(
+        reverse('report-month', args=['202506']) + '?contract_type=CONTRACTOR&contract_type=OTHER'
+    )
+
+    soup = BeautifulSoup(response.content, 'html.parser')
+    hrefs = {a['href'] for a in soup.find_all('a', class_='button')}
+    assert reverse('report-month', args=['202505']) + '?contract_type=CONTRACTOR&contract_type=OTHER' in hrefs
+    assert reverse('report-month', args=['202507']) + '?contract_type=CONTRACTOR&contract_type=OTHER' in hrefs
+
+
+def _get_exported_resources(response, resources):
+    sheet = openpyxl.load_workbook(BytesIO(response.content)).active
+    headers = {str(cell.value) for cell in sheet['A'] if cell.value}
+    return {
+        key
+        for key, resource in resources.items()
+        if any(f'{resource.last_name.upper()} {resource.first_name}' in header for header in headers)
+    }
+
+
+@pytest.mark.parametrize(
+    ('query', 'expected_types'),
+    [
+        pytest.param('', {'EMPLOYEE'}, id='default-employee'),
+        pytest.param('?contract_type=CONTRACTOR&contract_type=OTHER', {'CONTRACTOR', 'OTHER'}, id='non-employees'),
+        pytest.param('?contract_type=INVALID', {'EMPLOYEE'}, id='invalid-falls-back-to-employee'),
+    ],
+)
+def test_timesheet_report_export_contract_type_filter(admin_client, contracts_by_type, query, expected_types):
+    response = admin_client.get(reverse('export_report', args=['202506']) + query)
+
+    assert response.status_code == 200
+    resources = {contract_type: contract.resource for contract_type, contract in contracts_by_type.items()}
+    assert _get_exported_resources(response, resources) == expected_types
+
+
+@pytest.mark.parametrize(
+    ('permission', 'can_filter'),
+    [
+        pytest.param(None, False, id='no-permission'),
+        pytest.param('core.view_any_timesheet', True, id='view-any'),
+        pytest.param('core.manage_any_timesheet', True, id='manage-any'),
+    ],
+)
+def test_timesheet_report_export_contract_type_filter_requires_permission(
+    client, contracts_by_type, permission, can_filter
+):
+    own_contract = ContractFactory(contract_type=Contract.ContractType.EMPLOYEE)
+    user = own_contract.resource.user
+    if permission:
+        add_permissions(user, permission)
+    client.force_login(user)
+
+    response = client.get(reverse('export_report', args=['202506']) + '?contract_type=CONTRACTOR')
+
+    assert response.status_code == 200
+    exported = _get_exported_resources(
+        response, {'own': own_contract.resource, 'contractor': contracts_by_type['CONTRACTOR'].resource}
+    )
+    assert exported == ({'contractor'} if can_filter else {'own'})
+
+
+def test_timesheet_report_download_link_keeps_contract_type_filter(admin_client):
+    response = admin_client.get(
+        reverse('report-month', args=['202506']) + '?contract_type=CONTRACTOR&contract_type=OTHER'
+    )
+
+    soup = BeautifulSoup(response.content, 'html.parser')
+    hrefs = {a['href'] for a in soup.find_all('a', class_='button')}
+    assert reverse('export_report', args=['202506']) + '?contract_type=CONTRACTOR&contract_type=OTHER' in hrefs
