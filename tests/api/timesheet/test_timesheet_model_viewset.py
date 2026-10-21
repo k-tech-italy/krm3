@@ -1,9 +1,11 @@
 import typing
+from datetime import date
 
 import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from testutils.factories import (
+    ContractFactory,
     GroupFactory,
     ResourceFactory,
     TimesheetSubmissionFactory,
@@ -130,6 +132,51 @@ class TestTimesheetSubmissionModelAPIListView:
         assert response.status_code == status.HTTP_200_OK
         submission.refresh_from_db()
         assert submission.closed is False
+
+    @pytest.mark.parametrize(
+        'method',
+        [pytest.param('patch', id='reopen'), pytest.param('delete', id='delete')],
+    )
+    def test_manager_cannot_change_submission_before_a_later_closed_one(self, method, api_client, manager):
+        resource = ResourceFactory()
+        september = TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2026-09-01', '2026-10-01'),
+            closed=True,
+        )
+        TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2026-10-01', '2026-11-01'),
+            closed=True,
+        )
+        client = api_client(user=manager)
+
+        if method == 'delete':
+            response = client.delete(self.url(september.pk))
+        else:
+            response = client.patch(self.url(september.pk), data={'closed': False}, format='json')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        september.refresh_from_db()
+        assert september.closed is True
+
+    def test_cannot_submit_after_a_missing_contracted_month(self, api_client, manager):
+        resource = ResourceFactory()
+        ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 4, 1)))
+        TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2026-01-01', '2026-02-01'),
+            closed=True,
+        )
+
+        response = api_client(user=manager).post(
+            self.url(),
+            data={'resource': resource.pk, 'period': ('2026-03-01', '2026-03-31')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {'__all__': ['The timesheet for 2026-02 must be submitted first.']}
 
     @pytest.mark.parametrize(
         'who',

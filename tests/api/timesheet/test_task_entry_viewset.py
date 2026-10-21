@@ -307,6 +307,21 @@ def test_creates_task_entry_and_parent_day_entry(resource, api_client):
     assert task_entry.day_entry.on_call_hours == Decimal(1)
 
 
+def test_creates_task_entry_when_bank_balance_is_already_above_the_limit(api_client):
+    entry_date = date(2026, 9, 10)
+    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
+    resource = contract.resource
+    for day in (date(2026, 9, 7), date(2026, 9, 8), date(2026, 9, 9)):
+        DayEntryFactory(resource=resource, contract=contract, day=day, bank=Decimal('8.00'))
+    assert resource.get_bank_hours_balance(date(2026, 9, 30)) == Decimal('24.00')
+
+    task = TaskFactory(resource=resource, period=contract.period)
+    response = _post_task_entry(api_client, task, entry_date, day_shift_hours=8)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert TaskEntry.objects.filter(task=task, day_entry__day=entry_date).exists()
+
+
 @pytest.mark.parametrize(
     'covered_hours',
     (
