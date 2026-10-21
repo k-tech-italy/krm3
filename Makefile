@@ -5,7 +5,7 @@ CURRENT_BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 NODE_ENV?=production
 .PHONY: help runonce run i18n
 .DEFAULT_GOAL := help
-TEST_PROCESSORS?=auto
+CORES?=$(shell sysctl -n hw.ncpu | awk '{ v = int($$1 * 0.75); print (v < 1 ? 1 : v) }')
 
 ifeq ($(wildcard .python-version),)
     PYTHON_VERSION = ""
@@ -135,7 +135,7 @@ test:
 	@cp -R tools/zapdata/demo/media/* ~media
 
 test-fast: ## runtest integration and unit tests in parallel
-	@pytest -n ${TEST_PROCESSORS} -m "selenium or not selenium" --no-cov --headless
+	pytest -n ${CORES} -m "selenium or not selenium" --no-cov --headless
 
 test-cov: ## run tests with coverage
 	@pytest -m "selenium or not selenium" tests --create-db --junitxml=`pwd`/~build/pytest.xml -vv \
