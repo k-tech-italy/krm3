@@ -10,6 +10,7 @@ from django.contrib.auth import (
     login as djlogin,
     logout as djlogout,
 )
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -316,7 +317,10 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
     @override
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         self._check_manage_permission(request)
-        return super().destroy(request, *args, **kwargs)
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except DjangoValidationError as exc:
+            return Response({'error': '; '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self) -> QuerySet[TimesheetSubmission]:
         user = cast('User', self.request.user)

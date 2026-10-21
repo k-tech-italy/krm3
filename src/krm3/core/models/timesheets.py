@@ -15,6 +15,7 @@ from django.db.models import F, Q, QuerySet
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange, KTDay
+from psycopg.types.range import DateRange
 
 from krm3.timesheet.operations import DayEntryProcessor
 from krm3.timesheet.utils import calculate_regular_hours
@@ -103,8 +104,18 @@ class SpecialLeaveReason(models.Model):
         return not self.is_not_valid_yet(date) and not self.is_expired(date)
 
 
+class TimesheetSubmissionQuerySet(QuerySet):
+    def delete(self) -> tuple[int, dict[str, int]]:
+        for submission in self:
+            submission._verify_no_later_closed_submission()
+        return super().delete()
+
+
 class TimesheetSubmissionManager(models.Manager):
     """Custom Manager for TimesheetSubmission with utility methods."""
+
+    def get_queryset(self) -> TimesheetSubmissionQuerySet:
+        return TimesheetSubmissionQuerySet(self.model, using=self._db)
 
     def get_closed_in_period(
         self, from_date: datetime.date, to_date: datetime.date, resources: Resource | Iterable[Resource]
@@ -164,7 +175,112 @@ class TimesheetSubmission(models.Model):
     @override
     def clean(self) -> None:
         super().clean()
+        self._verify_no_later_closed_submission()
+        self._verify_submission_order()
         self.timesheet = self.calculate_timesheet() if self.closed else None
+
+    @staticmethod
+    def _period_start(period: DateRange | list | tuple) -> datetime.date:
+        if isinstance(period, list | tuple):
+            return KTDay(period[0]).date
+        return KTDay(period.lower).date
+
+    @staticmethod
+    def _period_end(period: DateRange | list | tuple) -> datetime.date | None:
+        if isinstance(period, list | tuple):
+            return KTDay(period[1]).date
+        if period.upper is None:
+            return None
+        if period.upper_inc:
+            return period.upper + datetime.timedelta(days=1)
+        return period.upper
+
+    @staticmethod
+    def _next_month(month: datetime.date) -> datetime.date:
+        return (month.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
+
+    def _verify_submission_order(self) -> None:
+        """Require contracted months after the first closed submission to be submitted in chronological order."""
+        if not self.closed:
+            return
+
+        stored_closed = (
+            TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first()
+            if self.pk
+            else None
+        )
+        if stored_closed is True:
+            return
+
+        current_month = self._period_start(self.period).replace(day=1)
+        previous_periods = TimesheetSubmission.objects.filter(
+            resource_id=self.resource_id,
+            closed=True,
+        ).exclude(pk=self.pk).values_list('period', flat=True)
+        previous_periods = [period for period in previous_periods if period.lower < current_month]
+        if not previous_periods:
+            return
+
+        latest_period = max(previous_periods, key=lambda period: period.lower)
+        month = self._next_month(latest_period.lower.replace(day=1))
+
+        from krm3.core.models import Contract  # noqa: PLC0415
+
+        while month < current_month:
+            next_month = self._next_month(month)
+            has_contract = Contract.objects.filter(
+                resource_id=self.resource_id,
+                period__overlap=DateRange(month, next_month, '[)'),
+            ).exists()
+            if has_contract:
+                raise ValidationError(
+                    _('The timesheet for {month} must be submitted first.').format(month=month.strftime('%Y-%m')),
+                    code='previous_timesheet_not_submitted',
+                )
+            month = next_month
+
+    @classmethod
+    def _has_later_closed_submission(
+        cls,
+        resource_id: int,
+        period: DateRange | list | tuple,
+        *,
+        exclude_pk: int | None = None,
+    ) -> bool:
+        period_end = cls._period_end(period)
+        if period_end is None:
+            return False
+        return (
+            cls.objects.filter(
+                resource_id=resource_id,
+                closed=True,
+                period__overlap=KTDateRange.from_start_end(period_end, None),
+            )
+            .exclude(pk=exclude_pk)
+            .exists()
+        )
+
+    def _verify_no_later_closed_submission(self) -> None:
+        """Reject changes while a later closed timesheet exists for the resource."""
+        states = [(self.resource_id, self.period)]
+        if self.pk:
+            stored = TimesheetSubmission.objects.filter(pk=self.pk).values_list('resource_id', 'period').first()
+            if stored is not None:
+                states.append(stored)
+
+        if any(
+            self._has_later_closed_submission(resource_id, period, exclude_pk=self.pk)
+            for resource_id, period in states
+        ):
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
+            )
+
+    @override
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        self._verify_no_later_closed_submission()
+        return super().delete(*args, **kwargs)
 
     def calculate_timesheet(self) -> dict:
         """Retrieve the resource timesheet data (DTO dict) for a specific date interval."""
@@ -173,7 +289,8 @@ class TimesheetSubmission(models.Model):
 
         lower = KTDay(self.period.lower).date
         upper = KTDay(self.period.upper).date
-        timesheet = TimesheetDTO().fetch(self.resource, lower, upper)
+        last_day = upper if self.period.upper_inc else (KTDay(upper) - 1).date
+        timesheet = TimesheetDTO().fetch(self.resource, lower, last_day)
         return TimesheetSerializer(timesheet).data
 
 
@@ -195,6 +312,11 @@ class TimeEntryAwareQuerySet[T: TimeEntry](QuerySet[T], abc.ABC):
             raise ValidationError(
                 _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
                 code='timesheet_closed',
+            )
+        if any(entry.has_later_closed_submission for entry in self):
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
             )
         return super().delete()
 
@@ -305,12 +427,33 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             period__contains=self.day,
         ).exists()
 
+    @property
+    def has_later_closed_submission(self) -> bool:
+        return self._has_later_closed_submission(self.resource_id, self.day)
+
+    @staticmethod
+    def _has_later_closed_submission(resource_id: int, day: datetime.date) -> bool:
+        return (
+            TimesheetSubmission.objects.filter(
+                resource_id=resource_id,
+                closed=True,
+                period__overlap=KTDateRange.from_start_end(day + datetime.timedelta(days=1), None),
+            )
+            .exclude(period__contains=day)
+            .exists()
+        )
+
     @override
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         if self.is_submitted:
             raise ValidationError(
                 _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
                 code='timesheet_closed',
+            )
+        if self.has_later_closed_submission:
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
             )
         return super().delete(*args, **kwargs)
 
@@ -502,32 +645,79 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             )
 
     def _verify_bank_hours_balance_limits(self) -> None:
-        """Verify that the transaction won't exceed total balance limits (-16 to +16)."""
+        """Rebuild the balance from the changed day and reject the operation if any later value exceeds its limits."""
         balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
         balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
-        current_balance = self.resource.get_bank_hours_balance((KTDay(self.day) - 1).date)
-        new_balance = current_balance + Decimal(self.bank)
 
-        if new_balance > balance_upper:
+        stored = DayEntry.objects.filter(pk=self.pk).values_list('bank', 'day').first() if self.pk else None
+        old_bank, old_day = (safe_dec(stored[0]), stored[1]) if stored else (Decimal(0), None)
+        new_day = KTDay(self.day).date
+        delta = safe_dec(self.bank) - old_bank
+
+        if delta == 0 and old_day in (None, new_day):
+            # Do not reject unrelated changes when the existing balance is already outside its limits.
+            return
+
+        check_from = min(old_day, new_day) if old_day is not None else new_day
+        current_balance = self.resource.get_bank_hours_balance((KTDay(check_from) - 1).date)
+
+        later_entries = DayEntry.objects.filter(resource=self.resource, day__gte=check_from)
+        if self.pk:
+            later_entries = later_entries.exclude(pk=self.pk)
+
+        running = current_balance
+        new_movement_applied = False
+        new_bank = safe_dec(self.bank)
+        for day, bank in later_entries.order_by('day').values_list('day', 'bank'):
+            if not new_movement_applied and day >= new_day:
+                running += new_bank
+                new_movement_applied = True
+                self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
+            running += safe_dec(bank)
+            self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
+        if not new_movement_applied:
+            running += new_bank
+            self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
+
+    @staticmethod
+    def _raise_if_balance_out_of_range(
+        running: Decimal, current_balance: Decimal, delta: Decimal, balance_upper: Decimal, balance_lower: Decimal
+    ) -> None:
+        """Raise a validation error when the running bank hours balance exceeds either configured limit."""
+        if running > balance_upper:
             raise ValidationError(
                 _(
                     'This transaction would exceed the maximum bank balance of {limit} hours. '
                     'Current balance: {current}, attempting to add: {change}'
-                ).format(limit=balance_upper, current=current_balance, change=self.bank),
+                ).format(limit=balance_upper, current=current_balance, change=delta),
                 code='bank_balance_exceeds_upper_limit',
             )
-        if new_balance < balance_lower:
+        if running < balance_lower:
             raise ValidationError(
                 _(
                     'This transaction would exceed the minimum bank balance of {limit} hours. '
                     'Current balance: {current}, attempting to change by: {change}'
-                ).format(limit=balance_lower, current=current_balance, change=self.bank),
+                ).format(limit=balance_lower, current=current_balance, change=delta),
                 code='bank_balance_exceeds_lower_limit',
             )
 
     def _verify_timesheet_not_submitted(self) -> None:
         if self.is_submitted:
             raise ValidationError(_('Cannot modify entries for submitted timesheets'), code='timesheet_submitted')
+
+    def _verify_no_later_closed_submission(self) -> None:
+        """Reject changes when this entry precedes a closed timesheet."""
+        states = [(self.resource_id, self.day)]
+        if self.pk:
+            stored = DayEntry.objects.filter(pk=self.pk).values_list('resource_id', 'day').first()
+            if stored is not None:
+                states.append(stored)
+
+        if any(self._has_later_closed_submission(resource_id, day) for resource_id, day in states):
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
+            )
 
     def _verify_total_hours(self) -> None:
         if self.effective_hours > TOTAL_WORK_HOURS_MAX:
@@ -646,6 +836,10 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
     def is_submitted(self) -> bool:
         return self.day_entry.is_submitted
 
+    @property
+    def has_later_closed_submission(self) -> bool:
+        return self.day_entry.has_later_closed_submission
+
     @override
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         if self.is_submitted:
@@ -653,11 +847,32 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
                 _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
                 code='timesheet_closed',
             )
+        if self.has_later_closed_submission:
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
+            )
         return super().delete(*args, **kwargs)
 
     def _verify_timesheet_not_submitted(self) -> None:
         if self.day_entry.is_submitted:
             raise ValidationError(_('Cannot modify time entries for submitted timesheets'), code='timesheet_submitted')
+
+    def _verify_no_later_closed_submission(self) -> None:
+        """Reject changes when this entry precedes a closed timesheet."""
+        day_entries = [self.day_entry]
+        if self.pk:
+            stored_day_entry = (
+                TaskEntry.objects.filter(pk=self.pk).values_list('day_entry_id', flat=True).first()
+            )
+            if stored_day_entry is not None and stored_day_entry != self.day_entry_id:
+                day_entries.append(DayEntry.objects.get(pk=stored_day_entry))
+
+        if any(day_entry.has_later_closed_submission for day_entry in day_entries):
+            raise ValidationError(
+                _('A later timesheet is closed. Reopen later timesheets first.'),
+                code='later_timesheet_closed',
+            )
 
     def _verify_no_negative_hours(self) -> None:
         if any(
@@ -701,9 +916,12 @@ def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, **k
     instance.dayentry_set.update(timesheet=None, closed=False)
     if isinstance(instance.period, (list | tuple)):
         lower, upper = instance.period[0], instance.period[1]
+        period_filter = {'day__gte': lower, 'day__lt': upper}
     else:
         lower, upper = instance.period.lower, instance.period.upper
-    DayEntry.objects.filter(resource=instance.resource, day__gte=lower, day__lt=upper).update(
+        upper_lookup = 'day__lte' if instance.period.upper_inc else 'day__lt'
+        period_filter = {'day__gte': lower, upper_lookup: upper}
+    DayEntry.objects.filter(resource=instance.resource, **period_filter).update(
         timesheet=instance,
         closed=instance.closed,
     )
