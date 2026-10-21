@@ -806,8 +806,10 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
         """Handle model constraints and return a 400 bad request if and error occurred."""
         try:
             super().save(**kwargs)
+        except ValidationError as exc:
+            raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
         except IntegrityError as e:
-            raise serializers.ValidationError({'error': str(e)})
+            raise serializers.ValidationError({'error': str(e)}) from e
 
     class Meta:
         model = TimesheetSubmission

@@ -10,3 +10,9 @@ In Day Entry window you should see:
 To add hours to the bank, enter the number of hours in the 'Save' field. To use hours from the bank, enter the number in the 'Use' field. After entering the amount, click 'Save' to apply the change.
 
 For information when you can add/get hours from bank check <glossary:BankOfHours>
+
+## Balance limits
+
+The bank balance must stay between -16 and +16 hours (your organization may configure different bounds).
+
+KRM3 checks the limit on every change, day by day: if adding, removing or moving hours on one day would push the balance out of range on that day or on any following day, the change is rejected with an explanatory error message.

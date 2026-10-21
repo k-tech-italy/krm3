@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Iterable, Self
 
 import vobject
 from django.contrib.auth.base_user import BaseUserManager
@@ -238,15 +238,57 @@ class Resource(models.Model):
                     result[day] = contract.get_due_hours(day)
         return result
 
-    # TODO: this method will last longer and longer. Fix it
-    def get_bank_hours_balance(self, at: KTDayType) -> D:
-        """Calculate bank hours balance from all time entries."""
-        from krm3.core.models import DayEntry  # noqa: PLC0415
+    def get_bank_hours_balance(self, at: KTDayType, *, use_watermark: bool = True) -> D:
+        """Return the balance through the given day using the latest closed snapshot, or all DayEntry records."""
+        from krm3.core.models import DayEntry, TimesheetSubmission  # noqa: PLC0415
 
         at = KTDay(at).date
+        if use_watermark:
+            snapshots = TimesheetSubmission.objects.filter(resource=self, closed=True).values_list(
+                'period', 'timesheet'
+            )
+            if (balance := self._balance_from_watermark(at, snapshots)) is not None:
+                return balance
+
         bank = DayEntry.objects.filter(resource=self, day__lte=at).aggregate(total_bank=Sum('bank'))
 
         return safe_dec(bank['total_bank'])
+
+    def _balance_from_watermark(self, at: datetime.date, snapshots: Iterable[tuple[DateRange, Any]]) -> D | None:
+        """Use the latest closed snapshot before the requested day and add every later bank movement."""
+        from krm3.core.models import DayEntry  # noqa: PLC0415
+
+        valid_snapshots = []
+        for period, timesheet in snapshots:
+            if period.upper is not None:
+                valid_snapshots.append((period, timesheet))
+
+        if not valid_snapshots:
+            return None
+
+        valid_snapshots.sort(key=lambda snapshot: snapshot[0].upper, reverse=True)
+
+        day_after_requested_date = at + datetime.timedelta(days=1)
+
+        for period, timesheet in valid_snapshots:
+            snapshot_end = period.upper
+
+            if snapshot_end > day_after_requested_date:
+                continue
+
+            if not isinstance(timesheet, dict):
+                continue
+
+            frozen_balance = timesheet.get('bank_hours')
+            if frozen_balance is None:
+                continue
+
+            later_entries = DayEntry.objects.filter(resource=self, day__gte=snapshot_end, day__lte=at)
+            later_balance = later_entries.aggregate(total_bank=Sum('bank'))['total_bank']
+
+            return safe_dec(frozen_balance) + safe_dec(later_balance)
+
+        return None
 
 
 @receiver(post_save, sender=User)

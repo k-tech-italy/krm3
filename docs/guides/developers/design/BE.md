@@ -27,3 +27,17 @@
 - **Decision**: Whenever using `pytest.param`, always pass a meaningful `id` kwarg describing the scenario being tested.
 - **Consequences**: Test output and failure reports are self-explanatory and individual cases are easy to target; writing parametrized tests requires slightly more effort to name each case.
 - **Status**: Accepted
+
+### DDR-BE-005: Frozen Bank Balance in Closed Timesheets
+- **Date**: 2026-10-20
+- **Context**: Validating a Bank of Hours transaction and freezing a timesheet both need the resource bank balance up to a given day. Re-summing every day entry on every call gets slower as the history grows, and the timesheet snapshot already stores a `bank_hours` key whose value used to be computed at a different date boundary than the balance queries expected.
+- **Decision**: `Resource.get_bank_hours_balance(at, use_watermark=True)` rebuilds the balance from the `bank_hours` value frozen in the most recent closed timesheet whose period ends at or before `at`, then adds the entries logged after it. The frozen value is authoritative regardless of earlier open or missing timesheets and represents the balance as of the last day of the period. A timesheet cannot be created, reopened, modified or deleted while a later closed timesheet exists for the same resource, and neither can its related DayEntry and TaskEntry records be modified. The Bank of Hours limits validator checks the running balance from the earliest affected day forward, and only when the transaction changes the balance or the day.
+- **Consequences**: Balance reads stay proportional to the entries after the last closed timesheet instead of the whole history, and incomplete history before that snapshot is ignored. Correcting an earlier period requires reopening later submissions in reverse chronological order and closing them again in chronological order, so each snapshot is rebuilt from the previous authoritative balance. When no closed snapshot containing `bank_hours` exists, the balance falls back to the full DayEntry sum.
+- **Status**: Accepted
+
+### DDR-BE-006: Mandatory Monthly Timesheet Order
+- **Date**: 2026-10-21
+- **Context**: Bank balance snapshots depend on previous closed timesheets, but historical data contains missing submissions that must remain unchanged.
+- **Decision**: A resource's first closed timesheet establishes its starting point. Every later timesheet must be submitted in chronological monthly order for months covered by an active contract. Months without an active contract are skipped, and missing submissions before the latest closed timesheet are not validated retroactively.
+- **Consequences**: New gaps cannot be introduced after the starting point, while existing historical gaps remain untouched. Closing a timesheet fails when an earlier contracted month after the latest closed submission is still open or missing.
+- **Status**: Accepted
