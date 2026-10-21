@@ -392,7 +392,14 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         self.night_hours = Decimal(sum([safe_dec(te.night_shift_hours) for te in task_entries]))
         self.travel_hours = Decimal(sum([safe_dec(te.travel_hours) for te in task_entries]))
         self.on_call_hours = Decimal(sum([safe_dec(te.on_call_hours) for te in task_entries]))
+        self.refresh_derived_hours()
 
+        self.clean()
+        if save:
+            self.save()
+
+    def refresh_derived_hours(self) -> None:
+        """Recalculate the meal voucher and overtime from the worked hours and the bank movement."""
         if meal_threshold := self.contract.meal_threshold(self.day):
             bank_withdrawal = max(-Decimal(self.bank), Decimal(0))
             eligible_hours = self.worked_hours + bank_withdrawal
@@ -401,14 +408,12 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             self.meal_voucher = 0
 
         if self.contract.overtime:
-            overtime = self.worked_hours - self.due_hours
+            # hours deposited to the bank are not overtime
+            bank_deposit = max(Decimal(self.bank), Decimal(0))
+            overtime = self.worked_hours - self.due_hours - bank_deposit
             self.overtime_hours = overtime if overtime > 0 else Decimal(0.0)
         else:
             self.overtime_hours = Decimal(0.0)
-
-        self.clean()
-        if save:
-            self.save()
 
     def add_task_entry(self, task_entry: TaskEntry | None = None, **kwargs) -> DayEntry:
         """Add a single TaskEntry to the DayEntry using the DayEntryProcessor and refreshes."""

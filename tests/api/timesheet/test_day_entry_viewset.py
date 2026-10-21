@@ -824,3 +824,36 @@ def test_update_reason_uses_existing_special_leave_hours(api_client):
     assert response.status_code == status.HTTP_200_OK
     assert entry.special_leave_hours == 2
     assert entry.special_leave_reason == new_reason
+
+
+@pytest.mark.parametrize(
+    ('worked_hours', 'bank', 'expected_overtime', 'expected_meal_voucher'),
+    [
+        pytest.param(5, 1, Decimal(0), 1, id='deposit-removes-overtime'),
+        pytest.param(5, 0, Decimal(1), 1, id='no-deposit-keeps-overtime'),
+        pytest.param(1, -2, Decimal(0), 1, id='withdrawal-grants-meal-voucher'),
+    ],
+)
+def test_bulk_update_bank_recalculates_overtime_and_meal_voucher(
+    api_client, worked_hours, bank, expected_overtime, expected_meal_voucher
+):
+    day = date(2026, 9, 2)
+    contract = ContractFactory(
+        period=(date(2026, 1, 1), None),
+        working_schedule={'mon': 4, 'tue': 4, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 0, 'sun': 0},
+        meal_voucher={'mon': 3, 'tue': 3, 'wed': 3, 'thu': 3, 'fri': 3, 'sat': 3, 'sun': 3},
+    )
+    task = TaskFactory(resource=contract.resource, period=contract.period)
+    contract.build_day(day, task_entries=[{'task_id': task.pk, 'day_shift_hours': worked_hours}])
+
+    response = api_client(user=contract.resource.user).post(
+        _url(),
+        data={'resource': contract.resource_id, 'dates': [day.isoformat()], 'bank': bank},
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    day_entry = DayEntry.objects.get(resource=contract.resource, day=day)
+    assert day_entry.bank == Decimal(bank)
+    assert day_entry.overtime_hours == expected_overtime
+    assert day_entry.meal_voucher == expected_meal_voucher

@@ -50,13 +50,16 @@ Remaining hours = _Due Hours_ - _Regular Hours_, or 0 if _Regular Hours_ exceed 
 
 ## Overtime
 
-The basic value is: _Day shift hours_ + _Night shift hours_ + _Travel hours_ - _Due Hours_.
+The basic value is: _Day shift hours_ + _Night shift hours_ + _Travel hours_ - _Due Hours_ - hours deposited to the
+Bank of Hours.
 If such value is 0 or negative then _Overtime_ = 0.
 
 Additional rules:
 
 - Overtime is always 0 if `Contract.overtime` is False.
-- Leave, special leave, rest, and bank movements do not directly affect overtime. Overtime is still calculated from Worked Hours minus Due Hours.
+- Hours deposited to the Bank of Hours are not overtime: e.g. with 4 _Due Hours_, 5 worked hours and 1 hour
+  deposited, _Overtime_ = 0.
+- Leave, special leave, rest, and bank withdrawals do not directly affect overtime.
 - A requested holiday or sickness results in zero overtime because these whole-day absences cannot coexist with task hours.
 
 ## Meal Voucher

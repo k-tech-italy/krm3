@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from ktcalendars import KTDay
 from ktcalendars.utils import dt
 
-from testutils.factories import ContractFactory, DayEntryFactory, TaskEntryFactory
+from testutils.factories import ContractFactory, DayEntryFactory, TaskEntryFactory, TaskFactory
 
 
 @pytest.mark.parametrize(
@@ -135,3 +135,33 @@ def test_resource_cannot_have_two_day_entries_on_the_same_day():
 
     with pytest.raises(IntegrityError), transaction.atomic():
         DayEntryFactory(resource=day_entry.resource, contract=day_entry.contract, day=day_entry.day)
+
+
+@pytest.mark.parametrize(
+    ('worked_hours', 'bank', 'expected'),
+    [
+        pytest.param(5, 0, 1, id='no-bank'),
+        pytest.param(5, 1, 0, id='deposit-covers-extra-hours'),
+        pytest.param(5, Decimal('0.5'), Decimal('0.5'), id='partial-deposit'),
+        pytest.param(6, 1, 1, id='deposit-and-overtime'),
+        pytest.param(3, -1, 0, id='withdrawal'),
+    ],
+)
+def test_bank_deposit_is_not_overtime(worked_hours, bank, expected):
+    contract = ContractFactory(
+        period=(dt('2026-01-01'), None),
+        working_schedule={'mon': 4, 'tue': 4, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 0, 'sun': 0},
+    )
+    day_entry = DayEntryFactory(
+        day=dt('2026-09-02'),
+        contract=contract,
+        resource=contract.resource,
+        due_hours=Decimal(4),
+        bank=Decimal(bank),
+    )
+    task = TaskFactory(resource=contract.resource, period=contract.period)
+    TaskEntryFactory(day_entry=day_entry, task=task, day_shift_hours=worked_hours)
+
+    day_entry.refresh(task_entries=None, drop_existing=False)
+
+    assert day_entry.overtime_hours == expected

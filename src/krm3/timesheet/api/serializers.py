@@ -275,6 +275,8 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
                 if instance.asked_holiday or instance.is_sick:
                     instance.refresh(task_entries=[])
                 else:
+                    # bank movements change overtime and meal voucher
+                    instance.refresh_derived_hours()
                     instance.save()
         except ValidationError as exc:
             raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
