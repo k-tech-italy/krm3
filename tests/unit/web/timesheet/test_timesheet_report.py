@@ -295,6 +295,7 @@ def test_timesheet_report_marks_the_weekly_holiday(admin_client, holiday_day, ex
     # June 2025 in GB-ENG has no public holidays
     contract = ContractFactory(
         holiday_day=holiday_day,
+        base_in__country__name='United Kingdom',
         base_in__country__country_calendar_code='GB',
         base_in__subdivision_code='ENG',
     )

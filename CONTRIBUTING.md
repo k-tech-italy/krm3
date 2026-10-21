@@ -54,7 +54,7 @@ KRM3 uses [Conventional Commits](https://www.conventionalcommits.org/) to drive 
 An optional scope goes in brackets, e.g. `fix(missions): ...`. The `commit-msg` hook rejects
 messages that do not follow the convention.
 
-Commitizen (a prerequisite, see [README.md](./README.md#mandatory-requirements)) offers an
+Commitizen (a prerequisite, see [README.md](./README.md#mandatory-requirements)), must be used to perform the commits, offers an
 interactive prompt:
 
 ```bash

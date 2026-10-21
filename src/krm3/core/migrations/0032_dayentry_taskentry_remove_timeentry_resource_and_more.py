@@ -560,7 +560,9 @@ def recalculate_day_entries(apps, schema_editor) -> None:  # noqa: ANN001
         worked_hours = Decimal(day_entry.day_hours) + Decimal(day_entry.night_hours) + Decimal(day_entry.travel_hours)
 
         if contract.overtime:
-            overtime = worked_hours - day_entry.due_hours
+            # hours deposited to the bank are not overtime
+            bank_deposit = max(Decimal(day_entry.bank), Decimal(0))
+            overtime = worked_hours - day_entry.due_hours - bank_deposit
             day_entry.overtime_hours = max(
                 overtime,
                 Decimal(0),
@@ -595,7 +597,7 @@ def recalculate_day_entries(apps, schema_editor) -> None:  # noqa: ANN001
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('core', '0032_contact_title_alter_contact_job_title_and_more'),
+        ('core', '0031_contact_title_alter_contact_job_title_and_more'),
     ]
 
     operations = [
