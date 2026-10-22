@@ -10,8 +10,10 @@ These tests verify that the media views correctly:
 
 from unittest.mock import MagicMock
 
+import pytest
 from django.conf import settings
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.urls import reverse
 from testutils.factories import (
     ContractFactory,
@@ -24,6 +26,9 @@ from testutils.factories import (
     UserFactory,
 )
 from testutils.permissions import add_permissions
+
+from krm3.core.models import Contract, Expense
+from krm3.core.models.documents import ProtectedDocument
 
 
 class TestServeExpenseImage:
@@ -401,3 +406,41 @@ class TestServeDocumentFile:
         response = client.get(url)
 
         assert response.status_code == 403
+
+
+@pytest.fixture
+def private_media(tmp_path, monkeypatch):
+    """Store the private media files in a temporary directory."""
+    for model, field_name in ((Expense, 'image'), (Contract, 'document'), (ProtectedDocument, 'document')):
+        storage = model._meta.get_field(field_name).storage
+        monkeypatch.setattr(storage, 'base_location', str(tmp_path), raising=False)
+        monkeypatch.setattr(storage, 'location', str(tmp_path), raising=False)
+    return tmp_path
+
+
+@pytest.mark.parametrize(
+    ('url_name', 'factory', 'field_name'),
+    [
+        pytest.param('media-auth:expense-image', lambda user: ExpenseFactory(), 'image', id='expense-image'),
+        pytest.param(
+            'media-auth:contract-document', lambda user: ContractFactory(), 'document', id='contract-document'
+        ),
+        pytest.param(
+            'media-auth:document-file', lambda user: DocumentFactory(admin=user), 'document', id='dms-document'
+        ),
+    ],
+)
+def test_local_development_serves_the_file_without_nginx(
+    admin_client, admin_user, settings, private_media, url_name, factory, field_name
+):
+    settings.LOCAL_DEVELOPMENT = True
+    record = factory(admin_user)
+    getattr(record, field_name).save('receipt.pdf', ContentFile(b'%PDF-1.4 content'), save=True)
+
+    response = admin_client.get(reverse(url_name, args=[record.pk]))
+
+    assert response.status_code == 200
+    assert 'X-Accel-Redirect' not in response
+    assert b''.join(response.streaming_content) == b'%PDF-1.4 content'
+    assert response['Content-Disposition'] == 'inline; filename="receipt.pdf"'
+    assert response['Content-Type'] == 'application/pdf'
