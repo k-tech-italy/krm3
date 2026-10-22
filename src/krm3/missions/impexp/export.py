@@ -8,7 +8,6 @@ import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from django.conf import settings
 
 from krm3.core.models import City, Client, Country, ExpenseCategory, Mission, PaymentCategory, Project, Resource
 from krm3.currencies.models import Currency
@@ -36,7 +35,7 @@ class MissionExporter:
         self.queryset = queryset
 
     def export(self) -> io.BytesIO:
-        images_prefix_offset = len(f'{settings.MEDIA_URL}{EXPENSES_IMAGE_PREFIX}/')
+        images_prefix_offset = len(f'{EXPENSES_IMAGE_PREFIX}/')
 
         data = {
             'clients': {},

@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, PaymentCategory
-from krm3.utils.serializers import ModelDefaultSerializerMetaclass
+from krm3.utils.serializers import ModelDefaultSerializerMetaclass, PrivateMediaFileField
 
 
 def token_validator(value: str) -> None:
@@ -39,6 +39,7 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
     category = ExpenseCategorySerializer()
     document_type = DocumentTypeSerializer()
     payment_type = PaymentCategorySerializer()
+    image = PrivateMediaFileField(url_field='image_url', required=False, allow_null=True)
 
     class Meta:
         model = Expense
@@ -84,6 +85,9 @@ class ExpenseCreateSerializer(serializers.ModelSerializer):
 
 
 class ExpenseExportSerializer(serializers.ModelSerializer):
+    # the export copies the image files: it needs their storage path, not a URL
+    image = serializers.FileField(use_url=False, read_only=True)
+
     class Meta:
         model = Expense
         fields = '__all__'

@@ -54,6 +54,9 @@ class MissionExpenseBaseTable(ExpenseTableMixin, tables.Table):
 
 
 class MissionExpenseTable(MissionExpenseBaseTable):
+    # a plain column: the default FileColumn builds its link with the storage URL, refused for private media
+    image = tables.Column()
+
     def render_image(self, record: Expense) -> str:
         if record.image:
             return format_html('<a href="{}"><img src="{}"></a>', record.image_url, static('admin/img/icon-yes.svg'))
@@ -71,7 +74,7 @@ class MissionExpenseTable(MissionExpenseBaseTable):
 
     class Meta:
         model = Expense
-        exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement', 'image')
+        exclude = ('mission', 'created_ts', 'modified_ts', 'currency', 'reimbursement')
 
 
 class MissionExpenseExportTable(MissionExpenseBaseTable):
@@ -101,6 +104,9 @@ class ReimbursementExpenseBaseTable(ExpenseTableMixin, tables.Table):
 
 
 class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
+    # a plain column: the default FileColumn builds its link with the storage URL, refused for private media
+    image = tables.Column()
+
     def render_id(self, record: Expense) -> str:
         url = reverse('admin:core_expense_change', args=[record.id])
         return format_html('<a href="{}">{}</a>', url, record.id)
@@ -115,6 +121,9 @@ class ReimbursementExpenseTable(ReimbursementExpenseBaseTable):
             url = reverse('admin:core_mission_change', args=[record.mission.id])
             return format_html('<a href="{}">{}</a>', url, record.mission)
         return '--'
+
+    class Meta(ReimbursementExpenseBaseTable.Meta):
+        exclude = ('reimbursement', 'created_ts', 'modified_ts', 'currency')
 
 
 class ReimbursementExpenseExportTable(ReimbursementExpenseBaseTable):
