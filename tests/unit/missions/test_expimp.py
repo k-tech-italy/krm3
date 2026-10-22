@@ -288,3 +288,14 @@ class TestMissionImporterIntegration:
         finally:
             if os.path.exists(pathname):
                 os.unlink(pathname)
+
+
+def test_mission_export_includes_expense_image(db, private_media, expense_image):
+    expense = ExpenseFactory(image=expense_image)
+
+    archive = zipfile.ZipFile(MissionExporter(Mission.objects.all()).export())
+
+    data = json.loads(archive.read('data.json'))
+    expected_path = f'R{expense.mission.resource_id}/M{expense.mission_id}/receipt.pdf'
+    assert data['expenses'][str(expense.pk)]['image'] == expected_path
+    assert archive.read('images/receipt.pdf') == b'%PDF-1.4 receipt'

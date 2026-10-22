@@ -78,3 +78,28 @@ def test_reimbursement_report_action(admin_client, reimbursement):
 
     assert response.status_code == 200
     assert 'Reimbursements report' in response.content.decode()
+
+
+@pytest.mark.parametrize(
+    ('url_name', 'target'),
+    [
+        pytest.param('admin:core_mission_overview', 'mission', id='mission-overview'),
+        pytest.param('admin:core_reimbursement_overview', 'reimbursement', id='reimbursement-overview'),
+    ],
+)
+def test_overview_links_expense_image(admin_client, eur, categories, private_media, expense_image, url_name, target):
+    reimbursement = ReimbursementFactory()
+    expense = ExpenseFactory(
+        mission=MissionFactory(default_currency=eur),
+        currency=eur,
+        amount_base=10,
+        amount_reimbursement=10,
+        reimbursement=reimbursement,
+        image=expense_image,
+    )
+    pk = expense.mission_id if target == 'mission' else reimbursement.pk
+
+    response = admin_client.get(reverse(url_name, args=[pk]))
+
+    assert response.status_code == 200
+    assert f'href="{reverse("media-auth:expense-image", args=[expense.pk])}"' in response.content.decode()

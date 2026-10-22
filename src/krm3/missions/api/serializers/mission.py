@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from krm3.core.api.views import ResourceSerializer
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
-from krm3.utils.serializers import ModelDefaultSerializerMetaclass
+from krm3.utils.serializers import ModelDefaultSerializerMetaclass, PrivateMediaFileField
 
 
 class MissionSerializer(metaclass=ModelDefaultSerializerMetaclass):
@@ -38,6 +38,7 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
     category = MissionExpenseCategorySerializer()
     document_type = MissionDocumentTypeSerializer()
     payment_type = MissionPaymentCategorySerializer()
+    image = PrivateMediaFileField(url_field='image_url', required=False, allow_null=True)
 
     class Meta:
         model = Expense
