@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 
 from krm3.core.models.documents import ProtectedDocument as Document
 
@@ -79,7 +79,7 @@ def _serve_protected_file(file_field: FieldFile | None, request: HttpRequest) ->
         request: The HTTP request
 
     Returns:
-        HttpResponse with X-Accel-Redirect header
+        HttpResponse with X-Accel-Redirect header, or the file itself in local development (no nginx)
 
     Raises:
         Http404: If the file field is empty
@@ -106,6 +106,9 @@ def _serve_protected_file(file_field: FieldFile | None, request: HttpRequest) ->
     # Get the filename for Content-Disposition
     filename = Path(relative_path).name
 
+    # without nginx in front (runserver) nobody follows X-Accel-Redirect: Django serves the file itself
+    if settings.LOCAL_DEVELOPMENT:
+        return FileResponse(file_field.open('rb'), filename=filename)
 
     # Create the response with X-Accel-Redirect
     # this headers tells nginx to serve the file
