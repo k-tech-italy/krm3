@@ -6,8 +6,9 @@ Django application (Python, PostgreSQL); the frontend is a React single-page app
 the `krm3-fe` git submodule.
 
 This file explains how to set up a local development environment. To contribute (branching,
-commits, running the checks, pull requests) see [CONTRIBUTING.md](./CONTRIBUTING.md).
+commits, running the checks, pull requests) see [CONTRIBUTING.md](https://github.com/k-tech-italy/krm3/blob/develop/CONTRIBUTING.md).
 
+<!--docs-setup-start-->
 ## TL;DR;
 
 ```shell
@@ -24,7 +25,7 @@ uv run ./manage.py runserver localhost:8000
 
 (`uv run` is not needed when the virtualenv is active, e.g. with direnv.)
 
-Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-tests).
+Run the tests with `make test`; see [Running tests](https://github.com/k-tech-italy/krm3/blob/develop/CONTRIBUTING.md#running-tests).
 
 ## Mandatory requirements
 
@@ -33,7 +34,7 @@ Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-te
 - [PostgreSQL](https://postgresql.org) as the database
 - [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) to build the frontend and the Tailwind theme
 - [Commitizen](https://commitizen-tools.github.io/commitizen/) for Conventional Commits
-  (`uv tool install commitizen`), see [Commits](./CONTRIBUTING.md#commits)
+  (`uv tool install commitizen`), see [Commits](https://github.com/k-tech-italy/krm3/blob/develop/CONTRIBUTING.md#commits)
 
 ## Optional requirements
 
@@ -48,11 +49,11 @@ Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-te
     cd krm3
     ```
 
-  To work on a change, create a branch as described in [Branching](./CONTRIBUTING.md#branching).
+  To work on a change, create a branch as described in [Branching](https://github.com/k-tech-italy/krm3/blob/develop/CONTRIBUTING.md#branching).
 
 * Initialise the frontend
 
-```shell
+    ```shell
     git submodule init
     git submodule update
 
@@ -61,7 +62,7 @@ Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-te
     git switch <your working FE branch>
     yarn install
     yarn build
-  ```
+    ```
 
 * Prepare the Python environment for the project.
 
@@ -88,7 +89,12 @@ Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-te
 
 * **IMPORTANT**: Edit the .env file according to your personal setup.
   * Most importantly, edit the `KRM3_DATABASE_URL` variable to match your database's DSN.
-  * For local development, ensure `KRM3_LOCAL_DEVELOPMENT=True` is set to enable Django to serve static files (in production, nginx handles this).
+  * Set `KRM3_LOCAL_DEVELOPMENT=True`: `.env.example` has `False`, the production value. With no nginx in front of
+    `runserver`, it makes Django do what nginx does in production:
+    * serve the static and media files;
+    * serve the frontend at `/` (without it `http://localhost:8000/` answers 404);
+    * send the private files behind `/media-auth/` (expense images, contract and DMS documents) itself, instead
+      of delegating them to nginx (without it they download as empty files).
 
 * If using `direnv`:
     ```shell
@@ -98,7 +104,7 @@ Run the tests with `make test`; see [Running tests](./CONTRIBUTING.md#running-te
   Whenever you make a change to your `.env` or `.envrc` files, you need to run `direnv reload` or `direnv allow` to apply them.
 
 - Install the git hooks. This installs the `pre-commit`, `commit-msg` and `pre-push` hooks
-  configured in `.pre-commit-config.yaml` (see [Git hooks](./CONTRIBUTING.md#git-hooks) for
+  configured in `.pre-commit-config.yaml` (see [Git hooks](https://github.com/k-tech-italy/krm3/blob/develop/CONTRIBUTING.md#git-hooks) for
   what they check).
   ```bash
   pre-commit install
