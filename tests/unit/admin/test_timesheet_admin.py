@@ -1,10 +1,13 @@
 from datetime import date, timedelta
+from unittest.mock import patch
 
 import pytest
+from django.contrib import admin
 from django.test import RequestFactory
 from django.urls import reverse
 from testutils.factories import DayEntryFactory, TaskEntryFactory, TimesheetSubmissionFactory
 
+from krm3.core.models import TaskEntry
 from krm3.timesheet.admin import DayEntryAdmin, TaskEntryAdmin
 
 
@@ -53,3 +56,35 @@ def test_timesheet_submission_changelist_period_filter(admin_client, params, exp
     assert response.status_code == 200
     shown = {obj.pk for obj in response.context['cl'].result_list}
     assert shown == {submissions[key].pk for key in expected}
+
+
+def test_timesheet_submission_view_entries_redirects_to_filtered_task_entries(admin_client):
+    included_entry = TaskEntryFactory(day=True)
+    submission = TimesheetSubmissionFactory(
+        period=(included_entry.day_entry.day, included_entry.day_entry.day + timedelta(days=1)),
+        resource=included_entry.day_entry.resource,
+    )
+    excluded_entry = TaskEntryFactory(day=True)
+    TimesheetSubmissionFactory(
+        period=(excluded_entry.day_entry.day, excluded_entry.day_entry.day + timedelta(days=1)),
+        resource=excluded_entry.day_entry.resource,
+    )
+    response = admin_client.get(reverse('admin:core_timesheetsubmission_view_entries', args=[submission.pk]))
+
+    expected_url = reverse('admin:core_taskentry_changelist') + f'?day_entry__timesheet_id={submission.pk}'
+    assert response.url == expected_url
+
+    response = admin_client.get(response.url)
+    assert response.status_code == 200
+    assert [obj.pk for obj in response.context['cl'].result_list] == [included_entry.pk]
+
+
+def test_task_entry_admin_delegates_other_lookups_to_model_admin():
+    request = RequestFactory().get('/')
+    task_entry_admin = TaskEntryAdmin(model=TaskEntry, admin_site=None)
+
+    with patch.object(admin.ModelAdmin, 'lookup_allowed', return_value=False) as lookup_allowed:
+        result = task_entry_admin.lookup_allowed('task__project', '1', request)
+
+    assert result is False
+    lookup_allowed.assert_called_once_with('task__project', '1', request)

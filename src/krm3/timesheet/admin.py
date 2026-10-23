@@ -56,7 +56,7 @@ class TimesheetSubmissionAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.Model
 
     @button(html_attrs=NORMAL, visible=lambda btn: bool(btn.original.id))
     def view_entries(self, request: 'HttpRequest', pk: int) -> HttpResponseRedirect:
-        url = reverse('admin:core_TaskEntry_changelist') + f'?timesheet_id={pk}'
+        url = reverse('admin:core_taskentry_changelist') + f'?day_entry__timesheet_id={pk}'
         return HttpResponseRedirect(url)
 
 
@@ -169,7 +169,7 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
         ('on_call_hours', NumberFilter),
 
     ]
-    list_select_related = ('task__project', 'day_entry__resource', 'timesheet')
+    list_select_related = ('task__project', 'day_entry__resource', 'day_entry__timesheet')
 
     def get_queryset(self, request: HttpRequest) -> 'QuerySet[TaskEntry]':
         requestor = request.user
@@ -177,6 +177,11 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
         if not requestor.has_any_perm('core.view_any_timesheet', 'core.manage_any_timesheet'):
             qs = qs.filter(day_entry__resource__user=requestor)
         return qs
+
+    def lookup_allowed(self, lookup: str, value: str, request: HttpRequest | None = None) -> bool:
+        if lookup == 'day_entry__timesheet_id':
+            return True
+        return super().lookup_allowed(lookup, value, request)
 
     def has_change_permission(self, request: HttpRequest, obj: TaskEntry | None = None) -> bool:
         if obj is not None and obj.is_submitted:
