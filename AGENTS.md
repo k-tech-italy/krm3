@@ -133,6 +133,7 @@ when either changes. Examples:
 - Tickets live in Taiga (project `krm3`); reference them in commits as `Refs: taiga#<ref>`.
   Describe security issues by class of problem, without step-by-step exploit instructions.
 
+
 ## Releases
 
 Only when the user asks for one, and following [RELEASE.md](RELEASE.md), the single description of the

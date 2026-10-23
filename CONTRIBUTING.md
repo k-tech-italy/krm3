@@ -75,6 +75,7 @@ things:
 - on push: secrets (detect-secrets, against `.secrets.baseline`) and that no files under `src/`
   or `tests/` are left untracked.
 
+
 Run all the commit-stage hooks on the whole tree with `make lint`.
 
 ## Running tests
