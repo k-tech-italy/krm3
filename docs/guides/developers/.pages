@@ -2,5 +2,5 @@ nav:
   - index.md
   - Contributing: contributing
   - overtime.md
-  - pipeline.md
+  - release.md
   - Design: design
