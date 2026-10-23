@@ -31,6 +31,12 @@ from krm3.core.models import Contract, Expense
 from krm3.core.models.documents import ProtectedDocument
 
 
+@pytest.fixture(autouse=True)
+def behind_nginx(settings):
+    """Default to the production path (X-Accel-Redirect), whatever KRM3_LOCAL_DEVELOPMENT says in .env."""
+    settings.LOCAL_DEVELOPMENT = False
+
+
 class TestServeExpenseImage:
     """Tests for the serve_expense_image view."""
 
