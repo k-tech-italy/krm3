@@ -124,13 +124,21 @@ when either changes. Examples:
   with `<type>` one of `feat`, `fix`, `bug`, `docs`, `refactor`, `test`, `style`, `chore`
   (see CONTRIBUTING.md).
 - Conventional Commits (`fix(missions): ...`, `feat: ...`, `docs: ...`), enforced by the
-  commitizen hook. Do not bump versions or edit `CHANGELOG.md`; the release manager does it.
+  commitizen hook. Do not bump versions or edit `CHANGELOG.md` in feature or fix work; that is
+  part of a release (below).
 - Pre-commit hooks include ruff, `check-missed-migrations` and `check-forbidden` (no
   `.showbrowser(`). Never commit `.env` files or secrets.
 - Only commit, push, open PRs or update tickets when the user asks. Stage files explicitly; do
   not include an unrelated `krm3-fe` pointer change.
 - Tickets live in Taiga (project `krm3`); reference them in commits as `Refs: taiga#<ref>`.
   Describe security issues by class of problem, without step-by-step exploit instructions.
+
+## Releases
+
+Only when the user asks for one, and following [RELEASE.md](RELEASE.md), the single description of the
+process (the developer guide includes it). Keep it in sync with `.github/workflows/deploy.yml` and
+`prod-deploy.yml` when either changes. The version bump (`cz bump` on `develop`, tag pushed) is not optional:
+without it the deploy workflow stops because the version is already published.
 
 ## Don'ts
 

@@ -112,6 +112,9 @@ plugins:
   - redirects:
       redirect_maps:
         'help/Mission.md': 'glossary/terms/Mission.md'
+        'guides/developers/pipeline.md': 'guides/developers/release.md'
+        'guides/developers/contributing/bump.md': 'guides/developers/release.md'
+        'wiki/ReleaseWorkflow.md': 'guides/developers/release.md'
   - include-markdown:
       encoding: ascii
       preserve_includer_indent: false
