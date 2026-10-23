@@ -5,7 +5,7 @@ CURRENT_BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 NODE_ENV?=production
 .PHONY: help runonce run i18n
 .DEFAULT_GOAL := help
-CORES?=$(shell sysctl -n hw.ncpu | awk '{ v = int($$1 * 0.75); print (v < 1 ? 1 : v) }')
+CORES?=$(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1) | awk '{ v = int($$1 * 0.75); print (v < 1 ? 1 : v) }')
 
 ifeq ($(wildcard .python-version),)
     PYTHON_VERSION = ""
