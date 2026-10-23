@@ -1,170 +1,118 @@
+# Release process
+
+How a new KRM3 version is released and deployed. This is the only description of the process: CONTRIBUTING.md,
+AGENTS.md and the developer guide refer to this file. Releases are done by the maintainers.
+
 ## TL;DR
 
-This document outlines the release process for KRM3, which involves the following key steps:
+1. **Development**: changes reach `develop` through Pull Requests, with Conventional Commits.
+2. **Version bump** on `develop` (required: the pipeline refuses a version that is already published):
+    - point the `krm3-fe` submodule at the frontend commit to release (the pipeline builds it);
+    - run `cz bump`: it commits the new version and changelog and creates the tag;
+    - push `develop` and the new tag.
+3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with
+   *Rebase and merge*.
+4. **Build and Deploy** (automatic, on the push to `master`): the Docker image is published to the GitHub
+   Container Registry and deployed to the `krm3int` development cluster. There is no approval step.
+5. **Production**: run the **Deploy to Production** GitHub action by hand with the new version.
 
-1.  **Development**: All changes are made in feature branches and merged into the `develop` branch via Pull Requests.
-2. Bump the version
-  - Build the frontend
-  - Perform `cz bump` (Commitizen)
-  - Perform a commit (on Develop)
-3. Create PR develop -> master. The **Build and Deploy** workflow will be triggered automatically and will create a Docker image and push it to the GitHub Container Registry.
-4. **Manual Approval**: The workflow pauses for manual approval before deploying to the development environment.
-5. **Development Deployment**: After approval, the new version is automatically deployed to the `krm3int` development Kubernetes cluster.
-6. **Production Deployment**: Production deployment require manual trigger of Github action **Deploy to Production**
+## Contents
 
-# Release Process
-
-This document describes the process for releasing a new version of KRM3.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Release Workflow](#release-workflow)
-- [Deployment Stages](#deployment-stages)
-- [Workflow Details](#workflow-details)
+- [Before you start](#before-you-start)
+- [1. Bump the version](#1-bump-the-version)
+- [2. Open and merge the release PR](#2-open-and-merge-the-release-pr)
+- [3. Build and Deploy (automatic)](#3-build-and-deploy-automatic)
+- [4. Deploy to production](#4-deploy-to-production)
+- [Commitizen](#commitizen)
 - [Troubleshooting](#troubleshooting)
 
-## Overview
+## Before you start
 
-KRM3 follows a structured release process that ensures code quality through peer review, automated version management with Commitizen, and controlled deployments across multiple environments.
+- Everything to release is merged into `develop` through reviewed Pull Requests (see CONTRIBUTING.md), and
+  the tests on `develop` pass.
+- Since the last release there is at least one commit whose type changes the version (`fix`, `feat` or a
+  breaking change, see [Commitizen](#commitizen)); otherwise `cz bump` has nothing to bump.
+- Note anything the deployment needs beyond the new image, such as manual database work: it goes in the
+  release PR description.
 
-The release flow follows these stages:
-1. **Development** → Feature branches merged to `develop` via Pull Requests
-2. **Version Bump** → Manually on the `develop` branch: build the frontend, run `cz bump` (Commitizen), and commit
-3. **Build & Publish** → Merge `develop` into `master`: the **Build and Deploy** workflow builds and publishes the Docker image to GitHub Container Registry
-4. **Manual Approval** → Wait for manual approval in GitHub Actions
-5. **Development Deployment (krm3int)** → Automated deployment to development Kubernetes cluster after approval
-6. **Production Deployment** → Production deployment require manual trigger of Github action **Deploy to Production**
+## 1. Bump the version
 
-## Prerequisites
-
-Before starting a release, ensure:
-
-- [ ] All changes have been committed to a feature branch
-- [ ] At least one commit follows the [Conventional Commits](https://www.conventionalcommits.org/) specification (created using `cz commit`)
-- [ ] All tests are passing
-- [ ] Code has been reviewed
-
-## Release Workflow
-
-### 1. Create a Pull Request
-
-Create a PR from your feature branch to `develop`:
+On an up-to-date `develop`:
 
 ```bash
-git checkout -b feature/my-feature
-# Make your changes
-cz commit  # Use Commitizen to create conventional commits
-git push origin feature/my-feature
+git switch develop && git pull
+# if the frontend changed: point krm3-fe at the commit to release and commit the pointer
+cz bump --dry-run          # optional: shows the new version and the changelog entry
+cz bump
+git push origin develop
+git push origin <new version>    # e.g. git push origin 4.1.0
 ```
 
-**Important**: The PR must contain at least one commit created with `cz commit` that will be used by Commitizen to determine the version bump (patch, minor, or major).
+`cz bump` reads the commits since the last tag, picks the new version and:
 
-### 2. Review and Merge
+- updates the version in
+  [pyproject.toml](https://github.com/k-tech-italy/krm3/blob/develop/pyproject.toml) (and `uv.lock`),
+  [src/krm3/\_\_init\_\_.py](https://github.com/k-tech-italy/krm3/blob/develop/src/krm3/__init__.py),
+  [docker/Makefile](https://github.com/k-tech-italy/krm3/blob/develop/docker/Makefile) and
+  [serviceworker.js](https://github.com/k-tech-italy/krm3/blob/develop/src/krm3/config/fragments/serviceworker.js);
+- adds the new version to [CHANGELOG.md](https://github.com/k-tech-italy/krm3/blob/develop/CHANGELOG.md);
+- commits these changes as `bump: version X -> Y` and creates the annotated tag `Y` (no `v` prefix).
 
-- Request code review from team members
-- Address any feedback
-- Once approved, merge the PR into `develop`
+The tag is only local until you push it. The frontend is built by the pipeline from the commit the `krm3-fe`
+submodule points to, so updating that pointer is all the frontend needs.
 
-### 3. Bump the Version
+This step is required: when `master` receives a version that is already in the registry, the **Build and
+Deploy** workflow stops with `Version X already exists in the container registry!` and nothing is deployed.
 
-Once the changes are on `develop`, prepare the release locally on the `develop` branch:
+## 2. Open and merge the release PR
 
-1. Build the frontend
-2. Run `cz bump` (Commitizen) to determine and apply the new version
-3. Commit the bump and push it (with tags) to `develop`
+Open a Pull Request from `develop` to `master`. Its description is the release note:
 
-### 4. Merge to `master`
+- the changes, grouped as features, fixes, documentation and others;
+- anything that has to be done by hand around the deployment (e.g. database steps), at the top.
 
-Create a Pull Request from `develop` to `master` and merge it. Merging to `master` automatically triggers the **Build and Deploy** workflow, which builds the Docker image, pushes it to the GitHub Container Registry, and — after manual approval — deploys to the krm3int development environment.
+Merge it with **Rebase and merge**, the only merge method enabled in the repository. Rebasing gives the commits
+new hashes on `master`: afterwards `develop` and `master` have the same content but different commits, and the
+release tag points at the bump commit on `develop`. The next release PR from `develop` therefore lists again
+the commits of earlier releases.
 
-## Deployment Stages
+## 3. Build and Deploy (automatic)
 
-### Stage 1: Version Bump (Manual)
+The push to `master` runs the **Build and Deploy** workflow
+([.github/workflows/deploy.yml](https://github.com/k-tech-italy/krm3/blob/develop/.github/workflows/deploy.yml)).
+Its jobs:
 
-On the `develop` branch, before merging to `master`:
-- Build the frontend
-- Run `cz bump` to analyze commits and determine the new version, which:
-  - Updates version in:
-    - [pyproject.toml](pyproject.toml#L3)
-    - [src/krm3/__init__.py](src/krm3/__init__.py)
-    - [docker/Makefile](docker/Makefile)
-    - [src/krm3/config/fragments/serviceworker.js](src/krm3/config/fragments/serviceworker.js)
-  - Updates [CHANGELOG.md](CHANGELOG.md) with changes since version 1.5.32
-  - Creates a git tag with the new version
-- Commit the bump and push the commit and tags to `develop`
+1. **`validate`**: reads the version from `pyproject.toml` and checks it against the images in the registry:
+   it must not exist yet and must be higher than the highest published version.
+2. **`build-frontend`**: installs the dependencies, initialises the `krm3-fe` submodule, builds the frontend
+   with Yarn, generates `release.json` (`make release`) and uploads the result as an artifact.
+3. **`build-and-push`**: builds the Python package and the Docker image
+   ([docker/Dockerfile](https://github.com/k-tech-italy/krm3/blob/develop/docker/Dockerfile)) and pushes it as
+   `ghcr.io/k-tech-italy/krm3:<version>` and `ghcr.io/k-tech-italy/krm3:latest` to the
+   [GitHub Container Registry](https://github.com/k-tech-italy/krm3/pkgs/container/krm3).
+4. **`release`**: calls the Rancher API (`RANCHER_URL`, `RANCHER_TOKEN`) to redeploy the **krm3int** development
+   environment, and fails unless Rancher answers HTTP 200.
 
-> The following stages run automatically in the **Build and Deploy** workflow, which is triggered when `develop` is merged into `master`.
+There is no approval step: the `release` job does not use the protected `development` environment. The workflow
+never deploys to production.
 
-### Stage 2: Frontend Build (Automated)
+## 4. Deploy to production
 
-The workflow:
-- Checks out the code at the new version commit
-- Sets up Python 3.12.1 and uv package manager
-- Installs dependencies using `uv sync`
-- Initializes the frontend submodule (`krm3-fe`)
-- Builds the frontend using Yarn
-- Generates `release.json` with version information
-- Uploads the built frontend as an artifact
+After checking the new version on krm3int, run the **Deploy to Production** workflow
+([.github/workflows/prod-deploy.yml](https://github.com/k-tech-italy/krm3/blob/develop/.github/workflows/prod-deploy.yml)):
 
-### Stage 3: Docker Build & Push (Automated)
+1. go to the [Actions tab](https://github.com/k-tech-italy/krm3/actions) and select **Deploy to Production**;
+2. click **Run workflow** and enter the backend version to deploy (e.g. `4.1.0`).
 
-The workflow:
-- Downloads the built frontend artifact
-- Builds the Docker image using [docker/Dockerfile](docker/Dockerfile)
-- Tags the image with:
-  - Version tag: `ghcr.io/k-tech-italy/krm3:<version>`
-  - Latest tag: `ghcr.io/k-tech-italy/krm3:latest`
-- Pushes to [GitHub Container Registry](https://github.com/k-tech-italy/krm3/pkgs/container/krm3)
+The workflow reads `https://krm3int.k-tech.it/static/release.json` and aborts if the requested version is higher
+than the one running on krm3int; it then points the production deployment at
+`ghcr.io/k-tech-italy/krm3:<version>` through the Rancher API. The same workflow rolls production back to an
+earlier version.
 
-### Stage 4: Manual Approval (Manual)
+## Commitizen
 
-After the Docker image is successfully built and pushed:
-
-1. The workflow pauses and waits for **manual approval** in the GitHub Actions "development" environment
-2. A team member with appropriate permissions must review and approve the deployment
-3. Go to the [Actions tab](https://github.com/k-tech-italy/krm3/actions) and approve the pending deployment
-
-### Stage 5: Development Environment Deployment (krm3int) - Automated
-
-After manual approval, the workflow automatically:
-- Calls the Rancher API to deploy the application to the **krm3int development Kubernetes cluster**
-- Uses environment variables:
-  - `RANCHER_URL`: Rancher API endpoint
-  - `RANCHER_TOKEN`: Authentication token
-- Verifies deployment success (HTTP 200 response)
-
-**Important**: This deployment is **only to the krm3int development environment**. This is the final step of the automated pipeline.
-
-### Stage 6: Production Deployment (Manual)
-
-**The Build and Deploy workflow does NOT deploy to production.** Production deployment is triggered separately and manually via the **Deploy to Production** GitHub action:
-
-1. After verifying the deployment works correctly in the krm3int development environment
-2. Manually trigger the **Deploy to Production** workflow:
-   - Go to the [Actions tab](https://github.com/k-tech-italy/krm3/actions)
-   - Select the **Deploy to Production** workflow
-   - Click **Run workflow** and provide the backend version to deploy (e.g. `3.4.0`)
-
-**Note**: Production is never deployed automatically by the Build and Deploy pipeline; it always requires the manual **Deploy to Production** trigger.
-
-## Workflow Details
-
-### Workflow File
-
-The complete workflow is defined in [.github/workflows/deploy.yml](.github/workflows/deploy.yml).
-
-### Jobs Overview
-
-1. **`validate`**: Validates the version in `pyproject.toml` against the container registry (ensures it is new and greater than the latest published)
-2. **`build-frontend`**: Frontend compilation and artifact creation
-3. **`build-and-push`**: Docker image creation and registry push
-4. **`release`**: Manual approval gate + deployment to krm3int development environment via Rancher API
-
-### Commitizen Configuration
-
-Commitizen is configured in [pyproject.toml](pyproject.toml#L154-L165):
+Commitizen is configured in
+[pyproject.toml](https://github.com/k-tech-italy/krm3/blob/develop/pyproject.toml) under `[tool.commitizen]`:
 
 ```toml
 [tool.commitizen]
@@ -172,6 +120,7 @@ name = "cz_conventional_commits"
 tag_format = "$version"
 version_scheme = "pep440"
 version_provider = "uv"
+annotated_tag = true
 update_changelog_on_bump = true
 changelog_start_rev = "1.5.32"
 version_files = [
@@ -181,56 +130,56 @@ version_files = [
 ]
 ```
 
-### Version Determination
+The new version depends on the commit types since the last tag (see CONTRIBUTING.md for all the types):
 
-Commitizen determines the version bump based on commit messages:
+| Commits | Bump | Example |
+|---|---|---|
+| `fix:` | patch | 2.2.1 -> 2.2.2 |
+| `feat:` | minor | 2.2.1 -> 2.3.0 |
+| `BREAKING CHANGE:` footer or `!` after the type | major | 2.2.1 -> 3.0.0 |
 
-- `fix:` → Patch version (e.g., 2.2.1 → 2.2.2)
-- `feat:` → Minor version (e.g., 2.2.1 → 2.3.0)
-- `BREAKING CHANGE:` or `!` → Major version (e.g., 2.2.1 → 3.0.0)
+Commit with `cz commit` to get the format right; the `commit-msg` hook rejects messages that do not follow it.
 
 ## Troubleshooting
 
-### Build Failures
+### `Version X already exists in the container registry!`
 
-If the workflow fails during build:
-1. Check the GitHub Actions logs for specific errors
-2. Ensure all dependencies are correctly specified in [pyproject.toml](pyproject.toml)
-3. Verify the frontend submodule is properly configured
+The release reached `master` without a version bump. Bump the version on `develop`
+(see [1. Bump the version](#1-bump-the-version)) and open a new release PR: the push to `master` runs the
+workflow again.
 
-### Version Bump Failures
+### `cz bump` finds nothing to bump
 
-If version bump fails:
-1. Ensure at least one commit uses the Conventional Commits format
-2. Check that the version in [pyproject.toml](pyproject.toml#L3) is valid
-3. Verify Commitizen can access the git history (`fetch-depth: 0`)
+No commit since the last tag has a type that changes the version (only `docs`, `test`, `chore`, ...), or the
+commit messages do not follow Conventional Commits. Commitizen also needs the tags of earlier releases: check
+that the last release tag is in your clone (`git describe --tags --abbrev=0`).
 
-### Deployment Failures
+### Build failures
 
-If deployment to krm3int development environment fails:
-1. Verify the Rancher API credentials are correctly configured in GitHub Secrets (`RANCHER_URL` and `RANCHER_TOKEN`)
-2. Check that the krm3int Kubernetes cluster is accessible
-3. Review Rancher logs for deployment issues
-4. Verify the Docker image was successfully pushed to the registry
-5. Check the Rancher API response for specific error messages
+1. Check the GitHub Actions logs for the failing job.
+2. Make sure the dependencies are correct in `pyproject.toml` and `uv.lock` (the workflow runs
+   `uv sync --frozen`).
+3. Check that the `krm3-fe` submodule points at a commit that exists in the frontend repository and builds.
 
-### Docker Registry Push Failures
+### Docker registry push failures
 
-If image push fails:
-1. Verify GitHub Actions has `packages: write` permission
-2. Check that the GitHub Container Registry is accessible
-3. Ensure the image name follows the correct format
+1. Check that the workflow has the `packages: write` permission.
+2. Check that the GitHub Container Registry is reachable.
 
-## Additional Resources
+### Deployment failures (krm3int or production)
 
-- [Conventional Commits Specification](https://www.conventionalcommits.org/)
-- [Commitizen Documentation](https://commitizen-tools.github.io/commitizen/)
+1. Check the Rancher credentials: the `RANCHER_URL` variable and the `RANCHER_TOKEN` secret.
+2. Check that the Kubernetes cluster is reachable and look at the Rancher logs and the API response.
+3. Check that the image `ghcr.io/k-tech-italy/krm3:<version>` exists in the registry.
+
+## Additional resources
+
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Commitizen documentation](https://commitizen-tools.github.io/commitizen/)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [GitHub Actions Workflow Syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
 
 ## Contact
 
-For questions or issues with the release process:
-- **DevOps Team**: Contact for production deployment assistance
-- **Team Leader**: For release approval and coordination
-- **Development Team**: For build and integration issues
+- **DevOps team**: production deployments
+- **Team leader**: release approval and coordination
+- **Development team**: build and integration issues

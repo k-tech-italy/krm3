@@ -72,8 +72,9 @@ things:
 - on commit: Ruff, missing Django migrations, forbidden patterns (e.g. trailing whitespace
   and end-of-file fixes, compiled translations;
 - on the commit message: the Conventional Commits format (Commitizen);
-- on push: that the version matches the release and that no files under `src/` or `tests/`
-  are left untracked.
+- on push: secrets (detect-secrets, against `.secrets.baseline`) and that no files under `src/`
+  or `tests/` are left untracked.
+
 
 Run all the commit-stage hooks on the whole tree with `make lint`.
 
@@ -115,8 +116,10 @@ npx tsc --noEmit -p .    # type check
 
 ## Releases and deployment
 
-- **Do not bump the version or update the changelog yourself.** The release manager prepares the release PR from `develop` to `master`.
-- Releases and deployments are handled by the maintainers.
+- **Do not bump the version or update the changelog in your PRs.** Releases and deployments are handled by the
+  maintainers.
+- The release process (version bump, release PR from `develop` to `master`, deployment to krm3int and
+  production) is described in [RELEASE.md](./RELEASE.md).
 
 ## Code of conduct
 
