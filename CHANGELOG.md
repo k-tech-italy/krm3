@@ -1,3 +1,35 @@
+## 4.1.0 (2026-10-23)
+
+### Feat
+
+- **Contract-weeday-holiday**: Introduced weekday as holiday selection. It defaults to Sunday
+- **contracts**: replace sunday_as_holiday with a configurable weekly holiday_day
+- **Paayslip-report**: Added checkboxes for filtering by contract type (default to EMPLOYEE)
+
+### Fix
+
+- **timesheet**: fix admin view entries navigation
+- **tests**: pin LOCAL_DEVELOPMENT in media view tests; portable CORES in Makefile
+- **media**: serve private media files directly in local development
+- **missions**: stop expense images from crashing the API, the export and the overviews
+- **timesheet**: enforce sequential submissions and bank hour limits
+- **TimesheeetSubmissions**: Fixed regression not showing records unless a filter was set
+- **missions**: remove the non-existent 'reimburse' action from MissionAdmin
+- **Reimbursement-Admin-Overview**: Fix rendering
+- **Mission-Overview**: Fixed errors in rendering
+- **missions**: store a blank expense currency as the mission or base currency
+- **Expense**: Improved resilience to wrong ExpenseAdmin form submission
+- **missions**: report mission admin errors via messages instead of crashing
+- **missions**: use core.* permissions in the missions admin
+- **missions**: reject expenses of non-Submitted missions in reimbursement actions
+- **missions**: remove direct "Add reimbursement" from the admin
+- **missions**: require manage permission to modify others' missions and expenses
+- **missions**: restrict reimbursement views to staff with permissions
+- **missions**: enforce add_mission and own-resource rules on the API
+- **missions**: assign mission number on submission and add submit API
+- **missions**: enforce TRASFERTE_ENABLED feature flag on the missions API
+- **Expense**: Rewrite update_rates to convert every expense in batch
+
 ## 4.0.0 (2026-10-13)
 
 ### Feat
