@@ -10,8 +10,8 @@ AGENTS.md and the developer guide refer to this file. Releases are done by the m
     - point the `krm3-fe` submodule at the frontend commit to release (the pipeline builds it);
     - run `cz bump`: it commits the new version and changelog and creates the tag;
     - push `develop` and the new tag.
-3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with
-   *Rebase and merge*.
+3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with a
+   merge commit (not *Rebase and merge*).
 4. **Build and Deploy** (automatic, on the push to `master`): the Docker image is published to the GitHub
    Container Registry and deployed to the `krm3int` development cluster. There is no approval step.
 5. **Production**: run the **Deploy to Production** GitHub action by hand with the new version.
@@ -71,10 +71,13 @@ Open a Pull Request from `develop` to `master`. Its description is the release n
 - the changes, grouped as features, fixes, documentation and others;
 - anything that has to be done by hand around the deployment (e.g. database steps), at the top.
 
-Merge it with **Rebase and merge**, the only merge method enabled in the repository. Rebasing gives the commits
-new hashes on `master`: afterwards `develop` and `master` have the same content but different commits, and the
-release tag points at the bump commit on `develop`. The next release PR from `develop` therefore lists again
-the commits of earlier releases.
+Merge it with **Create a merge commit** (`gh pr merge <number> --merge`), not *Rebase and merge*. The merge
+commit keeps the `develop` commits, and the release tag on the bump commit, in the history of `master`, so the
+next release PR contains only the new commits.
+
+Rebasing would copy the commits onto `master` with new hashes. `develop` would then no longer be part of the
+history of `master`, and the next release PR would have to replay every earlier commit again: GitHub refuses it
+with `This branch can't be rebased` once those copies conflict.
 
 ## 3. Build and Deploy (automatic)
 
@@ -147,6 +150,12 @@ Commit with `cz commit` to get the format right; the `commit-msg` hook rejects m
 The release reached `master` without a version bump. Bump the version on `develop`
 (see [1. Bump the version](#1-bump-the-version)) and open a new release PR: the push to `master` runs the
 workflow again.
+
+### `This branch can't be rebased` on the release PR
+
+The release PR was set to *Rebase and merge* while `master` already holds rebased copies of some `develop`
+commits. Merge it with a merge commit instead (see
+[2. Open and merge the release PR](#2-open-and-merge-the-release-pr)).
 
 ### `cz bump` finds nothing to bump
 
