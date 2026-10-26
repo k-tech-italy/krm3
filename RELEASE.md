@@ -8,6 +8,7 @@ AGENTS.md and the developer guide refer to this file. Releases are done by the m
 1. **Development**: changes reach `develop` through Pull Requests, with Conventional Commits.
 2. **Version bump** on `develop` (required: the pipeline refuses a version that is already published):
     - point the `krm3-fe` submodule at the frontend commit to release (the pipeline builds it);
+    - Perform a `make refresh-fe` and `cz commit` if needed
     - run `cz bump`: it commits the new version and changelog and creates the tag;
     - push `develop` and the new tag.
 3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with a
