@@ -36,7 +36,7 @@ def test_navbar_contacts_module_link_visible_with_feature_flag_on(
 ):
     _resource = ResourceFactory(user=admin_user)
     browser.login_as_user(admin_user)
-    browser.assert_element_present('//a[@href="contacts" and text()="Contacts"]')
+    browser.assert_element_present('//a[@href="/contacts" and text()="Contacts"]')
 
 
 @django_test.override_settings(FLAGS={'CONTACTS_ENABLED': [('boolean', False)]})
