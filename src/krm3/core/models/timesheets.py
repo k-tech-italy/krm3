@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 DAYTIME_WORK_HOURS_MAX = 16
 NIGHTTIME_WORK_HOURS_MAX = 8
 TOTAL_WORK_HOURS_MAX = 24
+# Temporary fixed limit until daily bank movements are derived from the contract's working schedule.
+DAILY_BANK_HOURS_MAX = 16
 
 
 class SpecialLeaveReasonQuerySet(QuerySet):
@@ -412,7 +414,9 @@ class DayEntry(CleanValidatorsMixin, models.Model):
                 condition=models.Q(special_leave_hours__range=(0, 24)), name='special_leave_hours_range'
             ),
             models.CheckConstraint(condition=models.Q(leave_hours__range=(0, 24)), name='leave_hours_range'),
-            models.CheckConstraint(condition=models.Q(bank__range=(-8, 8)), name='bank_range'),
+            models.CheckConstraint(
+                condition=models.Q(bank__range=(-DAILY_BANK_HOURS_MAX, DAILY_BANK_HOURS_MAX)), name='bank_range'
+            ),
             models.CheckConstraint(condition=models.Q(rest_hours__range=(0, 24)), name='rest_hours_range'),
         ]
 
