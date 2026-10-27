@@ -77,6 +77,55 @@ def test_creates_single_valid_day_entry(entry_data, api_client):
     assert day_entry.special_leave_reason is None
 
 
+def test_creates_day_entry_with_bank_withdrawal_matching_ten_due_hours(api_client):
+    entry_date = date(2026, 9, 7)
+    contract = ContractFactory(
+        period=(entry_date, None),
+        working_schedule={'mon': 10, 'tue': 10, 'wed': 10, 'thu': 10, 'fri': 10, 'sat': 0, 'sun': 0},
+    )
+
+    response = api_client(user=contract.resource.user).post(
+        _url(),
+        data={
+            'dates': [entry_date.isoformat()],
+            'resource': contract.resource_id,
+            'bank': -10,
+        },
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    day_entry = DayEntry.objects.get(resource=contract.resource, day=entry_date)
+    assert day_entry.bank == Decimal('-10.00')
+    assert day_entry.due_hours == Decimal('10.00')
+
+
+@pytest.mark.parametrize(
+    ('bank', 'error'),
+    (
+        pytest.param(-17, 'You cannot withdraw more than 16 hours from the bank of hours.', id='withdrawal'),
+        pytest.param(17, 'You cannot deposit more than 16 hours in the bank of hours.', id='deposit'),
+    ),
+)
+def test_rejects_bank_movement_outside_daily_limit(bank, error, api_client):
+    entry_date = date(2026, 9, 7)
+    contract = ContractFactory(period=(entry_date, None))
+
+    response = api_client(user=contract.resource.user).post(
+        _url(),
+        data={
+            'dates': [entry_date.isoformat()],
+            'resource': contract.resource_id,
+            'bank': bank,
+        },
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {'bank': [error]}
+    assert not DayEntry.objects.filter(resource=contract.resource, day=entry_date).exists()
+
+
 @pytest.mark.parametrize(
     ('dates', 'expected_status'),
     (

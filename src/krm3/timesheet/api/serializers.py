@@ -20,6 +20,7 @@ from krm3.core.models import TaskEntry, Resource
 from krm3.core.models.contracts import Contract
 from krm3.core.models.projects import Task
 from krm3.core.models.timesheets import (
+    DAILY_BANK_HOURS_MAX,
     DAYTIME_WORK_HOURS_MAX,
     NIGHTTIME_WORK_HOURS_MAX,
     TOTAL_WORK_HOURS_MAX,
@@ -200,6 +201,21 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
     def validate_rest_hours(self, value: Hours) -> Hours:
         return self._validate_hours(value)
 
+    def validate_bank(self, value: Hours) -> Hours:
+        if value > DAILY_BANK_HOURS_MAX:
+            raise serializers.ValidationError(
+                _('You cannot deposit more than {limit} hours in the bank of hours.').format(
+                    limit=DAILY_BANK_HOURS_MAX,
+                )
+            )
+        if value < -DAILY_BANK_HOURS_MAX:
+            raise serializers.ValidationError(
+                _('You cannot withdraw more than {limit} hours from the bank of hours.').format(
+                    limit=DAILY_BANK_HOURS_MAX,
+                )
+            )
+        return value
+
     def _validate_hours(self, value: Hours) -> Hours:
         if not 0 <= value <= 24:
             raise serializers.ValidationError({'error': _('Hours must be between 0 and 24.')})
@@ -241,7 +257,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
         )
 
         try:
-            entry.refresh(task_entries=[], drop_existing=False)
+            entry.refresh(task_entries=[], drop_existing=False, save=False)
             entry.full_clean()
         except ValidationError as exc:
             raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
