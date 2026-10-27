@@ -16,3 +16,7 @@ For information when you can add/get hours from bank check <glossary:BankOfHours
 The bank balance must stay between -16 and +16 hours (your organization may configure different bounds).
 
 KRM3 checks the limit on every change, day by day: if adding, removing or moving hours on one day would push the balance out of range on that day or on any following day, the change is rejected with an explanatory error message.
+
+## Daily movement limit
+
+A single day's bank movement must be between -16 and +16 hours. Withdrawals are also limited by the hours scheduled for that day: they cannot make the effective hours exceed the scheduled hours.
