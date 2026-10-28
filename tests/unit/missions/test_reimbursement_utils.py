@@ -3,8 +3,8 @@ from decimal import Decimal
 import pytest
 from testutils.factories import ExpenseFactory
 
-from krm3.core.models import Expense
-from krm3.missions.utilities import ReimbursementSummaryEnum, calculate_reimbursement_summaries
+from krm3.core.models import Expense, Reimbursement
+from krm3.missions.utilities import calculate_reimbursement_summaries
 
 
 @pytest.fixture
@@ -126,13 +126,13 @@ def expenses_for_crs(categories):
 @pytest.mark.parametrize(
     'key,outcome',
     [
-        pytest.param(ReimbursementSummaryEnum.TOTALE_COSTO, 10 + 5100 - 1000, id='costo-azienda'),
-        pytest.param(ReimbursementSummaryEnum.TOTALE_RIMBORSO, 10 - 1000, id='reimbursment'),
-        pytest.param(ReimbursementSummaryEnum.NON_RIMBORSATE, 3010 - 10, id='non-reimbursed'),
-        pytest.param(ReimbursementSummaryEnum.DA_RESTITUIRE, 1000, id='to-return'),
+        pytest.param(Reimbursement.ReimbursementSummaryEnum.TOTALE_SPESE, 10 + 5100 - 1000, id='costo-azienda'),
+        pytest.param(Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO, 10 - 1000, id='reimbursment'),
+        pytest.param(Reimbursement.ReimbursementSummaryEnum.NON_RIMBORSATE, 3010 - 10, id='non-reimbursed'),
+        pytest.param(Reimbursement.ReimbursementSummaryEnum.DA_RESTITUIRE, 1000, id='to-return'),
     ],
 )
-def test_crs_costo_azienda(key: ReimbursementSummaryEnum, outcome: int, expenses_for_crs):
+def test_crs_costo_azienda(key: Reimbursement.ReimbursementSummaryEnum, outcome: int, expenses_for_crs):
     byexpcategory, bypayment, summary = calculate_reimbursement_summaries(Expense.objects.all())
     summary = {str(k): v for k, v in summary.items()}
     byexpcategory = {str(k): v for k, v in byexpcategory.items()}
