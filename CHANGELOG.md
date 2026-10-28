@@ -1,3 +1,10 @@
+## 5.0.1 (2026-10-28)
+
+### Fix
+
+- **timesheet**: increase daily bank hours limit
+- **Test**: Fixing test test_navbar_contacts_module_link_visible_with_feature_flag_on
+
 ## 5.0.0 (2026-10-26)
 
 ### Feat
