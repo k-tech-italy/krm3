@@ -12,15 +12,12 @@ from django.contrib.postgres.forms import RangeWidget
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
+from django.utils.html import format_html
 from rangefilter.filters import DateRangeFilter
 
-from krm3.core.models import PO, Basket, SpecialLeaveReason, TaskEntry, TimesheetSubmission, DayEntry
+from krm3.core.models import PO, Basket, DayEntry, SpecialLeaveReason, TaskEntry, TimesheetSubmission
 from krm3.daterange import DateRangeOverlapFilter
 from krm3.styles.buttons import NORMAL
-
-
-from django.utils.html import format_html
-
 
 @admin.register(PO)
 class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
@@ -31,6 +28,7 @@ class POAdmin(AdminFiltersMixin, admin.ModelAdmin):
         # Tell Django to use our custom widget for all DateRangeFields in this admin.
         DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
     }
+
 
 @admin.register(Basket)
 class BasketAdmin(admin.ModelAdmin):
@@ -167,7 +165,6 @@ class TaskEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, a
         ('night_shift_hours', NumberFilter),
         ('travel_hours', NumberFilter),
         ('on_call_hours', NumberFilter),
-
     ]
     list_select_related = ('task__project', 'day_entry__resource', 'day_entry__timesheet')
 
