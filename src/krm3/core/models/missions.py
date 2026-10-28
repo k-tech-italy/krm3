@@ -253,6 +253,9 @@ class Reimbursement(models.Model):
         SPESE_TRASFERTA = 'Spese trasferta'
         TOTALE_SPESE = 'Totale spese'
 
+        def __str__(self) -> str:
+            return self.value
+
     number = models.PositiveIntegerField(blank=True, help_text='Assigned by the Create reimbursement action')
     year = models.PositiveIntegerField(blank=True)
     month = models.CharField(max_length=20, null=True)

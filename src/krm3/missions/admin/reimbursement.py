@@ -20,7 +20,7 @@ from krm3.missions.admin.expenses import ExpenseInline
 from krm3.missions.forms import ReimbursementAdminForm
 from krm3.core.models import Mission, Reimbursement, Expense, Resource, ExpenseCategory
 from krm3.missions.tables import ReimbursementExpenseExportTable, ReimbursementExpenseTable
-from krm3.missions.utilities import calculate_reimbursement_summaries, ReimbursementSummaryEnum
+from krm3.missions.utilities import calculate_reimbursement_summaries
 from krm3.styles.buttons import NORMAL
 from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
@@ -42,7 +42,7 @@ def prepare_resources_html(resources: dict, max_missions: int) -> dict:
                 {
                     'id': summary['mission_id'],
                     'n_mission': mission_num,
-                    'tot_expenses': summary['summary'][ReimbursementSummaryEnum.TOTALE_COSTO],
+                    'tot_expenses': summary['summary'][Reimbursement.ReimbursementSummaryEnum.TOTALE_SPESE],
                     'tot_company': summary['bypayment']['Company'][0],
                     'forfait': summary['byexpcategory'][expense_categories['Forfait']][0],
                     'to_reimburse': summary['bypayment']['Personal'][1],
