@@ -83,7 +83,7 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             ),
         ]
         user = cast('User', request.user)
-        if obj is None or user.has_any_perm('view_any_task_costs', 'manage_any_task_costs'):
+        if obj is None or user.has_any_perm('core.view_any_task_costs', 'core.manage_any_task_costs'):
             fieldsets.append(
                 ('Costs', {'fields': (('work_price', 'overtime_price'), ('travel_price', 'on_call_price'))})
             )

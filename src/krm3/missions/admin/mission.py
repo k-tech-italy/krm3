@@ -35,7 +35,6 @@ from krm3.missions.forms import MissionAdminForm, MissionsImportForm
 from krm3.missions.impexp.export import MissionExporter
 from krm3.missions.impexp.imp import MissionImporter
 from krm3.missions.tables import MissionExpenseExportTable, MissionExpenseTable
-from krm3.missions.utilities import ReimbursementSummaryEnum
 from krm3.styles.buttons import NORMAL
 from krm3.utils.filters import RecentFilter
 from krm3.utils.queryset import ACLMixin
@@ -242,50 +241,51 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 expenses_table = build_mission_expenses_table(request, exp_re, sorting, refresh=False)
 
                 summary = {
-                    ReimbursementSummaryEnum.SPESE_TRASFERTA: decimal.Decimal(0.0),
-                    ReimbursementSummaryEnum.ANTICIPATO: decimal.Decimal(0.0),
-                    ReimbursementSummaryEnum.TOTALE_RIMBORSO: decimal.Decimal(0.0),
-                    ReimbursementSummaryEnum.GIA_RIMBORSATE: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.SPESE_TRASFERTA: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.ANTICIPATO: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.GIA_RIMBORSATE: decimal.Decimal(0.0),
                     # 'Ancora da rimborsare': decimal.Decimal(0.0),
-                    ReimbursementSummaryEnum.NON_RIMBORSATE: decimal.Decimal(0.0),
-                    ReimbursementSummaryEnum.DA_RESTITUIRE: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.NON_RIMBORSATE: decimal.Decimal(0.0),
+                    Reimbursement.ReimbursementSummaryEnum.DA_RESTITUIRE: decimal.Decimal(0.0),
                 }
 
                 for expense in exp_re:
                     expense: Expense
-                    summary[ReimbursementSummaryEnum.ANTICIPATO] += (
+                    summary[Reimbursement.ReimbursementSummaryEnum.ANTICIPATO] += (
                         expense.amount_base if expense.payment_type.personal_expense is False else decimal.Decimal(0.0)
                     )
-                    summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] += (
+                    summary[Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO] += (
                         expense.amount_reimbursement or decimal.Decimal(0.0)
                     )
 
-                    summary[ReimbursementSummaryEnum.GIA_RIMBORSATE] += (
+                    summary[Reimbursement.ReimbursementSummaryEnum.GIA_RIMBORSATE] += (
                         expense.amount_reimbursement
                         if expense.reimbursement
                         else decimal.Decimal(0.0) or decimal.Decimal(0.0)
                     )
                     if expense.payment_type.personal_expense:
-                        summary[ReimbursementSummaryEnum.NON_RIMBORSATE] += (
+                        summary[Reimbursement.ReimbursementSummaryEnum.NON_RIMBORSATE] += (
                             expense.amount_base or decimal.Decimal(0.0)
                         ) - (expense.amount_reimbursement or decimal.Decimal(0.0))
                     else:
-                        summary[ReimbursementSummaryEnum.DA_RESTITUIRE] -= (
+                        summary[Reimbursement.ReimbursementSummaryEnum.DA_RESTITUIRE] -= (
                             expense.amount_reimbursement or decimal.Decimal(0.0)
                         )
 
-                    summary[ReimbursementSummaryEnum.SPESE_TRASFERTA] += (
+                    summary[Reimbursement.ReimbursementSummaryEnum.SPESE_TRASFERTA] += (
                         expense.amount_base
                         if not expense.payment_type.personal_expense
                         else expense.amount_reimbursement or Decimal(0)
                     ) or decimal.Decimal(0.0)
 
                 da_rimborsare = (
-                    summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] - summary[ReimbursementSummaryEnum.GIA_RIMBORSATE]
+                    summary[Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO]
+                    - summary[Reimbursement.ReimbursementSummaryEnum.GIA_RIMBORSATE]
                 )
-                summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO] = (
-                    f'{summary[ReimbursementSummaryEnum.TOTALE_RIMBORSO]}'
-                    f' ({summary.pop(ReimbursementSummaryEnum.GIA_RIMBORSATE)}'
+                summary[Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO] = (
+                    f'{summary[Reimbursement.ReimbursementSummaryEnum.TOTALE_RIMBORSO]}'
+                    f' ({summary.pop(Reimbursement.ReimbursementSummaryEnum.GIA_RIMBORSATE)}'
                     f' già Rimborsate, {da_rimborsare} rimanenti)'
                 )
                 result_dict[reimbursement] = {
