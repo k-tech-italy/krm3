@@ -1,3 +1,9 @@
+## 5.0.3 (2026-10-28)
+
+### Fix
+
+- **Cost-Permissions**: Fies Issues 678 and 688
+
 ## 5.0.2 (2026-10-28)
 
 ### Fix
