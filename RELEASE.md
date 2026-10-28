@@ -11,6 +11,7 @@ AGENTS.md and the developer guide refer to this file. Releases are done by the m
     - Perform a `make refresh-fe` and `cz commit` if needed
     - run `cz bump`: it commits the new version and changelog and creates the tag;
     - push `develop` and the new tag: `git push origin HEAD --follow-tags`
+
 3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with a
    merge commit (not *Rebase and merge*).
 4. **Build and Deploy** (automatic, on the push to `master`): the Docker image is published to the GitHub
