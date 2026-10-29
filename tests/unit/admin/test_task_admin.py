@@ -49,3 +49,28 @@ def test_task_admin_add_view_shows_costs_without_cost_permission(client, staff_u
 
     assert response.status_code == 200
     assert COST_FIELDS.issubset(response.context['adminform'].form.fields)
+
+
+CLONED_COST_FIELDS = ('work_price', 'on_call_price', 'travel_price', 'overtime_price')
+
+
+@pytest.mark.parametrize(
+    ('permissions', 'expected_copied'),
+    [
+        pytest.param([], False, id='no-cost-permission'),
+        pytest.param(['core.view_any_task_costs'], True, id='view-any-task-costs'),
+        pytest.param(['core.manage_any_task_costs'], True, id='manage-any-task-costs'),
+    ],
+)
+def test_task_admin_clone_copies_costs_only_with_cost_permission(client, staff_user, permissions, expected_copied):
+    add_permissions(staff_user, ['core.view_task', 'core.change_task', 'core.add_task', *permissions])
+    task = TaskFactory(contract=True, work_price=150, on_call_price=10, travel_price=20, overtime_price=30)
+    client.force_login(staff_user)
+
+    response = client.get(reverse('admin:core_task_clone', args=[task.pk]), follow=True)
+
+    assert response.status_code == 200
+    initial = response.context['adminform'].form.initial
+    assert initial['title'] == task.title
+    for field in CLONED_COST_FIELDS:
+        assert (initial.get(field) == getattr(task, field)) is expected_copied, field
