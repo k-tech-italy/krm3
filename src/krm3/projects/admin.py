@@ -100,7 +100,11 @@ class TaskAdmin(ExtraButtonsMixin, AdminFiltersMixin, admin.ModelAdmin):
             ret['project'] = source.project
             ret['basket'] = source.basket
             ret['period'] = source.period
-            ret['work_price'] = source.work_price
+            if request.user.has_any_perm('core.view_any_task_costs', 'core.manage_any_task_costs'):
+                ret['work_price'] = source.work_price
+                ret['on_call_price'] = source.on_call_price
+                ret['travel_price'] = source.travel_price
+                ret['overtime_price'] = source.overtime_price
         else:
             pk = ret.pop('project_id', None)
             if pk:
