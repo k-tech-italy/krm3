@@ -224,5 +224,5 @@ class Task(PeriodBoundCheckerMixin, models.Model):
                 code='task-period-outside-project',
             )
         period = KTDateRange(self.period)
-        if self.resource and self.period and not self.resource.has_contract_cover(*period.as_dates()):
+        if self.resource_id and self.period and not self.resource.has_contract_cover(*period.as_dates()):
             raise ValidationError(_('Missing contract cover for the range {}').format(period))

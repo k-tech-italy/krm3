@@ -52,6 +52,37 @@ def test_task_with_contract(end_date, project_2020_open):
     assert form.is_valid() is True, form.errors
 
 
+def test_task_rejects_equal_period_bounds(project_2020_open):
+    contract: Contract = ContractFactory(period=(dt('2020-01-01'), None))
+
+    form = TaskForm(
+        data=base
+        | {
+            'project': project_2020_open,
+            'resource': contract.resource,
+            'period_0': '2020-01-01',
+            'period_1': '2020-01-01',
+        }
+    )
+
+    assert form.is_valid() is False
+    assert form.errors == {'period': ['End date must be at least one day after start date']}
+
+
+def test_task_without_resource_returns_validation_error(project_2020_open):
+    form = TaskForm(
+        data=base
+        | {
+            'project': project_2020_open,
+            'period_0': '2020-01-01',
+            'period_1': '2020-01-02',
+        }
+    )
+
+    assert form.is_valid() is False
+    assert form.errors == {'resource': ['This field is required.']}
+
+
 def test_task_spanning_contracts(project_2020_open):
     c1: 'Contract' = ContractFactory(period=(dt('20200101'), dt('20220101')))
     ContractFactory(resource=c1.resource, period=(dt('20220101'), dt('20250101')))
