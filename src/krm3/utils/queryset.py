@@ -36,8 +36,3 @@ class ACLMixin:
 class ActiveQuerySet(models.QuerySet):
     def actives(self):  # noqa: ANN201
         return self.filter(active=True)
-
-
-class ActiveManagerMixin:
-    def active(self):  # noqa: ANN201
-        return self.get_queryset().filter(active=True)
