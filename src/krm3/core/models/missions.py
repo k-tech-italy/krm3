@@ -21,7 +21,6 @@ from krm3.core.storage import PrivateMediaStorage
 from krm3.currencies.models import Currency, Rate
 from krm3.missions.exceptions import AlreadyReimbursed
 from krm3.missions.media import mission_directory_path
-from krm3.utils.queryset import ActiveManagerMixin
 
 from .auth import Resource
 from .geo import City
@@ -31,7 +30,7 @@ if typing.TYPE_CHECKING:
     from krm3.core.models.auth import User
 
 
-class MissionManager(ActiveManagerMixin, models.Manager):
+class MissionManager(models.Manager):
     def filter_acl(self, user: 'User') -> models.QuerySet[Mission]:
         """Return the queryset for the owned records.
 
@@ -287,7 +286,7 @@ class Reimbursement(models.Model):
         return self.expenses.count()
 
 
-class ExpenseManager(ActiveManagerMixin, models.Manager):
+class ExpenseManager(models.Manager):
     def by_otp(self, otp: str) -> 'Expense':
         """Retrieve the instance matching the provided otp."""
         ref = settings.FERNET_KEY.decrypt(f'gAAAAA{otp}').decode()
