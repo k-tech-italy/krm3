@@ -1,3 +1,17 @@
+## 5.0.4 (2026-10-29)
+
+### Fix
+
+- **timesheet**: make submission replacement and entry deletion atomic
+- **Task**: Task clone now does not copy the cost values if user has not the right permission
+- **Cost-Permissions**: Fies Issues 678 and 688
+- **FE**: Minor fixes
+- **timesheet**: increase daily bank hours limit
+
+### Refactor
+
+- **missions**: remove ActiveManagerMixin from Mission and Expense managers
+
 ## 5.0.3 (2026-10-28)
 
 ### Fix
