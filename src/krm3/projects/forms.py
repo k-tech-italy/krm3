@@ -49,6 +49,14 @@ class TaskForm(ModelForm):
 
         resource: Resource
         if (task_period := self.cleaned_data.get('period')) and (resource := self.cleaned_data.get('resource')):
+            if task_period.lower is None:
+                raise ValidationError({'period': _('"start_date" is required')}, code='required')
+            if task_period.upper and task_period.lower >= task_period.upper:
+                raise ValidationError(
+                    {'period': _('End date must be at least one day after start date')},
+                    code='invalid_date_interval',
+                )
+
             task_period = KTDateRange(task_period)
             if self.instance and self.instance.pk:
                 self._check_orphan_task_entries(task_period)
