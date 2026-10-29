@@ -137,7 +137,14 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         if resp := self.check_modify_allowed(request):
             return resp
-        return super().destroy(request, *args, **kwargs)
+        try:
+            with transaction.atomic():
+                return super().destroy(request, *args, **kwargs)
+        except DjangoValidationError as exc:
+            return Response(
+                data=_model_validation_error_detail(exc),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @override
     def perform_destroy(self, instance: TaskEntry) -> None:

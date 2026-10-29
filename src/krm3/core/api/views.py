@@ -11,6 +11,7 @@ from django.contrib.auth import (
     logout as djlogout,
 )
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -334,14 +335,25 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
 
     def create(self, request: Request, *args, **kwargs) -> Response:
         """Create a new Timesheet submission or replace an existing opened one."""
-        period = request.data['period'][:]
-        period[1] = str(KTDay(period[1]) + 1)
-        ts = TimesheetSubmission.objects.filter(
-            resource_id=request.data['resource'], period=period, closed=False
-        ).first()
-        if ts:
-            ts.delete()
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        resource = serializer.validated_data['resource']
+        period = serializer.validated_data['period']
+
+        with transaction.atomic():
+            existing_submission = (
+                TimesheetSubmission.objects.select_for_update()
+                .filter(resource=resource, period=period, closed=False)
+                .first()
+            )
+            if existing_submission:
+                existing_submission.delete()
+
+            self.perform_create(serializer)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ContactAPIViewSet(ModelViewSet):
