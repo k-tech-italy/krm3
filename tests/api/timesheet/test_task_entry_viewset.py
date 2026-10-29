@@ -876,3 +876,43 @@ def test_task_entry_delete_permissions(usr: str, expected: int, task_entry_scena
     assert response.status_code == expected, response.data.get('detail')
 
     assert TaskEntry.objects.filter(pk=pk).exists() is (expected != status.HTTP_204_NO_CONTENT)
+
+
+def test_task_entry_delete_returns_bad_request_and_rolls_back_when_bank_deposit_would_be_invalid(
+    admin_user, api_client
+):
+    entry_date = date(2024, 1, 1)
+    contract = ContractFactory(
+        period=(entry_date, None),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    day_entry = DayEntryFactory(
+        resource=contract.resource,
+        contract=contract,
+        day=entry_date,
+        due_hours=8,
+        day_hours=16,
+        bank=8,
+    )
+    task = TaskFactory(resource=contract.resource, period=contract.period)
+    entry = TaskEntryFactory(
+        task=task,
+        day_entry=day_entry,
+        day_shift_hours=16,
+    )
+
+    response = api_client(user=admin_user).delete(
+        reverse('timesheet-api:api-task-entry-detail', kwargs={'pk': entry.pk})
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        'error': (
+            'Invalid day entry for 2024-01-01: Cannot deposit 8.00 bank hours. '
+            'Total hours would become -8.00, which is below scheduled hours (8.00).'
+        )
+    }
+    assert TaskEntry.objects.filter(pk=entry.pk).exists()
+    day_entry.refresh_from_db()
+    assert day_entry.bank == 8
+    assert day_entry.day_hours == 16

@@ -205,6 +205,52 @@ class TestTimesheetSubmissionModelAPIListView:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_unauthorised_create_does_not_delete_other_users_open_submission(
+        self, api_client, regular_user
+    ):
+        ResourceFactory(user=regular_user)
+        victim_resource = ResourceFactory()
+        existing_submission = TimesheetSubmissionFactory(
+            resource=victim_resource,
+            period=('2024-01-01', '2024-01-08'),
+            closed=False,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={
+                'resource': victim_resource.pk,
+                'period': ('2024-01-01', '2024-01-07'),
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert TimesheetSubmission.objects.filter(pk=existing_submission.pk).exists()
+
+    def test_invalid_resubmission_does_not_delete_existing_open_submission(
+        self, api_client, regular_user
+    ):
+        resource = ResourceFactory(user=regular_user)
+        existing_submission = TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2024-01-01', '2024-01-08'),
+            closed=False,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={
+                'resource': resource.pk,
+                'period': ('2024-01-01', '2024-01-07'),
+                'closed': 'invalid-value',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert TimesheetSubmission.objects.filter(pk=existing_submission.pk).exists()
+
     @pytest.mark.parametrize(
         'who, result',
         [
