@@ -1,3 +1,11 @@
+## 5.0.5 (2026-10-30)
+
+### Fix
+
+- **projects**: validate task period before contract coverage
+- **missions**: compute rates of unreimbursed expenses in mission overview
+- **UI-tests**: Fixed sporadic Django flush error with race conditions during UI tests
+
 ## 5.0.4 (2026-10-29)
 
 ### Fix
