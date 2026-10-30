@@ -285,15 +285,15 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             instance.special_leave_reason = None
 
         try:
-            instance.full_clean()
-
             with transaction.atomic():
                 if instance.asked_holiday or instance.is_sick:
-                    instance.refresh(task_entries=[])
+                    # a full-day absence drops the task entries of the day
+                    instance.refresh(task_entries=[], save=False)
                 else:
                     # bank movements change overtime and meal voucher
                     instance.refresh_derived_hours()
-                    instance.save()
+                instance.full_clean()
+                instance.save()
         except ValidationError as exc:
             raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
 

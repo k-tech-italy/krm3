@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ValidationError
 
 from krm3.core.models import Contract, TaskEntry
 from krm3.timesheet.operations import DayEntryProcessor
@@ -107,3 +108,63 @@ def test_meal_voucher_counts_only_bank_withdrawals(  # noqa: PLR0917
     )
 
     assert day_entry.meal_voucher == expected_meal_voucher
+
+
+@pytest.mark.parametrize(
+    ('bank', 'expected_overtime'),
+    (
+        pytest.param(0, 2, id='no-bank'),
+        pytest.param(1, 1, id='bank-deposit'),
+    ),
+)
+def test_task_hours_above_due_hours_are_overtime(contract, tasks, bank, expected_overtime):
+    day_entry = DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-05')).build_day(
+        task_entries=[{'task': tasks[0], 'day_shift_hours': 6}],
+        bank=bank,
+    )  # Thursday, 4 due hours
+
+    assert day_entry.overtime_hours == expected_overtime
+
+
+@pytest.mark.parametrize(
+    'absence',
+    (
+        pytest.param({'asked_holiday': True}, id='holiday'),
+        pytest.param({'is_sick': True}, id='sick'),
+    ),
+)
+def test_rejects_task_hours_on_full_day_absence(contract, tasks, absence):
+    with pytest.raises(ValidationError, match='sick day or requested holiday'):
+        DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-05')).build_day(
+            task_entries=[{'task': tasks[0], 'on_call_hours': 1}],
+            **absence,
+        )
+
+
+@pytest.mark.parametrize(
+    'absence',
+    (
+        pytest.param({'leave_hours': 2}, id='leave'),
+        pytest.param({'special_leave_hours': 2}, id='special-leave'),
+        pytest.param({'rest_hours': 2}, id='rest'),
+    ),
+)
+@pytest.mark.parametrize(
+    ('worked_hours', 'accepted'),
+    (
+        pytest.param(2, True, id='up-to-due-hours'),
+        pytest.param(3, False, id='above-due-hours'),
+    ),
+)
+def test_limits_task_hours_to_due_hours_on_partial_absence(contract, tasks, absence, worked_hours, accepted):
+    def build_day():
+        return DayEntryProcessor(resource=contract.resource, day=_dt('2023-01-05')).build_day(
+            task_entries=[{'task': tasks[0], 'day_shift_hours': worked_hours}],
+            **absence,
+        )  # Thursday, 4 due hours
+
+    if accepted:
+        assert build_day().overtime_hours == 0
+    else:
+        with pytest.raises(ValidationError, match='cannot exceed the due hours'):
+            build_day()
