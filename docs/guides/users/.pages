@@ -2,5 +2,5 @@ title: User Guide
 nav:
   - index.md
   - timesheet
-  - missions.md
+  - missions
   - availability.md

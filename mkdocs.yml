@@ -116,6 +116,7 @@ plugins:
         'guides/developers/pipeline.md': 'guides/developers/release.md'
         'guides/developers/contributing/bump.md': 'guides/developers/release.md'
         'wiki/ReleaseWorkflow.md': 'guides/developers/release.md'
+        'guides/users/missions-admin.md': 'guides/users/missions/admin.md'
   - include-markdown:
       encoding: ascii
       preserve_includer_indent: false

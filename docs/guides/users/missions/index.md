@@ -36,14 +36,14 @@ The page has two tabs:
 You see your own missions only, unless you have been granted access to other people's
 missions.
 
-![Missions list](./assets/missions-list.png){ style="width:80%; display:block; margin:auto;" }
+![Missions list](../assets/missions-list.png){ style="width:80%; display:block; margin:auto;" }
 
 ## Create a mission
 
 Click **+ Add mission** (top right of the *Trasferte* tab; the button is not shown on
 small screens) and fill in the *Create Mission* form:
 
-![Create Mission form](./assets/missions-create.png){ style="width:80%; display:block; margin:auto;" }
+![Create Mission form](../assets/missions-create.png){ style="width:80%; display:block; margin:auto;" }
 
 | Field                  | What to enter                                                                                       |
 |------------------------|-----------------------------------------------------------------------------------------------------|
@@ -65,7 +65,7 @@ in the *Number* column.
 
 Open the mission and click **+ Add Expense**. Click an existing row to change it.
 
-![Draft mission](./assets/missions-draft.png){ style="width:80%; display:block; margin:auto;" }
+![Draft mission](../assets/missions-draft.png){ style="width:80%; display:block; margin:auto;" }
 
 Each expense has:
 
@@ -79,7 +79,7 @@ Each expense has:
 | *Importo* and currency | The amount as shown on the receipt, in the currency you paid in                                  |
 | *Allegato*            | A photo or scan of the receipt                                                                    |
 
-![Add Expense form](./assets/missions-expense.png){ style="width:80%; display:block; margin:auto;" }
+![Add Expense form](../assets/missions-expense.png){ style="width:80%; display:block; margin:auto;" }
 
 Leave the reimbursement amount empty: it is calculated by the system (see
 [How much you get back](#how-much-you-get-back)) and, when needed, adjusted by a mission
@@ -112,7 +112,7 @@ On submission:
 - the mission gets its **number**, per year and starting again from 1 every year;
 - the title is generated, if you left it empty.
 
-![Submitted mission](./assets/missions-submitted.png){ style="width:80%; display:block; margin:auto;" }
+![Submitted mission](../assets/missions-submitted.png){ style="width:80%; display:block; margin:auto;" }
 
 You cannot cancel a mission or bring it back to Draft yourself: ask an administrator.
 
@@ -134,7 +134,7 @@ The amount is calculated when the expense is included in a reimbursement, or ear
 you attach a receipt or change the payment type. A mission manager can override it in the
 administration pages, for instance to refund only part of an expense; the value they set
 is kept. The detailed rules are in
-[Reimbursement amount](../../glossary/terms/Expense.md#reimbursement-amount).
+[Reimbursement amount](../../../glossary/terms/Expense.md#reimbursement-amount).
 
 ## Reimbursement
 
@@ -158,4 +158,6 @@ included in a following reimbursement.
 | Mission / expense manager                 | view, change, delete           | view, change, delete                 |
 
 For the full rules see the glossary pages <glossary:Mission>, <glossary:Expense> and
-<glossary:Reimbursement>, and [the reimbursement process](../../missions/index.md).
+<glossary:Reimbursement>, and [the reimbursement process](../../../missions/index.md).
+Mission managers will find their operations in
+[Missions - Admin console](admin.md).
