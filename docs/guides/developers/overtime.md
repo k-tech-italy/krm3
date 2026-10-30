@@ -15,7 +15,7 @@ Overtime is calculated from the hours actually worked in TaskEntry records minus
 
 A requested holiday or sickness is a whole-day absence and cannot coexist with task hours, so overtime is zero for those days.
 
-Leave, special leave, and rest do not directly prevent overtime. When they coexist with task hours, overtime is still calculated from Worked Hours minus Due Hours.
+Leave, special leave and rest cover part of the Due Hours: when they are logged, Worked Hours plus those hours cannot exceed the Due Hours, so overtime is zero for those days. The limit is enforced by `DayEntry` validation (`_verify_no_overtime_during_partial_absence`), whichever of task hours or absence hours is recorded first.
 
 ### Bank Hours impact
 Bank transactions are stored as a signed `DayEntry.bank` value: positive values are deposits and negative values are withdrawals. The bank value is used when validating effective hours; overtime itself is recalculated from the worked hours recorded in `TaskEntry` records minus the due hours for the day.

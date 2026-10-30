@@ -19,3 +19,10 @@ _Django Model: core.TaskEntry_
 - `day_shift_hours`, `night_shift_hours`, `travel_hours`, and `on_call_hours`: Hours recorded for this Task on that day.
 - `comment`: An optional note about the entry.
 - `metadata`: Additional structured data associated with the entry.
+
+## Rules
+
+- The hours of a day can exceed its due hours: the hours above them are overtime, except those deposited to the <glossary:BankOfHours>.
+- At most 16 day shift hours, 8 night shift hours and 24 total hours per day.
+- When the <glossary:DayEntry> has leave, special leave or rest hours, the worked hours (day shift, night shift and travel) plus those hours cannot exceed the due hours.
+- No hours can be recorded on a requested holiday or sick day.

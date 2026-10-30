@@ -12,6 +12,8 @@ The values appear in the daily entries and in the [Timesheet Report](timesheet_r
 - Task hours can be recorded on a non-working day by selecting that day individually. When multiple dates are selected, non-working days are skipped.
 - A requested holiday cannot be recorded on a public holiday.
 - Holiday and Sick day are whole-day and exclusive: no other day or task entries are allowed for the day, including bank hours movements.
+- Task hours can exceed the _Due Hours_: the hours above them are _Overtime_ (see below), except those deposited to the Bank of Hours.
+- When leave, special leave or rest hours are logged for the day, _Worked Hours_ plus those hours cannot exceed the _Due Hours_.
 
 ## Is Holiday
 
@@ -59,7 +61,7 @@ Additional rules:
 - Overtime is always 0 if `Contract.overtime` is False.
 - Hours deposited to the Bank of Hours are not overtime: e.g. with 4 _Due Hours_, 5 worked hours and 1 hour
   deposited, _Overtime_ = 0.
-- Leave, special leave, rest, and bank withdrawals do not directly affect overtime.
+- Leave, special leave, rest and bank withdrawals result in zero overtime: when any of them is logged for the day, _Worked Hours_ plus those hours cannot exceed the _Due Hours_.
 - A requested holiday or sickness results in zero overtime because these whole-day absences cannot coexist with task hours.
 
 ## Meal Voucher

@@ -916,3 +916,18 @@ def test_task_entry_delete_returns_bad_request_and_rolls_back_when_bank_deposit_
     day_entry.refresh_from_db()
     assert day_entry.bank == 8
     assert day_entry.day_hours == 16
+
+
+@override_config(
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0})
+)
+def test_accepts_task_hours_above_due_hours_as_overtime(api_client):
+    entry_date = date(2024, 1, 2)
+    task = TaskFactory(period=(entry_date, None), contract=True)
+
+    response = _post_task_entry(api_client, task, entry_date, day_shift_hours=10)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    day_entry = DayEntry.objects.get(resource=task.resource, day=entry_date)
+    assert day_entry.due_hours == Decimal(8)
+    assert day_entry.overtime_hours == Decimal(2)

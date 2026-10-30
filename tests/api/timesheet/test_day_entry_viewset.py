@@ -906,3 +906,37 @@ def test_bulk_update_bank_recalculates_overtime_and_meal_voucher(
     assert day_entry.bank == Decimal(bank)
     assert day_entry.overtime_hours == expected_overtime
     assert day_entry.meal_voucher == expected_meal_voucher
+
+
+@pytest.mark.parametrize(
+    'absence',
+    (
+        pytest.param({'leave_hours': 2}, id='leave'),
+        pytest.param({'rest_hours': 2}, id='rest'),
+    ),
+)
+@pytest.mark.parametrize(
+    ('worked_hours', 'expected_status'),
+    (
+        pytest.param(6, status.HTTP_200_OK, id='up-to-due-hours'),
+        pytest.param(8, status.HTTP_400_BAD_REQUEST, id='above-due-hours'),
+    ),
+)
+def test_limits_partial_absence_to_hours_not_worked(absence, worked_hours, expected_status, api_client):
+    day_entry = DayEntryFactory(due_hours=8, day_hours=worked_hours)
+    TaskEntryFactory(resource=day_entry.resource, day_entry=day_entry, day_shift_hours=worked_hours)
+
+    response = api_client(user=day_entry.resource.user).post(
+        _url(),
+        data={
+            'resource': day_entry.resource_id,
+            'dates': [day_entry.day.isoformat()],
+            **absence,
+        },
+        format='json',
+    )
+
+    assert response.status_code == expected_status
+    day_entry.refresh_from_db()
+    (field, hours), = absence.items()
+    assert getattr(day_entry, field) == (hours if expected_status == status.HTTP_200_OK else 0)

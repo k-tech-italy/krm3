@@ -7,6 +7,8 @@ Click + symbol under the designated day and you will be presented with a popup:
 
 If you wish to add anything different from the, 2h, 4h or 8h selection, from the popup box, then click More. This allows you to add, in increments of 0.25 hours, you can also add a comment, for the amendment. Once you are happy, then click Save, or cancel or delete, if not.
 
+You can record more hours than the hours due for the day: the extra hours count as overtime. On a day with leave or rest hours, the task hours cannot exceed the due hours not covered by the leave or rest. On a requested holiday or sick day no task hours can be recorded.
+
 ![Add custom hours](../assets/2025-07-08-13-53-48-image.png){ style="width:60%; display:block; margin:auto;" }
 
 

@@ -764,6 +764,25 @@ class DayEntry(CleanValidatorsMixin, models.Model):
                 code='multiple_absence_kind',
             )
 
+    def _verify_no_task_hours_during_full_day_absence(self) -> None:
+        if (self.asked_holiday or self.is_sick) and (self.worked_hours > 0 or self.on_call_hours > 0):
+            raise ValidationError(
+                _('Task hours cannot be recorded on a sick day or requested holiday.'),
+                code='task_hours_during_full_day_absence',
+            )
+
+    def _verify_no_overtime_during_partial_absence(self) -> None:
+        """Leave, special leave and rest cover part of the due hours: task hours cannot exceed the rest of them."""
+        has_partial_absence = self.is_leave or self.is_special_leave or self.is_rest
+        if has_partial_absence and self.worked_hours > 0 and self.effective_hours > self.due_hours:
+            raise ValidationError(
+                _(
+                    'Total hours ({hours}) cannot exceed the due hours ({due_hours}) '
+                    'when leave, special leave or rest hours are logged.'
+                ).format(hours=self.effective_hours, due_hours=self.due_hours),
+                code='overtime_during_partial_absence',
+            )
+
     def _verify_holiday_request(self) -> None:
         if self.is_holiday and self.asked_holiday:
             raise ValidationError(
