@@ -19,7 +19,7 @@ user, so you may not see all of them.
 | You are...                      | Start from                                                                       |
 |---------------------------------|----------------------------------------------------------------------------------|
 | An employee using KRM3          | The [User Guide](guides/users/index.md), then [Key Concepts](guides/users/key-concepts.md) |
-| A manager or administrator      | The [Glossary](glossary/index.md) for the business rules, and the [missions and reimbursements process](missions/index.md) |
+| A manager or administrator      | The [Glossary](glossary/index.md) for the business rules, the [missions and reimbursements process](missions/index.md) and [Missions - Admin console](guides/users/missions/admin.md) |
 | A developer                     | The [Developer Guide](guides/developers/index.md) and the [Local development setup](guides/developers/contributing/setup.md) |
 
 ## How this documentation is organised
@@ -36,6 +36,7 @@ Guide
     Key Concepts                  periods and date rules shared by all modules
     Timesheet                     filling in, submitting and reporting timesheets
     Missions                      missions, expenses and reimbursements
+      Missions - Admin console    what mission managers do in the admin console
     Availability                  who is on holiday or leave
   For Developers ................ how KRM3 is built and maintained
     Contributing                  local setup, development choices, commits
@@ -65,7 +66,7 @@ that mention it.
 
 - [For Users](guides/users/index.md): step-by-step instructions for employees, organised by
   module ([Timesheet](guides/users/timesheet/timesheet_overview.md),
-  [Missions](guides/users/missions.md), [Availability](guides/users/availability.md)). Read
+  [Missions](guides/users/missions/index.md), [Availability](guides/users/availability.md)). Read
   [Key Concepts](guides/users/key-concepts.md) first: it explains how periods and dates are
   entered throughout the application.
 - [For Developers](guides/developers/index.md): how to set up a development environment,
@@ -86,8 +87,8 @@ that mention it.
 
 The documentation lives in the `docs/` folder of the
 [KRM3 repository](https://github.com/k-tech-italy/krm3) and is built with MkDocs: a page's
-source file has the same path as its URL (e.g. `guides/users/missions/` comes from
-`docs/guides/users/missions.md`), and the edit button at the top of each page opens it on
+source file has the same path as its URL (e.g. `guides/users/availability/` comes from
+`docs/guides/users/availability.md`), and the edit button at the top of each page opens it on
 GitHub. Changes go through a pull request against `develop`.
 When you change it:
 
