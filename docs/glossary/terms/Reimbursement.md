@@ -39,8 +39,8 @@ The <glossary:Expense>s included in a reimbursement point to it through their
 Reimbursements are created **only** from the Expense admin with the *Create reimbursement*
 action:
 
-1. Select the expenses to reimburse. All of them must be not yet reimbursed and must not
-   belong to a Draft <glossary:Mission>.
+1. Select the expenses to reimburse. All of them must be not yet reimbursed and must
+   belong to a Submitted <glossary:Mission>.
 2. The preview shows the selected expenses grouped by Resource and Mission. Choose the
    `year` (it must be within the years of the selected missions) and the `month`.
 3. On confirmation **one Reimbursement per Resource** is created, numbered after the
