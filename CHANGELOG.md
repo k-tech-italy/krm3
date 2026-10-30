@@ -1,3 +1,9 @@
+## 5.0.6 (2026-10-30)
+
+### Fix
+
+- **timesheet**: enforce day hour limits on absences in DayEntry
+
 ## 5.0.5 (2026-10-30)
 
 ### Fix
