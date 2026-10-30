@@ -1,17 +1,22 @@
 nav:
     - BankOfHours.md
     - BaseCurrency.md
+    - Basket.md
     - ClosedEntry.md
     - Contract.md
     - DayEntry.md
+    - DocumentType.md
     - Expense.md
     - ExpenseCategory.md
     - ExtraHoliday.md
     - Mission.md
     - OpenEntry.md
     - PaymentType.md
+    - PO.md
+    - Project.md
     - Reimbursement.md
     - Resource.md
+    - Task.md
     - TaskEntry.md
     - TimeEntry.md
     - TimesheetSubmission.md

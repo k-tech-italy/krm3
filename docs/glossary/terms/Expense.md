@@ -91,6 +91,9 @@ base currency (`amount_base`).
     - a receipt `image` is attached to an existing expense that had none;
     - the payment type changes between personal and company;
     - the expense is included in a <glossary:Reimbursement> (admin action *Create reimbursement*).
+- A mission manager can override the amount by editing `amount_reimbursement` in the Expense
+  admin form. This is intended: since the automatic calculation only fills an empty value,
+  the override is kept (until *Recalculate reimbursement* is run on the expense).
 - Admin actions on expenses not yet reimbursed:
     - *Recalculate reimbursement* recomputes the amount, overwriting the current value;
     - *Reset reimbursement* empties it, so it is recomputed later.

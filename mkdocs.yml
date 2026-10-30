@@ -1,7 +1,7 @@
 copyright: Copyright &copy; 2020-2024 K-Tech srl.
 dev_addr: 127.0.0.1:8001
 docs_dir: docs
-edit_uri: 'blob/develop/docs/'
+edit_uri: 'edit/develop/docs/'
 repo_url: "https://github.com/k-tech-italy/krm3"
 site_author: "KRM3 Team"
 site_description: "KRM3"
@@ -66,6 +66,7 @@ theme:
   logo: _theme/img/logo.png
   user_color_mode_toggle: true
   features:
+    - content.action.edit
     - content.code.copy
     - navigation.indexes
     - navigation.instant
