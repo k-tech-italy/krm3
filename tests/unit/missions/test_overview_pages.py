@@ -5,6 +5,7 @@ rename of its ``querystring`` tag), so they are rendered end to end here.
 """
 
 import pytest
+from django.contrib.messages import get_messages
 from django.urls import reverse
 from testutils.factories import ExpenseFactory, MissionFactory, ReimbursementFactory
 
@@ -103,3 +104,26 @@ def test_overview_links_expense_image(admin_client, eur, categories, private_med
 
     assert response.status_code == 200
     assert f'href="{reverse("media-auth:expense-image", args=[expense.pk])}"' in response.content.decode()
+
+
+def test_mission_overview_updates_rates_of_unreimbursed_expenses(admin_client, eur):
+    """Already reimbursed expenses must not prevent the others from getting their amounts computed."""
+    mission = MissionFactory(default_currency=eur)
+    reimbursed = ExpenseFactory(
+        mission=mission,
+        currency=eur,
+        amount_currency=10,
+        amount_base=7,
+        amount_reimbursement=7,
+        reimbursement=ReimbursementFactory(),
+    )
+    pending = ExpenseFactory(mission=mission, currency=eur, amount_currency=20, amount_base=None)
+
+    response = admin_client.get(reverse('admin:core_mission_overview', args=[mission.pk]))
+
+    assert response.status_code == 200
+    assert not [m for m in get_messages(response.wsgi_request) if 'already reimbursed' in str(m)]
+    pending.refresh_from_db()
+    assert pending.amount_base == 20
+    reimbursed.refresh_from_db()
+    assert (reimbursed.amount_base, reimbursed.amount_reimbursement) == (7, 7)

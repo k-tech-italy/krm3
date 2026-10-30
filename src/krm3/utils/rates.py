@@ -16,18 +16,24 @@ if typing.TYPE_CHECKING:
     from krm3.core.models import Expense
 
 
-def update_rates(request: 'HttpRequest', qs: 'QuerySet[Expense]', force: bool = False) -> None:
-    """Update the Expense amount_base for the expense not already reimbursed unless force is True."""
+def update_rates(
+    request: 'HttpRequest', qs: 'QuerySet[Expense]', force: bool = False, skip_reimbursed: bool = False
+) -> None:
+    """Update the Expense amount_base for the expense not already reimbursed unless force is True.
+
+    With skip_reimbursed, already reimbursed expenses are left untouched and the others are updated.
+    """
     if qs.filter(day__gt=datetime.today()).exists():
         messages.error(request, _('Impossible to apply rate conversions for future expenses'))
         return
 
-    if qs.filter(reimbursement__isnull=False).exists():
-        if force:
-            messages.warning(request, _('Amount base recalculated'))
-        else:
+    if skip_reimbursed:
+        qs = qs.filter(reimbursement__isnull=True)
+    elif qs.filter(reimbursement__isnull=False).exists():
+        if not force:
             messages.error(request, _('Impossible to apply rate conversions for already reimbursed expenses'))
             return
+        messages.warning(request, _('Amount base recalculated'))
 
     rates_to_ensure = {}
 
@@ -36,9 +42,7 @@ def update_rates(request: 'HttpRequest', qs: 'QuerySet[Expense]', force: bool = 
         if (curr := expense.get_currency_iso3()) != settings.BASE_CURRENCY:
             rates_to_ensure.setdefault(expense.day, set()).add(curr)
 
-    rates_dict = {}
-    for day, rates in rates_to_ensure.items():
-        rates_dict[day] = Rate.for_date(day, include=rates)
+    rates_dict = {day: Rate.for_date(day, include=rates) for day, rates in rates_to_ensure.items()}
 
     try:
         for expense in qs:
