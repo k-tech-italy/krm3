@@ -20,11 +20,13 @@
 - [OpenEntry](terms/OpenEntry.md)
 ## P
 - [PaymentType](terms/PaymentType.md)
+- [PO](terms/PO.md)
 - [Project](terms/Project.md)
 ## R
 - [Reimbursement](terms/Reimbursement.md)
 - [Resource](terms/Resource.md)
 ## T
+- [Task](terms/Task.md)
 - [TaskEntry](terms/TaskEntry.md)
 - [TimeEntry](terms/TimeEntry.md)
 - [TimesheetSubmission](terms/TimesheetSubmission.md)
