@@ -234,7 +234,8 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 expenses_table = build_mission_expenses_table(request, expenses, sorting, report=True)
                 return self.export_table(mission, expenses_table, export_format, request)
 
-            update_rates(request, expenses)
+            update_rates(request, expenses, skip_reimbursed=True)
+            expenses = expenses.all()  # necessary to refresh the queryset after the update_rates
             for reimbursement in reimbursements:
                 exp_re = [e for e in expenses if e.reimbursement == reimbursement]
 
