@@ -1,3 +1,15 @@
+## 5.1.0 (2026-10-30)
+
+### Feat
+
+- **TimesheetSubmission**: Forcibly closes timesheets before 2026-10-01
+
+### Fix
+
+- **projects**: validate task period before contract coverage
+- **missions**: compute rates of unreimbursed expenses in mission overview
+- **UI-tests**: Fixed sporadic Django flush error with race conditions during UI tests
+
 ## 5.0.6 (2026-10-30)
 
 ### Fix

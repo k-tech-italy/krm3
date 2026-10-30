@@ -141,6 +141,11 @@ process (the developer guide includes it). Keep it in sync with `.github/workflo
 `prod-deploy.yml` when either changes. The version bump (`cz bump` on `develop`, tag pushed) is not optional:
 without it the deploy workflow stops because the version is already published.
 
+Release PRs (`develop` -> `master`) are merged with a merge commit (`gh pr merge <n> --merge`), never rebased:
+the *Protected main* ruleset on `master` allows merge and rebase and requires one approval (see "Branch rules" in
+RELEASE.md). Merge with `--admin` only when the user asks, and do not change repository rulesets or settings
+without the user's approval.
+
 ## Don'ts
 
 - Don't reformat whole files you are not otherwise changing (many files predate the current

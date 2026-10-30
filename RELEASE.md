@@ -11,8 +11,8 @@ AGENTS.md and the developer guide refer to this file. Releases are done by the m
     - Perform a `make refresh-fe` and `cz commit` if needed
     - run `cz bump`: it commits the new version and changelog and creates the tag;
     - push `develop` and the new tag: `git push origin HEAD --follow-tags`
-3. **Release PR**: open a PR from `develop` to `master`, describe the release in it and merge it with a
-   merge commit (not *Rebase and merge*).
+3. **Release PR**: open a PR from `develop` to `master`, describe the release in it, get it approved and merge
+   it with a merge commit (not *Rebase and merge*), see [Branch rules](#branch-rules).
 4. **Build and Deploy** (automatic, on the push to `master`): the Docker image is published to the GitHub
    Container Registry and deployed to the `krm3int` development cluster. There is no approval step.
 5. **Production**: run the **Deploy to Production** GitHub action by hand with the new version.
@@ -22,6 +22,7 @@ AGENTS.md and the developer guide refer to this file. Releases are done by the m
 - [Before you start](#before-you-start)
 - [1. Bump the version](#1-bump-the-version)
 - [2. Open and merge the release PR](#2-open-and-merge-the-release-pr)
+    - [Branch rules](#branch-rules)
 - [3. Build and Deploy (automatic)](#3-build-and-deploy-automatic)
 - [4. Deploy to production](#4-deploy-to-production)
 - [Commitizen](#commitizen)
@@ -79,6 +80,22 @@ next release PR contains only the new commits.
 Rebasing would copy the commits onto `master` with new hashes. `develop` would then no longer be part of the
 history of `master`, and the next release PR would have to replay every earlier commit again: GitHub refuses it
 with `This branch can't be rebased` once those copies conflict.
+
+### Branch rules
+
+The GitHub repository rulesets (*Settings > Rules > Rulesets*) that apply to the release:
+
+| Ruleset | Branches | Rules |
+|---|---|---|
+| **Protected main** (active) | `master`, `main` | changes only through a PR with 1 approving review; allowed merge methods: **merge** and rebase; no deletion, creation or force push; CodeQL alerts block the merge |
+| **Moderated** (active) | `develop` (default branch) | no deletion or force push; direct pushes are allowed |
+| **Master Branch** (disabled) | `master` | REBASE merge queue: keep it disabled, it would rebase release PRs |
+
+- The author cannot approve their own release PR: another maintainer approves it, or an organization admin
+  merges it without approval with `gh pr merge <number> --merge --admin`.
+- `--admin` bypasses only the review: it does not allow a merge method that the ruleset excludes. If the
+  merge fails with `Merge commits are not allowed on this repository`, the **merge** method has been removed
+  from *Protected main*: add it back rather than rebasing the release PR.
 
 ## 3. Build and Deploy (automatic)
 
@@ -157,6 +174,22 @@ workflow again.
 The release PR was set to *Rebase and merge* while `master` already holds rebased copies of some `develop`
 commits. Merge it with a merge commit instead (see
 [2. Open and merge the release PR](#2-open-and-merge-the-release-pr)).
+
+If the release PR also shows conflicts (typically on `CHANGELOG.md` and the version files), an earlier release
+was rebased: merge `master` into `develop` keeping the `develop` side, check that the files did not change, push
+`develop` and merge the release PR with a merge commit:
+
+```bash
+git switch develop && git pull
+git merge -X ours origin/master
+git diff ORIG_HEAD HEAD --stat     # must be empty: master holds nothing that develop lacks
+git push origin develop
+```
+
+### `Merge commits are not allowed on this repository`
+
+The *Protected main* ruleset no longer lists **merge** among its allowed merge methods (see
+[Branch rules](#branch-rules)). A repository admin adds it back; do not rebase the release PR.
 
 ### `cz bump` finds nothing to bump
 
