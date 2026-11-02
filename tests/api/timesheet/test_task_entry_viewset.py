@@ -142,6 +142,9 @@ def test_rejects_task_entry_ids_not_in_a_list(admin_user, api_client):
 
 def test_rejects_clearing_task_entries_from_closed_timesheet(admin_user, api_client):
     entry = TaskEntryFactory(day=date(2024, 1, 2))
+    entry.day_entry.day_hours = Decimal('8.00')
+    entry.day_entry.due_hours = Decimal('8.00')
+    entry.day_entry.save()
     TimesheetSubmissionFactory(
         resource=entry.day_entry.resource,
         period=(entry.day_entry.day, entry.day_entry.day + timedelta(days=1)),

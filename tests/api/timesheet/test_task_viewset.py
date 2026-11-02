@@ -1,4 +1,4 @@
-import datetime
+import datetime  # noqa: ICN001
 import json
 import typing
 from decimal import Decimal
@@ -34,6 +34,7 @@ class TestTaskAPIListView:
 
     def test_returns_submission_state_for_requested_period(self, admin_user, api_client):
         resource = ResourceFactory()
+        TaskFactory(resource=resource, period=(_dt('2024-01-07'), _dt('2024-01-08')), contract=True)
         TimesheetSubmissionFactory(
             resource=resource,
             period=('2024-01-01', '2024-01-08'),
@@ -100,11 +101,14 @@ class TestTaskAPIListView:
             day_shift_hours=1,
             comment='Within range',
         )
+        day_entry.day_hours = Decimal('1.00')
+        day_entry.due_hours = Decimal('3.00')
+        day_entry.save()
 
         TimesheetSubmissionFactory(
             resource=resource,
             closed=True,
-            period=(_dt('2024-01-03'), _dt('2024-01-05')),
+            period=(_dt('2024-01-03'), _dt('2024-01-04')),
         )
         TimesheetSubmissionFactory(
             resource=resource,
