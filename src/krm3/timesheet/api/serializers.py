@@ -1,4 +1,4 @@
-import datetime
+import datetime  # noqa: ICN001
 import json
 from collections.abc import Mapping
 from decimal import Decimal
@@ -824,8 +824,13 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
             super().save(**kwargs)
         except ValidationError as exc:
             raise serializers.ValidationError(_model_validation_error_detail(exc)) from exc
-        except IntegrityError as e:
-            raise serializers.ValidationError({'error': str(e)}) from e
+        except IntegrityError as exc:
+            constraint_name = getattr(getattr(exc.__cause__, 'diag', None), 'constraint_name', None)
+            if constraint_name == 'exclude_overlapping_timesheets':
+                raise serializers.ValidationError(
+                    {'error': _('A timesheet already exists for an overlapping period.')}
+                ) from exc
+            raise serializers.ValidationError({'error': str(exc)}) from exc
 
     class Meta:
         model = TimesheetSubmission

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-import datetime
+import datetime  # noqa: ICN001
 from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
@@ -179,7 +179,92 @@ class TimesheetSubmission(models.Model):
         super().clean()
         self._verify_no_later_closed_submission()
         self._verify_submission_order()
+        if self._is_being_closed():
+            self._verify_scheduled_hours_completed()
         self.timesheet = self.calculate_timesheet() if self.closed else None
+
+    def _is_being_closed(self) -> bool:
+        """Return whether this save transitions the submission to closed."""
+        if not self.closed:
+            return False
+        if not self.pk:
+            return True
+        return not TimesheetSubmission.objects.filter(pk=self.pk, closed=True).exists()
+
+    def _verify_scheduled_hours_completed(self) -> None:
+        """Reject submissions with incomplete task-covered scheduled days."""
+        from krm3.core.models import Task  # noqa: PLC0415
+
+        period_start = self._period_start(self.period)
+        period_end = self._period_end(self.period)
+        if period_end is None:
+            raise ValidationError(
+                _('The timesheet has incomplete scheduled days.'),
+                code='incomplete_scheduled_days',
+            )
+
+        tasks = Task.objects.filter(
+            resource_id=self.resource_id,
+            period__overlap=DateRange(period_start, period_end, '[)'),
+        )
+        if not tasks.exists():
+            raise ValidationError(
+                _('The timesheet has incomplete scheduled days.'),
+                code='incomplete_scheduled_days',
+            )
+        task_periods = list(tasks.values_list('period', flat=True))
+
+        entries_by_day = {
+            entry.day: entry
+            for entry in DayEntry.objects.filter(
+                resource_id=self.resource_id,
+                day__gte=period_start,
+                day__lt=period_end,
+            )
+        }
+        contracts_by_day = {
+            KTDay(day).date: contract
+            for period, contract in self.resource.get_contract_map(
+                period_start,
+                period_end - datetime.timedelta(days=1),
+            ).items()
+            for day in period
+        }
+
+        day = period_start
+        while day < period_end:
+            if not any(day in task_period for task_period in task_periods):
+                day += datetime.timedelta(days=1)
+                continue
+
+            contract = contracts_by_day.get(day)
+            required_hours = contract.get_due_hours(day) if contract else Decimal(0)
+            if required_hours == 0:
+                day += datetime.timedelta(days=1)
+                continue
+
+            entry = entries_by_day.get(day)
+            recorded_hours = Decimal(0)
+            if entry:
+                absence_hours = entry.due_hours if entry.is_sick or entry.asked_holiday else Decimal(0)
+                recorded_hours = (
+                    entry.day_hours
+                    + entry.night_hours
+                    + entry.travel_hours
+                    + entry.leave_hours
+                    + entry.special_leave_hours
+                    + entry.rest_hours
+                    + absence_hours
+                    - entry.bank
+                )
+
+            if recorded_hours < required_hours:
+                raise ValidationError(
+                    _('The timesheet has incomplete scheduled days.'),
+                    code='incomplete_scheduled_days',
+                )
+
+            day += datetime.timedelta(days=1)
 
     @staticmethod
     def _period_start(period: DateRange | list | tuple) -> datetime.date:
@@ -193,9 +278,10 @@ class TimesheetSubmission(models.Model):
             return KTDay(period[1]).date
         if period.upper is None:
             return None
+        upper = KTDay(period.upper).date
         if period.upper_inc:
-            return period.upper + datetime.timedelta(days=1)
-        return period.upper
+            return upper + datetime.timedelta(days=1)
+        return upper
 
     @staticmethod
     def _next_month(month: datetime.date) -> datetime.date:

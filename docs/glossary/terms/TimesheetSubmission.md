@@ -16,6 +16,21 @@ While the submission is closed, its entries cannot be created, edited or deleted
 
 To correct an earlier period, privileged users must reopen closed submissions in reverse chronological order. After making the correction, they must close them again in chronological order so that each snapshot is rebuilt from the previous authoritative balance.
 
+## Completeness validation
+
+Closing a submission requires at least one <glossary:Task> assigned to the Resource and overlapping the submission
+period. For every day covered by one or more assigned Tasks, the effective recorded hours must be at least the hours
+scheduled by the active <glossary:Contract>. Overlapping Tasks do not multiply the scheduled hours required for a
+day.
+
+The effective recorded hours are the sum of day shift, night shift, travel, leave, special leave and rest hours,
+minus the signed Bank of Hours movement. A requested holiday or sickness covers the day's due hours. On-call hours
+do not contribute to submission completeness.
+
+Days outside every assigned Task, days without an active Contract and days with zero due hours are not required.
+The backend performs this validation when a submission is first closed and whenever an open submission is closed
+again. Saving a submission that is already closed does not repeat the completeness validation.
+
 ## Correcting an earlier period
 
 For example, if both September and October are closed and September must be corrected:

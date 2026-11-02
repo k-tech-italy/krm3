@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
-from testutils.factories import ContractFactory, DayEntryFactory, TimesheetSubmissionFactory
+from testutils.factories import ContractFactory, DayEntryFactory, TaskFactory, TimesheetSubmissionFactory
 
 from krm3.core.models import Resource, TimesheetSubmission
 
@@ -30,6 +30,8 @@ def test_frozen_balance_excludes_the_day_after_the_period_and_is_reused(monkeypa
     _entry(resource, contract, date(2026, 9, 10), '2.00')
     _entry(resource, contract, date(2026, 9, 30), '4.00')
     _entry(resource, contract, date(2026, 10, 1), '8.00')
+    for day in (date(2026, 9, 7), date(2026, 9, 10), date(2026, 9, 30)):
+        TaskFactory(resource=resource, period=(day, day + timedelta(days=1)))
 
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     assert september.timesheet['bank_hours'] == '14.00'
@@ -52,6 +54,7 @@ def test_falls_back_to_the_full_sum_when_the_snapshot_is_legacy():
     contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
     resource = contract.resource
     _entry(resource, contract, date(2026, 9, 7), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 9, 7), date(2026, 9, 8)))
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     TimesheetSubmission.objects.filter(pk=september.pk).update(timesheet={'days': {}})
 
@@ -74,6 +77,7 @@ def test_closed_snapshot_is_authoritative_despite_earlier_open_entries():
     resource = contract.resource
     _entry(resource, contract, date(2026, 8, 15), '5.00')
     _entry(resource, contract, date(2026, 9, 7), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 9, 7), date(2026, 9, 8)))
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     TimesheetSubmission.objects.filter(pk=september.pk).update(
         timesheet={**september.timesheet, 'bank_hours': '20.00'}
@@ -88,6 +92,7 @@ def test_reopened_timesheet_is_not_used_as_a_watermark():
     contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
     resource = contract.resource
     _entry(resource, contract, date(2026, 9, 7), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 9, 7), date(2026, 9, 8)))
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     assert september.timesheet['bank_hours'] == '8.00'
 
@@ -103,6 +108,8 @@ def test_later_timesheet_builds_on_the_earlier_frozen_balance():
     resource = contract.resource
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     _entry(resource, contract, date(2026, 10, 5), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 9, 7), date(2026, 9, 8)))
+    TaskFactory(resource=resource, period=(date(2026, 10, 5), date(2026, 10, 6)))
 
     _close(resource, ('2026-09-01', '2026-10-01'))
     october = _close(resource, ('2026-10-01', '2026-11-01'))
@@ -115,8 +122,10 @@ def test_later_closed_submission_must_be_reopened_before_an_earlier_one():
     contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 11, 1)))
     resource = contract.resource
     september_entry = _entry(resource, contract, date(2026, 9, 7), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 9, 7), date(2026, 9, 8)))
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     _entry(resource, contract, date(2026, 10, 5), '8.00')
+    TaskFactory(resource=resource, period=(date(2026, 10, 5), date(2026, 10, 6)))
     october = _close(resource, ('2026-10-01', '2026-11-01'))
 
     september.closed = False
