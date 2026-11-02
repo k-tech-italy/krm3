@@ -1,15 +1,13 @@
 import typing
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from testutils.factories import (
     ContractFactory,
-    DayEntryFactory,
     GroupFactory,
     ResourceFactory,
-    TaskFactory,
     TimesheetSubmissionFactory,
     UserFactory,
 )
@@ -19,27 +17,6 @@ from krm3.core.models import TimesheetSubmission
 
 if typing.TYPE_CHECKING:
     from krm3.core.models import Resource
-
-
-def _prepare_complete_timesheet(resource, start: date, end: date):
-    schedule = {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}
-    contract = ContractFactory(
-        resource=resource,
-        period=(start, end + timedelta(days=1)),
-        working_schedule=schedule,
-    )
-    TaskFactory(resource=resource, period=contract.period)
-    day = start
-    while day <= end:
-        due_hours = contract.get_due_hours(day)
-        DayEntryFactory(
-            resource=resource,
-            contract=contract,
-            day=day,
-            day_hours=due_hours,
-            due_hours=due_hours,
-        )
-        day += timedelta(days=1)
 
 
 @pytest.fixture
@@ -94,7 +71,6 @@ class TestTimesheetSubmissionModelAPIListView:
                 user = group_manager
 
         resource: Resource = ResourceFactory(user=regular_user)
-        _prepare_complete_timesheet(resource, date(2024, 1, 1), date(2024, 1, 7))
         response = api_client(user=user).post(
             self.url(), data={'resource': resource.pk, 'period': ('2024-01-01', '2024-01-07')}, format='json'
         )
@@ -128,12 +104,7 @@ class TestTimesheetSubmissionModelAPIListView:
     ):
         user = regular_user if who == 'regular' else viewer
         resource = ResourceFactory(user=user)
-        TaskFactory(resource=resource, period=(date(2024, 1, 7), date(2024, 1, 8)), contract=True)
-        submission = TimesheetSubmissionFactory(
-            resource=resource,
-            period=(date(2024, 1, 7), date(2024, 1, 8)),
-            closed=True,
-        )
+        submission = TimesheetSubmissionFactory(resource=resource, closed=True)
         client = api_client(user=user)
 
         if method == 'delete':
@@ -150,13 +121,7 @@ class TestTimesheetSubmissionModelAPIListView:
         assert submission.closed is True
 
     def test_manager_can_reopen_submission(self, api_client, manager):
-        resource = ResourceFactory()
-        TaskFactory(resource=resource, period=(date(2024, 1, 7), date(2024, 1, 8)), contract=True)
-        submission = TimesheetSubmissionFactory(
-            resource=resource,
-            period=(date(2024, 1, 7), date(2024, 1, 8)),
-            closed=True,
-        )
+        submission = TimesheetSubmissionFactory(closed=True)
 
         response = api_client(user=manager).patch(
             self.url(submission.pk),
@@ -174,8 +139,6 @@ class TestTimesheetSubmissionModelAPIListView:
     )
     def test_manager_cannot_change_submission_before_a_later_closed_one(self, method, api_client, manager):
         resource = ResourceFactory()
-        TaskFactory(resource=resource, period=(date(2026, 9, 6), date(2026, 9, 7)), contract=True)
-        TaskFactory(resource=resource, period=(date(2026, 10, 4), date(2026, 10, 5)), contract=True)
         september = TimesheetSubmissionFactory(
             resource=resource,
             period=('2026-09-01', '2026-10-01'),
@@ -200,7 +163,6 @@ class TestTimesheetSubmissionModelAPIListView:
     def test_cannot_submit_after_a_missing_contracted_month(self, api_client, manager):
         resource = ResourceFactory()
         ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 4, 1)))
-        TaskFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 1, 2)))
         TimesheetSubmissionFactory(
             resource=resource,
             period=('2026-01-01', '2026-02-01'),
@@ -234,7 +196,7 @@ class TestTimesheetSubmissionModelAPIListView:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-        timesheet: TimesheetSubmission = TimesheetSubmissionFactory(closed=False)
+        timesheet: TimesheetSubmission = TimesheetSubmissionFactory()
         ResourceFactory(user=user)
         response = api_client(user=user).put(
             self.url(timesheet.resource_id),
@@ -315,28 +277,30 @@ class TestTimesheetSubmissionModelAPIListView:
                 user = viewer
 
         resource: Resource = ResourceFactory(user=regular_user)
-        own_ts = TimesheetSubmissionFactory(resource=resource, closed=False)
-        other_ts = TimesheetSubmissionFactory(closed=False)
+        own_ts = TimesheetSubmissionFactory(resource=resource)
+        other_ts = TimesheetSubmissionFactory()
         expected = {own_ts.id} if result == 'own' else {own_ts.id, other_ts.id}
 
         response = api_client(user=user).get(self.url())
         assert response.status_code == status.HTTP_200_OK
         assert {r['id'] for r in response.data['results']} == expected
 
-    def test_rejects_overlapping_timesheet_with_clear_error(self, api_client, regular_user):
+    def test_integrity_error_on_timesheet_creation(self, api_client, regular_user):
         resource: Resource = ResourceFactory(user=regular_user)
-        _prepare_complete_timesheet(resource, date(2024, 1, 1), date(2024, 1, 15))
         # create and existing TimesheetSubmission with the same resource and overlapping period
         TimesheetSubmissionFactory(resource=resource, period=('2024-01-01', '2024-01-07'))
         response = api_client(user=regular_user).post(
             self.url(), data={'resource': resource.pk, 'period': ('2024-01-06', '2024-01-15')}, format='json'
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json() == {'error': 'A timesheet already exists for an overlapping period.'}
+        assert response.json() == {
+            'error': 'conflicting key value violates exclusion constraint "exclude_overlapping_timesheets"\n'
+            f'DETAIL:  Key (period, resource_id)=([2024-01-06,2024-01-16), {resource.pk})'
+            f' conflicts with existing key (period, resource_id)=([2024-01-01,2024-01-07), {resource.pk}).'
+        }
 
     def test_resubmit_open_timesheet(self, api_client, regular_user):
         resource: Resource = ResourceFactory(user=regular_user)
-        _prepare_complete_timesheet(resource, date(2024, 1, 1), date(2024, 1, 7))
         # create and existing TimesheetSubmission with the same resource and overlapping period
         ts: TimesheetSubmission = TimesheetSubmissionFactory(
             resource=resource, period=('2024-01-01', '2024-01-08'), closed=False
@@ -348,52 +312,3 @@ class TestTimesheetSubmissionModelAPIListView:
         assert response.status_code == status.HTTP_201_CREATED
         ts = TimesheetSubmission.objects.get(pk=response.data['id'])
         assert ts.timesheet is not None
-
-    def test_rejects_incomplete_submission(self, api_client, regular_user):
-        resource = ResourceFactory(user=regular_user)
-        contract = ContractFactory(
-            resource=resource,
-            period=(date(2026, 9, 1), date(2026, 9, 2)),
-            working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
-        )
-        TaskFactory(resource=resource, period=contract.period)
-        DayEntryFactory(
-            resource=resource,
-            contract=contract,
-            day=date(2026, 9, 1),
-            day_hours=7,
-            due_hours=8,
-        )
-
-        response = api_client(user=regular_user).post(
-            self.url(),
-            data={'resource': resource.pk, 'period': ('2026-09-01', '2026-09-01')},
-            format='json',
-        )
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'__all__': ['The timesheet has incomplete scheduled days.']}
-
-    def test_accepts_complete_submission(self, api_client, regular_user):
-        resource = ResourceFactory(user=regular_user)
-        contract = ContractFactory(
-            resource=resource,
-            period=(date(2026, 9, 1), date(2026, 9, 2)),
-            working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
-        )
-        TaskFactory(resource=resource, period=contract.period)
-        DayEntryFactory(
-            resource=resource,
-            contract=contract,
-            day=date(2026, 9, 1),
-            day_hours=8,
-            due_hours=8,
-        )
-
-        response = api_client(user=regular_user).post(
-            self.url(),
-            data={'resource': resource.pk, 'period': ('2026-09-01', '2026-09-01')},
-            format='json',
-        )
-
-        assert response.status_code == status.HTTP_201_CREATED

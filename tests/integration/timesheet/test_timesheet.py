@@ -741,18 +741,13 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
     contract = ContractFactory(resource=resource)
-    TaskFactory(
-        resource=resource,
-        period=(_dt('2025-07-04'), _dt('2025-07-05')),
-    )
+    TaskFactory(resource=resource, contract=contract)
 
-    due_hours = contract.get_due_hours(_dt('2025-07-04'))
     day_entry = DayEntryFactory(
         resource=resource,
         contract=contract,
         day=_dt('2025-07-04'),
-        due_hours=due_hours,
-        day_hours=due_hours,
+        due_hours=contract.get_due_hours(_dt('2025-07-04')),
         closed=True,
     )
 

@@ -8,7 +8,6 @@ from testutils.factories import (
     DayEntryFactory,
     ResourceFactory,
     SpecialLeaveReasonFactory,
-    TaskFactory,
     TimesheetSubmissionFactory,
 )
 
@@ -70,7 +69,6 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_submitted(
         due_hours=8,
         is_sick=True,
     )
-    TaskFactory(resource=resource, period=(_dt('2026-03-03'), _dt('2026-03-04')))
     TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
     browser.login_as_user(regular_user)
 
@@ -121,7 +119,6 @@ def test_special_leave_reason_is_visible_in_report_while_submitted(
         special_leave_reason=special_leave_reason,
         resource=resource,
     )
-    TaskFactory(resource=resource, period=(_dt('2026-03-02'), _dt('2026-03-03')))
     TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
     browser.login_as_user(regular_user)
 

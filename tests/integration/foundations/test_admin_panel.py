@@ -503,26 +503,25 @@ def test_contract_document_validation_pdf_only(browser: 'AppTestBrowser', admin_
     finally:
         os.unlink(tmp_file_path)
 
-
 @pytest.fixture
 def submissions():
     return {
         'january': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 1, 1), datetime.date(2026, 2, 1)),
-            closed=False,
+            closed=True,
         ),
         'february': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 2, 1), datetime.date(2026, 3, 1)),
-            closed=False,
+            closed=True,
         ),
         'march': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 3, 1), datetime.date(2026, 4, 1)),
-            closed=False,
+            closed=True,
         ),
         'mid_month': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 3, 15), datetime.date(2026, 4, 16)),
             resource=ResourceFactory(),
-            closed=False,
+            closed=True,
         ),
     }
 
