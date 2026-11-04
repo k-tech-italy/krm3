@@ -66,7 +66,7 @@ Additional rules:
 
 ## Meal Voucher
 
-To earn a meal voucher, the Resource must have the "meal_voucher" schedule set in the Contract. Eligible hours are _Day shift hours_, _Night shift hours_, _Travel hours_, and hours withdrawn from the Bank of Hours. A voucher is granted when eligible hours reach the threshold specified in the schedule for the day. Bank deposits and _On Call Hours_ do not count.
+To earn a meal voucher, the Resource must have the "meal_voucher" schedule set in the Contract. Eligible hours are _Day shift hours_, _Night shift hours_ and _Travel hours_, plus hours withdrawn from the Bank of Hours, minus hours deposited to it. A voucher is granted when eligible hours reach the threshold specified in the schedule for the day. _On Call Hours_ do not count. E.g. with a threshold of 4 hours, working 6 hours on a Sunday and depositing all 6 to the bank earns no voucher; depositing 2 of them leaves 4 eligible hours and earns one.
 
 ## Bank of Hours
 

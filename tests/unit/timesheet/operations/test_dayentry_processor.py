@@ -91,11 +91,11 @@ def test_add_del_task(contract, tasks):
     [
         ('2023-01-02', 6, -2, 1),
         ('2023-01-03', 0, -8, 1),
-        ('2023-01-04', 8, 2, 1),
+        ('2023-01-04', 8, 2, 0),
         ('2023-01-05', 6, 2, 0),
     ],
 )
-def test_meal_voucher_counts_only_bank_withdrawals(  # noqa: PLR0917
+def test_meal_voucher_counts_bank_movements(  # noqa: PLR0917
     contract, tasks, day, worked_hours, bank, expected_meal_voucher
 ):
     contract.working_schedule = {'mon': 8, 'tue': 8, 'wed': 4, 'thu': 4, 'fri': 4, 'sat': 0, 'sun': 0}
@@ -104,6 +104,27 @@ def test_meal_voucher_counts_only_bank_withdrawals(  # noqa: PLR0917
 
     day_entry = DayEntryProcessor(resource=contract.resource, day=_dt(day)).build_day(
         task_entries=[{'task': tasks[0], 'day_shift_hours': worked_hours}] if worked_hours else [],
+        bank=bank,
+    )
+
+    assert day_entry.meal_voucher == expected_meal_voucher
+
+
+@pytest.mark.parametrize(
+    ('day', 'worked_hours', 'bank', 'expected_meal_voucher'),
+    [
+        pytest.param('2023-01-08', 6, 6, 0, id='holiday-all-hours-deposited'),
+        pytest.param('2023-01-08', 6, 4, 1, id='holiday-remaining-hours-reach-threshold'),
+        pytest.param('2023-01-08', 6, 5, 0, id='holiday-remaining-hours-below-threshold'),
+        pytest.param('2023-01-04', 5, 1, 1, id='workday-remaining-hours-reach-threshold'),
+    ],
+)
+def test_meal_voucher_deducts_bank_deposits(  # noqa: PLR0917
+    contract, tasks, day, worked_hours, bank, expected_meal_voucher
+):
+    # thresholds: 2 hours on Sunday (the contract's holiday) and on Wednesday
+    day_entry = DayEntryProcessor(resource=contract.resource, day=_dt(day)).build_day(
+        task_entries=[{'task': tasks[0], 'day_shift_hours': worked_hours}],
         bank=bank,
     )
 
