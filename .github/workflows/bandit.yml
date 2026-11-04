@@ -36,7 +36,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.3.0
+
+    # Runs Bandit directly: PyCQA/bandit-action@v1.0.1 hard-codes Python 3.9, which is not available on ubuntu-latest
+    # (26.04). Same behaviour as the action: findings go to the SARIF report, they do not fail the job.
     - name: Perform Bandit Analysis
-      uses: PyCQA/bandit-action@v1.0.1
+      run: >-
+        uvx --python 3.12 --from 'bandit[sarif,toml]'
+        bandit -x .svn,CVS,.bzr,.hg,.git,__pycache__,.tox,.eggs,*.egg
+        -r src/krm3 -f sarif -o results.sarif || true
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v4
       with:
-        targets: "src/krm3"
+        sarif_file: results.sarif
