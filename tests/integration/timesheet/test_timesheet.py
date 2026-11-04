@@ -18,6 +18,7 @@ from testutils.factories import (
     TaskFactory,
     TaskEntryFactory,
     TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
 )
 
 if typing.TYPE_CHECKING:
@@ -740,8 +741,9 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
 ):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    contract = ContractFactory(resource=resource)
-    TaskFactory(resource=resource, contract=contract)
+    period = (_dt('2025-07-01'), _dt('2025-07-31'))
+    contract = create_contract_without_scheduled_hours(resource, period)
+    TaskFactory(resource=resource, contract=contract, period=contract.period)
 
     day_entry = DayEntryFactory(
         resource=resource,
@@ -754,7 +756,7 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     submission = TimesheetSubmissionFactory(
         resource=resource,
         closed=True,
-        period=(_dt('2025-07-01'), _dt('2025-07-31')),
+        period=period,
     )
     type(day_entry).objects.filter(pk=day_entry.pk).update(timesheet=submission)
 
