@@ -1,3 +1,9 @@
+## 5.1.1 (2026-11-04)
+
+### Fix
+
+- **timesheet**: deduct bank deposits from worked hours for the meal voucher
+
 ## 5.1.0 (2026-10-30)
 
 ### Feat

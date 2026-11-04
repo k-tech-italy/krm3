@@ -51,7 +51,7 @@ Following rows (see [Definitions for each calendar Day](#definitions-for-each-ca
 - Sick: The number of hours (equivalent to the expected Due Hours) the Resource was sick in the day.
 - Rest: The number of hours the Resource was on rest in the day.
 - Overtime: The number of hours the Resource earned as overtime in the day (see [Overtime Calculations](rules.md#overtime)).
-- Meal Voucher: 1 if worked hours plus hours withdrawn from the Bank of Hours reach the Contract's meal-voucher threshold for the day. Bank deposits and On Call Hours do not count (see [Meal Voucher Calculations](rules.md#meal-voucher)).
+- Meal Voucher: 1 if worked hours, plus hours withdrawn from and minus hours deposited to the Bank of Hours, reach the Contract's meal-voucher threshold for the day. On Call Hours do not count (see [Meal Voucher Calculations](rules.md#meal-voucher)).
 
 ## Calculated properties:
 
