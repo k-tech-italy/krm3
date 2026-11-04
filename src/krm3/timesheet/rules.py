@@ -352,7 +352,9 @@ class TimesheetRule:
 
         worked_hours = safe_dec(utils.worked_hours(time_entries))
         special_hours = safe_dec(utils.special_hours(time_entries))
-        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours:
+        # withdrawals from the bank are already in the worked hours, deposits are deducted from them
+        bank_deposit = max(safe_dec(base['bank']), Decimal(0))
+        if meal_voucher_threshold and meal_voucher_threshold <= worked_hours - bank_deposit:
             base['meal_voucher'] = 1
 
         regular_hours = safe_dec(utils.regular_hours(time_entries, safe_dec(due_hours)))

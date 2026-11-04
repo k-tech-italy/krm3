@@ -548,8 +548,8 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     def refresh_derived_hours(self) -> None:
         """Recalculate the meal voucher and overtime from the worked hours and the bank movement."""
         if meal_threshold := self.contract.meal_threshold(self.day):
-            bank_withdrawal = max(-Decimal(self.bank), Decimal(0))
-            eligible_hours = self.worked_hours + bank_withdrawal
+            # withdrawals from the bank count as worked hours, deposits are deducted from them
+            eligible_hours = self.worked_hours - Decimal(self.bank)
             self.meal_voucher = 1 if eligible_hours >= meal_threshold else 0
         else:
             self.meal_voucher = 0

@@ -199,3 +199,36 @@ def test_calculate_from_ods(due_hours, meal_threshold, time_entries, expected, d
     result = TimesheetRule.calculate(False, due_hours, meal_threshold, time_entries)
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ('day_shift_hours', 'bank_to', 'bank_from', 'expected_meal_voucher'),
+    [
+        pytest.param(6, 6, None, None, id='all-hours-deposited'),
+        pytest.param(6, 2, None, 1, id='remaining-hours-reach-threshold'),
+        pytest.param(6, 3, None, None, id='remaining-hours-below-threshold'),
+        pytest.param(2, None, 2, 1, id='withdrawal-reaches-threshold'),
+        pytest.param(6, 4, 2, 1, id='net-deposit-leaves-threshold'),
+    ],
+)
+def test_calculate_meal_voucher_deducts_bank_deposits(day_shift_hours, bank_to, bank_from, expected_meal_voucher):
+    time_entry = TimeEntryMock(
+        date=_dt('2020-04-12'),
+        protocol_number=None,
+        bank_to=to_decimal(bank_to) if bank_to else None,
+        bank_from=to_decimal(bank_from) if bank_from else None,
+        day_shift_hours=to_decimal(day_shift_hours),
+        night_shift_hours=None,
+        on_call_hours=None,
+        travel_hours=None,
+        holiday_hours=None,
+        leave_hours=None,
+        rest_hours=None,
+        sick_hours=None,
+        special_leave_reason=None,
+        special_leave_hours=None,
+    )
+
+    result = TimesheetRule.calculate(False, Decimal(0), Decimal(4), [time_entry])
+
+    assert result['meal_voucher'] == expected_meal_voucher
