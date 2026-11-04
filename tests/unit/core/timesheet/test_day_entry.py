@@ -98,6 +98,40 @@ def test_effective_hours_include_absences_and_bank_operations():
 
 
 @pytest.mark.parametrize(
+    ('entry_data', 'expected'),
+    (
+        pytest.param({'day_hours': '8.00'}, '0.00', id='day-hours-complete'),
+        pytest.param({'day_hours': '6.00'}, '2.00', id='day-hours-incomplete'),
+        pytest.param({'day_hours': '5.00', 'leave_hours': '3.00'}, '0.00', id='leave-hours'),
+        pytest.param(
+            {'day_hours': '4.00', 'night_hours': '2.00', 'travel_hours': '2.00'},
+            '0.00',
+            id='worked-hours',
+        ),
+        pytest.param({'leave_hours': '8.00'}, '0.00', id='full-day-leave'),
+        pytest.param({'special_leave_hours': '8.00'}, '0.00', id='full-day-special-leave'),
+        pytest.param({'rest_hours': '8.00'}, '0.00', id='full-day-rest'),
+        pytest.param({'is_sick': True}, '0.00', id='sick'),
+        pytest.param({'asked_holiday': True}, '0.00', id='requested-holiday'),
+        pytest.param({'day_hours': '6.00', 'bank': '-2.00'}, '0.00', id='bank-withdrawal'),
+        pytest.param({'day_hours': '8.00', 'bank': '2.00'}, '2.00', id='bank-deposit'),
+        pytest.param({'day_hours': '10.00'}, '0.00', id='hours-above-due'),
+    ),
+)
+def test_remaining_hours_include_all_hours_covering_the_workday(entry_data, expected):
+    decimal_entry_data = {}
+    for field, value in entry_data.items():
+        decimal_entry_data[field] = Decimal(value) if isinstance(value, str) else value
+
+    day_entry = DayEntryFactory.build(
+        due_hours=Decimal('8.00'),
+        **decimal_entry_data,
+    )
+
+    assert day_entry.remaining_hours == Decimal(expected)
+
+
+@pytest.mark.parametrize(
     ('worked_hours', 'bank', 'due_hours', 'expected'),
     (
         pytest.param('2.00', '4.00', '8.00', '0.00', id='minimum-zero'),

@@ -179,7 +179,18 @@ class TimesheetSubmission(models.Model):
         super().clean()
         self._verify_no_later_closed_submission()
         self._verify_submission_order()
+        if self._is_being_closed():
+            self._verify_scheduled_hours_completed()
         self.timesheet = self.calculate_timesheet() if self.closed else None
+
+    def _is_being_closed(self) -> bool:
+        """Return whether this save creates a closed submission or closes an open one."""
+        if not self.closed:
+            return False
+        if not self.pk:
+            return True
+        stored_closed = TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first()
+        return stored_closed is not True
 
     @staticmethod
     def _period_start(period: DateRange | list | tuple) -> datetime.date:
@@ -200,6 +211,55 @@ class TimesheetSubmission(models.Model):
     @staticmethod
     def _next_month(month: datetime.date) -> datetime.date:
         return (month.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
+
+    def _verify_scheduled_hours_completed(self) -> None:
+        """Reject submissions containing incomplete scheduled workdays."""
+        start = self._period_start(self.period)
+        period_end = self._period_end(self.period)
+        if period_end is None:
+            return
+
+        last_day = KTDay(period_end).date - datetime.timedelta(days=1)
+        contract_map = self.resource.get_contract_map(start, last_day)
+        day_entries = {
+            entry.day: entry
+            for entry in DayEntry.objects.filter(
+                resource_id=self.resource_id,
+                day__range=(start, last_day),
+            )
+        }
+
+        for period, contract in contract_map.items():
+            if contract is None:
+                continue
+
+            for kt_day in period:
+                day = kt_day.date
+                due_hours = contract.get_due_hours(day)
+                if due_hours <= 0:
+                    continue
+
+                day_entry = day_entries.get(day)
+                if day_entry is None:
+                    raise ValidationError(
+                        {
+                            '__all__': ValidationError(
+                                _('The timesheet has incomplete scheduled days.'),
+                                code='incomplete_timesheet',
+                            )
+                        }
+                    )
+
+                day_entry.due_hours = due_hours
+                if day_entry.remaining_hours > 0:
+                    raise ValidationError(
+                        {
+                            '__all__': ValidationError(
+                                _('The timesheet has incomplete scheduled days.'),
+                                code='incomplete_timesheet',
+                            )
+                        }
+                    )
 
     def _verify_submission_order(self) -> None:
         """Require contracted months after the first closed submission to be submitted in chronological order."""
@@ -592,8 +652,11 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     @property
     def remaining_hours(self) -> Decimal:
-        hours = self.due_hours - self.regular_hours
-        return Decimal(max(0.0, hours))
+        if self.is_sick or self.asked_holiday:
+            return Decimal(0)
+
+        hours = Decimal(self.due_hours) - self.effective_hours
+        return max(Decimal(0), hours)
 
     @property
     def is_leave(self) -> bool:
