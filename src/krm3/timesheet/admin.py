@@ -92,6 +92,7 @@ class DayEntryAdmin(ResourceAdminMixin, ExtraButtonsMixin, AdminFiltersMixin, ad
         'travel_hours',
         'on_call_hours',
         'overtime_hours',
+        'meal_voucher_threshold',
         'meal_voucher',
     )
 

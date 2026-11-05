@@ -464,8 +464,9 @@ def test_bulk_holiday_deletes_tasks_and_refreshes_day_entry(api_client):
         travel_hours=2,
         on_call_hours=3,
         overtime_hours=1,
-        meal_voucher=1,
+        meal_voucher_threshold=6,
     )
+    assert day_entry.meal_voucher == 1
     task_entry = TaskEntryFactory(
         resource=day_entry.resource,
         day_entry=day_entry,

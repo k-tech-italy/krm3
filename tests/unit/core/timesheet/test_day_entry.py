@@ -10,6 +10,8 @@ from ktcalendars.utils import dt
 
 from testutils.factories import ContractFactory, DayEntryFactory, TaskEntryFactory, TaskFactory
 
+from krm3.core.models import DayEntry
+
 
 @pytest.mark.parametrize(
     'day, expectation',
@@ -166,6 +168,30 @@ def test_bank_deposit_is_not_overtime(worked_hours, bank, expected):
     day_entry.refresh(task_entries=None, drop_existing=False)
 
     assert day_entry.overtime_hours == expected
+
+
+@pytest.mark.parametrize(
+    ('worked_hours', 'bank', 'threshold', 'expected'),
+    [
+        pytest.param('6.00', '6.00', 4, 0, id='all-hours-deposited'),
+        pytest.param('6.00', '2.00', 4, 1, id='remaining-hours-reach-threshold'),
+        pytest.param('6.00', '3.00', 4, 0, id='remaining-hours-below-threshold'),
+        pytest.param('2.00', '-2.00', 4, 1, id='withdrawal-reaches-threshold'),
+        pytest.param('8.00', '0.00', None, 0, id='no-threshold'),
+        pytest.param('0.00', '0.00', 0, 0, id='zero-threshold'),
+    ],
+)
+def test_meal_voucher_deducts_bank_deposits(worked_hours, bank, threshold, expected):
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    day_entry = DayEntryFactory(resource=contract.resource, contract=contract, day=dt('2026-10-04'))
+    # update() skips the bank checks, which are not under test here
+    DayEntry.objects.filter(pk=day_entry.pk).update(
+        day_hours=Decimal(worked_hours), bank=Decimal(bank), meal_voucher_threshold=threshold
+    )
+
+    day_entry.refresh_from_db()
+
+    assert day_entry.meal_voucher == expected
 
 
 def _deposit_entry(contract, day, bank):

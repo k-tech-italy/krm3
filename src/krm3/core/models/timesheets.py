@@ -207,18 +207,20 @@ class TimesheetSubmission(models.Model):
             return
 
         stored_closed = (
-            TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first()
-            if self.pk
-            else None
+            TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first() if self.pk else None
         )
         if stored_closed is True:
             return
 
         current_month = self._period_start(self.period).replace(day=1)
-        previous_periods = TimesheetSubmission.objects.filter(
-            resource_id=self.resource_id,
-            closed=True,
-        ).exclude(pk=self.pk).values_list('period', flat=True)
+        previous_periods = (
+            TimesheetSubmission.objects.filter(
+                resource_id=self.resource_id,
+                closed=True,
+            )
+            .exclude(pk=self.pk)
+            .values_list('period', flat=True)
+        )
         previous_periods = [period for period in previous_periods if period.lower < current_month]
         if not previous_periods:
             return
@@ -230,6 +232,7 @@ class TimesheetSubmission(models.Model):
 
         while month < current_month:
             next_month = self._next_month(month)
+            # TODO: check logic
             has_contract = Contract.objects.filter(
                 resource_id=self.resource_id,
                 period__overlap=DateRange(month, next_month, '[)'),
@@ -271,8 +274,7 @@ class TimesheetSubmission(models.Model):
                 states.append(stored)
 
         if any(
-            self._has_later_closed_submission(resource_id, period, exclude_pk=self.pk)
-            for resource_id, period in states
+            self._has_later_closed_submission(resource_id, period, exclude_pk=self.pk) for resource_id, period in states
         ):
             raise ValidationError(
                 _('A later timesheet is closed. Reopen later timesheets first.'),
@@ -402,7 +404,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     overtime_hours = models.DecimalField(
         max_digits=4, decimal_places=2, default=0.0, help_text=_('Overtime hours in the day')
     )
-    meal_voucher = models.PositiveIntegerField(default=0, help_text=_('Meal voucher for the day'))
+    meal_voucher_threshold = models.PositiveIntegerField(null=True, blank=True, help_text=_('Meal voucher threshold'))
 
     objects = DayEntryQuerySet.as_manager()
 
@@ -430,6 +432,12 @@ class DayEntry(CleanValidatorsMixin, models.Model):
             closed=True,
             period__contains=self.day,
         ).exists()
+
+    @property
+    def meal_voucher(self) -> int:
+        if not self.meal_voucher_threshold:
+            return 0
+        return 1 if self.worked_hours - Decimal(self.bank) >= self.meal_voucher_threshold else 0
 
     @property
     def has_later_closed_submission(self) -> bool:
@@ -502,7 +510,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         self.is_holiday = self.contract.get_ktday(self.day).is_holiday
         self.due_hours = self.contract.get_due_hours(self.day)
         self.overtime_hours = Decimal(0.0)
-        self.meal_voucher = 0
+        self.meal_voucher_threshold = self.contract.meal_threshold(self.day)
         self.taskentry_set.set(kwargs.pop('task_entries', []))
 
         self.travel_hours = Decimal(0.0)
@@ -547,12 +555,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     def refresh_derived_hours(self) -> None:
         """Recalculate the meal voucher and overtime from the worked hours and the bank movement."""
-        if meal_threshold := self.contract.meal_threshold(self.day):
-            # withdrawals from the bank count as worked hours, deposits are deducted from them
-            eligible_hours = self.worked_hours - Decimal(self.bank)
-            self.meal_voucher = 1 if eligible_hours >= meal_threshold else 0
-        else:
-            self.meal_voucher = 0
+        self.meal_voucher_threshold = self.contract.meal_threshold(self.day)
 
         if self.contract.overtime:
             # hours deposited to the bank are not overtime
@@ -885,9 +888,7 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
         """Reject changes when this entry precedes a closed timesheet."""
         day_entries = [self.day_entry]
         if self.pk:
-            stored_day_entry = (
-                TaskEntry.objects.filter(pk=self.pk).values_list('day_entry_id', flat=True).first()
-            )
+            stored_day_entry = TaskEntry.objects.filter(pk=self.pk).values_list('day_entry_id', flat=True).first()
             if stored_day_entry is not None and stored_day_entry != self.day_entry_id:
                 day_entries.append(DayEntry.objects.get(pk=stored_day_entry))
 
