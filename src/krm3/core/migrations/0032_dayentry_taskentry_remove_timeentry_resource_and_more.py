@@ -226,7 +226,7 @@ INSERT INTO core_dayentry (
     is_sick,
     rest_hours,
     overtime_hours,
-    meal_voucher
+    meal_voucher_threshold
 )
 SELECT
     days.date,
@@ -252,7 +252,7 @@ SELECT
     COALESCE(day_values.sick_hours, 0) > 0,
     COALESCE(day_values.rest_hours, 0),
     0,
-    0
+    null
 FROM days
 JOIN core_contract AS contract
     ON contract.resource_id = days.resource_id
@@ -570,18 +570,8 @@ def recalculate_day_entries(apps, schema_editor) -> None:  # noqa: ANN001
         else:
             day_entry.overtime_hours = Decimal(0)
 
-        day_entry.meal_voucher = 0
-
         if contract.meal_voucher:
-            meal_threshold = Decimal(str(contract.meal_voucher[weekday]))
-
-            if meal_threshold:
-                bank_withdrawal = max(
-                    -Decimal(day_entry.bank),
-                    Decimal(0),
-                )
-                eligible_hours = worked_hours + bank_withdrawal
-                day_entry.meal_voucher = int(eligible_hours >= meal_threshold)
+            day_entry.meal_voucher_threshold = Decimal(str(contract.meal_voucher[weekday]))
 
     DayEntry.objects.using(database_alias).bulk_update(
         day_entries,
@@ -589,7 +579,7 @@ def recalculate_day_entries(apps, schema_editor) -> None:  # noqa: ANN001
             'is_holiday',
             'due_hours',
             'overtime_hours',
-            'meal_voucher',
+            'meal_voucher_threshold',
         ],
         batch_size=1000,
     )
@@ -736,7 +726,7 @@ class Migration(migrations.Migration):
                         decimal_places=2, default=0.0, help_text='Overtime hours in the day', max_digits=4
                     ),
                 ),
-                ('meal_voucher', models.PositiveIntegerField(default=0, help_text='Meal voucher for the day')),
+                ('meal_voucher_threshold', models.PositiveIntegerField(blank=True, null=True, help_text='Meal voucher threshold')),
             ],
             options={
                 'verbose_name_plural': 'Day entries',

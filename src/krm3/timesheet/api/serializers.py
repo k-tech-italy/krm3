@@ -103,6 +103,7 @@ class DayEntryReadSerializer(BaseDayEntrySerializer):
             'is_sick',
             'rest_hours',
             'overtime_hours',
+            'meal_voucher_threshold',
             'meal_voucher',
         )
         read_only_fields = fields

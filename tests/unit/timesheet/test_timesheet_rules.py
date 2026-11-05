@@ -196,7 +196,7 @@ def test_calculate_from_ods(due_hours, meal_threshold, time_entries, expected, d
     if reason := te.special_leave_reason:
         reason.save()
 
-    result = TimesheetRule.calculate(False, due_hours, meal_threshold, time_entries)
+    result = TimesheetRule.calculate(due_hours, meal_threshold, time_entries)
 
     assert result == expected
 
@@ -229,6 +229,6 @@ def test_calculate_meal_voucher_deducts_bank_deposits(day_shift_hours, bank_to, 
         special_leave_hours=None,
     )
 
-    result = TimesheetRule.calculate(False, Decimal(0), Decimal(4), [time_entry])
+    result = TimesheetRule.calculate(Decimal(0), Decimal(4), [time_entry])
 
     assert result['meal_voucher'] == expected_meal_voucher

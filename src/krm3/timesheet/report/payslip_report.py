@@ -29,6 +29,7 @@ def get_report_timeentry_key_mapping() -> dict[str, str]:
         'sick': _('Sick'),
         'rest': _('Rest'),
         'overtime': _('Overtime'),
+        'meal_voucher_threshold': _('Meal voucher threshold'),
         'meal_voucher': _('Meal voucher'),
     }
 

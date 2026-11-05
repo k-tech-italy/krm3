@@ -59,7 +59,6 @@ class Krm3Day(KTDay):
         self.data_rest = None
         self.data_sick = None
         self.data_overtime = None
-        self.data_meal_voucher = None
         self.data_meal_voucher_threshold = None
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
@@ -117,6 +116,7 @@ class Krm3Day(KTDay):
         self.data_rest = value_or_none(day_entry.rest_hours)
         self.data_sick = due_hours if day_entry.is_sick else None
         self.data_overtime = value_or_none(day_entry.overtime_hours)
+        self.data_meal_voucher_threshold = day_entry.meal_voucher_threshold
         self.data_meal_voucher = value_or_none(day_entry.meal_voucher)
         regular_hours = utils.calculate_regular_hours(
             worked_hours=worked_hours,
@@ -179,7 +179,7 @@ class Krm3Day(KTDay):
                 is_sick=bool(entry_data.get('is_sick')),
                 rest_hours=_decimal_value(entry_data.get('rest_hours')),
                 overtime_hours=_decimal_value(entry_data.get('overtime_hours')),
-                meal_voucher=int(entry_data.get('meal_voucher') or 0),
+                meal_voucher_threshold=int(entry_data.get('meal_voucher_threshold') or 0),
             )
             day_entries_by_id[entry_data['id']] = day_entry
             day_entries_by_date[entry_date] = day_entry
@@ -305,7 +305,7 @@ class Krm3Day(KTDay):
 class TimesheetRule:
     @staticmethod
     def calculate(  # noqa: C901,PLR0912
-        work_day: bool, due_hours: float, meal_voucher_threshold: float | None, time_entries: 'Iterable[DayEntry]'
+        due_hours: float, meal_voucher_threshold: float | None, time_entries: 'Iterable[DayEntry]'
     ) -> dict:
         """Calculate the time sheet rules for a set of time entries in a given work day.
 

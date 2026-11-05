@@ -35,6 +35,7 @@ def get_i18n_mapping() -> dict:
         'leave': _('Leave'),
         'rest': _('Rest'),
         'overtime': _('Overtime'),
+        'meal_voucher_threshold': _('Meal voucher threshold'),
         'meal_voucher': _('Meal voucher'),
     }
 
