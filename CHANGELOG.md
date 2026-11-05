@@ -1,3 +1,9 @@
+## 5.1.2 (2026-11-05)
+
+### Fix
+
+- **timesheet**: derive the meal voucher from a persisted threshold
+
 ## 5.1.1 (2026-11-04)
 
 ### Fix
