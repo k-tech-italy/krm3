@@ -730,6 +730,15 @@ wheels = [
 ]
 
 [[package]]
+name = "django-concurrency"
+version = "2.8.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/57/94ce0cb4592ff43f4e9671bc2e7fc4d50c1c7f71d56fe85a6637d7b58306/django_concurrency-2.8.1.tar.gz", hash = "sha256:621817c0cf8b344d14389cdf7d9040080717292cde88ecbd471facb79614afbf", size = 21092, upload-time = "2026-04-08T12:23:32.931Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/c7/657936235e0176a27bd56d556ad9ab427bfdab0fe29c2447bc39510bf6d5/django_concurrency-2.8.1-py3-none-any.whl", hash = "sha256:785e0c47052d47438cb99dc9ff128b8166c24377284080bdd7f3a57dbeb4c56a", size = 27861, upload-time = "2026-04-08T12:23:31.825Z" },
+]
+
+[[package]]
 name = "django-constance"
 version = "4.3.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1406,7 +1415,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "5.1.2"
+version = "5.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "bs4" },
@@ -1418,6 +1427,7 @@ dependencies = [
     { name = "django-adminactions" },
     { name = "django-adminfilters" },
     { name = "django-click" },
+    { name = "django-concurrency" },
     { name = "django-constance" },
     { name = "django-cors-headers" },
     { name = "django-cotton" },
@@ -1529,6 +1539,7 @@ requires-dist = [
     { name = "django-adminactions", specifier = ">=2.4" },
     { name = "django-adminfilters", specifier = ">=2.7" },
     { name = "django-click", specifier = ">=2.4.1" },
+    { name = "django-concurrency", specifier = ">=2.8.1" },
     { name = "django-constance", specifier = ">=4.3.2" },
     { name = "django-cors-headers", specifier = ">=4.7.0" },
     { name = "django-cotton", specifier = ">=2.1.2" },

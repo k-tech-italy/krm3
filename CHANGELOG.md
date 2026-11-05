@@ -1,3 +1,9 @@
+## 5.2.0 (2026-11-05)
+
+### Feat
+
+- **contracts**: confirm contract termination and guard it with the contract version
+
 ## 5.1.2 (2026-11-05)
 
 ### Fix

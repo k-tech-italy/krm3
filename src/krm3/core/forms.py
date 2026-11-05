@@ -1,5 +1,6 @@
 import typing
 
+from concurrency.forms import ConcurrentForm
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -11,10 +12,13 @@ from krm3.core.models import Contract, ProtectedDocument
 from krm3.core.widgets import PrivateMediaFileInput
 
 if typing.TYPE_CHECKING:
+    import datetime
+
     from krm3.core.models.auth import Resource
 
 
-class ContractForm(ModelForm):
+class ContractForm(ConcurrentForm):
+    # ConcurrentForm rejects the save, with a form error, when the contract changed after the form was loaded
     working_schedule = forms.JSONField(
         widget=forms.Textarea,
         required=False,
@@ -120,7 +124,24 @@ class ContractTerminationForm(forms.Form):
     termination_date = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date'}),
         help_text=_l(
-            'Actual end date of the contract. Tasks without end date for this resource will be updated to this date.'
+            'Last day of the contract. The day entries, tasks and timesheet submissions of the resource after this'
+            ' date are deleted or truncated: they are listed for confirmation before anything is changed.'
         ),
         label=_l('Contract end date'),
     )
+    # the contract version read when the termination was started, carried through the confirmation steps
+    version = forms.IntegerField(widget=forms.HiddenInput)
+
+    def __init__(self, *args: typing.Any, contract: Contract, **kwargs: typing.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.contract = contract
+
+    def clean_termination_date(self) -> 'datetime.date':
+        termination_date = self.cleaned_data['termination_date']
+        if termination_date < self.contract.period.lower:
+            raise ValidationError(
+                _l('The contract starts on %(start)s: it cannot end before.'),
+                code='before_contract_start',
+                params={'start': self.contract.period.lower},
+            )
+        return termination_date

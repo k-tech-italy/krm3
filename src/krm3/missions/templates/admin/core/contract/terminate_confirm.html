@@ -1,0 +1,81 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:core_contract_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; <a href="{% url 'admin:core_contract_change' original.pk %}">{{ original }}</a>
+        &rsaquo; {{ title }}
+    </div>
+{% endblock %}
+
+{% block content %}
+    <p>
+        {% blocktranslate with resource=original.resource day=termination_date|date:'Y-m-d' %}The contract of {{ resource }} will end on {{ day }}. The following changes will be made:{% endblocktranslate %}
+    </p>
+
+    <h2 id="day-entries">{% translate 'Day entries to be deleted' %} ({{ day_entries|length }})</h2>
+    {% if day_entries %}
+        <ul>
+            {% for day, closed in day_entries %}
+                <li>{{ day|date:'Y-m-d' }}{% if closed %} ({% translate 'submitted' %}){% endif %}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{% translate 'None' %}</p>
+    {% endif %}
+
+    <h2 id="deleted-tasks">{% translate 'Tasks to be deleted (starting after the end date)' %} ({{ deleted_tasks|length }})</h2>
+    {% if deleted_tasks %}
+        <ul>
+            {% for task, first, last in deleted_tasks %}
+                <li>{{ task }}: {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d'|default:_('open') }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{% translate 'None' %}</p>
+    {% endif %}
+
+    <h2 id="truncated-tasks">{% translate 'Tasks to be truncated at the end date' %} ({{ truncated_tasks|length }})</h2>
+    {% if truncated_tasks %}
+        <ul>
+            {% for task, first, last in truncated_tasks %}
+                <li>{{ task }}: {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d'|default:_('open') }} &rarr; {{ first|date:'Y-m-d' }} - {{ termination_date|date:'Y-m-d' }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{% translate 'None' %}</p>
+    {% endif %}
+
+    <h2 id="submissions">{% translate 'Timesheet submissions to be amended' %} ({{ submission_count }})</h2>
+    {% if truncated_submissions or deleted_submissions %}
+        <ul>
+            {% for submission, first, last in truncated_submissions %}
+                <li>
+                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.closed %} ({% translate 'closed' %}){% endif %}:
+                    {% blocktranslate with day=termination_date|date:'Y-m-d' %}truncated to end on {{ day }}{% endblocktranslate %}{% if submission.closed %}, {% translate 'snapshot rebuilt' %}{% endif %}
+                </li>
+            {% endfor %}
+            {% for submission, first, last in deleted_submissions %}
+                <li>
+                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.closed %} ({% translate 'closed' %}){% endif %}:
+                    {% translate 'deleted' %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{% translate 'None' %}</p>
+    {% endif %}
+
+    <form id="contract-termination-confirm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="termination_date" value="{{ termination_date|date:'Y-m-d' }}">
+        <input type="hidden" name="version" value="{{ form.cleaned_data.version }}">
+        <input type="hidden" name="confirm" value="1">
+        <div class="submit-row">
+            <input type="submit" class="default" value="{% translate 'Yes, terminate the contract' %}">
+            <a href="{% url 'admin:core_contract_terminate' original.pk %}" class="button cancel-link">{% translate 'No, take me back' %}</a>
+        </div>
+    </form>
+{% endblock %}
