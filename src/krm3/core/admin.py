@@ -7,16 +7,18 @@ from admin_extra_buttons.decorators import button
 from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.autocomplete import AutoCompleteFilter
 from adminfilters.mixin import AdminFiltersMixin
+from concurrency.admin import ConcurrentModelAdmin
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
+from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
-from ktcalendars import KTDateRange
 from smart_admin.smart_auth.admin import UserAdmin
 
 from krm3.core.forms import ContractForm, ContractTerminationForm
@@ -35,11 +37,11 @@ from krm3.core.models import (
     Phone,
     PhoneInfo,
     Resource,
-    Task,
     UserProfile,
     Website,
     WebsiteInfo,
 )
+from krm3.core.termination import ContractModifiedError, ContractTermination
 from krm3.sentry import capture_exception
 from krm3.styles.buttons import DANGEROUS, NORMAL
 
@@ -126,7 +128,7 @@ class ClientAdmin(ModelAdmin):
 
 
 @admin.register(Contract)
-class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
+class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ConcurrentModelAdmin):
     form = ContractForm
     search_fields = ['resource__last_name', 'resource__first_name', 'base_in__name']
     list_display = [
@@ -159,27 +161,80 @@ class ContractAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
             return format_html('<a href="{}">View document</a>', obj.document_url)
         return '-'
 
-    @button(html_attrs=DANGEROUS, visible=lambda btn: not btn.original.period.upper)
+    @button(
+        html_attrs=DANGEROUS,
+        visible=lambda btn: not btn.original.period.upper,
+        permission='core.change_contract',
+    )
     def terminate(self, request: 'HttpRequest', pk: str) -> HttpResponse:
+        """Ask for the termination date, list what the termination changes, and apply it once confirmed."""
         contract = get_object_or_404(Contract, pk=pk)
+        if contract.period.upper:
+            messages.error(request, 'The contract already has an end date.')
+            return redirect('admin:core_contract_change', contract.pk)
         context = self.get_common_context(request, pk, title='Terminate Contract')
 
         if request.method == 'POST':
-            form = ContractTerminationForm(request.POST)
+            form = ContractTerminationForm(request.POST, contract=contract)
             if form.is_valid():
-                termination_date = form.cleaned_data['termination_date']
-                contract.period = KTDateRange.from_start_end(contract.period.lower, termination_date)
-                contract.save()
-                updated = Task.objects.filter(resource=contract.resource, end_date__isnull=True).update(
-                    end_date=termination_date
-                )
-                messages.success(request, f'Contract terminated. {updated} task(s) updated.')
-                return redirect('admin:core_contract_changelist')
+                termination = ContractTermination(contract, form.cleaned_data['termination_date'])
+                if 'confirm' in request.POST:
+                    return self._apply_termination(request, termination, form.cleaned_data['version'])
+                context.update(termination_preview(termination), form=form)
+                return TemplateResponse(request, 'admin/core/contract/terminate_confirm.html', context)
         else:
-            form = ContractTerminationForm(initial={'termination_date': datetime.date.today()})
+            form = ContractTerminationForm(
+                initial={'termination_date': datetime.date.today(), 'version': contract.version}, contract=contract
+            )
 
         context['form'] = form
         return TemplateResponse(request, 'admin/core/contract/terminate.html', context)
+
+    def _apply_termination(
+        self, request: 'HttpRequest', termination: ContractTermination, version: int
+    ) -> HttpResponse:
+        try:
+            outcome = termination.apply(version)
+        except ContractModifiedError:
+            messages.error(
+                request,
+                'Contract not terminated: it was changed after the termination was started. Review it and try again.',
+            )
+            return redirect('admin:core_contract_terminate', termination.contract.pk)
+        except (ValidationError, ProtectedError) as e:
+            messages.error(request, f'Contract not terminated: {"; ".join(getattr(e, "messages", [str(e)]))}')
+            return redirect('admin:core_contract_change', termination.contract.pk)
+        messages.success(
+            request,
+            f'Contract terminated on {termination.termination_date:%Y-%m-%d}.'
+            f' Day entries deleted: {outcome.day_entries}.'
+            f' Tasks deleted: {outcome.deleted_tasks}, truncated: {outcome.truncated_tasks}.'
+            f' Timesheet submissions deleted: {outcome.deleted_submissions},'
+            f' truncated: {outcome.truncated_submissions}.',
+        )
+        return redirect('admin:core_contract_changelist')
+
+
+def termination_preview(termination: ContractTermination) -> dict[str, typing.Any]:
+    """Return the template context listing what `termination` deletes or truncates.
+
+    Periods are shown as (first day, last day), both included; the last day is None when the period is open.
+    """
+
+    def days(period: typing.Any) -> tuple[datetime.date, datetime.date | None]:
+        return period.lower, period.upper - datetime.timedelta(days=1) if period.upper else None
+
+    truncated_submissions = [(sub, *days(sub.period)) for sub in termination.truncated_submissions()]
+    deleted_submissions = [(sub, *days(sub.period)) for sub in termination.deleted_submissions()]
+    return {
+        'termination_date': termination.termination_date,
+        'day_entries': list(termination.day_entries().values_list('day', 'closed')),
+        'deleted_tasks': [(task, *days(task.period)) for task in termination.deleted_tasks()],
+        'truncated_tasks': [(task, *days(task.period)) for task in termination.truncated_tasks()],
+        'truncated_submissions': truncated_submissions,
+        'deleted_submissions': deleted_submissions,
+        'submission_count': len(truncated_submissions) + len(deleted_submissions),
+    }
 
 
 @admin.register(ExtraHoliday)

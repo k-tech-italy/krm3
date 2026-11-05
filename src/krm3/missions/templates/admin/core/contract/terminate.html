@@ -1,14 +1,23 @@
-{% extends "admin/base.html" %}
-{% load static %}
+{% extends "admin/base_site.html" %}
+{% load i18n %}
 
-{% block container %}
-    {% block content %}
-        <form action="#" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form }}
-            <input type=submit>
-        </form>
-        <br>
-        <a href="{% url 'admin:core_contract_change' original.id %}">Back to Contract {{ original }}</a>
-    {% endblock %}
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:core_contract_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; <a href="{% url 'admin:core_contract_change' original.pk %}">{{ original }}</a>
+        &rsaquo; {{ title }}
+    </div>
+{% endblock %}
+
+{% block content %}
+    <form id="contract-termination-form" method="post">
+        {% csrf_token %}
+        {{ form }}
+        <p>{% translate 'Nothing is changed yet: the next page lists what the termination deletes or truncates.' %}</p>
+        <div class="submit-row">
+            <input type="submit" value="{% translate 'Review termination' %}">
+            <a href="{% url 'admin:core_contract_change' original.pk %}" class="button cancel-link">{% translate 'Cancel' %}</a>
+        </div>
+    </form>
 {% endblock %}

@@ -87,6 +87,7 @@ dependencies = [
     "pyrefly>=0.60.0",
     "ktcalendars[psycopg]>=4.0.0",
     "cachetools>=7.1.7",
+    "django-concurrency>=2.8.1",
 ]
 
 [project.optional-dependencies]
