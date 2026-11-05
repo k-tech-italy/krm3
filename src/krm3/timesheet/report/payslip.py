@@ -44,7 +44,6 @@ REPORT_FIELDS: tuple[tuple[str, Any], ...] = (
     ('leave_hours', _('Leave')),
     ('rest_hours', _('Rest')),
     ('overtime_hours', _('Overtime')),
-    ('meal_voucher_threshold', _('Meal voucher threshold')),
     ('meal_voucher', _('Meal voucher')),
 )
 

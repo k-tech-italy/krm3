@@ -59,7 +59,7 @@ class Krm3Day(KTDay):
         self.data_rest = None
         self.data_sick = None
         self.data_overtime = None
-        self.data_meal_voucher_threshold = None
+        self.data_meal_voucher = None
         self.data_special_leave_hours = None
         self.data_special_leave_reason = None
         self.data_regular_hours = None
@@ -116,7 +116,6 @@ class Krm3Day(KTDay):
         self.data_rest = value_or_none(day_entry.rest_hours)
         self.data_sick = due_hours if day_entry.is_sick else None
         self.data_overtime = value_or_none(day_entry.overtime_hours)
-        self.data_meal_voucher_threshold = day_entry.meal_voucher_threshold
         self.data_meal_voucher = value_or_none(day_entry.meal_voucher)
         regular_hours = utils.calculate_regular_hours(
             worked_hours=worked_hours,

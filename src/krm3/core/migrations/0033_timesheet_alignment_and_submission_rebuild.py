@@ -1,5 +1,5 @@
 # Collapses the migrations that followed 0032 (reimbursement help texts, DayEntry bank range, forced closing of the
-# timesheets before 2026-10-01, meal-voucher recalculation), rebuilds the snapshot of every closed submission and
+# timesheets before 2026-10-01), rebuilds the snapshot of every closed submission and
 # grants the timesheet groups the permissions of the DayEntry and TaskEntry models.
 import datetime
 
@@ -8,8 +8,6 @@ from django.contrib.auth.management import create_permissions
 from django.db import migrations, models
 from django.db.models.functions import TruncMonth
 from psycopg.types.range import DateRange
-
-WEEKDAYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
 
 # (model, codename) of the `core` permissions added to each group; view_any_timesheet and manage_any_timesheet are
 # declared by TaskEntry (in 0030 the groups held the ones of the removed TimeEntry model)
@@ -23,7 +21,7 @@ TIMESHEET_GROUP_PERMISSIONS = {
             for action in ('add', 'view', 'change', 'delete')
         ),
     ],
-    'Timesheet Administrator': [('taskentry', 'view_any_timesheet'), ('taskentry', 'manage_any_timesheet')],
+    'Timesheet Administrator': [('taskentry', 'manage_any_timesheet')],
 }
 
 TRUNCATE_SUBMISSIONS = """
@@ -55,25 +53,6 @@ def close_timesheets_before_october_2026(apps, schema_editor):
         DayEntry.objects.filter(resource_id=ts.resource_id, day__lt=ts.period.upper, day__gte=ts.period.lower).update(
             timesheet=ts, closed=True
         )
-
-
-def recompute_meal_vouchers(apps, schema_editor):
-    """Deduct the hours deposited to the bank from the hours eligible for the meal voucher.
-
-    0032 counted the bank withdrawals but not the deposits: only the day entries with a deposit can change.
-    """
-    # DayEntry = apps.get_model('core', 'DayEntry')
-    #
-    # to_update = []
-    # for entry in DayEntry.objects.filter(bank__gt=0, meal_voucher__gt=0).select_related('contract'):
-    #     threshold = (entry.contract.meal_voucher or {}).get(WEEKDAYS[entry.day.weekday()])
-    #     if not threshold:
-    #         continue
-    #     eligible_hours = entry.day_hours + entry.night_hours + entry.travel_hours - entry.bank
-    #     if eligible_hours < Decimal(str(threshold)):
-    #         entry.meal_voucher = 0
-    #         to_update.append(entry)
-    # DayEntry.objects.bulk_update(to_update, ['meal_voucher'], batch_size=1000)
 
 
 def rebuild_closed_submissions(apps, schema_editor):
@@ -147,7 +126,6 @@ class Migration(migrations.Migration):
             constraint=models.CheckConstraint(condition=models.Q(('bank__range', (-16, 16))), name='bank_range'),
         ),
         migrations.RunPython(close_timesheets_before_october_2026, migrations.RunPython.noop),
-        migrations.RunPython(recompute_meal_vouchers, migrations.RunPython.noop),
         migrations.RunPython(rebuild_closed_submissions, migrations.RunPython.noop),
         migrations.RunPython(add_timesheet_group_permissions, migrations.RunPython.noop),
     ]

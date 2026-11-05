@@ -435,7 +435,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
     @property
     def meal_voucher(self) -> int:
-        if self.meal_voucher_threshold is None:
+        if not self.meal_voucher_threshold:
             return 0
         return 1 if self.worked_hours - Decimal(self.bank) >= self.meal_voucher_threshold else 0
 

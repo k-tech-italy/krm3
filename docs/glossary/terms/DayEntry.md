@@ -20,7 +20,9 @@ Day-level fields include:
 - `is_sick` and `protocol_number`: Whether the Resource reported sick and, when applicable, the sick certificate number.
 - `leave_hours`, `special_leave_hours`, `special_leave_reason`, and `rest_hours`: Day-level leave and rest information.
 - `bank`: Hours deposited to or withdrawn from the <glossary:BankOfHours>; positive values are deposits and negative values are withdrawals.
-- `due_hours`, `overtime_hours`, and `meal_voucher`: The scheduled hours, calculated overtime, and meal voucher count for the day.
+- `due_hours` and `overtime_hours`: The scheduled hours and calculated overtime for the day.
+- `meal_voucher_threshold`: The <glossary:Contract> meal voucher threshold for the day, empty when the contract has none.
+  `meal_voucher` is not stored: it is 1 when the worked hours, minus the `bank` movement, reach a threshold above zero.
 - `timesheet` and `closed`: The associated <glossary:TimesheetSubmission> and whether the entry is closed.
 - `comment` and `last_modified`: An optional note and the last modification time.
 

@@ -3,42 +3,14 @@ from decimal import Decimal
 from importlib import import_module
 from types import SimpleNamespace
 
-import pytest
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.db import connection
 from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, TimesheetSubmissionFactory
 
-from krm3.core.models import DayEntry, TimesheetSubmission
+from krm3.core.models import TimesheetSubmission
 
 migration = import_module('krm3.core.migrations.0033_timesheet_alignment_and_submission_rebuild')
-
-
-@pytest.mark.parametrize(
-    ('worked_hours', 'bank', 'closed', 'expected_meal_voucher'),
-    [
-        pytest.param('6.00', '6.00', True, 0, id='closed-all-hours-deposited'),
-        pytest.param('6.00', '6.00', False, 0, id='open-all-hours-deposited'),
-        pytest.param('6.00', '2.00', True, 1, id='remaining-hours-reach-threshold'),
-        pytest.param('6.00', '3.00', True, 0, id='remaining-hours-below-threshold'),
-        pytest.param('2.00', '-2.00', True, 1, id='withdrawal-reaches-threshold'),
-    ],
-)
-def test_recompute_meal_vouchers_deducts_bank_deposits(worked_hours, bank, closed, expected_meal_voucher):
-    contract = ContractFactory(
-        period=(date(2026, 1, 1), None),
-        meal_voucher={'mon': 6, 'tue': 6, 'wed': 6, 'thu': 6, 'fri': 6, 'sat': 4, 'sun': 4},
-    )
-    entry = DayEntryFactory(resource=contract.resource, contract=contract, day=date(2026, 10, 4))  # Sunday
-    # the values 0032 left behind: the voucher was granted without deducting the deposit
-    DayEntry.objects.filter(pk=entry.pk).update(
-        day_hours=Decimal(worked_hours), bank=Decimal(bank), closed=closed, meal_voucher=1
-    )
-
-    migration.recompute_meal_vouchers(apps, None)
-
-    entry.refresh_from_db()
-    assert entry.meal_voucher == expected_meal_voucher
 
 
 def test_rebuild_closed_submissions_replaces_legacy_snapshots():
@@ -84,4 +56,4 @@ def test_add_timesheet_group_permissions(db):
             for action in ('add', 'view', 'change', 'delete')
         ),
     }
-    assert codenames(administrator) == {('core', 'view_any_timesheet'), ('core', 'manage_any_timesheet')}
+    assert codenames(administrator) == {('core', 'manage_any_timesheet')}
