@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Iterable, Self
 
 from cachetools import cachedmethod
+from concurrency.fields import IntegerVersionField
 from constance import config
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateRangeField, RangeOperators
@@ -69,6 +70,7 @@ class Contract(models.Model):
         SATURDAY = 5, _('Saturday')
         SUNDAY = 6, _('Sunday')
 
+    version = IntegerVersionField()
     resource = models.ForeignKey('core.Resource', on_delete=models.PROTECT)
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
     working_schedule = models.JSONField(blank=True, default=dict)
