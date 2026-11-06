@@ -9,6 +9,7 @@ from testutils.factories import (
     ResourceFactory,
     SpecialLeaveReasonFactory,
     TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
 )
 
 if typing.TYPE_CHECKING:
@@ -56,9 +57,11 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_submitted(
 ):
     freeze_frontend_time('2025-03-02T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
+    contract = create_contract_without_scheduled_hours(resource, (_dt('2026-03-01'), _dt('2026-04-01')))
     DayEntryFactory(
         day=_dt('2026-03-01'),
         resource=resource,
+        contract=contract,
         due_hours=8,
         is_sick=True,
         protocol_number='12',
@@ -66,6 +69,7 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_submitted(
     DayEntryFactory(
         day=_dt('2026-03-03'),
         resource=resource,
+        contract=contract,
         due_hours=8,
         is_sick=True,
     )
@@ -111,6 +115,7 @@ def test_special_leave_reason_is_visible_in_report_while_submitted(
 ):
     freeze_frontend_time('2025-03-02T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
+    contract = create_contract_without_scheduled_hours(resource, (_dt('2026-03-01'), _dt('2026-04-01')))
     special_leave_reason = SpecialLeaveReasonFactory()
     DayEntryFactory(
         day=_dt('2026-03-02'),
@@ -118,6 +123,7 @@ def test_special_leave_reason_is_visible_in_report_while_submitted(
         special_leave_hours=8,
         special_leave_reason=special_leave_reason,
         resource=resource,
+        contract=contract,
     )
     TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
     browser.login_as_user(regular_user)

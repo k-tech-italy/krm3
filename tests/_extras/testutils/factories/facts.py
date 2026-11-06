@@ -276,6 +276,16 @@ class TimesheetSubmissionFactory(DjangoModelFactory):
         model = 'core.TimesheetSubmission'
 
 
+def create_contract_without_scheduled_hours(resource, period):
+    """Create an active contract whose period has no scheduled hours."""
+    period = KTDateRange(*period) if isinstance(period, tuple | list) else KTDateRange(period)
+    return ContractFactory(
+        resource=resource,
+        period=period,
+        working_schedule={'mon': 0, 'tue': 0, 'wed': 0, 'thu': 0, 'fri': 0, 'sat': 0, 'sun': 0},
+    )
+
+
 class DayEntryFactory(DjangoModelFactory):
     day = Faker('date_between_dates', date_start=date(2020, 1, 1), date_end=date(2023, 12, 31))
     resource = SubFactory(ResourceFactory)

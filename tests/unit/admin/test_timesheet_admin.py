@@ -14,6 +14,8 @@ from krm3.timesheet.admin import DayEntryAdmin, TaskEntryAdmin
 def test_admin_cannot_change_or_delete_entries_in_closed_submission(admin_user):
     day_entry = DayEntryFactory()
     task_entry = TaskEntryFactory(day_entry=day_entry, resource=day_entry.resource)
+    day_entry.day_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.save()
     TimesheetSubmissionFactory(
         resource=day_entry.resource,
         period=(day_entry.day, day_entry.day + timedelta(days=1)),
@@ -60,11 +62,15 @@ def test_timesheet_submission_changelist_period_filter(admin_client, params, exp
 
 def test_timesheet_submission_view_entries_redirects_to_filtered_task_entries(admin_client):
     included_entry = TaskEntryFactory(day=True)
+    included_entry.day_entry.day_hours = included_entry.day_entry.contract.get_due_hours(included_entry.day_entry.day)
+    included_entry.day_entry.save()
     submission = TimesheetSubmissionFactory(
         period=(included_entry.day_entry.day, included_entry.day_entry.day + timedelta(days=1)),
         resource=included_entry.day_entry.resource,
     )
     excluded_entry = TaskEntryFactory(day=True)
+    excluded_entry.day_entry.day_hours = excluded_entry.day_entry.contract.get_due_hours(excluded_entry.day_entry.day)
+    excluded_entry.day_entry.save()
     TimesheetSubmissionFactory(
         period=(excluded_entry.day_entry.day, excluded_entry.day_entry.day + timedelta(days=1)),
         resource=excluded_entry.day_entry.resource,
