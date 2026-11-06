@@ -1,3 +1,9 @@
+## 5.2.1 (2026-11-06)
+
+### Fix
+
+- **Migrations**: Core migrations order fixed
+
 ## 5.2.0 (2026-11-05)
 
 ### Feat
