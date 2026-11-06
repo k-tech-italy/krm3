@@ -96,6 +96,7 @@ class CountryAdmin(ModelAdmin):
 class CityAdmin(AdminFiltersMixin, ModelAdmin):
     search_fields = ['name', 'country__name', 'subdivision_code']
     list_filter = [('country__name', AutoCompleteFilter)]
+    list_display = ('name', 'country', 'subdivision_code')
 
 
 @admin.register(Resource)
