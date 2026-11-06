@@ -5,6 +5,7 @@ import json
 import typing
 from decimal import Decimal
 
+import concurrency.fields
 import django.contrib.postgres.fields.ranges
 import django.db.models.deletion
 from constance import config
@@ -726,7 +727,10 @@ class Migration(migrations.Migration):
                         decimal_places=2, default=0.0, help_text='Overtime hours in the day', max_digits=4
                     ),
                 ),
-                ('meal_voucher_threshold', models.PositiveIntegerField(blank=True, null=True, help_text='Meal voucher threshold')),
+                (
+                    'meal_voucher_threshold',
+                    models.PositiveIntegerField(blank=True, null=True, help_text='Meal voucher threshold'),
+                ),
             ],
             options={
                 'verbose_name_plural': 'Day entries',
@@ -986,5 +990,10 @@ class Migration(migrations.Migration):
         ),
         migrations.DeleteModel(
             name='TimeEntry',
+        ),
+        migrations.AddField(
+            model_name='contract',
+            name='version',
+            field=concurrency.fields.IntegerVersionField(default=0, help_text='record revision number'),
         ),
     ]
