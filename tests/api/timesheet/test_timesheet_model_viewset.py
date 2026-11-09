@@ -62,6 +62,67 @@ class TestTimesheetSubmissionModelAPIListView:
 
         assert response.status_code == status.HTTP_201_CREATED
 
+    @pytest.mark.parametrize(
+        'data',
+        [
+            pytest.param({'period': ('2026-09-07', '2026-09-07')}, id='missing'),
+            pytest.param(
+                {'resource': 'not-a-resource', 'period': ('2026-09-07', '2026-09-07')},
+                id='malformed',
+            ),
+        ],
+    )
+    def test_invalid_resource_returns_field_error(self, data, api_client, regular_user):
+        ResourceFactory(user=regular_user)
+
+        response = api_client(user=regular_user).post(self.url(), data=data, format='json')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'resource' in response.data
+
+    @pytest.mark.parametrize(
+        'resource_id_type',
+        [
+            pytest.param('integer', id='integer'),
+            pytest.param('numeric-string', id='numeric-string'),
+        ],
+    )
+    def test_regular_user_can_create_submission_for_own_resource(self, resource_id_type, api_client, regular_user):
+        resource = ResourceFactory(user=regular_user)
+        resource_id = str(resource.pk) if resource_id_type == 'numeric-string' else resource.pk
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={'resource': resource_id, 'period': ('2026-09-07', '2026-09-07')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['resource'] == resource.pk
+
+    def test_regular_user_cannot_create_submission_for_another_resource(self, api_client, regular_user):
+        ResourceFactory(user=regular_user)
+        other_resource = ResourceFactory()
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={'resource': other_resource.pk, 'period': ('2026-09-07', '2026-09-07')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_manager_can_create_submission_for_any_resource(self, api_client, manager):
+        resource = ResourceFactory()
+
+        response = api_client(user=manager).post(
+            self.url(),
+            data={'resource': resource.pk, 'period': ('2026-09-07', '2026-09-07')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+
     def test_incomplete_submission_returns_bad_request(self, api_client, manager):
         contract = ContractFactory(
             period=(date(2026, 9, 7), date(2026, 9, 8)),

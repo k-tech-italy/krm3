@@ -177,6 +177,8 @@ class TimesheetSubmission(models.Model):
     @override
     def clean(self) -> None:
         super().clean()
+        if not self.resource_id or not self.period:
+            return
         self._verify_no_later_closed_submission()
         self._verify_submission_order()
         if self._is_being_closed():

@@ -874,13 +874,10 @@ def test_timesheet_scheduled_hours_more_colors(
 
     browser.click_and_release(element)
 
-    more_button = '#short-menu-more-button'
-    browser.wait_for_element_visible(more_button)
-    browser.js_click(more_button)
-    task_dialog = '//div[@role="dialog" and starts-with(@aria-label, "Add Task Entry for ")]'
-    browser.wait_for_element_visible(task_dialog)
-    browser.fill(f'{task_dialog}//input[@id="daytime-input"]', '13')
-    browser.click(f'{task_dialog}//button[normalize-space()="Save"]')
+    custom_hours_input = '//input[@placeholder="e.g. 2.5"]'
+    browser.wait_for_element_visible(custom_hours_input)
+    browser.fill(custom_hours_input, '13')
+    browser.click('//button[normalize-space()="Add"]')
     element_path = (
         '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'
