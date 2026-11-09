@@ -808,6 +808,13 @@ class StartEndDateRangeField(serializers.Field):
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     period = StartEndDateRangeField()
 
+    def get_fields(self) -> dict[str, serializers.Field]:
+        fields = super().get_fields()
+        request = self.context.get('request')
+        if request is None or not request.user.has_perm('core.manage_any_timesheet'):
+            fields['closed'].read_only = True
+        return fields
+
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         user = self.context['request'].user
         resource = attrs.get('resource', self.instance.resource if self.instance else None)
