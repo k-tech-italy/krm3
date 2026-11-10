@@ -5,6 +5,7 @@ from ..environ import env as _env
 # SENTRY & RAVEN
 # need to copy in settings because we inject these values in the templates
 SENTRY_DSN = _env('SENTRY_DSN')
+SENTRY_ENVIRONMENT = _env('SENTRY_ENVIRONMENT')
 if SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
@@ -14,7 +15,6 @@ if SENTRY_DSN:
     from ..environ import env as _env
 
     SENTRY_PROJECT = _env('SENTRY_PROJECT')
-    SENTRY_ENVIRONMENT = _env('SENTRY_ENVIRONMENT')
     SENTRY_DEBUG = _env('SENTRY_DEBUG')
 
     sentry_logging = LoggingIntegration(

@@ -134,6 +134,7 @@ MIDDLEWARE = (
         'django.contrib.admindocs.middleware.XViewMiddleware',
         # Third party middlewares.
         'djangorestframework_camel_case.middleware.CamelCaseMiddleWare',
+        'krm3.middlewares.environment.EnvironmentHeadersMiddleware',
     ]
 )
 
@@ -142,6 +143,8 @@ if env('RELOAD'):
     MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')
 
 CORS_ALLOW_ALL_ORIGINS = True
+# Let browser-side JS read the environment headers (Refs: taiga#715).
+CORS_EXPOSE_HEADERS = ['X-environment', 'X-env-color']
 
 ROOT_URLCONF = 'krm3.config.urls'
 
