@@ -16,6 +16,12 @@ While the submission is closed, its entries cannot be created, edited or deleted
 
 To correct an earlier period, privileged users must reopen closed submissions in reverse chronological order. After making the correction, they must close them again in chronological order so that each snapshot is rebuilt from the previous authoritative balance.
 
+## Completeness validation
+
+A submission can be closed only when all Due Hours under an active Contract are covered. Days outside an active Contract and days with zero Due Hours do not need a DayEntry. If the submission period has no active Contract, there are no Due Hours to validate.
+
+Each day with Due Hours must have a DayEntry, and its recorded work, holiday, sickness, leave, special leave, rest or Bank of Hours data must cover all Due Hours. A TaskEntry is needed only to record worked hours; a day fully covered by holiday, sickness or another supported absence can be complete without one. A missing DayEntry or a DayEntry with remaining hours prevents submission.
+
 ## Correcting an earlier period
 
 For example, if both September and October are closed and September must be corrected:

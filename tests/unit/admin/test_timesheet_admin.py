@@ -5,15 +5,17 @@ import pytest
 from django.contrib import admin
 from django.test import RequestFactory
 from django.urls import reverse
-from testutils.factories import DayEntryFactory, TaskEntryFactory, TimesheetSubmissionFactory
+from testutils.factories import DayEntryFactory, ResourceFactory, TaskEntryFactory, TimesheetSubmissionFactory
 
-from krm3.core.models import TaskEntry
+from krm3.core.models import TaskEntry, TimesheetSubmission
 from krm3.timesheet.admin import DayEntryAdmin, TaskEntryAdmin
 
 
 def test_admin_cannot_change_or_delete_entries_in_closed_submission(admin_user):
     day_entry = DayEntryFactory()
     task_entry = TaskEntryFactory(day_entry=day_entry, resource=day_entry.resource)
+    day_entry.day_hours = day_entry.contract.get_due_hours(day_entry.day)
+    day_entry.save()
     TimesheetSubmissionFactory(
         resource=day_entry.resource,
         period=(day_entry.day, day_entry.day + timedelta(days=1)),
@@ -60,11 +62,15 @@ def test_timesheet_submission_changelist_period_filter(admin_client, params, exp
 
 def test_timesheet_submission_view_entries_redirects_to_filtered_task_entries(admin_client):
     included_entry = TaskEntryFactory(day=True)
+    included_entry.day_entry.day_hours = included_entry.day_entry.contract.get_due_hours(included_entry.day_entry.day)
+    included_entry.day_entry.save()
     submission = TimesheetSubmissionFactory(
         period=(included_entry.day_entry.day, included_entry.day_entry.day + timedelta(days=1)),
         resource=included_entry.day_entry.resource,
     )
     excluded_entry = TaskEntryFactory(day=True)
+    excluded_entry.day_entry.day_hours = excluded_entry.day_entry.contract.get_due_hours(excluded_entry.day_entry.day)
+    excluded_entry.day_entry.save()
     TimesheetSubmissionFactory(
         period=(excluded_entry.day_entry.day, excluded_entry.day_entry.day + timedelta(days=1)),
         resource=excluded_entry.day_entry.resource,
@@ -77,6 +83,32 @@ def test_timesheet_submission_view_entries_redirects_to_filtered_task_entries(ad
     response = admin_client.get(response.url)
     assert response.status_code == 200
     assert [obj.pk for obj in response.context['cl'].result_list] == [included_entry.pk]
+
+
+@pytest.mark.parametrize(
+    ('missing_field', 'data'),
+    [
+        pytest.param(
+            'resource',
+            {'period_0': '2026-11-01', 'period_1': '2026-11-30', 'closed': 'on'},
+            id='missing-resource',
+        ),
+        pytest.param(
+            'period',
+            {'closed': 'on'},
+            id='missing-period',
+        ),
+    ],
+)
+def test_timesheet_submission_add_reports_missing_required_fields(admin_client, missing_field, data):
+    if missing_field != 'resource':
+        data['resource'] = ResourceFactory().pk
+
+    response = admin_client.post(reverse('admin:core_timesheetsubmission_add'), data)
+
+    assert response.status_code == 200
+    assert response.context['adminform'].form.errors[missing_field] == ['This field is required.']
+    assert not TimesheetSubmission.objects.exists()
 
 
 def test_task_entry_admin_delegates_other_lookups_to_model_admin():

@@ -3,10 +3,14 @@ from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
-from testutils.factories import ContractFactory, DayEntryFactory, TimesheetSubmissionFactory
+from testutils.factories import (
+    DayEntryFactory,
+    ResourceFactory,
+    TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
+)
 
 from krm3.core.models import Resource, TimesheetSubmission
-
 
 def _entry(resource, contract, day, bank):
     return DayEntryFactory(
@@ -24,8 +28,8 @@ def _close(resource, period):
 
 
 def test_frozen_balance_excludes_the_day_after_the_period_and_is_reused(monkeypatch):
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     _entry(resource, contract, date(2026, 9, 10), '2.00')
     _entry(resource, contract, date(2026, 9, 30), '4.00')
@@ -49,8 +53,8 @@ def test_frozen_balance_excludes_the_day_after_the_period_and_is_reused(monkeypa
 
 
 def test_falls_back_to_the_full_sum_when_the_snapshot_is_legacy():
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     TimesheetSubmission.objects.filter(pk=september.pk).update(timesheet={'days': {}})
@@ -61,8 +65,8 @@ def test_falls_back_to_the_full_sum_when_the_snapshot_is_legacy():
 
 
 def test_falls_back_to_the_full_sum_when_nothing_is_closed_yet():
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     _entry(resource, contract, date(2026, 9, 10), '2.00')
 
@@ -70,8 +74,8 @@ def test_falls_back_to_the_full_sum_when_nothing_is_closed_yet():
 
 
 def test_closed_snapshot_is_authoritative_despite_earlier_open_entries():
-    contract = ContractFactory(period=(date(2026, 8, 1), date(2026, 11, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 8, 1), date(2026, 11, 1)))
     _entry(resource, contract, date(2026, 8, 15), '5.00')
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     september = _close(resource, ('2026-09-01', '2026-10-01'))
@@ -85,8 +89,8 @@ def test_closed_snapshot_is_authoritative_despite_earlier_open_entries():
 
 
 def test_reopened_timesheet_is_not_used_as_a_watermark():
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 10, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     assert september.timesheet['bank_hours'] == '8.00'
@@ -99,8 +103,8 @@ def test_reopened_timesheet_is_not_used_as_a_watermark():
 
 
 def test_later_timesheet_builds_on_the_earlier_frozen_balance():
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 11, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 11, 1)))
     _entry(resource, contract, date(2026, 9, 7), '8.00')
     _entry(resource, contract, date(2026, 10, 5), '8.00')
 
@@ -112,8 +116,8 @@ def test_later_timesheet_builds_on_the_earlier_frozen_balance():
 
 
 def test_later_closed_submission_must_be_reopened_before_an_earlier_one():
-    contract = ContractFactory(period=(date(2026, 9, 1), date(2026, 11, 1)))
-    resource = contract.resource
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 11, 1)))
     september_entry = _entry(resource, contract, date(2026, 9, 7), '8.00')
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     _entry(resource, contract, date(2026, 10, 5), '8.00')

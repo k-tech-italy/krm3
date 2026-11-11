@@ -6,7 +6,12 @@ from types import SimpleNamespace
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.db import connection
-from testutils.factories import ContractFactory, DayEntryFactory, ResourceFactory, TimesheetSubmissionFactory
+from testutils.factories import (
+    DayEntryFactory,
+    ResourceFactory,
+    TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
+)
 
 from krm3.core.models import TimesheetSubmission
 
@@ -15,7 +20,7 @@ migration = import_module('krm3.core.migrations.0033_timesheet_alignment_and_sub
 
 def test_rebuild_closed_submissions_replaces_legacy_snapshots():
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2026, 9, 1), None))
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), None))
     entry = DayEntryFactory(
         resource=resource, contract=contract, day=date(2026, 9, 6), day_hours=Decimal(6), bank=Decimal(6)
     )

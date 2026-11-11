@@ -1,7 +1,9 @@
+import json
 from datetime import date
 from decimal import Decimal
 
 import pytest
+from constance.test import override_config
 from django.core.exceptions import ValidationError
 from psycopg.types.range import DateRange
 from testutils.factories import (
@@ -12,15 +14,144 @@ from testutils.factories import (
     TaskEntryFactory,
     TaskFactory,
     TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
 )
 
 from krm3.timesheet.rules import Krm3Day
+
+def _day_entry(contract, day, hours='8.00'):
+    return DayEntryFactory(
+        resource=contract.resource,
+        contract=contract,
+        day=day,
+        day_hours=Decimal(hours),
+        due_hours=Decimal('8.00'),
+    )
+
+
+def test_completeness_validation_rejects_an_incomplete_day_entry():
+    contract = ContractFactory(
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    _day_entry(contract, date(2026, 9, 7), hours='6.00')
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        closed=True,
+    )
+
+    with pytest.raises(ValidationError, match='The timesheet has incomplete scheduled days'):
+        submission._verify_scheduled_hours_completed()
+
+
+def test_completeness_validation_rejects_a_missing_day_entry_without_tasks():
+    contract = ContractFactory(
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        closed=True,
+    )
+
+    with pytest.raises(ValidationError, match='The timesheet has incomplete scheduled days'):
+        submission._verify_scheduled_hours_completed()
+
+
+def test_completeness_validation_accepts_complete_submission_without_tasks():
+    contract = ContractFactory(
+        period=(date(2026, 9, 7), date(2026, 9, 9)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    _day_entry(contract, date(2026, 9, 7))
+    _day_entry(contract, date(2026, 9, 8))
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 7), date(2026, 9, 9)),
+        closed=True,
+    )
+
+    submission._verify_scheduled_hours_completed()
+
+    assert not TaskFactory._meta.model.objects.filter(resource=contract.resource).exists()
+
+
+def test_completeness_validation_ignores_days_outside_the_active_contract():
+    contract = ContractFactory(
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    _day_entry(contract, date(2026, 9, 7))
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 7), date(2026, 9, 9)),
+        closed=True,
+    )
+
+    submission._verify_scheduled_hours_completed()
+
+
+def test_completeness_validation_ignores_days_with_zero_required_hours():
+    contract = ContractFactory(
+        period=(date(2026, 9, 12), date(2026, 9, 14)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 12), date(2026, 9, 14)),
+        closed=True,
+    )
+
+    submission._verify_scheduled_hours_completed()
+
+
+def test_completeness_validation_ignores_public_holidays():
+    christmas = date(2026, 12, 25)
+    contract = ContractFactory(
+        period=(christmas, date(2026, 12, 26)),
+        working_schedule={'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0},
+    )
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(christmas, date(2026, 12, 26)),
+        closed=True,
+    )
+
+    assert contract.get_due_hours(christmas) == 0
+
+    submission._verify_scheduled_hours_completed()
+
+
+@override_config(
+    DEFAULT_RESOURCE_SCHEDULE=json.dumps(
+        {'mon': 8, 'tue': 8, 'wed': 8, 'thu': 8, 'fri': 8, 'sat': 0, 'sun': 0}
+    )
+)
+def test_completeness_validation_uses_default_schedule_when_contract_schedule_is_missing():
+    contract = ContractFactory(
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        working_schedule={},
+    )
+    submission = TimesheetSubmissionFactory.build(
+        resource=contract.resource,
+        period=(date(2026, 9, 7), date(2026, 9, 8)),
+        closed=True,
+    )
+    assert contract.get_due_hours(date(2026, 9, 7)) == 8
+
+    with pytest.raises(ValidationError, match='The timesheet has incomplete scheduled days'):
+        submission._verify_scheduled_hours_completed()
 
 
 @pytest.mark.parametrize('reload_before_closing', (False, True))
 def test_submission_snapshot_excludes_the_day_after_its_period(reload_before_closing):
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2027, 4, 1), date(2027, 6, 1)))
+    contract = create_contract_without_scheduled_hours(
+        resource,
+        (date(2027, 4, 1), date(2027, 6, 1)),
+    )
     april_entry = DayEntryFactory(
         resource=resource,
         contract=contract,
@@ -59,7 +190,7 @@ def test_submission_snapshot_excludes_the_day_after_its_period(reload_before_clo
 
 def test_first_closed_submission_establishes_the_starting_point_despite_older_contracts():
     resource = ResourceFactory()
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 11, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 11, 1)))
 
     submission = TimesheetSubmissionFactory(
         resource=resource,
@@ -72,7 +203,7 @@ def test_first_closed_submission_establishes_the_starting_point_despite_older_co
 
 def test_cannot_close_a_timesheet_after_an_unsubmitted_contracted_month():
     resource = ResourceFactory()
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 4, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 4, 1)))
     TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
 
     march = TimesheetSubmissionFactory.build(
@@ -87,8 +218,8 @@ def test_cannot_close_a_timesheet_after_an_unsubmitted_contracted_month():
 
 def test_closing_skips_months_without_an_active_contract():
     resource = ResourceFactory()
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 2, 1)))
-    ContractFactory(resource=resource, period=(date(2026, 3, 1), date(2026, 4, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 2, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 3, 1), date(2026, 4, 1)))
     TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
 
     march = TimesheetSubmissionFactory(
@@ -102,7 +233,7 @@ def test_closing_skips_months_without_an_active_contract():
 
 def test_historical_gaps_before_the_latest_closed_submission_are_ignored():
     resource = ResourceFactory()
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 6, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 6, 1)))
     TimesheetSubmissionFactory(resource=resource, period=('2026-04-01', '2026-05-01'), closed=True)
 
     may = TimesheetSubmissionFactory(
@@ -116,7 +247,7 @@ def test_historical_gaps_before_the_latest_closed_submission_are_ignored():
 
 def test_closing_an_open_submission_checks_the_previous_contracted_month():
     resource = ResourceFactory()
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 4, 1)))
+    create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 4, 1)))
     TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
     march = TimesheetSubmissionFactory(
         resource=resource,
@@ -132,19 +263,21 @@ def test_closing_an_open_submission_checks_the_previous_contracted_month():
 
 def test_existing_closed_submission_is_not_revalidated_against_historical_gaps():
     resource = ResourceFactory()
+    create_contract_without_scheduled_hours(resource, (date(2026, 3, 1), date(2026, 4, 1)))
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-03-01', '2026-04-01'),
         closed=True,
     )
-    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 4, 1)))
+    ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 3, 1)))
 
     submission.save()
 
 
 def test_submission_state_is_synchronized_with_day_entries():
     resource = ResourceFactory()
-    day_entry = DayEntryFactory(resource=resource, day=date(2024, 1, 3))
+    contract = create_contract_without_scheduled_hours(resource, (date(2024, 1, 1), date(2024, 2, 1)))
+    day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2024, 1, 3))
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2024-01-01', '2024-01-08'),
@@ -171,7 +304,7 @@ def test_submission_state_is_synchronized_with_day_entries():
 
 def test_closed_entries_cannot_be_deleted_until_submission_is_reopened():
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 2, 1)))
+    contract = create_contract_without_scheduled_hours(resource, (date(2024, 1, 1), date(2024, 2, 1)))
     task = TaskFactory(resource=resource, period=contract.period)
     day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2024, 1, 3))
     task_entry = TaskEntryFactory(day_entry=day_entry, task=task)
@@ -204,7 +337,7 @@ def test_closed_entries_cannot_be_deleted_until_submission_is_reopened():
 
 def test_entries_cannot_be_changed_until_the_later_submission_is_reopened():
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2026, 9, 1), date(2026, 11, 1)))
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 11, 1)))
     task = TaskFactory(resource=resource, period=contract.period)
     day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2026, 9, 15))
     task_entry = TaskEntryFactory(day_entry=day_entry, task=task)
@@ -244,14 +377,16 @@ def test_entries_cannot_be_changed_until_the_later_submission_is_reopened():
 
 def test_submission_cannot_be_deleted_while_a_later_submission_is_closed():
     resource = ResourceFactory()
+    september_period = ('2026-09-01', '2026-10-01')
+    october_period = ('2026-10-01', '2026-11-01')
     september = TimesheetSubmissionFactory(
         resource=resource,
-        period=('2026-09-01', '2026-10-01'),
+        period=september_period,
         closed=True,
     )
     TimesheetSubmissionFactory(
         resource=resource,
-        period=('2026-10-01', '2026-11-01'),
+        period=october_period,
         closed=True,
     )
 
@@ -263,12 +398,13 @@ def test_submission_cannot_be_deleted_while_a_later_submission_is_closed():
 
 def test_task_entry_cannot_be_created_in_closed_submission():
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 2, 1)))
+    period = (date(2024, 1, 1), date(2024, 2, 1))
+    contract = create_contract_without_scheduled_hours(resource, period)
     task = TaskFactory(resource=resource, period=contract.period)
     day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2024, 1, 3))
     TimesheetSubmissionFactory(
         resource=resource,
-        period=('2024-01-01', '2024-02-01'),
+        period=period,
         closed=True,
     )
 
