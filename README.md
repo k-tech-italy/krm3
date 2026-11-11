@@ -95,6 +95,8 @@ Run the tests with `make test`; see [Running tests](https://github.com/k-tech-it
     * serve the frontend at `/` (without it `http://localhost:8000/` answers 404);
     * send the private files behind `/media-auth/` (expense images, contract and DMS documents) itself, instead
       of delegating them to nginx (without it they download as empty files).
+  * `KRM3_SENTRY_ENVIRONMENT` drives the strip above the header: `local` (already in `.env.example`) shows
+    an orange LOCAL strip, `int` a green one, `prod` none.
 
 * If using `direnv`:
     ```shell
