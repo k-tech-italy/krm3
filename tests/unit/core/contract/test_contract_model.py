@@ -126,6 +126,47 @@ def test_contract_form_rejects_period_that_excludes_day_entries(start, end, entr
     assert form.non_field_errors() == ['Shrinking the contract period would leave day entries outside it.']
 
 
+@pytest.mark.parametrize(
+    ('start', 'end', 'task_period'),
+    (
+        pytest.param(
+            dt('2026-02-01'),
+            None,
+            (dt('2026-01-15'), dt('2026-03-01')),
+            id='later-contract-start',
+        ),
+        pytest.param(
+            dt('2026-01-01'),
+            dt('2026-07-01'),
+            (dt('2026-06-01'), dt('2026-08-01')),
+            id='earlier-contract-end',
+        ),
+    ),
+)
+def test_contract_form_rejects_period_that_leaves_tasks_without_contract_coverage(start, end, task_period):
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    TaskFactory(resource=contract.resource, period=task_period)
+
+    form = ContractForm(instance=contract, data=_contract_form_data(contract, start, end))
+
+    assert not form.is_valid()
+    assert form.non_field_errors() == [
+        'Shrinking the contract period would leave tasks without contract coverage.'
+    ]
+
+
+def test_contract_form_allows_shorter_period_when_tasks_remain_covered():
+    contract = ContractFactory(period=(dt('2026-01-01'), None))
+    TaskFactory(resource=contract.resource, period=(dt('2026-02-01'), dt('2026-06-01')))
+
+    form = ContractForm(
+        instance=contract,
+        data=_contract_form_data(contract, dt('2026-01-15'), dt('2026-07-01')),
+    )
+
+    assert form.is_valid(), form.errors
+
+
 @override_config(
     DEFAULT_RESOURCE_SCHEDULE=json.dumps({'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7})
 )

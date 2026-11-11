@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms import ModelForm
 from django.utils.translation import gettext_lazy as _l
+from psycopg.types.range import DateRange
 
 from krm3.core.models import Contract, ProtectedDocument
 from krm3.core.widgets import PrivateMediaFileInput
@@ -66,6 +67,19 @@ class ContractForm(ConcurrentForm):
                     raise ValidationError(
                         'Shrinking the contract period would leave day entries outside it.',
                         code='orphan-day-entries',
+                    )
+                tasks = self.instance.resource.task_set
+                task_before_new_start = start_was_shortened and tasks.filter(
+                    period__overlap=DateRange(old_period.lower, new_period.lower, '[)')
+                ).exists()
+                task_after_new_end = end_was_shortened and tasks.filter(
+                    period__overlap=DateRange(new_period.upper, old_period.upper, '[)')
+                ).exists()
+
+                if task_before_new_start or task_after_new_end:
+                    raise ValidationError(
+                        'Shrinking the contract period would leave tasks without contract coverage.',
+                        code='orphan-tasks',
                     )
         return cleaned_data
 
