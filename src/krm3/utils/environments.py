@@ -1,34 +1,22 @@
 """Helpers to describe the deployment environment (Refs: taiga#715).
 
-The environment value comes from the SENTRY_ENVIRONMENT setting: production
-environments show no banner, `local` is displayed in pale orange and any other
-non-production value (e.g. INT) in light green.
-
-When the setting is empty it is derived from DEBUG (see `resolve_environment`):
-development servers run with DEBUG on and get `local`, while deployments such
-as Rancher explicitly set DEBUG off (KRM3_DEBUG='0') and get `production`.
-Non-production deployments (e.g. INT) set SENTRY_ENVIRONMENT explicitly.
+The environment value comes from the SENTRY_ENVIRONMENT setting, which defaults
+to `prod`: a server that starts unconfigured assumes it is prod.
+Non-production deployments (e.g. INT) and local development set the setting
+explicitly. Production environments show no banner, `local` is displayed in
+pale orange and any other non-production value in light green. An empty value
+never shows a banner.
 """
 
 PROD_ENVIRONMENTS = frozenset({'production', 'prod'})
 
 LOCAL_ENVIRONMENT = 'local'
 
-PRODUCTION_ENVIRONMENT = 'production'
-
 # Pale orange for local development.
 LOCAL_COLOUR = '#fed7aa'
 
 # Light green for any non-production environment (e.g. INT).
 NON_PROD_COLOUR = '#86efac'
-
-
-def resolve_environment(explicit: str | None, debug: bool) -> str:
-    """Return an explicit environment (e.g. INT) when given, otherwise derive it from DEBUG."""
-    explicit = (explicit or '').strip()
-    if explicit:
-        return explicit
-    return LOCAL_ENVIRONMENT if debug else PRODUCTION_ENVIRONMENT
 
 
 def environment_info(environment: str | None) -> dict[str, str | bool]:

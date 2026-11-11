@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from krm3.utils.environments import environment_info, resolve_environment
+from krm3.utils.environments import environment_info
 
 
 @pytest.mark.parametrize(
@@ -56,24 +56,6 @@ from krm3.utils.environments import environment_info, resolve_environment
 )
 def test_environment_info(environment, expected):
     assert environment_info(environment) == expected
-
-
-@pytest.mark.parametrize(
-    ('explicit', 'debug', 'expected'),
-    [
-        pytest.param('int', True, 'int', id='explicit-wins-with-debug'),
-        pytest.param('int', False, 'int', id='explicit-wins-without-debug'),
-        pytest.param('local', False, 'local', id='explicit-local-wins'),
-        pytest.param('', True, 'local', id='unset-with-debug'),
-        pytest.param('', False, 'production', id='unset-without-debug'),
-        pytest.param(None, True, 'local', id='none-with-debug'),
-        pytest.param(None, False, 'production', id='none-without-debug'),
-        pytest.param('  ', True, 'local', id='whitespace-counts-as-unset'),
-        pytest.param(' production ', False, 'production', id='whitespace-stripped'),
-    ],
-)
-def test_resolve_environment(explicit, debug, expected):
-    assert resolve_environment(explicit, debug) == expected
 
 
 @pytest.mark.django_db
