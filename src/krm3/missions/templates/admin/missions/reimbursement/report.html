@@ -2,14 +2,13 @@
 {% load render_table from django_tables2 %}
 {% load numformat %}
 
+{% block title %}{{ filename }}{% endblock %}
+
 {% block extrahead %}
     {{ block.super }}
     <script>
         function printWithSpecialFileName() {
-            var tempTitle = document.title;
-            document.title = "{{filename}}";
             window.print();
-            document.title = tempTitle;
         }
     </script>
 
