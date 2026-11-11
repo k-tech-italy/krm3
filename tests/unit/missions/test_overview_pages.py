@@ -78,7 +78,9 @@ def test_reimbursement_report_action(admin_client, reimbursement):
     )
 
     assert response.status_code == 200
-    assert 'Reimbursements report' in response.content.decode()
+    content = response.content.decode()
+    assert 'Reimbursements report' in content
+    assert f'<title>ReimbursementReport_{reimbursement.month}_{reimbursement.year}</title>' in content
 
 
 @pytest.mark.parametrize(

@@ -222,9 +222,14 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
     @admin.action(description='Reimbursement report')
     def report(self, request: HttpRequest, queryset: QuerySet[Reimbursement]) -> TemplateResponse:
         """View reimbursement report."""
-        context = {'data': prepare_reimbursement_report_context(queryset)}
+        data = prepare_reimbursement_report_context(queryset)
+        period = next(iter(data))
+        context = {
+            'data': data,
+            'filename': f'ReimbursementReport_{period.replace(" ", "_")}',
+        }
         return TemplateResponse(
             request,
             'admin/missions/reimbursement/report.html',
-            context=context | {'mid':99},
+            context=context | {'mid': 99},
         )
