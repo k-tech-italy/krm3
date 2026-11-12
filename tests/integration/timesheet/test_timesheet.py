@@ -320,7 +320,10 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
 
     browser.click('//button[contains(text(), "Save")]')
     browser.assert_element('//*[@data-testid = "leave-icon-2025-07-04"]')
-    browser.assert_element('//div[@data-tooltip-id="tooltip-hours-2025-07-04" and contains(text(), "7")]')
+    browser.assert_element(
+        '//div[@data-tooltip-id="tooltip-hours-2025-07-04"]'
+        '//*[@data-testid="header-total-hours" and normalize-space()="7h"]'
+    )
 
 
 @freeze_time('2025-07-13')
@@ -384,7 +387,7 @@ def test_add_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
@@ -395,7 +398,7 @@ def test_add_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
 
     browser.click('//button[contains(text(), "Save")]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
 
@@ -429,7 +432,7 @@ def test_use_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +2h)'
 
@@ -440,7 +443,7 @@ def test_use_bank_hours_success(browser: 'AppTestBrowser', regular_user, freeze_
 
     browser.click('//button[contains(text(), "Save")]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
@@ -463,7 +466,7 @@ def test_add_bank_hours_below_scheduled_hours(browser: 'AppTestBrowser', regular
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
@@ -474,7 +477,7 @@ def test_add_bank_hours_below_scheduled_hours(browser: 'AppTestBrowser', regular
 
     browser.click('//button[contains(text(), "Save")]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
@@ -508,7 +511,7 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "2")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "2")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = -2h)'
 
@@ -518,7 +521,7 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     browser.fill('//input[contains(@id,"save-bank-hour-input")]', '2')
     browser.click('//button[contains(text(), "Save")]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "0")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "0")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
@@ -623,7 +626,7 @@ def test_cannot_exceed_bank_hours_upper_bound(browser: 'AppTestBrowser', regular
     browser.login_as_user(regular_user)
     browser.click('[href*="timesheet"]')
 
-    browser.assert_element('//p[@data-testid="bank-total" and contains(text(), "16")]')
+    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "16")]')
     bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
     assert bank_delta.text.strip() == '(𝚫 = +16h)'
 

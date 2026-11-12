@@ -1,9 +1,22 @@
 import pytest
+from django.contrib import admin
+from django.contrib.admin.widgets import AdminDateWidget
 from django.urls import reverse
 from testutils.factories import TaskFactory
 from testutils.permissions import add_permissions
 
+from krm3.core.models import Task
+from krm3.projects.admin import TaskInline
+
 COST_FIELDS = {'work_price', 'travel_price'}
+
+
+def test_task_inline_uses_admin_date_widgets_for_period():
+    task_inline = TaskInline(Task, admin.site)
+
+    period_formfield = task_inline.formfield_for_dbfield(Task._meta.get_field('period'), request=None)
+
+    assert all(isinstance(widget, AdminDateWidget) for widget in period_formfield.widget.widgets)
 
 
 @pytest.mark.parametrize(
