@@ -1,3 +1,9 @@
+## 5.3.1 (2026-11-12)
+
+### Fix
+
+- **projects**: restore date pickers in project task inline
+
 ## 5.3.0 (2026-11-12)
 
 ### Feat
