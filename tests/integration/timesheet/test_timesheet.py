@@ -18,6 +18,7 @@ from testutils.factories import (
     TaskFactory,
     TaskEntryFactory,
     TimesheetSubmissionFactory,
+    create_contract_without_scheduled_hours,
 )
 
 if typing.TYPE_CHECKING:
@@ -740,8 +741,9 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
 ):
     freeze_frontend_time('2025-07-13T00:00:00Z')
     resource = ResourceFactory(user=regular_user)
-    contract = ContractFactory(resource=resource)
-    TaskFactory(resource=resource, contract=contract)
+    period = (_dt('2025-07-01'), _dt('2025-07-31'))
+    contract = create_contract_without_scheduled_hours(resource, period)
+    TaskFactory(resource=resource, contract=contract, period=contract.period)
 
     day_entry = DayEntryFactory(
         resource=resource,
@@ -754,7 +756,7 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
     submission = TimesheetSubmissionFactory(
         resource=resource,
         closed=True,
-        period=(_dt('2025-07-01'), _dt('2025-07-31')),
+        period=period,
     )
     type(day_entry).objects.filter(pk=day_entry.pk).update(timesheet=submission)
 
@@ -872,13 +874,10 @@ def test_timesheet_scheduled_hours_more_colors(
 
     browser.click_and_release(element)
 
-    more_button = '#short-menu-more-button'
-    browser.wait_for_element_visible(more_button)
-    browser.js_click(more_button)
-    task_dialog = '//div[@role="dialog" and starts-with(@aria-label, "Add Task Entry for ")]'
-    browser.wait_for_element_visible(task_dialog)
-    browser.fill(f'{task_dialog}//input[@id="daytime-input"]', '13')
-    browser.click(f'{task_dialog}//button[normalize-space()="Save"]')
+    custom_hours_input = '//input[@placeholder="e.g. 2.5"]'
+    browser.wait_for_element_visible(custom_hours_input)
+    browser.fill(custom_hours_input, '13')
+    browser.click('//button[normalize-space()="Add"]')
     element_path = (
         '//div[contains(@data-testid, "header-2025-06-24") and contains(@style,'
         f' "{config.MORE_THAN_SCHEDULE_COLOR_DARK_THEME}")]'

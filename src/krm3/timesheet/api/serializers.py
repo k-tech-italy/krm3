@@ -808,16 +808,21 @@ class StartEndDateRangeField(serializers.Field):
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     period = StartEndDateRangeField()
 
-    def is_valid(self, *, raise_exception: bool = False) -> bool:
+    def get_fields(self) -> dict[str, serializers.Field]:
+        fields = super().get_fields()
+        request = self.context.get('request')
+        if request is None or not request.user.has_perm('core.manage_any_timesheet'):
+            fields['closed'].read_only = True
+        return fields
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         user = self.context['request'].user
-        resource = user.get_resource()
-        if user.has_perm('core.manage_any_timesheet') or (
-            resource and user.resource.id == self.initial_data['resource']
-        ):
-            return super().is_valid(raise_exception=raise_exception)
-        if raise_exception:
+        resource = attrs.get('resource', self.instance.resource if self.instance else None)
+
+        if resource is not None and not user.has_perm('core.manage_any_timesheet') and user.get_resource() != resource:
             raise exceptions.PermissionDenied()
-        return False
+
+        return attrs
 
     def save(self, **kwargs) -> None:
         """Handle model constraints and return a 400 bad request if and error occurred."""

@@ -1,3 +1,21 @@
+## 5.3.0 (2026-11-12)
+
+### Feat
+
+- **config**: derive the environment from DEBUG when SENTRY_ENVIRONMENT is unset
+- **web**: environment banner to tell INT and local apart from PROD
+
+### Fix
+
+- **missions**: set reimbursement report PDF filename
+- **config**: default SENTRY_ENVIRONMENT to prod
+- **contracts**: prevent tasks outside contract coverage
+- **timesheet**: restrict open submissions to managers Refs: taiga#711
+- **timesheet**: handle missing resource during submission
+- **timesheet**: validate scheduled hours on submission
+- **timesheet**: validate completeness on submission
+- **Admin-City**: added list_display
+
 ## 5.2.1 (2026-11-06)
 
 ### Fix

@@ -16,6 +16,7 @@ from testutils.factories import (
     TaskFactory,
     TimesheetSubmissionFactory,
     UserFactory,
+    create_contract_without_scheduled_hours,
 )
 
 from krm3.core.forms import ContractTerminationForm
@@ -33,7 +34,7 @@ def _month(year: int, month: int) -> tuple[date, date]:
 def scenario():
     """An open contract from 2026-01-01, with data before and after 2026-11-15."""
     resource = ResourceFactory()
-    contract = ContractFactory(resource=resource, period=(date(2026, 1, 1), None))
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), None))
     project = ProjectFactory(period=(date(2020, 1, 1), None))
 
     def task(title: str, start: date, end: date | None) -> Task:

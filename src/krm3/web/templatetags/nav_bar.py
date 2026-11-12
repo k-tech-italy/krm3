@@ -63,10 +63,26 @@ def nav_bar(context: dict, elements: dict[str, str], logout_url: str = None) -> 
             csrf_token,
         )
 
+    environment_strip = ''
+    environment_style = ''
+    if (banner := context.get('ENVIRONMENT_BANNER', {})).get('show_banner'):
+        environment_strip = format_html(
+            """
+            <div data-environment-banner
+                 style="background-color: {}; color: #000000; text-align: center; font-weight: bold;
+                        font-size: 14px; line-height: 20px; padding: 4px 0;">{}</div>
+        """,
+            banner['color'],
+            banner['label'],
+        )
+        # keep the page content below the fixed navbar that grew by the strip height
+        environment_style = format_html('<style>body {{ padding-top: 28px; }}</style>', '')
+
     return format_html(
         """
-            <nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
+            {}<nav class="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b
                     border-gray-200 dark:border-gray-600 mb-20">
+                {}
                 <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4 md:py-0 md:px-4">
                     <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
                         <span class="text-xl font-bold text-gray-900 dark:text-white">KRM³</span>
@@ -88,6 +104,8 @@ def nav_bar(context: dict, elements: dict[str, str], logout_url: str = None) -> 
                 </div>
             </nav>
         """,
+        environment_style,
+        environment_strip,
         nav_items,
         logout_button,
     )

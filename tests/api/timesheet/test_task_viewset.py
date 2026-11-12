@@ -100,11 +100,14 @@ class TestTaskAPIListView:
             day_shift_hours=1,
             comment='Within range',
         )
+        day_entry.day_hours = Decimal('1.00')
+        day_entry.due_hours = Decimal('3.00')
+        day_entry.save()
 
         TimesheetSubmissionFactory(
             resource=resource,
             closed=True,
-            period=(_dt('2024-01-03'), _dt('2024-01-05')),
+            period=(_dt('2024-01-03'), _dt('2024-01-04')),
         )
         TimesheetSubmissionFactory(
             resource=resource,
