@@ -28,6 +28,11 @@ class TaskInline(admin.TabularInline):  # noqa: D101
     model = Task
     exclude = ['color', 'on_call_price', 'overtime_price', 'travel_price']
     autocomplete_fields = ['resource']
+    # Tell Django to use our custom widget for all DateRangeFields in this admin.
+    formfield_overrides = {
+        DateRangeField: {'widget': RangeWidget(base_widget=AdminDateWidget)},
+    }
+
 
 @admin.register(Project)
 class ProjectAdmin(ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
