@@ -6,7 +6,6 @@ from decimal import Decimal
 from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
 
-from constance import config
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
@@ -108,6 +107,14 @@ class SpecialLeaveReason(models.Model):
 
 
 class TimesheetSubmissionQuerySet(QuerySet):
+    def submitted(self) -> Self:
+        """Select the submissions that have been submitted for review or closed."""
+        return self.filter(status__in=[self.model.Status.PENDING, self.model.Status.CLOSED])
+
+    def closed(self) -> Self:
+        """Select the closed submissions."""
+        return self.filter(status=self.model.Status.CLOSED)
+
     def delete(self) -> tuple[int, dict[str, int]]:
         for submission in self:
             submission._verify_no_later_closed_submission()
@@ -142,17 +149,31 @@ class TimesheetSubmissionManager(models.Manager):
         if isinstance(resources, Resource):
             resources = [resources]
         return self.filter(
-            period__overlap=KTDateRange.from_start_end(from_date, to_date), closed=True, resource__in=resources
+            period__overlap=KTDateRange.from_start_end(from_date, to_date),
+            status=TimesheetSubmission.Status.CLOSED,
+            resource__in=resources,
         )
 
 
 class TimesheetSubmission(models.Model):
     """A submitted timesheet."""
 
+    class Status(models.TextChoices):
+        DRAFT = 'draft', _('Draft')
+        PENDING = 'pending', _('Pending')
+        REJECTED = 'rejected', _('Rejected')
+        CLOSED = 'closed', _('Closed')
+
     period = DateRangeField(help_text=_('N.B.: End date is the day after the actual end date'))
-    closed = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     timesheet = models.JSONField(null=True, blank=True, default=dict)
+    rejection_message = models.TextField(blank=True, default='')
     chat_threads = GenericRelation('core.ChatThread')
 
     objects: TimesheetSubmissionManager = TimesheetSubmissionManager()
@@ -194,18 +215,26 @@ class TimesheetSubmission(models.Model):
             return
         self._verify_no_later_closed_submission()
         self._verify_submission_order()
-        if self._is_being_closed():
+        if self.status in (self.Status.PENDING, self.Status.CLOSED):
             self._verify_scheduled_hours_completed()
-        self.timesheet = self.calculate_timesheet() if self.closed else None
+        self.timesheet = self.calculate_timesheet() if self.is_closed else None
+
+    @property
+    def is_closed(self) -> bool:
+        return self.status == self.Status.CLOSED
+
+    @property
+    def is_submitted(self) -> bool:
+        return self.status in (self.Status.PENDING, self.Status.CLOSED)
 
     def _is_being_closed(self) -> bool:
         """Return whether this save creates a closed submission or closes an open one."""
-        if not self.closed:
+        if not self.is_closed:
             return False
         if not self.pk:
             return True
-        stored_closed = TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first()
-        return stored_closed is not True
+        stored_status = TimesheetSubmission.objects.filter(pk=self.pk).values_list('status', flat=True).first()
+        return stored_status != self.Status.CLOSED
 
     @staticmethod
     def _period_start(period: DateRange | list | tuple) -> datetime.date:
@@ -277,21 +306,31 @@ class TimesheetSubmission(models.Model):
                     )
 
     def _verify_submission_order(self) -> None:
-        """Require contracted months after the first closed submission to be submitted in chronological order."""
-        if not self.closed:
+        """Require submitted periods to follow existing submission and review rules."""
+        if self.status not in (self.Status.PENDING, self.Status.CLOSED):
             return
 
-        stored_closed = (
-            TimesheetSubmission.objects.filter(pk=self.pk).values_list('closed', flat=True).first() if self.pk else None
+        stored_status = (
+            TimesheetSubmission.objects.filter(pk=self.pk).values_list('status', flat=True).first() if self.pk else None
         )
-        if stored_closed is True:
+        if stored_status == self.Status.CLOSED:
             return
 
         current_month = self._period_start(self.period).replace(day=1)
+        blocking_periods = TimesheetSubmission.objects.filter(
+            resource_id=self.resource_id,
+            status__in=[self.Status.PENDING, self.Status.REJECTED],
+        ).exclude(pk=self.pk).values_list('period', flat=True)
+        if any(period.lower < current_month for period in blocking_periods):
+            raise ValidationError(
+                _('A previous timesheet is still pending review or rejected.'),
+                code='previous_timesheet_not_submitted',
+            )
+
         previous_periods = (
             TimesheetSubmission.objects.filter(
                 resource_id=self.resource_id,
-                closed=True,
+                status=self.Status.CLOSED,
             )
             .exclude(pk=self.pk)
             .values_list('period', flat=True)
@@ -333,7 +372,7 @@ class TimesheetSubmission(models.Model):
         return (
             cls.objects.filter(
                 resource_id=resource_id,
-                closed=True,
+                status=cls.Status.CLOSED,
                 period__overlap=KTDateRange.from_start_end(period_end, None),
             )
             .exclude(pk=exclude_pk)
@@ -361,7 +400,7 @@ class TimesheetSubmission(models.Model):
         self._verify_no_later_closed_submission()
         return super().delete(*args, **kwargs)
 
-    def calculate_timesheet(self) -> dict:
+    def calculate_timesheet(self, *, check_submission: bool = True) -> dict:
         """Retrieve the resource timesheet data (DTO dict) for a specific date interval."""
         from krm3.timesheet.api.serializers import TimesheetSerializer  # noqa: PLC0415
         from krm3.timesheet.dto import TimesheetDTO  # noqa: PLC0415
@@ -369,8 +408,10 @@ class TimesheetSubmission(models.Model):
         lower = KTDay(self.period.lower).date
         upper = KTDay(self.period.upper).date
         last_day = upper if self.period.upper_inc else (KTDay(upper) - 1).date
-        timesheet = TimesheetDTO().fetch(self.resource, lower, last_day)
-        return TimesheetSerializer(timesheet).data
+        timesheet = TimesheetDTO().fetch(self.resource, lower, last_day, check_submission=check_submission)
+        serialized = TimesheetSerializer(timesheet).data
+        serialized.pop('status', None)
+        return serialized
 
 
 type TimeEntry = DayEntry | TaskEntry
@@ -381,13 +422,16 @@ class TimeEntryAwareQuerySet[T: TimeEntry](QuerySet[T], abc.ABC):
     def open(self) -> Self: ...
 
     @abc.abstractmethod
+    def submitted(self) -> Self: ...
+
+    @abc.abstractmethod
     def closed(self) -> Self: ...
 
     @abc.abstractmethod
     def filter_acl(self) -> Self: ...
 
     def delete(self) -> tuple[int, dict[str, int]]:
-        if self.closed().exists():
+        if self.submitted().exists():
             raise ValidationError(
                 _('Closed time entries cannot be deleted. Reopen the timesheet first.'),
                 code='timesheet_closed',
@@ -410,7 +454,29 @@ def acl_queryset_factory[T: models.Model](prefix: str) -> type[TimeEntryAwareQue
             :return: the filtered queryset.
             """
             return self.filter(
-                Q(**{f'{self._prefix}timesheet__isnull': True}) | Q(**{f'{self._prefix}timesheet__closed': False})
+                Q(**{f'{self._prefix}timesheet__isnull': True})
+                | Q(
+                    **{
+                        f'{self._prefix}timesheet__status__in': [
+                            TimesheetSubmission.Status.DRAFT,
+                            TimesheetSubmission.Status.REJECTED,
+                        ]
+                    }
+                )
+            )
+
+        def submitted(self) -> Self:
+            """Select the submitted time entries in this queryset.
+
+            :return: the filtered queryset.
+            """
+            return self.filter(
+                **{
+                    f'{self._prefix}timesheet__status__in': [
+                        TimesheetSubmission.Status.PENDING,
+                        TimesheetSubmission.Status.CLOSED,
+                    ]
+                }
             )
 
         def closed(self) -> Self:
@@ -418,7 +484,12 @@ def acl_queryset_factory[T: models.Model](prefix: str) -> type[TimeEntryAwareQue
 
             :return: the filtered queryset.
             """
-            return self.filter(**{f'{self._prefix}timesheet__isnull': False, f'{self._prefix}timesheet__closed': True})
+            return self.filter(
+                **{
+                    f'{self._prefix}timesheet__isnull': False,
+                    f'{self._prefix}timesheet__status': TimesheetSubmission.Status.CLOSED,
+                }
+            )
 
         def filter_acl(self, user: AbstractUser) -> Self:
             """Return the queryset for the owned records.
@@ -505,7 +576,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
     def is_submitted(self) -> bool:
         return TimesheetSubmission.objects.filter(
             resource_id=self.resource_id,
-            closed=True,
+            status__in=[TimesheetSubmission.Status.PENDING, TimesheetSubmission.Status.CLOSED],
             period__contains=self.day,
         ).exists()
 
@@ -524,7 +595,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         return (
             TimesheetSubmission.objects.filter(
                 resource_id=resource_id,
-                closed=True,
+                status=TimesheetSubmission.Status.CLOSED,
                 period__overlap=KTDateRange.from_start_end(day + datetime.timedelta(days=1), None),
             )
             .exclude(period__contains=day)
@@ -582,7 +653,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
 
         If full is False [default], only the fields calculated from the related TimeEntries are reset.
         """
-        self.closed = self.timesheet.closed if self.timesheet else False
+        self.closed = self.timesheet.is_submitted if self.timesheet else False
         self.is_holiday = self.contract.get_ktday(self.day).is_holiday
         self.due_hours = self.contract.get_due_hours(self.day)
         self.overtime_hours = Decimal(0.0)
@@ -729,41 +800,6 @@ class DayEntry(CleanValidatorsMixin, models.Model):
                 f'Invalid day entry for {self.day}: {message}',
                 code='bank_withdraw_above_scheduled_hours',
             )
-
-    def _verify_bank_hours_balance_limits(self) -> None:
-        """Rebuild the balance from the changed day and reject the operation if any later value exceeds its limits."""
-        balance_upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
-        balance_lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
-
-        stored = DayEntry.objects.filter(pk=self.pk).values_list('bank', 'day').first() if self.pk else None
-        old_bank, old_day = (safe_dec(stored[0]), stored[1]) if stored else (Decimal(0), None)
-        new_day = KTDay(self.day).date
-        delta = safe_dec(self.bank) - old_bank
-
-        if delta == 0 and old_day in (None, new_day):
-            # Do not reject unrelated changes when the existing balance is already outside its limits.
-            return
-
-        check_from = min(old_day, new_day) if old_day is not None else new_day
-        current_balance = self.resource.get_bank_hours_balance((KTDay(check_from) - 1).date)
-
-        later_entries = DayEntry.objects.filter(resource=self.resource, day__gte=check_from)
-        if self.pk:
-            later_entries = later_entries.exclude(pk=self.pk)
-
-        running = current_balance
-        new_movement_applied = False
-        new_bank = safe_dec(self.bank)
-        for day, bank in later_entries.order_by('day').values_list('day', 'bank'):
-            if not new_movement_applied and day >= new_day:
-                running += new_bank
-                new_movement_applied = True
-                self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
-            running += safe_dec(bank)
-            self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
-        if not new_movement_applied:
-            running += new_bank
-            self._raise_if_balance_out_of_range(running, current_balance, delta, balance_upper, balance_lower)
 
     @staticmethod
     def _raise_if_balance_out_of_range(
@@ -1026,7 +1062,7 @@ def link_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, **k
         period_filter = {'day__gte': lower, upper_lookup: upper}
     DayEntry.objects.filter(resource=instance.resource, **period_filter).update(
         timesheet=instance,
-        closed=instance.closed,
+        closed=instance.is_submitted,
     )
 
 
@@ -1039,6 +1075,7 @@ def unlink_entries(sender: TimesheetSubmission, instance: TimesheetSubmission, *
 def link_to_timesheet(sender: DayEntry, instance: DayEntry, **kwargs: Any) -> None:
     timesheet = TimesheetSubmission.objects.filter(resource=instance.resource, period__contains=instance.day).first()
     instance.timesheet = timesheet
+    instance.closed = timesheet.is_submitted if timesheet is not None else False
 
 
 class ExtraHolidayManager(models.Manager):

@@ -20,7 +20,6 @@ class EventDispatcher:
         with the following mandatory items:
 
         * `BACKEND`: the absolute dotted path of the backend class;
-        * `OPTIONS`: a dict with configuration options for the backend.
 
         :raises django.core.exceptions.ImproperlyConfigured: when the
             configuration is missing or lacks any of the mandatory items
@@ -31,7 +30,6 @@ class EventDispatcher:
         #       waste time rerunning them every time we fire an event
         try:
             backend_class = import_string(settings.EVENTS['BACKEND'])
-            options = settings.EVENTS['OPTIONS']
         except TypeError as e:
             raise django_exceptions.ImproperlyConfigured('Missing event dispatch configuration') from e
         except KeyError as e:
@@ -39,7 +37,7 @@ class EventDispatcher:
         except ImportError:
             raise
 
-        self.backend: EventDispatcherBackend = backend_class(options)
+        self.backend: EventDispatcherBackend = backend_class()
 
     def send[T](self, event: Event[T]) -> None:
         """Send an `Event` to the configured notification system.

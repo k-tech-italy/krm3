@@ -1,6 +1,7 @@
 nav:
   - index.md
   - Contributing: contributing
+  - notifications.md
   - overtime.md
   - release.md
   - Design: design

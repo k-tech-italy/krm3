@@ -21,7 +21,7 @@ if typing.TYPE_CHECKING:
 
 class TimesheetDTO:
     def __init__(self, requested_by: User | None = None) -> None:
-        self.submitted = False
+        self.status: str | None = None
         self.tasks = TaskQuerySet().none()
         self.day_entries = DayEntryQuerySet().none()
         self.requested_by = requested_by
@@ -33,14 +33,25 @@ class TimesheetDTO:
         self.contracts = Contract.objects.none()
         self.task_entries = TaskEntry.objects.none()
 
-    def fetch(self, resource: Resource, start_date: datetime.date, end_date: datetime.date) -> Self:
+    def fetch(
+        self,
+        resource: Resource,
+        start_date: datetime.date,
+        end_date: datetime.date,
+        *,
+        check_submission: bool = True,
+    ) -> Self:
         """Fetch the resource timesheet for a specific date interval."""
         requested_period = DateRange(start_date, end_date, '[]')
-        self.submitted = TimesheetSubmission.objects.filter(
-            resource=resource,
-            period__contains=requested_period,
-            closed=True,
-        ).exists()
+        submission = (
+            TimesheetSubmission.objects.filter(
+                resource=resource,
+                period__contains=requested_period,
+            ).first()
+            if check_submission
+            else None
+        )
+        self.status = submission.status if submission is not None else None
 
         task_qs = Task.objects.filter_acl(self.requested_by) if self.requested_by else Task.objects.all()
         self.tasks = cast(

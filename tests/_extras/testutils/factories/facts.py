@@ -271,6 +271,7 @@ def generate_month_period(start_date, offset):
 class TimesheetSubmissionFactory(DjangoModelFactory):
     period = Sequence(lambda n: generate_month_period(date(2020, 1, 1), n))
     resource = SubFactory(ResourceFactory)
+    status = 'closed'
 
     class Meta:
         model = 'core.TimesheetSubmission'

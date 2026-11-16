@@ -17,6 +17,7 @@ from testutils.factories import (
     create_contract_without_scheduled_hours,
 )
 
+from krm3.core.models import TimesheetSubmission
 from krm3.timesheet.rules import Krm3Day
 
 def _day_entry(contract, day, hours='8.00'):
@@ -38,7 +39,7 @@ def test_completeness_validation_rejects_an_incomplete_day_entry():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 7), date(2026, 9, 8)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     with pytest.raises(ValidationError, match='The timesheet has incomplete scheduled days'):
@@ -53,7 +54,7 @@ def test_completeness_validation_rejects_a_missing_day_entry_without_tasks():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 7), date(2026, 9, 8)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     with pytest.raises(ValidationError, match='The timesheet has incomplete scheduled days'):
@@ -70,7 +71,7 @@ def test_completeness_validation_accepts_complete_submission_without_tasks():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 7), date(2026, 9, 9)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     submission._verify_scheduled_hours_completed()
@@ -87,7 +88,7 @@ def test_completeness_validation_ignores_days_outside_the_active_contract():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 7), date(2026, 9, 9)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     submission._verify_scheduled_hours_completed()
@@ -101,7 +102,7 @@ def test_completeness_validation_ignores_days_with_zero_required_hours():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 12), date(2026, 9, 14)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     submission._verify_scheduled_hours_completed()
@@ -116,7 +117,7 @@ def test_completeness_validation_ignores_public_holidays():
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(christmas, date(2026, 12, 26)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     assert contract.get_due_hours(christmas) == 0
@@ -137,7 +138,7 @@ def test_completeness_validation_uses_default_schedule_when_contract_schedule_is
     submission = TimesheetSubmissionFactory.build(
         resource=contract.resource,
         period=(date(2026, 9, 7), date(2026, 9, 8)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
     assert contract.get_due_hours(date(2026, 9, 7)) == 8
 
@@ -170,17 +171,18 @@ def test_submission_snapshot_excludes_the_day_after_its_period(reload_before_clo
     submission = TimesheetSubmissionFactory.build(
         resource=resource,
         period=DateRange(date(2027, 4, 1), date(2027, 4, 30), '[]'),
-        closed=not reload_before_closing,
+        status=TimesheetSubmission.Status.DRAFT if reload_before_closing else TimesheetSubmission.Status.CLOSED,
     )
     submission.save()
     if reload_before_closing:
         submission.refresh_from_db()
-        submission.closed = True
+        submission.status = TimesheetSubmission.Status.CLOSED
         submission.save()
 
     assert submission.timesheet['days'][-1] == '2027-04-30'
     assert {entry['id'] for entry in submission.timesheet['day_entries']} == {april_entry.pk}
     assert submission.timesheet['bank_hours'] == '0.00'
+    assert 'status' not in submission.timesheet
 
     april_entry.refresh_from_db()
     may_entry.refresh_from_db()
@@ -195,21 +197,25 @@ def test_first_closed_submission_establishes_the_starting_point_despite_older_co
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-10-01', '2026-11-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
-    assert submission.closed is True
+    assert submission.is_closed is True
 
 
 def test_cannot_close_a_timesheet_after_an_unsubmitted_contracted_month():
     resource = ResourceFactory()
     create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 4, 1)))
-    TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2026-01-01', '2026-02-01'),
+        status=TimesheetSubmission.Status.CLOSED,
+    )
 
     march = TimesheetSubmissionFactory.build(
         resource=resource,
         period=('2026-03-01', '2026-04-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     with pytest.raises(ValidationError, match='The timesheet for 2026-02 must be submitted first'):
@@ -220,42 +226,54 @@ def test_closing_skips_months_without_an_active_contract():
     resource = ResourceFactory()
     create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 2, 1)))
     create_contract_without_scheduled_hours(resource, (date(2026, 3, 1), date(2026, 4, 1)))
-    TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2026-01-01', '2026-02-01'),
+        status=TimesheetSubmission.Status.CLOSED,
+    )
 
     march = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-03-01', '2026-04-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
-    assert march.closed is True
+    assert march.is_closed is True
 
 
 def test_historical_gaps_before_the_latest_closed_submission_are_ignored():
     resource = ResourceFactory()
     create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 6, 1)))
-    TimesheetSubmissionFactory(resource=resource, period=('2026-04-01', '2026-05-01'), closed=True)
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2026-04-01', '2026-05-01'),
+        status=TimesheetSubmission.Status.CLOSED,
+    )
 
     may = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-05-01', '2026-06-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
-    assert may.closed is True
+    assert may.is_closed is True
 
 
 def test_closing_an_open_submission_checks_the_previous_contracted_month():
     resource = ResourceFactory()
     create_contract_without_scheduled_hours(resource, (date(2026, 1, 1), date(2026, 4, 1)))
-    TimesheetSubmissionFactory(resource=resource, period=('2026-01-01', '2026-02-01'), closed=True)
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=('2026-01-01', '2026-02-01'),
+        status=TimesheetSubmission.Status.CLOSED,
+    )
     march = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-03-01', '2026-04-01'),
-        closed=False,
+        status=TimesheetSubmission.Status.DRAFT,
     )
 
-    march.closed = True
+    march.status = TimesheetSubmission.Status.CLOSED
 
     with pytest.raises(ValidationError, match='The timesheet for 2026-02 must be submitted first'):
         march.save()
@@ -267,7 +285,7 @@ def test_existing_closed_submission_is_not_revalidated_against_historical_gaps()
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-03-01', '2026-04-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
     ContractFactory(resource=resource, period=(date(2026, 1, 1), date(2026, 3, 1)))
 
@@ -281,20 +299,20 @@ def test_submission_state_is_synchronized_with_day_entries():
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2024-01-01', '2024-01-08'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     day_entry.refresh_from_db()
     assert day_entry.timesheet == submission
     assert day_entry.closed is True
 
-    submission.closed = False
+    submission.status = TimesheetSubmission.Status.DRAFT
     submission.save()
     day_entry.refresh_from_db()
     assert day_entry.timesheet == submission
     assert day_entry.closed is False
 
-    submission.closed = True
+    submission.status = TimesheetSubmission.Status.CLOSED
     submission.save()
     submission.delete()
     day_entry.refresh_from_db()
@@ -311,7 +329,7 @@ def test_closed_entries_cannot_be_deleted_until_submission_is_reopened():
     submission = TimesheetSubmissionFactory(
         resource=resource,
         period=('2024-01-01', '2024-02-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     day_entry.refresh_from_db()
@@ -326,7 +344,7 @@ def test_closed_entries_cannot_be_deleted_until_submission_is_reopened():
     with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
         task_entry.__class__.objects.filter(pk=task_entry.pk).delete()
 
-    submission.closed = False
+    submission.status = TimesheetSubmission.Status.DRAFT
     submission.save()
     task_entry.delete()
     day_entry.delete()
@@ -344,7 +362,7 @@ def test_entries_cannot_be_changed_until_the_later_submission_is_reopened():
     october = TimesheetSubmissionFactory(
         resource=resource,
         period=('2026-10-01', '2026-11-01'),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     day_entry.comment = 'Changed'
@@ -369,7 +387,7 @@ def test_entries_cannot_be_changed_until_the_later_submission_is_reopened():
     with pytest.raises(ValidationError, match='A later timesheet is closed'):
         task_entry.delete()
 
-    october.closed = False
+    october.status = TimesheetSubmission.Status.DRAFT
     october.save()
     day_entry.full_clean()
     task_entry.save()
@@ -382,12 +400,12 @@ def test_submission_cannot_be_deleted_while_a_later_submission_is_closed():
     september = TimesheetSubmissionFactory(
         resource=resource,
         period=september_period,
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
     TimesheetSubmissionFactory(
         resource=resource,
         period=october_period,
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     with pytest.raises(ValidationError, match='A later timesheet is closed'):
@@ -405,7 +423,7 @@ def test_task_entry_cannot_be_created_in_closed_submission():
     TimesheetSubmissionFactory(
         resource=resource,
         period=period,
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     with pytest.raises(ValidationError, match='Cannot modify time entries for submitted timesheets'):
@@ -523,3 +541,80 @@ def test_submission_report_reads_legacy_time_entry_format():
     assert report_day.data_overtime == Decimal('1.00')
     assert report_day.data_meal_voucher == Decimal('1.00')
     assert report_day.data_regular_hours == Decimal('8.00')
+
+
+def test_new_submission_defaults_to_draft():
+    resource = ResourceFactory()
+
+    submission = TimesheetSubmission.objects.create(
+        resource=resource,
+        period=DateRange(date(2026, 1, 1), date(2026, 2, 1), '[)'),
+    )
+
+    assert submission.status == TimesheetSubmission.Status.DRAFT
+    assert submission.is_closed is False
+    assert submission.is_submitted is False
+
+
+def test_submission_status_properties_and_querysets():
+    submissions = {
+        status: TimesheetSubmissionFactory(
+            resource=ResourceFactory(),
+            period=(date(2026, 1, 1), date(2026, 2, 1)),
+            status=status,
+        )
+        for status in TimesheetSubmission.Status
+    }
+
+    assert submissions[TimesheetSubmission.Status.DRAFT].is_closed is False
+    assert submissions[TimesheetSubmission.Status.DRAFT].is_submitted is False
+    assert submissions[TimesheetSubmission.Status.PENDING].is_closed is False
+    assert submissions[TimesheetSubmission.Status.PENDING].is_submitted is True
+    assert submissions[TimesheetSubmission.Status.REJECTED].is_closed is False
+    assert submissions[TimesheetSubmission.Status.REJECTED].is_submitted is False
+    assert submissions[TimesheetSubmission.Status.CLOSED].is_closed is True
+    assert submissions[TimesheetSubmission.Status.CLOSED].is_submitted is True
+
+    assert set(TimesheetSubmission.objects.all().submitted()) == {
+        submissions[TimesheetSubmission.Status.PENDING],
+        submissions[TimesheetSubmission.Status.CLOSED],
+    }
+    assert set(TimesheetSubmission.objects.all().closed()) == {submissions[TimesheetSubmission.Status.CLOSED]}
+
+
+@pytest.mark.parametrize(
+    ('submission_status', 'expected_closed'),
+    [
+        pytest.param(TimesheetSubmission.Status.DRAFT, False, id='draft'),
+        pytest.param(TimesheetSubmission.Status.PENDING, True, id='pending'),
+        pytest.param(TimesheetSubmission.Status.REJECTED, False, id='rejected'),
+        pytest.param(TimesheetSubmission.Status.CLOSED, True, id='closed'),
+    ],
+)
+def test_day_entry_closed_projection_tracks_submission_status(submission_status, expected_closed):
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
+    day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2026, 9, 2))
+
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=(date(2026, 9, 1), date(2026, 10, 1)),
+        status=submission_status,
+    )
+
+    day_entry.refresh_from_db()
+    assert day_entry.closed is expected_closed
+
+
+def test_pending_submission_locks_day_entries():
+    resource = ResourceFactory()
+    contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
+    day_entry = DayEntryFactory(resource=resource, contract=contract, day=date(2026, 9, 2))
+    TimesheetSubmissionFactory(
+        resource=resource,
+        period=(date(2026, 9, 1), date(2026, 10, 1)),
+        status=TimesheetSubmission.Status.PENDING,
+    )
+
+    with pytest.raises(ValidationError, match='Closed time entries cannot be deleted'):
+        day_entry.delete()

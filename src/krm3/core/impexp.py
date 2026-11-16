@@ -21,7 +21,7 @@ class TimesheetExporter:
     def export(self) -> io.BytesIO:
         # get all TimesheetSubmission for the given queryset
         ts_qs = TimesheetSubmission.objects.select_related('resource'). \
-            filter(resource__in=self.queryset, closed=True). \
+            filter(resource__in=self.queryset, status=TimesheetSubmission.Status.CLOSED). \
             annotate(
                 r_firstname=F('resource__first_name'),
                 r_lastname=F('resource__first_name'),

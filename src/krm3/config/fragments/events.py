@@ -4,5 +4,4 @@ __all__ = ['EVENTS']
 
 EVENTS = {
     'BACKEND': env('EVENT_DISPATCHER_BACKEND'),
-    'OPTIONS': env('EVENT_DISPATCHER_OPTIONS'),
 }

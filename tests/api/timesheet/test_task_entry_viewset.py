@@ -17,7 +17,7 @@ from testutils.factories import (
     TimesheetSubmissionFactory,
 )
 
-from krm3.core.models import DayEntry, TaskEntry
+from krm3.core.models import DayEntry, TaskEntry, TimesheetSubmission
 
 
 def _non_working_days_url():
@@ -147,7 +147,7 @@ def test_rejects_clearing_task_entries_from_closed_timesheet(admin_user, api_cli
     TimesheetSubmissionFactory(
         resource=entry.day_entry.resource,
         period=(entry.day_entry.day, entry.day_entry.day + timedelta(days=1)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
 
     response = api_client(user=admin_user).post(_task_entry_clear_url(), data={'ids': [entry.pk]}, format='json')

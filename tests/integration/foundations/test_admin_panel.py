@@ -24,7 +24,7 @@ from testutils.factories import (
     TimesheetSubmissionFactory,
 )
 
-from krm3.core.models import TaskEntry
+from krm3.core.models import TaskEntry, TimesheetSubmission
 from krm3.core.models.missions import Expense, Mission
 
 if typing.TYPE_CHECKING:
@@ -508,20 +508,20 @@ def submissions():
     return {
         'january': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 1, 1), datetime.date(2026, 2, 1)),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         ),
         'february': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 2, 1), datetime.date(2026, 3, 1)),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         ),
         'march': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 3, 1), datetime.date(2026, 4, 1)),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         ),
         'mid_month': TimesheetSubmissionFactory(
             period=(datetime.date(2026, 3, 15), datetime.date(2026, 4, 16)),
             resource=ResourceFactory(),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         ),
     }
 

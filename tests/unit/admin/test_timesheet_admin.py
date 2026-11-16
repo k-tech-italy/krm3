@@ -19,7 +19,7 @@ def test_admin_cannot_change_or_delete_entries_in_closed_submission(admin_user):
     TimesheetSubmissionFactory(
         resource=day_entry.resource,
         period=(day_entry.day, day_entry.day + timedelta(days=1)),
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
     )
     day_entry.refresh_from_db()
     task_entry.refresh_from_db()
@@ -85,17 +85,60 @@ def test_timesheet_submission_view_entries_redirects_to_filtered_task_entries(ad
     assert [obj.pk for obj in response.context['cl'].result_list] == [included_entry.pk]
 
 
+def test_admin_can_approve_pending_submission(admin_client):
+    submission = TimesheetSubmissionFactory(status=TimesheetSubmission.Status.PENDING)
+
+    response = admin_client.get(reverse('admin:core_timesheetsubmission_approve', args=[submission.pk]))
+
+    assert response.status_code == 302
+    submission.refresh_from_db()
+    assert submission.status == TimesheetSubmission.Status.CLOSED
+
+
+def test_admin_can_reject_pending_submission_with_message(admin_client):
+    submission = TimesheetSubmissionFactory(status=TimesheetSubmission.Status.PENDING)
+    url = reverse('admin:core_timesheetsubmission_reject', args=[submission.pk])
+
+    response = admin_client.post(url, {'message': 'Please correct the bank hours.'})
+
+    assert response.status_code == 302
+    submission.refresh_from_db()
+    assert submission.status == TimesheetSubmission.Status.REJECTED
+    assert submission.rejection_message == 'Please correct the bank hours.'
+
+
+def test_reject_requires_a_message(admin_client):
+    submission = TimesheetSubmissionFactory(status=TimesheetSubmission.Status.PENDING)
+    url = reverse('admin:core_timesheetsubmission_reject', args=[submission.pk])
+
+    response = admin_client.post(url, {'message': ''})
+
+    assert response.status_code == 200
+    submission.refresh_from_db()
+    assert submission.status == TimesheetSubmission.Status.PENDING
+
+
+def test_admin_can_reopen_closed_submission(admin_client):
+    submission = TimesheetSubmissionFactory(status=TimesheetSubmission.Status.CLOSED)
+
+    response = admin_client.get(reverse('admin:core_timesheetsubmission_reopen', args=[submission.pk]))
+
+    assert response.status_code == 302
+    submission.refresh_from_db()
+    assert submission.status == TimesheetSubmission.Status.DRAFT
+
+
 @pytest.mark.parametrize(
     ('missing_field', 'data'),
     [
         pytest.param(
             'resource',
-            {'period_0': '2026-11-01', 'period_1': '2026-11-30', 'closed': 'on'},
+            {'period_0': '2026-11-01', 'period_1': '2026-11-30', 'status': 'closed'},
             id='missing-resource',
         ),
         pytest.param(
             'period',
-            {'closed': 'on'},
+            {'status': 'closed'},
             id='missing-period',
         ),
     ],

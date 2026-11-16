@@ -92,6 +92,11 @@ DEFAULTS = dict(  # noqa: C408
     TICKETING_URL=(str, None),
     URL_REPLACE=(dict, None),
     # Event dispatching
-    EVENT_DISPATCHER_BACKEND=(str, 'krm3.events.backends.NullEventDispatcherBackend'),
-    EVENT_DISPATCHER_OPTIONS=(dict, {}),
+    EVENT_DISPATCHER_BACKEND=(str, 'krm3.events.backends.bitcaster.BitcasterBackend'),
+    # Bitcaster
+    BITCASTER_BAE=(str, ''),
+    BITCASTER_PROJECT_SLUG=(str, ''),
+    BITCASTER_APPLICATION=(str, ''),
+    BITCASTER_DISTRIBUTION_LIST=(str, ''),
+    BITCASTER_SYNC_USERS=(bool, True),
 )

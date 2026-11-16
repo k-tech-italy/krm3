@@ -10,8 +10,8 @@
 ### DDR-BE-002: Lightweight Event System
 - **Date**: 2026-08-03
 - **Context**: Decoupled modules need to react to domain events without pulling in a full message broker or Django signals spaghetti.
-- **Decision**: A custom pub/sub event dispatcher (`krm3.events`) with pluggable backends, defaulting to `NullEventDispatcherBackend` in tests.
-- **Consequences**: The event system is testable and swappable; being custom, it must be documented and maintained in-house rather than relying on a third-party library.
+- **Decision**: A custom pub/sub event dispatcher (`krm3.events`) with pluggable backends, defaulting to `NullEventDispatcherBackend` in tests. Application-specific payloads are built by callable `Notification` subclasses and the available notification types are declared in a local registry.
+- **Consequences**: The event system is testable and swappable, while payload construction remains outside views and other transport-facing code. Being custom, it must be documented and maintained in-house rather than relying on a third-party library. See [Notifications](../notifications.md) for the implementation and extension guidelines.
 - **Status**: Accepted
 
 ### DDR-BE-003: Row-Level Access Control via `filter_acl` Manager Method

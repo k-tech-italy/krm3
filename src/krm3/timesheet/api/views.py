@@ -14,8 +14,7 @@ from rest_framework.response import Response
 
 from krm3.core.models import Resource
 from krm3.core.models.timesheets import SpecialLeaveReason, TaskEntry, DayEntry, TimeEntryAwareQuerySet
-from krm3.events import Event
-from krm3.events.dispatcher import EventDispatcher
+from krm3.events.notifications.holidays import HolidayNotification
 from krm3.timesheet.api.serializers import (
     BaseDayEntrySerializer,
     SpecialLeaveReasonSerializer,
@@ -254,7 +253,7 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             if is_missing_acl_filtered_entries or is_user_unauthorized:
                 return Response(status=status.HTTP_403_FORBIDDEN)
 
-        if entries.closed().exists():
+        if entries.submitted().exists():
             return Response(
                 data={'error': 'Found closed time entry. Closed time entries are frozen and cannot be deleted.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -289,22 +288,10 @@ class TaskEntryAPIViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': _('Timesheet already submitted.')})
         return None
 
+
 class DayEntryAPIViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
-
-    def notify_holiday(self, resource: Resource, dates: Iterable[str]) -> None:
-        sorted_dates = sorted(dates)
-        EventDispatcher().send(
-            Event(
-                name='holidays',
-                payload={
-                    'resource': {'name': resource.full_name, 'email': resource.user.email},
-                    'start_date': sorted_dates[0],
-                    'end_date': sorted_dates[-1],
-                },
-            )
-        )
 
     @override
     def get_queryset(self) -> QuerySet[DayEntry]:
@@ -372,7 +359,7 @@ class DayEntryAPIViewSet(viewsets.ModelViewSet):
         ).data
 
         if request.data.get('asked_holiday', False) is True:
-            self.notify_holiday(resource, dates)
+            HolidayNotification()(resource, dates)
 
         return Response(response_data, status=status.HTTP_200_OK)
 

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import krm3
 
+from .fragments.bitcaster import *  # noqa: F401,F403
 from .fragments.constance import *  # noqa: F401,F403
 from .fragments.ddt import *  # noqa: F401,F403
 from .fragments.events import *  # noqa: F401,F403
@@ -86,6 +87,7 @@ INSTALLED_APPS = (
         'krm3.web',
         'krm3.chat',
         # Third party apps.
+        'bitcaster_django',
         'qr_code',
         'django_filters',
         'rest_framework',

@@ -1,7 +1,6 @@
 import abc
 import logging
-from collections.abc import Mapping
-from typing import TypedDict, override
+from typing import override
 
 from krm3.events import Event
 
@@ -9,20 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class EventDispatcherBackend(abc.ABC):
-    @abc.abstractmethod
-    def __init__(self, options: Mapping) -> None:
-        """Set up the event dispatching backend with the given `options`.
-
-        Setup details are left to the subclass.
-
-        A `django.core.exceptions.ImproperlyConfigured` exception should
-        be raised when options do not meet the backend's requirements.
-
-        :param options: a `dict` with configuration options, taken from
-            Django settings.
-        """
-        ...
-
     @abc.abstractmethod
     def send[T](self, event: Event[T]) -> None:
         """Process the given `event` and send a notification trigger.
@@ -32,15 +17,7 @@ class EventDispatcherBackend(abc.ABC):
         ...
 
 
-class _NullEventDispatcherOptions(TypedDict):
-    pass
-
-
 class NullEventDispatcherBackend(EventDispatcherBackend):
     @override
-    def __init__(self, _options: _NullEventDispatcherOptions) -> None:
-        self._logger = logger
-
-    @override
     def send[T](self, event: Event[T]) -> None:
-        self._logger.info(f'Event "{event.name}" sent. Payload: {event.payload}')
+        logger.info(f'Event "{event.name}" sent. Payload: {event.payload}')

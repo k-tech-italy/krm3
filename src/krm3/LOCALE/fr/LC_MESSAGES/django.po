@@ -151,6 +151,14 @@ msgstr "Ouvert"
 msgid "Closed"
 msgstr "Fermé"
 
+#: src/krm3/core/models/timesheets.py:152
+msgid "Pending"
+msgstr "En attente"
+
+#: src/krm3/core/models/timesheets.py:153
+msgid "Rejected"
+msgstr "Rejeté"
+
 #: src/krm3/core/models/projects.py:223
 msgid "Task period must be contained within the project period."
 msgstr "La période de la tâche doit être comprise dans la période du projet."

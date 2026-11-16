@@ -24,7 +24,7 @@ def _entry(resource, contract, day, bank):
 
 
 def _close(resource, period):
-    return TimesheetSubmissionFactory(resource=resource, period=period, closed=True)
+    return TimesheetSubmissionFactory(resource=resource, period=period, status=TimesheetSubmission.Status.CLOSED)
 
 
 def test_frozen_balance_excludes_the_day_after_the_period_and_is_reused(monkeypatch):
@@ -95,7 +95,7 @@ def test_reopened_timesheet_is_not_used_as_a_watermark():
     september = _close(resource, ('2026-09-01', '2026-10-01'))
     assert september.timesheet['bank_hours'] == '8.00'
 
-    september.closed = False
+    september.status = TimesheetSubmission.Status.DRAFT
     september.save()
     _entry(resource, contract, date(2026, 9, 10), '8.00')
 
@@ -123,20 +123,20 @@ def test_later_closed_submission_must_be_reopened_before_an_earlier_one():
     _entry(resource, contract, date(2026, 10, 5), '8.00')
     october = _close(resource, ('2026-10-01', '2026-11-01'))
 
-    september.closed = False
+    september.status = TimesheetSubmission.Status.DRAFT
     with pytest.raises(ValidationError, match='A later timesheet is closed'):
         september.save()
 
     september.refresh_from_db()
-    october.closed = False
+    october.status = TimesheetSubmission.Status.DRAFT
     october.save()
-    september.closed = False
+    september.status = TimesheetSubmission.Status.DRAFT
     september.save()
 
     september_entry.__class__.objects.filter(pk=september_entry.pk).update(bank=Decimal('4.00'))
-    september.closed = True
+    september.status = TimesheetSubmission.Status.CLOSED
     september.save()
-    october.closed = True
+    october.status = TimesheetSubmission.Status.CLOSED
     october.save()
 
     assert september.timesheet['bank_hours'] == '4.00'

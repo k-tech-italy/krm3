@@ -63,10 +63,18 @@ def scenario():
     }
 
     submissions = {
-        'october': TimesheetSubmissionFactory(resource=resource, period=_month(2026, 10), closed=True),
-        'november': TimesheetSubmissionFactory(resource=resource, period=_month(2026, 11), closed=True),
-        'december': TimesheetSubmissionFactory(resource=resource, period=_month(2026, 12), closed=True),
-        'january': TimesheetSubmissionFactory(resource=resource, period=_month(2027, 1), closed=False),
+        'october': TimesheetSubmissionFactory(
+            resource=resource, period=_month(2026, 10), status=TimesheetSubmission.Status.CLOSED
+        ),
+        'november': TimesheetSubmissionFactory(
+            resource=resource, period=_month(2026, 11), status=TimesheetSubmission.Status.CLOSED
+        ),
+        'december': TimesheetSubmissionFactory(
+            resource=resource, period=_month(2026, 12), status=TimesheetSubmission.Status.CLOSED
+        ),
+        'january': TimesheetSubmissionFactory(
+            resource=resource, period=_month(2027, 1), status=TimesheetSubmission.Status.DRAFT
+        ),
     }
     return {'contract': contract, 'tasks': tasks, 'entries': entries, 'submissions': submissions}
 
@@ -128,7 +136,7 @@ def test_apply_termination(scenario):
     assert october.timesheet == october_snapshot
     november = TimesheetSubmission.objects.get(pk=submissions['november'].pk)
     assert november.period == DateRange(date(2026, 11, 1), date(2026, 11, 16), '[)')
-    assert november.closed is True
+    assert november.is_closed is True
     # the rebuilt snapshot no longer holds the deleted days
     assert sorted(day_entry['day'] for day_entry in november.timesheet['day_entries']) == [
         '2026-11-14',

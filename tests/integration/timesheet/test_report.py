@@ -3,6 +3,7 @@ import typing
 import pytest
 from freezegun import freeze_time
 
+from krm3.core.models import TimesheetSubmission
 from testutils.date_utils import _dt
 from testutils.factories import (
     DayEntryFactory,
@@ -73,7 +74,11 @@ def test_sick_leave_protocol_number_is_visible_in_report_while_submitted(
         due_hours=8,
         is_sick=True,
     )
-    TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
+    TimesheetSubmissionFactory(
+        resource=resource,
+        status=TimesheetSubmission.Status.CLOSED,
+        period=(_dt('2026-03-01'), _dt('2026-03-31')),
+    )
     browser.login_as_user(regular_user)
 
     browser.click('[href*="be"]')
@@ -125,7 +130,11 @@ def test_special_leave_reason_is_visible_in_report_while_submitted(
         resource=resource,
         contract=contract,
     )
-    TimesheetSubmissionFactory(resource=resource, closed=True, period=(_dt('2026-03-01'), _dt('2026-03-31')))
+    TimesheetSubmissionFactory(
+        resource=resource,
+        status=TimesheetSubmission.Status.CLOSED,
+        period=(_dt('2026-03-01'), _dt('2026-03-31')),
+    )
     browser.login_as_user(regular_user)
 
     browser.click('[href*="be"]')

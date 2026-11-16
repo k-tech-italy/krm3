@@ -71,7 +71,6 @@ def events_settings(settings):
     """
     settings.EVENTS = {
         'BACKEND': 'krm3.events.backends.NullEventDispatcherBackend',
-        'OPTIONS': {},
     }
 
 

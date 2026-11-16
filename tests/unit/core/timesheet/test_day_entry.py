@@ -268,7 +268,7 @@ def test_allows_updating_an_entry_without_changing_the_balance_when_balance_is_a
     day_entry.save()
 
 
-def test_rejects_deposit_exceeding_upper_bound():
+def test_allows_deposit_exceeding_upper_bound_until_submission():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     _deposit_entry(contract, '2026-09-07', '8.00')
     _deposit_entry(contract, '2026-09-14', '8.00')
@@ -282,17 +282,11 @@ def test_rejects_deposit_exceeding_upper_bound():
         bank=Decimal('1.00'),
     )
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the maximum bank balance of 16.0 hours. '
-            'Current balance: 16.00, attempting to add: 1.00'
-        ),
-    ):
-        day_entry.full_clean()
+    day_entry.full_clean()
+    day_entry.save()
 
 
-def test_rejects_withdrawal_below_lower_bound():
+def test_allows_withdrawal_below_lower_bound_until_submission():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     _deposit_entry(contract, '2026-09-07', '-8.00')
     _deposit_entry(contract, '2026-09-14', '-8.00')
@@ -306,17 +300,11 @@ def test_rejects_withdrawal_below_lower_bound():
         bank=Decimal('-1.00'),
     )
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the minimum bank balance of -16.0 hours. '
-            'Current balance: -16.00, attempting to change by: -1.00'
-        ),
-    ):
-        day_entry.full_clean()
+    day_entry.full_clean()
+    day_entry.save()
 
 
-def test_rejects_retroactive_entry_rebuilding_the_curve_out_of_range():
+def test_allows_retroactive_entry_rebuilding_the_curve_out_of_range_until_submission():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     _deposit_entry(contract, '2026-09-07', '8.00')
     _deposit_entry(contract, '2026-09-14', '8.00')
@@ -330,18 +318,12 @@ def test_rejects_retroactive_entry_rebuilding_the_curve_out_of_range():
         bank=Decimal('1.00'),
     )
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the maximum bank balance of 16.0 hours. '
-            'Current balance: 8.00, attempting to add: 1.00'
-        ),
-    ):
-        day_entry.full_clean()
+    day_entry.full_clean()
+    day_entry.save()
 
 
 @override_config(BANK_HOURS_UPPER_BOUND=32.0)
-def test_rejects_increasing_an_existing_deposit_when_a_later_balance_exceeds_the_bound():
+def test_allows_increasing_an_existing_deposit_when_a_later_balance_exceeds_the_bound_until_submission():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     _deposit_entry(contract, '2026-09-01', '8.00')
     _deposit_entry(contract, '2026-09-02', '8.00')
@@ -352,17 +334,11 @@ def test_rejects_increasing_an_existing_deposit_when_a_later_balance_exceeds_the
 
     changed.bank = Decimal('8.00')
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the maximum bank balance of 32.0 hours. '
-            'Current balance: 16.00, attempting to add: 4.00'
-        ),
-    ):
-        changed.full_clean()
+    changed.full_clean()
+    changed.save()
 
 
-def test_rejects_a_temporary_excess_even_when_a_later_movement_restores_the_balance():
+def test_allows_a_temporary_excess_when_a_later_movement_restores_the_balance():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     _deposit_entry(contract, '2026-09-01', '8.00')
     _deposit_entry(contract, '2026-09-02', '8.00')
@@ -376,14 +352,8 @@ def test_rejects_a_temporary_excess_even_when_a_later_movement_restores_the_bala
         bank=Decimal('8.00'),
     )
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the maximum bank balance of 16.0 hours. '
-            'Current balance: 16.00, attempting to add: 8.00'
-        ),
-    ):
-        day_entry.full_clean()
+    day_entry.full_clean()
+    day_entry.save()
 
 
 def test_allows_reducing_an_existing_deposit_when_the_rebuilt_curve_stays_within_the_bounds():
@@ -399,7 +369,7 @@ def test_allows_reducing_an_existing_deposit_when_the_rebuilt_curve_stays_within
     changed.full_clean()
 
 
-def test_rejects_moving_a_withdrawal_after_the_deposits_it_was_funding():
+def test_allows_moving_a_withdrawal_after_the_deposits_it_was_funding_until_submission():
     contract = ContractFactory(period=(dt('2026-09-01'), dt('2026-10-01')))
     withdrawal = DayEntryFactory(
         resource=contract.resource,
@@ -415,14 +385,8 @@ def test_rejects_moving_a_withdrawal_after_the_deposits_it_was_funding():
 
     withdrawal.day = dt('2026-09-16')
 
-    with pytest.raises(
-        ValidationError,
-        match=(
-            'This transaction would exceed the maximum bank balance of 16.0 hours. '
-            'Current balance: 0, attempting to add: 0.00'
-        ),
-    ):
-        withdrawal.full_clean()
+    withdrawal.full_clean()
+    withdrawal.save()
 
 
 def test_allows_moving_an_entry_when_the_curve_stays_within_the_limits():

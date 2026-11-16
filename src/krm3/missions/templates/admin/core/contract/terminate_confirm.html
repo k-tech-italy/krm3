@@ -53,13 +53,13 @@
         <ul>
             {% for submission, first, last in truncated_submissions %}
                 <li>
-                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.closed %} ({% translate 'closed' %}){% endif %}:
-                    {% blocktranslate with day=termination_date|date:'Y-m-d' %}truncated to end on {{ day }}{% endblocktranslate %}{% if submission.closed %}, {% translate 'snapshot rebuilt' %}{% endif %}
+                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.is_closed %} ({% translate 'closed' %}){% endif %}:
+                    {% blocktranslate with day=termination_date|date:'Y-m-d' %}truncated to end on {{ day }}{% endblocktranslate %}{% if submission.is_closed %}, {% translate 'snapshot rebuilt' %}{% endif %}
                 </li>
             {% endfor %}
             {% for submission, first, last in deleted_submissions %}
                 <li>
-                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.closed %} ({% translate 'closed' %}){% endif %}:
+                    {{ first|date:'Y-m-d' }} - {{ last|date:'Y-m-d' }}{% if submission.is_closed %} ({% translate 'closed' %}){% endif %}:
                     {% translate 'deleted' %}
                 </li>
             {% endfor %}

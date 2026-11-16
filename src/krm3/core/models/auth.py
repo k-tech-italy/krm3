@@ -244,9 +244,9 @@ class Resource(models.Model):
 
         at = KTDay(at).date
         if use_watermark:
-            snapshots = TimesheetSubmission.objects.filter(resource=self, closed=True).values_list(
-                'period', 'timesheet'
-            )
+            snapshots = TimesheetSubmission.objects.filter(
+                resource=self, status=TimesheetSubmission.Status.CLOSED
+            ).values_list('period', 'timesheet')
             if (balance := self._balance_from_watermark(at, snapshots)) is not None:
                 return balance
 

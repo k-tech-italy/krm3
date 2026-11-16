@@ -12,6 +12,7 @@ from testutils.factories import (
     ResourceFactory,
     TimesheetSubmissionFactory,
     UserFactory,
+    create_contract_without_scheduled_hours,
 )
 from testutils.permissions import add_group_permissions, add_permissions
 
@@ -123,36 +124,33 @@ class TestTimesheetSubmissionModelAPIListView:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-    @pytest.mark.parametrize(
-        ('who', 'owns_resource', 'expected_status', 'expected_closed'),
-        [
-            pytest.param('regular', False, status.HTTP_403_FORBIDDEN, None, id='no-permission'),
-            pytest.param('viewer', False, status.HTTP_403_FORBIDDEN, None, id='view-only'),
-            pytest.param('manager', False, status.HTTP_201_CREATED, False, id='manager'),
-            pytest.param('regular', True, status.HTTP_201_CREATED, True, id='owner'),
-        ],
-    )
-    def test_only_manager_can_create_open_submission(  # noqa: PLR0917
-        self, who, owns_resource, expected_status, expected_closed, api_client, regular_user, viewer, manager
-    ):
-        users = {'regular': regular_user, 'viewer': viewer, 'manager': manager}
-        user = users[who]
-        resource = ResourceFactory(user=user if owns_resource else None)
+    def test_api_exposes_readonly_status(self, api_client, manager):
+        resource = ResourceFactory()
+        client = api_client(user=manager)
 
-        response = api_client(user=user).post(
+        response = client.post(
             self.url(),
-            data={
-                'resource': resource.pk,
-                'period': ('2026-09-07', '2026-09-07'),
-                'closed': False,
-            },
+            data={'resource': resource.pk, 'period': ('2026-09-07', '2026-09-07')},
             format='json',
         )
 
-        assert response.status_code == expected_status
-        if expected_closed is not None:
-            submission = TimesheetSubmission.objects.get(pk=response.data['id'])
-            assert submission.closed is expected_closed
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['status'] == TimesheetSubmission.Status.CLOSED
+        assert 'closed' not in response.data
+        submission = TimesheetSubmission.objects.get(pk=response.data['id'])
+        assert submission.status == TimesheetSubmission.Status.CLOSED
+
+        response = client.patch(
+            self.url(submission.pk),
+            data={'status': 'draft'},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['status'] == TimesheetSubmission.Status.CLOSED
+        assert 'closed' not in response.data
+        submission.refresh_from_db()
+        assert submission.status == TimesheetSubmission.Status.CLOSED
 
     def test_incomplete_submission_returns_bad_request(self, api_client, manager):
         contract = ContractFactory(
@@ -251,6 +249,83 @@ class TestTimesheetSubmissionModelAPIListView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert TimesheetSubmission.objects.count() == 0
 
+    def test_owner_can_resubmit_rejected_submission(self, api_client, regular_user):
+        resource = ResourceFactory(user=regular_user)
+        rejected = TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2024-01-01', '2024-01-08'),
+            status=TimesheetSubmission.Status.REJECTED,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={'resource': resource.pk, 'period': ('2024-01-01', '2024-01-07')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['status'] == TimesheetSubmission.Status.CLOSED
+        assert response.data['id'] != rejected.pk
+        assert TimesheetSubmission.objects.filter(pk=rejected.pk).exists() is False
+        assert TimesheetSubmission.objects.count() == 1
+
+    @pytest.mark.parametrize(
+        ('entries', 'period', 'expected_status'),
+        [
+            pytest.param(
+                [(date(2026, 9, 30), Decimal('16.00'))],
+                ('2026-09-30', '2026-09-30'),
+                TimesheetSubmission.Status.CLOSED,
+                id='within-limit',
+            ),
+            pytest.param(
+                [(date(2026, 9, 29), Decimal('16.00')), (date(2026, 9, 30), Decimal('1.00'))],
+                ('2026-09-29', '2026-09-30'),
+                TimesheetSubmission.Status.PENDING,
+                id='above-limit',
+            ),
+        ],
+    )
+    def test_submission_status_depends_on_final_bank_balance(
+        self, entries, period, expected_status, api_client, regular_user
+    ):
+        resource = ResourceFactory(user=regular_user)
+        contract = create_contract_without_scheduled_hours(resource, (date(2026, 9, 1), date(2026, 10, 1)))
+        for day, bank in entries:
+            DayEntryFactory(resource=resource, contract=contract, day=day, bank=bank, due_hours=0)
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={'resource': resource.pk, 'period': period},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data['status'] == expected_status
+
+    @pytest.mark.parametrize(
+        'blocking_status',
+        [TimesheetSubmission.Status.PENDING, TimesheetSubmission.Status.REJECTED],
+    )
+    def test_pending_or_rejected_previous_submission_blocks_later_submission(
+        self, blocking_status, api_client, regular_user
+    ):
+        resource = ResourceFactory(user=regular_user)
+        TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2026-09-01', '2026-10-01'),
+            status=blocking_status,
+        )
+
+        response = api_client(user=regular_user).post(
+            self.url(),
+            data={'resource': resource.pk, 'period': ('2026-10-01', '2026-11-01')},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data['__all__'] == ['A previous timesheet is still pending review or rejected.']
+
     @pytest.mark.parametrize(
         ('who', 'method'),
         [
@@ -267,7 +342,7 @@ class TestTimesheetSubmissionModelAPIListView:
     ):
         user = regular_user if who == 'regular' else viewer
         resource = ResourceFactory(user=user)
-        submission = TimesheetSubmissionFactory(resource=resource, closed=True)
+        submission = TimesheetSubmissionFactory(resource=resource, status=TimesheetSubmission.Status.CLOSED)
         client = api_client(user=user)
 
         if method == 'delete':
@@ -275,53 +350,13 @@ class TestTimesheetSubmissionModelAPIListView:
         else:
             response = getattr(client, method)(
                 self.url(submission.pk),
-                data={'closed': False},
+                data={'status': TimesheetSubmission.Status.DRAFT},
                 format='json',
             )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         submission.refresh_from_db()
-        assert submission.closed is True
-
-    def test_manager_can_reopen_submission(self, api_client, manager):
-        submission = TimesheetSubmissionFactory(closed=True)
-
-        response = api_client(user=manager).patch(
-            self.url(submission.pk),
-            data={'closed': False},
-            format='json',
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        submission.refresh_from_db()
-        assert submission.closed is False
-
-    @pytest.mark.parametrize(
-        'method',
-        [pytest.param('patch', id='reopen'), pytest.param('delete', id='delete')],
-    )
-    def test_manager_cannot_change_submission_before_a_later_closed_one(self, method, api_client, manager):
-        resource = ResourceFactory()
-        september = TimesheetSubmissionFactory(
-            resource=resource,
-            period=('2026-09-01', '2026-10-01'),
-            closed=True,
-        )
-        TimesheetSubmissionFactory(
-            resource=resource,
-            period=('2026-10-01', '2026-11-01'),
-            closed=True,
-        )
-        client = api_client(user=manager)
-
-        if method == 'delete':
-            response = client.delete(self.url(september.pk))
-        else:
-            response = client.patch(self.url(september.pk), data={'closed': False}, format='json')
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        september.refresh_from_db()
-        assert september.closed is True
+        assert submission.is_closed is True
 
     def test_cannot_submit_after_a_missing_contracted_month(self, api_client, manager):
         resource = ResourceFactory()
@@ -333,7 +368,7 @@ class TestTimesheetSubmissionModelAPIListView:
         TimesheetSubmissionFactory(
             resource=resource,
             period=('2026-01-01', '2026-02-01'),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         )
 
         response = api_client(user=manager).post(
@@ -380,7 +415,7 @@ class TestTimesheetSubmissionModelAPIListView:
         existing_submission = TimesheetSubmissionFactory(
             resource=victim_resource,
             period=('2024-01-01', '2024-01-08'),
-            closed=False,
+            status=TimesheetSubmission.Status.DRAFT,
         )
 
         response = api_client(user=regular_user).post(
@@ -402,15 +437,14 @@ class TestTimesheetSubmissionModelAPIListView:
         existing_submission = TimesheetSubmissionFactory(
             resource=resource,
             period=('2024-01-01', '2024-01-08'),
-            closed=False,
+            status=TimesheetSubmission.Status.DRAFT,
         )
 
         response = api_client(user=manager).post(
             self.url(),
             data={
                 'resource': resource.pk,
-                'period': ('2024-01-01', '2024-01-07'),
-                'closed': 'invalid-value',
+                'period': ('invalid', 'invalid'),
             },
             format='json',
         )
@@ -470,7 +504,7 @@ class TestTimesheetSubmissionModelAPIListView:
         resource: Resource = ResourceFactory(user=regular_user)
         # create and existing TimesheetSubmission with the same resource and overlapping period
         ts: TimesheetSubmission = TimesheetSubmissionFactory(
-            resource=resource, period=('2024-01-01', '2024-01-08'), closed=False
+            resource=resource, period=('2024-01-01', '2024-01-08'), status=TimesheetSubmission.Status.DRAFT
         )
         assert ts.timesheet is None
         response = api_client(user=regular_user).post(

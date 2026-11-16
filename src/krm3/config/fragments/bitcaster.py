@@ -1,0 +1,11 @@
+from krm3.config.environ import env
+
+__all__ = ['BITCASTER']
+
+BITCASTER = {
+    'BAE': env('BITCASTER_BAE'),
+    'PROJECT': env('BITCASTER_PROJECT_SLUG'),
+    'APPLICATION': env('BITCASTER_APPLICATION'),
+    'DISTRIBUTION_LIST': env('BITCASTER_DISTRIBUTION_LIST'),
+    'SYNC_USERS': env('BITCASTER_SYNC_USERS'),
+}

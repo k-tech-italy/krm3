@@ -23,7 +23,6 @@ def empty_events_settings():
 def bogus_events_settings():
     settings.EVENTS = {
         'BACKEND': 'some.non.existing.event.dispatcher.Backend',
-        'OPTIONS': {},
     }
 
 
@@ -38,10 +37,9 @@ class TestEventDispatcherConfigurationErrors:
         ):
             EventDispatcher()
 
-    @pytest.mark.parametrize('missing_setting', ('BACKEND', 'OPTIONS'))
-    def test_raises_when_setting_is_missing(self, missing_setting):
-        settings.EVENTS.pop(missing_setting)
-        message_pattern = f"Missing event dispatch configuration item: '{missing_setting}'"
+    def test_raises_when_backend_setting_is_missing(self):
+        settings.EVENTS.pop('BACKEND')
+        message_pattern = "Missing event dispatch configuration item: 'BACKEND'"
         with pytest.raises(django_exceptions.ImproperlyConfigured, match=message_pattern):
             EventDispatcher()
 

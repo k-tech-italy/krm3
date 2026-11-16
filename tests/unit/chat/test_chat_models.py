@@ -155,8 +155,8 @@ def test_constance_validator_rejects(value):
 )
 def test_timesheet_submission_filter_acl(user_with_perms, perm, sees_all):
     user = user_with_perms(*([perm] if perm else []))
-    own = TimesheetSubmissionFactory(resource=ResourceFactory(user=user), closed=False)
-    other = TimesheetSubmissionFactory(resource=ResourceFactory(), closed=False)
+    own = TimesheetSubmissionFactory(resource=ResourceFactory(user=user), status=TimesheetSubmission.Status.DRAFT)
+    other = TimesheetSubmissionFactory(resource=ResourceFactory(), status=TimesheetSubmission.Status.DRAFT)
 
     visible = set(TimesheetSubmission.objects.filter_acl(user))
 
@@ -164,7 +164,10 @@ def test_timesheet_submission_filter_acl(user_with_perms, perm, sees_all):
 
 
 def test_timesheet_submission_filter_acl_superuser(admin_user):
-    submissions = {TimesheetSubmissionFactory(closed=False), TimesheetSubmissionFactory(closed=False)}
+    submissions = {
+        TimesheetSubmissionFactory(status=TimesheetSubmission.Status.DRAFT),
+        TimesheetSubmissionFactory(status=TimesheetSubmission.Status.DRAFT),
+    }
 
     assert set(TimesheetSubmission.objects.filter_acl(admin_user)) == submissions
 

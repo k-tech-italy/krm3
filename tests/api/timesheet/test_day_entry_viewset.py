@@ -13,9 +13,10 @@ from testutils.factories import (
     SpecialLeaveReasonFactory,
     TaskEntryFactory,
     TaskFactory,
+    TimesheetSubmissionFactory,
 )
 
-from krm3.core.models import DayEntry, TaskEntry
+from krm3.core.models import DayEntry, TaskEntry, TimesheetSubmission
 
 
 def _url():
@@ -398,7 +399,11 @@ def test_sends_holiday_event_with_start_and_end_dates(api_client, monkeypatch):
     resource = ResourceFactory()
     ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 1, 5)))
 
-    monkeypatch.setattr('krm3.timesheet.api.views.DayEntryAPIViewSet.notify_holiday', mocked := Mock())
+    notification = Mock()
+    monkeypatch.setattr(
+        'krm3.timesheet.api.views.HolidayNotification',
+        notification_class := Mock(return_value=notification),
+    )
 
     response = api_client(user=resource.user).post(
         _url(),
@@ -411,8 +416,31 @@ def test_sends_holiday_event_with_start_and_end_dates(api_client, monkeypatch):
     )
     assert response.status_code == status.HTTP_200_OK
 
-    assert mocked.call_count == 1
-    assert mocked.call_args_list[0].args == (resource, sorted(dates))
+    notification_class.assert_called_once_with()
+    notification.assert_called_once_with(resource, sorted(dates))
+
+
+@django_test.override_settings(FLAGS={'EVENTS_ENABLED': [('boolean', True)]})
+def test_sends_holiday_event_with_json_serializable_dates(api_client, monkeypatch):
+    dates = [date(2024, 1, day) for day in (3, 4, 2)]
+    resource = ResourceFactory()
+    ContractFactory(resource=resource, period=(date(2024, 1, 1), date(2024, 1, 5)))
+    monkeypatch.setattr('krm3.events.notifications.holidays.EventDispatcher.send', mocked := Mock())
+
+    response = api_client(user=resource.user).post(
+        _url(),
+        data={
+            'dates': [day.isoformat() for day in dates],
+            'resource': resource.pk,
+            'asked_holiday': True,
+        },
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    event = mocked.call_args.args[0]
+    assert event.payload['start_date'] == '2024-01-02'
+    assert event.payload['end_date'] == '2024-01-04'
 
 
 def test_bulk_update_allows_bank_deposit_that_leaves_hours_above_schedule(api_client):
@@ -517,7 +545,14 @@ def test_bulk_sickness_deletes_tasks(api_client):
 
 
 def test_bulk_rejects_all_changes_when_an_entry_is_closed(api_client):
-    closed_entry = DayEntryFactory(day=date(2026, 9, 22), leave_hours=2, closed=True)
+    closed_entry = DayEntryFactory(day=date(2026, 9, 22), leave_hours=2)
+    submission = TimesheetSubmissionFactory(
+        resource=closed_entry.resource,
+        period=(closed_entry.day, closed_entry.day + timedelta(days=1)),
+        status=TimesheetSubmission.Status.DRAFT,
+    )
+    TimesheetSubmission.objects.filter(pk=submission.pk).update(status=TimesheetSubmission.Status.PENDING)
+    type(closed_entry).objects.filter(pk=closed_entry.pk).update(closed=True)
 
     response = api_client(user=closed_entry.resource.user).post(
         _url(),
@@ -598,7 +633,14 @@ def test_delete_removes_day_entries_without_tasks(api_client):
 
 def test_delete_rejects_the_whole_request_when_an_entry_is_closed(api_client):
     open_entry = DayEntryFactory(leave_hours=2)
-    closed_entry = DayEntryFactory(resource=open_entry.resource, leave_hours=3, closed=True)
+    closed_entry = DayEntryFactory(resource=open_entry.resource, leave_hours=3)
+    submission = TimesheetSubmissionFactory(
+        resource=closed_entry.resource,
+        period=(closed_entry.day, closed_entry.day + timedelta(days=1)),
+        status=TimesheetSubmission.Status.DRAFT,
+    )
+    TimesheetSubmission.objects.filter(pk=submission.pk).update(status=TimesheetSubmission.Status.PENDING)
+    type(closed_entry).objects.filter(pk=closed_entry.pk).update(closed=True)
 
     response = api_client(user=open_entry.resource.user).post(
         _delete_url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'
@@ -662,7 +704,14 @@ def test_destroy_is_allowed_only_to_owner_or_manager(api_client, resources, role
 
 
 def test_destroy_rejects_closed_day_entry(api_client):
-    day_entry = DayEntryFactory(closed=True)
+    day_entry = DayEntryFactory()
+    submission = TimesheetSubmissionFactory(
+        resource=day_entry.resource,
+        period=(day_entry.day, day_entry.day + timedelta(days=1)),
+        status=TimesheetSubmission.Status.DRAFT,
+    )
+    TimesheetSubmission.objects.filter(pk=submission.pk).update(status=TimesheetSubmission.Status.PENDING)
+    type(day_entry).objects.filter(pk=day_entry.pk).update(closed=True)
 
     response = api_client(user=day_entry.resource.user).delete(_detail_url(day_entry))
 
@@ -687,7 +736,14 @@ def test_clear_deletes_day_entries_and_their_tasks(api_client):
 
 def test_clear_rejects_the_whole_request_when_an_entry_is_closed(api_client):
     open_entry = DayEntryFactory()
-    closed_entry = DayEntryFactory(resource=open_entry.resource, closed=True)
+    closed_entry = DayEntryFactory(resource=open_entry.resource)
+    submission = TimesheetSubmissionFactory(
+        resource=closed_entry.resource,
+        period=(closed_entry.day, closed_entry.day + timedelta(days=1)),
+        status=TimesheetSubmission.Status.DRAFT,
+    )
+    TimesheetSubmission.objects.filter(pk=submission.pk).update(status=TimesheetSubmission.Status.PENDING)
+    type(closed_entry).objects.filter(pk=closed_entry.pk).update(closed=True)
 
     response = api_client(user=open_entry.resource.user).post(
         _clear_url(), data={'ids': [open_entry.pk, closed_entry.pk]}, format='json'

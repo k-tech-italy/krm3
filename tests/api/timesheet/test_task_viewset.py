@@ -21,6 +21,7 @@ from testutils.factories import (
     TaskEntryFactory,
     TimesheetSubmissionFactory,
 )
+from krm3.core.models import TimesheetSubmission
 from krm3.timesheet.api.serializers import DayEntryReadSerializer, TaskEntryReadSerializer
 
 if typing.TYPE_CHECKING:
@@ -37,7 +38,7 @@ class TestTaskAPIListView:
         TimesheetSubmissionFactory(
             resource=resource,
             period=('2024-01-01', '2024-01-08'),
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
         )
 
         response = api_client(user=admin_user).get(
@@ -46,7 +47,24 @@ class TestTaskAPIListView:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['submitted'] is True
+        assert response.data['status'] == TimesheetSubmission.Status.CLOSED
+
+    @pytest.mark.parametrize('submission_status', TimesheetSubmission.Status)
+    def test_returns_submission_status_for_requested_period(self, submission_status, admin_user, api_client):
+        resource = ResourceFactory()
+        TimesheetSubmissionFactory(
+            resource=resource,
+            period=('2024-01-01', '2024-01-08'),
+            status=submission_status,
+        )
+
+        response = api_client(user=admin_user).get(
+            self.url(),
+            data={'resource_id': resource.pk, 'start_date': '2024-01-01', 'end_date': '2024-01-07'},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['status'] == submission_status
 
     @override_config(LESS_THAN_SCHEDULE_COLOR_BRIGHT_THEME='111111')
     @override_config(EXACT_SCHEDULE_COLOR_BRIGHT_THEME='222222')
@@ -106,12 +124,12 @@ class TestTaskAPIListView:
 
         TimesheetSubmissionFactory(
             resource=resource,
-            closed=True,
+            status=TimesheetSubmission.Status.CLOSED,
             period=(_dt('2024-01-03'), _dt('2024-01-04')),
         )
         TimesheetSubmissionFactory(
             resource=resource,
-            closed=False,
+            status=TimesheetSubmission.Status.DRAFT,
             period=(_dt('2024-01-05'), _dt('2024-01-07')),
         )
 
@@ -131,7 +149,7 @@ class TestTaskAPIListView:
             return str(Decimal(number).quantize(Decimal('1.00')))
 
         expected_response = {
-            'submitted': False,
+            'status': None,
             'tasks': [
                 {
                     'id': task.pk,

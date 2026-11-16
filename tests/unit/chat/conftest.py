@@ -11,6 +11,7 @@ from testutils.permissions import add_permissions
 
 from krm3.chat import services
 from krm3.chat.registry import enabled_content_types
+from krm3.core.models import TimesheetSubmission
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +38,7 @@ RECORD_BUILDERS = {
         'core.manage_any_timesheet',
     ),
     'core.timesheetsubmission': (
-        lambda resource: TimesheetSubmissionFactory(resource=resource, closed=False),
+        lambda resource: TimesheetSubmissionFactory(resource=resource, status=TimesheetSubmission.Status.DRAFT),
         'core.view_any_timesheet',
         'core.manage_any_timesheet',
     ),

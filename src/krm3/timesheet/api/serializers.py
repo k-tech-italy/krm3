@@ -252,7 +252,7 @@ class DayEntryCreateSerializer(BaseDayEntrySerializer):
             **validated_data,
             contract=contract,
             timesheet=timesheet,
-            closed=bool(timesheet and timesheet.closed),
+            closed=bool(timesheet and timesheet.is_submitted),
             due_hours=contract.get_due_hours(day),
             is_holiday=contract.get_ktday(day).is_holiday,
         )
@@ -609,7 +609,7 @@ class TaskEntryCreateSerializer(BaseTaskEntrySerializer):
                     ).first()
 
                     day_entry.timesheet = submission
-                    day_entry.closed = submission.closed if submission is not None else False
+                    day_entry.closed = submission.is_submitted if submission is not None else False
 
                     if day_entry.closed:
                         raise serializers.ValidationError({'error': ('Cannot add task entries to a closed timesheet.')})
@@ -758,7 +758,7 @@ class TimesheetTaskSerializer(TaskSerializer):
 
 
 class TimesheetSerializer(serializers.Serializer):
-    submitted = serializers.BooleanField()
+    status = serializers.ChoiceField(choices=TimesheetSubmission.Status.choices, allow_null=True, read_only=True)
     tasks = serializers.SerializerMethodField()
     day_entries = DayEntryReadSerializer(many=True)
     days = serializers.SerializerMethodField()
@@ -807,13 +807,7 @@ class StartEndDateRangeField(serializers.Field):
 
 class TimesheetSubmissionSerializer(serializers.ModelSerializer):
     period = StartEndDateRangeField()
-
-    def get_fields(self) -> dict[str, serializers.Field]:
-        fields = super().get_fields()
-        request = self.context.get('request')
-        if request is None or not request.user.has_perm('core.manage_any_timesheet'):
-            fields['closed'].read_only = True
-        return fields
+    status = serializers.ChoiceField(choices=TimesheetSubmission.Status.choices, read_only=True)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         user = self.context['request'].user
@@ -823,6 +817,21 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
             raise exceptions.PermissionDenied()
 
         return attrs
+
+    def create(self, validated_data: dict[str, Any]) -> TimesheetSubmission:
+        validated_data.setdefault('status', TimesheetSubmission.Status.CLOSED)
+        return super().create(validated_data)
+
+    def submission_status(self) -> str:
+        resource = self.validated_data['resource']
+        period = self.validated_data['period']
+        last_day = period.upper if period.upper_inc else period.upper - datetime.timedelta(days=1)
+        balance = resource.get_bank_hours_balance(last_day)
+        lower = Decimal(str(config.BANK_HOURS_LOWER_BOUND))
+        upper = Decimal(str(config.BANK_HOURS_UPPER_BOUND))
+        if balance < lower or balance > upper:
+            return TimesheetSubmission.Status.PENDING
+        return TimesheetSubmission.Status.CLOSED
 
     def save(self, **kwargs) -> None:
         """Handle model constraints and return a 400 bad request if and error occurred."""
@@ -835,7 +844,8 @@ class TimesheetSubmissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TimesheetSubmission
-        fields = '__all__'
+        fields = ('id', 'period', 'status', 'resource', 'timesheet', 'rejection_message')
+        read_only_fields = ('status', 'rejection_message')
 
 
 class SpecialLeaveReasonSerializer(serializers.ModelSerializer):

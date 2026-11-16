@@ -27,6 +27,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 
 from krm3.core.api.permissions import ResourceMatch
+from krm3.events.notifications.timesheets import TimesheetPendingNotification
 from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
@@ -334,23 +335,29 @@ class TimesheetSubmissionAPIViewSet(viewsets.ModelViewSet):
         return ret
 
     def create(self, request: Request, *args, **kwargs) -> Response:
-        """Create a new Timesheet submission or replace an existing opened one."""
+        """Submit a timesheet, replacing an existing editable submission when present."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         resource = serializer.validated_data['resource']
         period = serializer.validated_data['period']
 
         with transaction.atomic():
             existing_submission = (
                 TimesheetSubmission.objects.select_for_update()
-                .filter(resource=resource, period=period, closed=False)
+                .filter(
+                    resource=resource,
+                    period=period,
+                    status__in=[TimesheetSubmission.Status.DRAFT, TimesheetSubmission.Status.REJECTED],
+                )
                 .first()
             )
-            if existing_submission:
-                existing_submission.delete()
 
-            self.perform_create(serializer)
+            if existing_submission is not None:
+                existing_submission.delete()
+            serializer.save(status=serializer.submission_status())
+            submission = serializer.instance
+            if submission.status == TimesheetSubmission.Status.PENDING:
+                transaction.on_commit(lambda: TimesheetPendingNotification()(submission))
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

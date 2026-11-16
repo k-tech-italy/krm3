@@ -3,10 +3,9 @@ import typing
 
 import pytest
 from constance import config
-from constance.test import override_config
 from django.test import override_settings
 from freezegun import freeze_time
-from krm3.core.models import TaskEntry
+from krm3.core.models import TaskEntry, TimesheetSubmission
 from selenium.webdriver.common.by import By
 
 from testutils.date_utils import _dt
@@ -533,127 +532,6 @@ def test_save_and_use_bank_hours_in_the_same_day(browser: 'AppTestBrowser', regu
     assert bank_delta.text.strip() == '(𝚫 = +0h)'
 
 
-@override_config(BANK_HOURS_LOWER_BOUND=-16.0)
-@freeze_time('2025-07-13')
-def test_cannot_withdraw_hours_below_lower_bound(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-    # Set the lower bound explicitly so the test does not depend on the application's default configuration.
-    freeze_frontend_time('2025-07-13T00:00:00Z')
-    resource = ResourceFactory(user=regular_user)
-    contract = ContractFactory(resource=resource)
-
-    DayEntryFactory(
-        resource=resource,
-        contract=contract,
-        day=_dt('2025-07-07'),
-        due_hours=contract.get_due_hours(_dt('2025-07-07')),
-        bank=-8,
-    )
-
-    DayEntryFactory(
-        resource=resource,
-        contract=contract,
-        day=_dt('2025-07-08'),
-        due_hours=contract.get_due_hours(_dt('2025-07-08')),
-        bank=-8,
-    )
-
-    task_entry = TaskEntryFactory(
-        day_shift_hours=2,
-        resource=resource,
-        task=TaskFactory(resource=resource, contract=contract),
-        day=_dt('2025-07-09'),
-    )
-    day_entry = task_entry.day_entry
-    day_entry.due_hours = day_entry.contract.get_due_hours(day_entry.day)
-    day_entry.refresh(task_entries=None, drop_existing=False)
-
-    browser.login_as_user(regular_user)
-    browser.click('[href*="timesheet"]')
-
-    browser.assert_element('//p[@data-testid="bank-total" and normalize-space()="-16h"]')
-    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
-    assert bank_delta.text.strip() == '(𝚫 = -16h)'
-
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-09")]')
-    browser.click_and_release(day_tile)
-
-    browser.fill('//input[contains(@id,"from-bank-hour-input")]', '1')
-    browser.click('//button[contains(text(), "Save")]')
-
-    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
-
-    expected_error = (
-        'This transaction would exceed the minimum bank balance of -16.0 hours. '
-        'Current balance: -16.00, attempting to change by: -1.00'
-    )
-    actual_error = error_element.text.strip()
-
-    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
-
-
-@override_config(BANK_HOURS_UPPER_BOUND=16.0)
-@freeze_time('2025-07-13')
-def test_cannot_exceed_bank_hours_upper_bound(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
-    # Set the upper bound explicitly so the test does not depend on the application's default configuration.
-    freeze_frontend_time('2025-07-13T00:00:00Z')
-    resource = ResourceFactory(user=regular_user)
-
-    first_task_entry = TaskEntryFactory(
-        resource=resource,
-        day_shift_hours=16,
-        task=TaskFactory(resource=resource, contract=True),
-        day=_dt('2025-07-07'),
-    )
-    first_day_entry = first_task_entry.day_entry
-    first_day_entry.due_hours = first_day_entry.contract.get_due_hours(first_day_entry.day)
-    first_day_entry.bank = 8
-    first_day_entry.refresh(task_entries=None, drop_existing=False)
-
-    second_task_entry = TaskEntryFactory(
-        resource=resource,
-        day_shift_hours=16,
-        task=TaskFactory(resource=resource, contract=True),
-        day=_dt('2025-07-08'),
-    )
-    second_day_entry = second_task_entry.day_entry
-    second_day_entry.due_hours = second_day_entry.contract.get_due_hours(second_day_entry.day)
-    second_day_entry.bank = 8
-    second_day_entry.refresh(task_entries=None, drop_existing=False)
-
-    current_task_entry = TaskEntryFactory(
-        day_shift_hours=16,
-        resource=resource,
-        task=TaskFactory(resource=resource, contract=True),
-        day=_dt('2025-07-09'),
-    )
-    current_day_entry = current_task_entry.day_entry
-    current_day_entry.due_hours = current_day_entry.contract.get_due_hours(current_day_entry.day)
-    current_day_entry.refresh(task_entries=None, drop_existing=False)
-
-    browser.login_as_user(regular_user)
-    browser.click('[href*="timesheet"]')
-
-    browser.assert_element('//*[@data-testid="bank-total-value" and contains(text(), "16")]')
-    bank_delta = browser.find_element('//p[@data-testid="bank-delta"]')
-    assert bank_delta.text.strip() == '(𝚫 = +16h)'
-
-    day_tile = browser.wait_for_element_visible('//div[contains(@data-testid, "header-2025-07-09")]')
-    browser.click_and_release(day_tile)
-
-    browser.fill('//input[contains(@id,"save-bank-hour-input")]', '8')
-    browser.click('//button[contains(text(), "Save")]')
-
-    error_element = browser.wait_for_element_visible('//p[@id="creation-error-message"]')
-
-    expected_error = (
-        'This transaction would exceed the maximum bank balance of 16.0 hours. '
-        'Current balance: 16.00, attempting to add: 8.00'
-    )
-    actual_error = error_element.text.strip()
-
-    assert actual_error == expected_error, f'❌ Unexpected error message: {actual_error}'
-
-
 @freeze_time('2025-07-13')
 def test_sick_day_wrong_protocol_number(browser: 'AppTestBrowser', regular_user, freeze_frontend_time):
     freeze_frontend_time('2025-07-13T00:00:00Z')
@@ -765,7 +643,7 @@ def test_day_entry_modal_accessible_on_timesheet_submitted(
 
     submission = TimesheetSubmissionFactory(
         resource=resource,
-        closed=True,
+        status=TimesheetSubmission.Status.CLOSED,
         period=period,
     )
     type(day_entry).objects.filter(pk=day_entry.pk).update(timesheet=submission)
