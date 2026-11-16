@@ -1,3 +1,10 @@
+## 5.4.0 (2026-11-16)
+
+### Feat
+
+- **Migrations**: Reset migrations
+- **Glitchtip**: Introducing Glitchtip
+
 ## 5.3.1 (2026-11-12)
 
 ### Fix

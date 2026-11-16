@@ -1,28 +1,21 @@
-# Generated manually for proxy model
-
 from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    """Create ProtectedDocument proxy model.
-
-    This proxy model extends django_simple_dms.Document with a file_url property
-    for serving files through protected media views.
-    """
-
     dependencies = [
-        ('core', '0027_use_private_storage'),
+        ('core', '0001_initial'),
         ('django_simple_dms', '0003_configurable_storage'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='ProtectedDocument',
-            fields=[],
+            fields=[
+            ],
             options={
-                'proxy': True,
                 'verbose_name': 'Document',
                 'verbose_name_plural': 'Documents',
+                'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
