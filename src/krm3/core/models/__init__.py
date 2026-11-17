@@ -6,6 +6,7 @@ from .projects import *  # noqa: F401, F403
 from .missions import *  # noqa: F401, F403
 from .timesheets import *  # noqa: F401, F403
 from .accounting import *  # noqa: F401, F403
+from .chat import ChatMessage, ChatParticipant, ChatThread  # noqa: F401
 
 
 def __getattr__(name: str): # noqa: ANN202

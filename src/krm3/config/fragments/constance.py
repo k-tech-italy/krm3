@@ -10,6 +10,16 @@ def currency_list_validation(value) -> None:  # noqa: ANN001
         raise ValidationError('Must be a csv of currency codes')
 
 
+def chat_content_types_validation(value) -> None:  # noqa: ANN001
+    from krm3.chat.registry import CHAT_CAPABLE_MODELS, parse_content_types  # noqa: PLC0415
+
+    if invalid := [label for label in parse_content_types(value) if label not in CHAT_CAPABLE_MODELS]:
+        raise ValidationError(
+            'Not chat-capable: %(invalid)s. Allowed: %(allowed)s',
+            params={'invalid': ', '.join(invalid), 'allowed': ', '.join(CHAT_CAPABLE_MODELS)},
+        )
+
+
 CONSTANCE_CONFIG = {
     'COUNTRY_GROUPS': ('A, B, C', 'The country grouping list (comma-separated values)'),
     'CURRENCIES': ('GBP,EUR,USD', 'The default currencies to get the rates for', 'currencies'),
@@ -50,12 +60,18 @@ CONSTANCE_CONFIG = {
     ),
     'BANK_HOURS_UPPER_BOUND': (16.0, 'Maximum bank hours that can be deposited/withdrawn', float),
     'BANK_HOURS_LOWER_BOUND': (-16.0, 'Minimum bank hours that can be deposited/withdrawn', float),
+    'CHAT_RECORD_CONTENT_TYPES': (
+        'core.mission,core.expense,core.dayentry,core.taskentry,core.timesheetsubmission',
+        'Record types that can have a chat thread (comma-separated app_label.model)',
+        'chat_content_types',
+    ),
 }
 
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 
 CONSTANCE_ADDITIONAL_FIELDS = {
     'currencies': ['django.forms.CharField', {'validators': [currency_list_validation]}],
+    'chat_content_types': ['django.forms.CharField', {'validators': [chat_content_types_validation]}],
     'color_field': [
         'django.forms.fields.CharField',
         {
@@ -75,3 +91,4 @@ class ConstanceTyping:
     LESS_THAN_SCHEDULE_COLOR_DARK_THEME: str
     EXACT_SCHEDULE_COLOR_DARK_THEME: str
     MORE_THAN_SCHEDULE_COLOR_DARK_THEME: str
+    CHAT_RECORD_CONTENT_TYPES: str
