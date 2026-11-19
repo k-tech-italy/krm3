@@ -1,3 +1,15 @@
+## 5.5.0 (2026-11-19)
+
+### Feat
+
+- **chat**: add chat backend with record threads, DMs, ACL and REST API
+
+### Fix
+
+- **Timesheet**: Quick menu accepting 0.25 hours
+- **FE**: Alignment
+- **Tests**: Fix sporadic pydantic dataclasses with freezegun's FakeDatetime and fails
+
 ## 5.4.0 (2026-11-16)
 
 ### Feat
