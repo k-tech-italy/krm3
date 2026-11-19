@@ -1,4 +1,8 @@
+from importlib import import_module
+
 import pytest
+from django.apps import apps
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from testutils.factories import (
@@ -46,12 +50,11 @@ def test_fk_cascade_removes_child_threads():
     assert not ChatThread.objects.exists()
 
 
-def test_day_entry_cascade_removes_task_entry_threads():
-    task_entry = TaskEntryFactory(day_entry=True)
-    _thread_with_messages(task_entry)
-    _thread_with_messages(task_entry.day_entry)
+def test_deleting_day_entry_removes_thread():
+    day_entry = DayEntryFactory()
+    _thread_with_messages(day_entry)
 
-    task_entry.day_entry.delete()
+    day_entry.delete()
 
     assert not ChatThread.objects.exists()
 
@@ -120,7 +123,7 @@ def test_message_str_does_not_leak_body():
     'value',
     [
         pytest.param('core.mission', id='single'),
-        pytest.param(' core.Mission , core.taskentry ', id='spaces-and-case'),
+        pytest.param(' core.Mission , core.DayEntry ', id='spaces-and-case'),
         pytest.param('', id='empty'),
     ],
 )
@@ -132,6 +135,7 @@ def test_constance_validator_accepts(value):
     'value',
     [
         pytest.param('core.project', id='not-chat-capable'),
+        pytest.param('core.taskentry', id='task-entry'),
         pytest.param('core.mission,core.nope', id='unknown'),
         pytest.param('mission', id='malformed'),
     ],
@@ -163,3 +167,16 @@ def test_timesheet_submission_filter_acl_superuser(admin_user):
     submissions = {TimesheetSubmissionFactory(closed=False), TimesheetSubmissionFactory(closed=False)}
 
     assert set(TimesheetSubmission.objects.filter_acl(admin_user)) == submissions
+
+
+def test_migration_deletes_task_entry_threads():
+    migration = import_module('krm3.core.migrations.0004_delete_task_entry_chat_threads')
+    task_entry = TaskEntryFactory(day_entry=True)
+    task_thread = ChatThreadFactory(content_type=ContentType.objects.get_for_model(task_entry), object_id=task_entry.pk)
+    ChatMessageFactory(thread=task_thread)
+    keep = _thread_with_messages(task_entry.day_entry)
+
+    migration.delete_task_entry_threads(apps, None)
+
+    assert list(ChatThread.objects.all()) == [keep]
+    assert not ChatMessage.objects.filter(thread_id=task_thread.pk).exists()

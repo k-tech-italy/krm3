@@ -195,5 +195,6 @@ compilemessages:  # Compiles i18n skipping .tox and .venv
 
 .release-admin:  # Risky!
 	NEW_TAG=$$(cz bump | awk '/\[new tag\]/ {print $4}')
+	git push origin HEAD --follow-tags
 	gh pr create --base master --head develop --title "Release: merge develop into master" --body "v$$NEW_TAG"
 	gh pr merge develop --merge --admin

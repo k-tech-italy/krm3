@@ -4,7 +4,6 @@ from testutils.factories import (
     ExpenseFactory,
     MissionFactory,
     ResourceFactory,
-    TaskEntryFactory,
     TimesheetSubmissionFactory,
     UserFactory,
 )
@@ -34,11 +33,6 @@ RECORD_BUILDERS = {
     ),
     'core.dayentry': (
         lambda resource: DayEntryFactory(resource=resource),
-        'core.view_any_timesheet',
-        'core.manage_any_timesheet',
-    ),
-    'core.taskentry': (
-        lambda resource: TaskEntryFactory(resource=resource, day_entry=True),
         'core.view_any_timesheet',
         'core.manage_any_timesheet',
     ),

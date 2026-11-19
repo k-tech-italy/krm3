@@ -887,7 +887,6 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
 
     # this will need to be turned into not nullable after migrations
     day_entry = models.ForeignKey(DayEntry, on_delete=models.CASCADE)
-    chat_threads = GenericRelation('core.ChatThread')
 
     objects = TaskEntryQuerySet.as_manager()
 

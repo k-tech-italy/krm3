@@ -21,7 +21,6 @@ CHAT_CAPABLE_MODELS: dict[str, str] = {
     'core.mission': 'resource.user_id',
     'core.expense': 'mission.resource.user_id',
     'core.dayentry': 'resource.user_id',
-    'core.taskentry': 'day_entry.resource.user_id',
     'core.timesheetsubmission': 'resource.user_id',
 }
 

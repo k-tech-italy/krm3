@@ -7,7 +7,7 @@ $(error DOCKER_REGISTRY is not set)
 endif
 
 # VARIABLES
-VERSION=5.4.0
+VERSION=5.5.1
 BASE?=$(shell echo "${VERSION}" | sed "s/\([0-9]*\)\.\([0-9]*\)\.\(.*\)/\1.\2/g" )
 BUILDDIR?=./~build
 CONTAINER_NAME=kt-krm3
@@ -127,6 +127,7 @@ release:  registrylogin  ## For manual release
 			-v "`pwd`/certs:/etc/certs:ro" \
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			-v "`pwd`/../tests:/code/tests:ro" \
+			-v "`pwd`/../pytest.ini:/code/pytest.ini:ro" \
 			-v "`pwd`/../src:/code/src:ro" \
 			-v "`pwd`/../krm3-fe:/code/krm3-fe:ro" \
 			${RUN_OPTIONS} \

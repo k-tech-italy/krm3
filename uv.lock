@@ -1439,7 +1439,7 @@ wheels = [
 
 [[package]]
 name = "krm3"
-version = "5.4.0"
+version = "5.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "bs4" },
