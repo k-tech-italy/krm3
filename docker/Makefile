@@ -127,6 +127,7 @@ release:  registrylogin  ## For manual release
 			-v "`pwd`/certs:/etc/certs:ro" \
 			-v "/etc/ssl/certs:/etc/ssl/certs:ro" \
 			-v "`pwd`/../tests:/code/tests:ro" \
+			-v "`pwd`/../pytest.ini:/code/pytest.ini:ro" \
 			-v "`pwd`/../src:/code/src:ro" \
 			-v "`pwd`/../krm3-fe:/code/krm3-fe:ro" \
 			${RUN_OPTIONS} \

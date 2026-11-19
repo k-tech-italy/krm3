@@ -160,6 +160,7 @@ jobs:
           set +e
           docker run --name krm3-test --network host \
             -v "$(pwd)/tests:/code/tests:ro" \
+            -v "$(pwd)/pytest.ini:/code/pytest.ini:ro" \
             -v "$(pwd)/krm3-fe:/code/krm3-fe:ro" \
             -e KRM3_DATABASE_URL="$KRM3_DATABASE_URL" \
             -e KRM3_ALLOWED_HOSTS="$KRM3_ALLOWED_HOSTS" \
