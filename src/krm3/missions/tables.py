@@ -15,8 +15,7 @@ class ExpenseTableMixin:
     attachment = tables.Column(empty_values=())
 
     def render_amount_currency(self, record: Expense) -> str:
-        value = f'{record.amount_currency} {record.currency.iso3}'
-        return format_html(value)
+        return f'{record.amount_currency} {record.currency.iso3}'
 
     @classmethod
     def render_amount_base(cls, value: Decimal) -> Decimal | str:
