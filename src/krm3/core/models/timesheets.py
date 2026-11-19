@@ -7,6 +7,7 @@ from textwrap import shorten
 from typing import TYPE_CHECKING, Any, Iterable, Self, override, cast
 
 from constance import config
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, DateRangeField, RangeOperators
 from django.core.exceptions import ValidationError
@@ -119,6 +120,17 @@ class TimesheetSubmissionManager(models.Manager):
     def get_queryset(self) -> TimesheetSubmissionQuerySet:
         return TimesheetSubmissionQuerySet(self.model, using=self._db)
 
+    def filter_acl(self, user: AbstractUser) -> TimesheetSubmissionQuerySet:
+        """Return the queryset for the owned records.
+
+        Superuser gets them all.
+        """
+        if user.is_superuser or user.get_all_permissions().intersection(
+            {'core.manage_any_timesheet', 'core.view_any_timesheet'}
+        ):
+            return self.get_queryset()
+        return self.get_queryset().filter(resource__user=user)
+
     def get_closed_in_period(
         self, from_date: datetime.date, to_date: datetime.date, resources: Resource | Iterable[Resource]
     ) -> QuerySet[TimesheetSubmission]:
@@ -141,6 +153,7 @@ class TimesheetSubmission(models.Model):
     closed = models.BooleanField(default=True)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     timesheet = models.JSONField(null=True, blank=True, default=dict)
+    chat_threads = GenericRelation('core.ChatThread')
 
     objects: TimesheetSubmissionManager = TimesheetSubmissionManager()
 
@@ -467,6 +480,7 @@ class DayEntry(CleanValidatorsMixin, models.Model):
         max_digits=4, decimal_places=2, default=0.0, help_text=_('Overtime hours in the day')
     )
     meal_voucher_threshold = models.PositiveIntegerField(null=True, blank=True, help_text=_('Meal voucher threshold'))
+    chat_threads = GenericRelation('core.ChatThread')
 
     objects = DayEntryQuerySet.as_manager()
 
@@ -873,6 +887,7 @@ class TaskEntry(CleanValidatorsMixin, models.Model):
 
     # this will need to be turned into not nullable after migrations
     day_entry = models.ForeignKey(DayEntry, on_delete=models.CASCADE)
+    chat_threads = GenericRelation('core.ChatThread')
 
     objects = TaskEntryQuerySet.as_manager()
 

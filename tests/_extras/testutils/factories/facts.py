@@ -525,3 +525,57 @@ class EmailInfoFactory(DjangoModelFactory):
     email = factory.SubFactory(EmailFactory)
     contact = factory.SubFactory(ContactFactory)
     kind = factory.sequence(lambda n: 'work' if n % 2 == 0 else 'personal')
+
+
+class ChatThreadFactory(DjangoModelFactory):
+    """RECORD thread on a new mission by default; pass `content_object=...` to attach another record."""
+
+    kind = 'RECORD'
+    content_object = SubFactory(MissionFactory)
+    created_by = SubFactory(UserFactory)
+
+    class Meta:
+        model = 'core.ChatThread'
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        from django.contrib.contenttypes.models import ContentType  # noqa: PLC0415
+
+        if kwargs.get('kind') == 'RECORD' and (record := kwargs.pop('content_object', None)) is not None:
+            kwargs.setdefault('content_type', ContentType.objects.get_for_model(record))
+            kwargs.setdefault('object_id', record.pk)
+        return super()._create(model_class, *args, **kwargs)
+
+
+class DirectChatThreadFactory(DjangoModelFactory):
+    """DIRECT thread; pass `users=(a, b)` in any order."""
+
+    kind = 'DIRECT'
+    created_by = SubFactory(UserFactory)
+
+    class Meta:
+        model = 'core.ChatThread'
+
+    @classmethod
+    def _create(cls, model_class, *args, users=None, **kwargs):
+        users = users or (UserFactory(), UserFactory())
+        low, high = sorted(users, key=lambda u: u.pk)
+        kwargs.update(direct_user_low=low, direct_user_high=high)
+        return super()._create(model_class, *args, **kwargs)
+
+
+class ChatParticipantFactory(DjangoModelFactory):
+    thread = SubFactory(ChatThreadFactory)
+    user = SubFactory(UserFactory)
+
+    class Meta:
+        model = 'core.ChatParticipant'
+
+
+class ChatMessageFactory(DjangoModelFactory):
+    thread = SubFactory(ChatThreadFactory)
+    author = SubFactory(UserFactory)
+    body = Faker('sentence')
+
+    class Meta:
+        model = 'core.ChatMessage'

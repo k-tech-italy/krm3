@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import Enum
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint
@@ -72,6 +73,7 @@ class Mission(models.Model):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     city = models.ForeignKey(City, on_delete=models.PROTECT)
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
+    chat_threads = GenericRelation('core.ChatThread')
 
     objects = MissionManager()
 
@@ -330,6 +332,7 @@ class Expense(models.Model):
 
     created_ts = models.DateTimeField(auto_now_add=True)
     modified_ts = models.DateTimeField(auto_now=True)
+    chat_threads = GenericRelation('core.ChatThread')
 
     objects = ExpenseManager()
 

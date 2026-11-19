@@ -7,6 +7,7 @@ from typing import cast
 
 import pytest
 import responses
+from django.template import engines
 from django.test import Client
 from django.utils.http import urlencode
 from rest_framework.test import APIClient
@@ -21,6 +22,13 @@ if typing.TYPE_CHECKING:
 
 here = Path(__file__).parent
 sys.path.insert(0, str(here / "_extras"))
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _load_template_engines():
+    # Template engines load their tag libraries lazily on first render. If that happens under
+    # freeze_time, qr_code declares its pydantic dataclasses with freezegun's FakeDatetime and fails.
+    engines.all()
 
 
 @pytest.fixture
