@@ -273,15 +273,9 @@ class Reimbursement(models.Model):
     def __str__(self) -> str:
         return f'{self.title} ({self.number}/{self.year})'
 
-    def save(
-        self,
-        force_insert: bool = False,
-        force_update: bool = False,
-        using: str | None = None,
-        update_fields: list[str] | None = None,
-    ) -> None:
+    def save(self, *args, **kwargs) -> None:
         self.full_clean()
-        super().save(force_insert, force_update, using, update_fields)
+        super().save(*args, **kwargs)
 
     @property
     def expense_count(self) -> int:
