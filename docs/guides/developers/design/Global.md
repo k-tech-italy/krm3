@@ -17,7 +17,7 @@
 ### DDR-G-003: Feature Flags via django-flags
 - **Date**: 2026-08-03
 - **Context**: Modules (timesheet, missions and their expenses, report, contacts) need to be enabled per deployment without branch-based feature toggling.
-- **Decision**: Module-level gating is controlled by django-flags, checked both API-side and UI-side. API-side, viewsets add the `krm3.core.api.permissions.FeatureFlagEnabled` permission and name the flag in a `feature_flag` attribute (e.g. the missions API uses `TRASFERTE_ENABLED`); when the flag is disabled for the request the API answers 403. UI-side, the frontend only exposes the modules listed in the current user's `config.modules`.
+- **Decision**: Module-level gating is controlled by django-flags, checked both API-side and UI-side. API-side, viewsets add the `krm3.core.api.permissions.FeatureFlagEnabled` permission and name the flag in a `feature_flag` attribute (e.g. the missions API uses `MISSIONS_ENABLED`); when the flag is disabled for the request the API answers 403. UI-side, the frontend only exposes the modules listed in the current user's `config.modules`.
 - **Consequences**: Features can be toggled per environment without code changes; every gated module must enforce the flag in both layers to stay consistent.
 - **Status**: Accepted
 
@@ -26,7 +26,7 @@ Module flags (`src/krm3/config/fragments/flags.py`; the frontend entries come fr
 
 | Flag | Module | Frontend URL | Notes |
 |------|--------|--------------|-------|
-| `TRASFERTE_ENABLED` | Missions, **including expenses** | `/trasferte` | *trasferte* is Italian for missions; expenses have no flag of their own. Off unless enabled |
+| `MISSIONS_ENABLED` | Missions, **including expenses** | `/trasferte` | Expenses have no flag of their own; the frontend URL keeps the Italian *trasferte* (missions). Off unless enabled. Was `TRASFERTE_ENABLED` |
 | `TIMESHEET_ENABLED` | Timesheet | `/timesheet` | Off unless enabled |
 | `REPORT_ENABLED` | Reports | `/be/` | On by default |
 | `CONTACTS_ENABLED` | Contacts | `/contacts` | Off unless enabled |

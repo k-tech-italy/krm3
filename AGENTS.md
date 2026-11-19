@@ -63,7 +63,7 @@ before changing behaviour. The ones most often relevant:
 - **Session auth, no JWT** (DDR-G-002).
 - **Feature flags** (DDR-G-003): modules are gated by django-flags (`src/krm3/config/fragments/flags.py`),
   **both** in the UI and in the API. API viewsets add `FeatureFlagEnabled` and set `feature_flag`
-  (missions use `TRASFERTE_ENABLED`).
+  (missions use `MISSIONS_ENABLED`).
 - **Row-level access** (DDR-BE-003): querysets go through `Model.objects.filter_acl(user)`;
   never filter by permissions inline in views.
 - **Permissions use the `core.` app label** (`core.view_any_mission`, `core.manage_any_mission`,

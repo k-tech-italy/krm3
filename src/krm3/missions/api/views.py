@@ -25,7 +25,7 @@ from .serializers.mission import MissionCreateSerializer, MissionNestedSerialize
 
 class MissionAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     owner_field = 'resource.user_id'
     manage_permission = 'core.manage_any_mission'
     serializer_class = MissionNestedSerializer
@@ -58,7 +58,7 @@ class MissionAPIViewSet(ModelViewSet):
 
 class ExpenseAPIViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     owner_field = 'mission.resource.user_id'
     manage_permission = 'core.manage_any_expense'
     serializer_class = ExpenseSerializer
@@ -94,20 +94,20 @@ class ExpenseAPIViewSet(ModelViewSet):
 
 class ExpenseCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
 
 class PaymentCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
 class DocumentTypeAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)

@@ -89,7 +89,7 @@ def test_admin_add_stores_resolved_currency(admin_client, expense_currency, miss
 def test_api_create_stores_resolved_currency(
     api_client, regular_user, settings, expense_currency, mission_currency, expected
 ):
-    settings.FLAGS = {**settings.FLAGS, 'TRASFERTE_ENABLED': [('boolean', True)]}
+    settings.FLAGS = {**settings.FLAGS, 'MISSIONS_ENABLED': [('boolean', True)]}
     mission = _mission(mission_currency)
     mission.resource = ResourceFactory(user=regular_user)
     mission.save()
