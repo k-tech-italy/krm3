@@ -1,3 +1,13 @@
+## 5.5.1 (2026-11-19)
+
+### Fix
+
+- **ci**: mount pytest.ini in the Docker test runs
+
+### Refactor
+
+- **chat**: restrict timesheet chat to day entries
+
 ## 5.5.0 (2026-11-19)
 
 ### Feat
