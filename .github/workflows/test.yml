@@ -8,7 +8,7 @@ on:
       - develop
     paths:
       - src/**
-      - test/**
+      - tests/**
 
   pull_request:
     types: [synchronize, opened, reopened, ready_for_review]
