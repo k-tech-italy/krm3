@@ -61,7 +61,7 @@ CONSTANCE_CONFIG = {
     'BANK_HOURS_UPPER_BOUND': (16.0, 'Maximum bank hours that can be deposited/withdrawn', float),
     'BANK_HOURS_LOWER_BOUND': (-16.0, 'Minimum bank hours that can be deposited/withdrawn', float),
     'CHAT_RECORD_CONTENT_TYPES': (
-        'core.mission,core.expense,core.dayentry,core.taskentry,core.timesheetsubmission',
+        'core.mission,core.expense,core.dayentry,core.timesheetsubmission',
         'Record types that can have a chat thread (comma-separated app_label.model)',
         'chat_content_types',
     ),

@@ -8,7 +8,7 @@ from krm3.chat.registry import enabled_content_types
 
 LABELS = [
     pytest.param(label, id=label.split('.')[1])
-    for label in ('core.mission', 'core.expense', 'core.dayentry', 'core.taskentry', 'core.timesheetsubmission')
+    for label in ('core.mission', 'core.expense', 'core.dayentry', 'core.timesheetsubmission')
 ]
 
 ROLES = [

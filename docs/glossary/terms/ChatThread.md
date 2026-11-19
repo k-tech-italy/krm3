@@ -10,7 +10,7 @@ terms:
 
 A `ChatThread` is a conversation. There are two kinds:
 
-- **Record thread**: a discussion attached to one business record. Each record has at most one thread, created the first time someone opens the chat on it. The record types that can have a thread are a fixed set in code (<glossary:Mission>, <glossary:Expense>, <glossary:DayEntry>, <glossary:TaskEntry>, <glossary:TimesheetSubmission>); the Constance setting `CHAT_RECORD_CONTENT_TYPES` decides which of them are enabled. Deleting the record deletes its thread and messages.
+- **Record thread**: a discussion attached to one business record. Each record has at most one thread, created the first time someone opens the chat on it. The record types that can have a thread are a fixed set in code (<glossary:Mission>, <glossary:Expense>, <glossary:DayEntry>, <glossary:TimesheetSubmission>); the Constance setting `CHAT_RECORD_CONTENT_TYPES` decides which of them are enabled. Deleting the record deletes its thread and messages.
 - **Direct thread**: a private 1:1 conversation between two active users. Each pair of users has at most one direct thread.
 
 ## Who can read and post
