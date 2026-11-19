@@ -5,6 +5,7 @@
 - [BaseCurrency](terms/BaseCurrency.md)
 - [Basket](terms/Basket.md)
 ## C
+- [ChatThread](terms/ChatThread.md)
 - [ClosedEntry](terms/ClosedEntry.md)
 - [Contract](terms/Contract.md)
 ## D

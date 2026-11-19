@@ -84,6 +84,7 @@ INSTALLED_APPS = (
         'krm3.projects',
         'krm3.fe',
         'krm3.web',
+        'krm3.chat',
         # Third party apps.
         'qr_code',
         'django_filters',
