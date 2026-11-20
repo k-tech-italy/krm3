@@ -26,7 +26,7 @@ Module flags (`src/krm3/config/fragments/flags.py`; the frontend entries come fr
 
 | Flag | Module | Frontend URL | Notes |
 |------|--------|--------------|-------|
-| `MISSIONS_ENABLED` | Missions, **including expenses** | `/trasferte` | Expenses have no flag of their own; the frontend URL keeps the Italian *trasferte* (missions). Off unless enabled. Was `TRASFERTE_ENABLED` |
+| `MISSIONS_ENABLED` | Missions, **including expenses** | `/trasferte` | Expenses have no flag of their own; the frontend URL keeps the Italian *trasferte* (missions). Off unless enabled. |
 | `TIMESHEET_ENABLED` | Timesheet | `/timesheet` | Off unless enabled |
 | `REPORT_ENABLED` | Reports | `/be/` | On by default |
 | `CONTACTS_ENABLED` | Contacts | `/contacts` | Off unless enabled |
