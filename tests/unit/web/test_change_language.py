@@ -10,7 +10,7 @@ User = get_user_model()
 @pytest.mark.django_db
 def test_language_change_user_changing_language(django_client_and_auth_resource):
     client, resource = django_client_and_auth_resource
-    assert resource.preferred_language == 'en-uk', "Sanity check, ResourceFactory should be setting this."
+    assert resource.user.profile.preferred_language == 'en-uk', "Sanity check, the profile default should be this."
 
     home_response = client.get('/')
     home_cookie = home_response.cookies.get(settings.LANGUAGE_COOKIE_NAME)
@@ -19,7 +19,7 @@ def test_language_change_user_changing_language(django_client_and_auth_resource)
 
 
     response = client.post(
-        reverse('user_resource', args=[resource.user.id]),
+        reverse('user_profile', args=[resource.user.id]),
         data={
             'first_name': resource.first_name,
             'last_name': resource.last_name,

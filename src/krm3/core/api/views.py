@@ -18,7 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ktcalendars import KTDay
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAuthenticated
 from rest_framework.request import Request
@@ -44,6 +44,7 @@ from krm3.core.models import (
     Resource,
     TimesheetSubmission,
     User,
+    UserProfile,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
@@ -234,18 +235,22 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
     @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
     def preferred_language(self, request: Request, pk: str) -> Response:
         resource = self.get_object()
+        # The preferred language is stored in the profile of the resource's user
+        if resource.user is None:
+            raise NotFound('This resource has no user.')
+        profile, _ = UserProfile.objects.get_or_create(user=resource.user)
 
         if request.method == 'PATCH':
             language_code = request.data.get('language_code')
             serializer = PreferredLanguageSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
-            if resource.preferred_language != language_code:
-                resource.preferred_language = language_code
-                resource.save()
+            if profile.preferred_language != language_code:
+                profile.preferred_language = language_code
+                profile.save(update_fields=['preferred_language'])
             return Response(status=status.HTTP_200_OK)
 
-        return Response(resource.preferred_language, status=status.HTTP_200_OK)
+        return Response(profile.preferred_language, status=status.HTTP_200_OK)
 
     def get_permissions(self) -> list[Any]:
         if self.action == 'preferred_language':

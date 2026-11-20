@@ -1,5 +1,5 @@
 import pytest
-from testutils.factories import ResourceFactory
+from testutils.factories import UserFactory
 
 
 @pytest.mark.parametrize(
@@ -54,8 +54,8 @@ from testutils.factories import ResourceFactory
         ),
     ],
 )
-def test_resource_vcard_validation(vcard_text, should_be_valid, test_description):
-    """Test vCard validation for the Resource model using vobject.
+def test_user_profile_vcard_validation(vcard_text, should_be_valid, test_description):
+    """Test vCard validation for the UserProfile model using vobject.
 
     vobject is more lenient than strict RFC 2426 validation and supports:
     - vCard 2.1, 3.0, and 4.0 formats
@@ -64,13 +64,14 @@ def test_resource_vcard_validation(vcard_text, should_be_valid, test_description
     """
     from django.core.exceptions import ValidationError  # noqa: PLC0415
 
-    resource = ResourceFactory(vcard_text=vcard_text)
+    profile = UserFactory().profile
+    profile.vcard_text = vcard_text
 
     if should_be_valid:
         # Should not raise ValidationError
-        resource.clean()
+        profile.clean()
     else:
         # Should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
-            resource.clean()
+            profile.clean()
         assert 'vcard_text' in exc_info.value.message_dict

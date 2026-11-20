@@ -95,9 +95,40 @@ class UserProfile(NaturalKeyModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     picture = models.TextField(null=True, blank=True)
     social_profile = models.TextField(null=True, blank=True)
+    vcard_text = models.TextField(null=True, blank=True)
+    preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
 
     def __str__(self) -> str:
         return self.user.username
+
+    def clean(self) -> None:
+        """Validate the model fields."""
+        super().clean()
+        self._validate_vcard_text()
+
+    def _validate_vcard_text(self) -> None:
+        """Validate that vcard_text contains a valid vCard format.
+
+        Empty values (None or empty string) are allowed and no validation is applied.
+        Non-empty values must be parseable as vCard using vobject library.
+        Supports vCard 2.1, 3.0, and 4.0 formats, including Apple-specific extensions.
+        """
+        # Allow None or empty string - no validation applied
+        if self.vcard_text:
+            self.vcard_text = '\n'.join([x.strip() for x in self.vcard_text.splitlines()])
+
+        if not self.vcard_text:
+            return
+
+        try:
+            # Try to parse the vCard text
+            vobject.readOne(self.vcard_text)
+        except vobject.base.ParseError as e:
+            # ParseError is raised for malformed vCards
+            raise ValidationError({'vcard_text': f'Invalid vCard format: {str(e)}'}) from e
+        except Exception as e:
+            # Catch any other unexpected errors
+            raise ValidationError({'vcard_text': f'Error parsing vCard: {str(e)}'}) from e
 
     @classmethod
     def new(cls, user: User) -> Self:
@@ -126,9 +157,7 @@ class Resource(models.Model):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    vcard_text = models.TextField(null=True, blank=True)
     fiscal_code = models.CharField(max_length=25, null=True, blank=True, unique=True)
-    preferred_language = models.CharField(choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
 
     objects = ResourceQuerySet.as_manager()
 
@@ -142,38 +171,9 @@ class Resource(models.Model):
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
 
-    def clean(self) -> None:
-        """Validate the model fields."""
-        super().clean()
-        self._validate_vcard_text()
-
     @property
     def full_name(self) -> str:
         return f'{self.first_name} {self.last_name}'
-
-    def _validate_vcard_text(self) -> None:
-        """Validate that vcard_text contains a valid vCard format.
-
-        Empty values (None or empty string) are allowed and no validation is applied.
-        Non-empty values must be parseable as vCard using vobject library.
-        Supports vCard 2.1, 3.0, and 4.0 formats, including Apple-specific extensions.
-        """
-        # Allow None or empty string - no validation applied
-        if self.vcard_text:
-            self.vcard_text = '\n'.join([x.strip() for x in self.vcard_text.splitlines()])
-
-        if not self.vcard_text:
-            return
-
-        try:
-            # Try to parse the vCard text
-            vobject.readOne(self.vcard_text)
-        except vobject.base.ParseError as e:
-            # ParseError is raised for malformed vCards
-            raise ValidationError({'vcard_text': f'Invalid vCard format: {str(e)}'}) from e
-        except Exception as e:
-            # Catch any other unexpected errors
-            raise ValidationError({'vcard_text': f'Error parsing vCard: {str(e)}'}) from e
 
     def scheduled_working_hours_for_day(self, day: KTDay) -> float:
         """Scheduled number of hours a resource should work each day.

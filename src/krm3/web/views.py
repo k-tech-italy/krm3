@@ -18,7 +18,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Min
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
+from django.http import HttpRequest, HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -27,8 +27,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django_simple_dms.models import DocumentTag
 
-from krm3.core.forms import ResourceForm
-from krm3.core.models import Contract, Project, Resource, Task
+from krm3.core.forms import UserProfileForm
+from krm3.core.models import Contract, Project, Resource, Task, UserProfile
 from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.reports.availability import AvailabilityReport
 from krm3.timesheet.report.payslip import TimesheetReportOnline
@@ -80,23 +80,19 @@ class HomeView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
+class UserProfileView(LoginRequiredMixin, ReportMixin, TemplateView):
+    """Show a user's data and profile; the owner can also edit them."""
+
     login_url = '/admin/login/'
-    template_name = 'user_resource.html'
+    template_name = 'user_profile.html'
 
     @override
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponseBase:
         """Check permissions before processing the request."""
         user_id = kwargs.get('pk')
-        user = cast('UserType', get_object_or_404(User, pk=user_id))
-
-        # Check if user has an associated resource
-        resource = user.get_resource()
-        if not resource:
-            raise Http404('No resource found for this user.')
-
-        self.user = user
-        self.resource = resource
+        self.user = cast('UserType', get_object_or_404(User, pk=user_id))
+        # Users created before profiles were added automatically may not have one yet
+        self.profile, _ = UserProfile.objects.get_or_create(user=self.user)
         # Determine if the view should be read-only (viewing someone else's profile)
         self.read_only = request.user.pk != user_id
         return super().dispatch(request, *args, **kwargs)
@@ -107,14 +103,13 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
         if self.read_only:
             raise PermissionDenied("You don't have permission to edit this profile.")
 
-        form = ResourceForm(resource=self.resource, data=request.POST)
+        form = UserProfileForm(user=self.user, data=request.POST)
         if form.is_valid():
             form.save()
             response = self.get(request, *args, **kwargs)
-            if 'preferred_language' in form.cleaned_data:
-                response.set_cookie('django_language', form.cleaned_data['preferred_language'])
+            if preferred_language := form.cleaned_data.get('preferred_language'):
+                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, preferred_language)
             messages.success(request, _('Profile updated successfully.'))
-            # Redirect to the same profile page after successful save
             return response
 
         # If form is invalid, re-render with errors
@@ -127,22 +122,12 @@ class UserResourceView(LoginRequiredMixin, ReportMixin, TemplateView):
 
         # Create form with existing data if not already in context (from POST)
         if 'form' not in context:
-            context['form'] = ResourceForm(resource=self.resource)
+            context['form'] = UserProfileForm(user=self.user)
 
-        # Get profile picture URL if it exists
-        profile_picture = None
-        if hasattr(self.user, 'profile') and self.user.profile.picture:
-            profile_picture = self.user.profile.picture
-
-        # Get vcard_text if it exists and is not empty
-        vcard_text = None
-        if self.resource.vcard_text:
-            vcard_text = self.resource.vcard_text
-
-        context['resource'] = self.resource
         context['user'] = self.user
-        context['profile_picture'] = profile_picture
-        context['vcard_text'] = vcard_text
+        context['profile'] = self.profile
+        context['profile_picture'] = self.profile.picture or None
+        context['vcard_text'] = self.profile.vcard_text or None
         context['read_only'] = self.read_only
 
         return context

@@ -7,7 +7,7 @@ from testutils.factories import ResourceFactory
 @pytest.mark.django_db
 def test_get_preferred_language(django_client_and_auth_resource):
     client, resource = django_client_and_auth_resource
-    assert resource.preferred_language == 'en-uk'
+    assert resource.user.profile.preferred_language == 'en-uk'
 
     response = client.get(reverse('core-api:api-resources-preferred-language', args=[resource.pk]))
 
@@ -18,7 +18,7 @@ def test_get_preferred_language(django_client_and_auth_resource):
 @pytest.mark.django_db
 def test_update_preferred_language(django_client_and_auth_resource):
     client, resource = django_client_and_auth_resource
-    assert resource.preferred_language == 'en-uk'
+    assert resource.user.profile.preferred_language == 'en-uk'
 
     response = client.patch(
         reverse('core-api:api-resources-preferred-language', args=[resource.pk]),
@@ -28,8 +28,8 @@ def test_update_preferred_language(django_client_and_auth_resource):
 
     assert response.status_code == 200
 
-    resource.refresh_from_db()
-    assert resource.preferred_language == 'it'
+    resource.user.profile.refresh_from_db()
+    assert resource.user.profile.preferred_language == 'it'
 
 
 @pytest.mark.parametrize(
@@ -67,5 +67,5 @@ def test_update_preferred_language_other_user(django_client_and_auth_resource):
     assert response.status_code == 403
     assert response.data.get('detail') == 'You do not have permission to perform this action.'
 
-    another_resource.refresh_from_db()
-    assert another_resource.preferred_language == 'en-uk'
+    another_resource.user.profile.refresh_from_db()
+    assert another_resource.user.profile.preferred_language == 'en-uk'

@@ -28,12 +28,12 @@ class UserLanguageMiddleware:
                 language_cookie_name=language_cookie_name
             )
 
-        # We don't have a language in the cookie, check the resource
+        # We don't have a language in the cookie, check the user profile
         if (
             not request_language
             and request.user.is_authenticated
-            and hasattr(request.user, 'resource')
-            and (user_preferred_language := getattr(request.user.resource, 'preferred_language', None))
+            and hasattr(request.user, 'profile')
+            and (user_preferred_language := getattr(request.user.profile, 'preferred_language', None))
         ):
             return self._set_response_language(
                 response=response,
