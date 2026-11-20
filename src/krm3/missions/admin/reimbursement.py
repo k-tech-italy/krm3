@@ -12,6 +12,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 from django_tables2.config import RequestConfig
 from django_tables2.export import TableExport
 
@@ -224,8 +225,10 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         if queryset.filter(expenses__isnull=True).exists():
             self.message_user(
                 request,
-                'Cannot generate the reimbursement report because one or more selected reimbursements '
-                'have no associated expenses.',
+                _(
+                    'Cannot generate the reimbursement report because one or more selected reimbursements '
+                    'have no associated expenses.'
+                ),
                 level=messages.ERROR,
             )
             return None
