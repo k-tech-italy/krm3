@@ -147,3 +147,18 @@ make refresh-fe
 It runs `git pull`, `yarn install` and `yarn build` in `krm3-fe/`, then `git pull`, `uv sync` and
 `./manage.py tailwind build` in this repository. Because it pulls both repositories, commit or
 stash your local changes first.
+
+<!--docs-setup-end-->
+
+## License
+
+KRM3 is source-available under the
+[PolyForm Noncommercial License 1.0.0](https://github.com/k-tech-italy/krm3/blob/develop/LICENSE.md):
+
+- **Noncommercial use is free**: personal study, research, hobby projects, and use by charities,
+  educational institutions, public research organizations and government institutions.
+- **Commercial use needs a commercial license**, including a company using KRM3 in its products,
+  services or internal systems. Write to K-Tech s.r.l. at <info@k-tech.it>.
+
+Versions up to 5.5.1 were released under the K-Tech Source License 1.1 with Apache 2.0 Future License
+(K-Tech-1.1-Apache-2.0), and those terms still apply to them.
