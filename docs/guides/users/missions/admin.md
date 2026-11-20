@@ -197,6 +197,9 @@ summarises them by month, person and mission. How to read the markers next to th
 numbers (`*`, `^`) is explained in
 [the reimbursement process](../../../missions/index.md#reimbursement-report).
 
+Every selected reimbursement must contain at least one expense. If any has no expenses,
+the report is not generated and you return to the reimbursement list with an error message.
+
 ## Lookup tables
 
 Three tables in the *Core* section configure the expense form. Change them with care:

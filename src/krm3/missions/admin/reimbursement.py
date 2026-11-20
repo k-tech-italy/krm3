@@ -5,13 +5,14 @@ from admin_extra_buttons.mixins import ExtraButtonsMixin
 from adminfilters.dates import DateFilter
 from adminfilters.mixin import AdminFiltersMixin
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import QuerySet, When, Case, Value, BooleanField, F
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 from django_tables2.config import RequestConfig
 from django_tables2.export import TableExport
 
@@ -219,8 +220,18 @@ class ReimbursementAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin):
         return None
 
     @admin.action(description='Reimbursement report')
-    def report(self, request: HttpRequest, queryset: QuerySet[Reimbursement]) -> TemplateResponse:
+    def report(self, request: HttpRequest, queryset: QuerySet[Reimbursement]) -> TemplateResponse | None:
         """View reimbursement report."""
+        if queryset.filter(expenses__isnull=True).exists():
+            self.message_user(
+                request,
+                _(
+                    'Cannot generate the reimbursement report because one or more selected reimbursements '
+                    'have no associated expenses.'
+                ),
+                level=messages.ERROR,
+            )
+            return None
         data = prepare_reimbursement_report_context(queryset)
         period = next(iter(data))
         context = {
