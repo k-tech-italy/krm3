@@ -1,3 +1,29 @@
+## 5.6.0 (2026-11-21)
+
+### Feat
+
+- saved filters with a default per page, listed in the user profile
+- **timesheet**: export the task report as XLSX laid out like the page
+- **timesheet**: download the task report as CSV
+- **missions**: filter, order and page the missions and expenses lists in the API
+
+### Fix
+
+- **missions**: translate reimbursement report validation message
+- **missions**: block reimbursement reports when selected reimbursements have no expenses
+- **FE**: alignement
+- **missions**: pass save() arguments through in Expense
+- **missions**: pass save() arguments through in Reimbursement
+- **ci**: run the tests workflow on pushes that change tests/
+- remove deprecated format_html() calls without arguments
+- **ci**: resolve GitHub Actions deprecation warnings in tests workflow
+
+### Refactor
+
+- **core**: move the preferred-language API from the resource to the user
+- **web**: replace UserResourceView with UserProfileView
+- **missions**: rename feature flag TRASFERTE_ENABLED to MISSIONS_ENABLED
+
 ## 5.5.1 (2026-11-19)
 
 ### Fix
