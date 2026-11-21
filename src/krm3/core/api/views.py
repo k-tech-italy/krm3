@@ -1,7 +1,7 @@
 import base64
 import json
 import logging
-from typing import Any, cast, override
+from typing import cast, override
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -18,7 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ktcalendars import KTDay
 from rest_framework import filters, mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, DjangoModelPermissions, IsAuthenticated
 from rest_framework.request import Request
@@ -26,7 +26,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 
-from krm3.core.api.permissions import ResourceMatch
 from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
@@ -202,6 +201,28 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
+    @action(
+        methods=['get', 'patch'],
+        detail=False,
+        url_path='me/preferred-language',
+        url_name='me-preferred-language',
+    )
+    def preferred_language(self, request: Request) -> Response:
+        """Read or change the preferred language of the logged-in user."""
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+        if request.method == 'PATCH':
+            serializer = PreferredLanguageSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            language_code = serializer.validated_data['language_code']
+
+            if profile.preferred_language != language_code:
+                profile.preferred_language = language_code
+                profile.save(update_fields=['preferred_language'])
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(profile.preferred_language, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def logout(self, request: Request) -> Response:
         # invalidate the session data created from the frontend if any
@@ -231,31 +252,6 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
         active_resources = self.get_queryset().active_between(date_from, date_to)
         serializer = ResourceBriefSerializer(active_resources, many=True)
         return Response(serializer.data)
-
-    @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
-    def preferred_language(self, request: Request, pk: str) -> Response:
-        resource = self.get_object()
-        # The preferred language is stored in the profile of the resource's user
-        if resource.user is None:
-            raise NotFound('This resource has no user.')
-        profile, _ = UserProfile.objects.get_or_create(user=resource.user)
-
-        if request.method == 'PATCH':
-            language_code = request.data.get('language_code')
-            serializer = PreferredLanguageSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            if profile.preferred_language != language_code:
-                profile.preferred_language = language_code
-                profile.save(update_fields=['preferred_language'])
-            return Response(status=status.HTTP_200_OK)
-
-        return Response(profile.preferred_language, status=status.HTTP_200_OK)
-
-    def get_permissions(self) -> list[Any]:
-        if self.action == 'preferred_language':
-            return [IsAuthenticated(), ResourceMatch()]
-        return super().get_permissions()
 
 
 class CitySerializer(serializers.ModelSerializer):
