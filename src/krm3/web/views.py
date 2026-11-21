@@ -374,7 +374,36 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         self, request: HttpRequest, *args, month: str | None = None, export: bool = False, **kwargs
     ) -> HttpResponse:
         self.month = month
+        if export:
+            return self._export_excel()
         return super().get(request, *args, **kwargs)
+
+    def _export_excel(self) -> HttpResponse:
+        """Download the report as XLSX, with the same filters as the page."""
+        ctx = self._get_base_context()
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="task_report_{ctx["current_month"]}.xlsx"'
+        report = TimesheetTaskReportOnline(
+            ctx['start'], ctx['end'], cast('UserType', self.request.user), **self._get_filter_kwargs()
+        )
+        report.write_excel(response, str(ctx['title']), tasks_only=self._tasks_only())
+        return response
+
+    def _get_filter_kwargs(self) -> dict[str, Any]:
+        """Return the report filters selected in the request.
+
+        The report ignores them for users who cannot see every resource.
+        """
+        selected_project = self.request.GET.get('project')
+        selected_resource = self.request.GET.get('resource')
+        return {
+            'project': int(selected_project) if selected_project else None,
+            'resource': int(selected_resource) if selected_resource else None,
+            'task_title': self.request.GET.get('task') or None,
+        }
+
+    def _tasks_only(self) -> bool:
+        return self.request.GET.get('tasks_only') == '1'
 
     def _get_base_context(self) -> dict:
         if self.month is None:
@@ -412,7 +441,7 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         ctx = self._get_base_context()
         context.update(ctx)
-        tasks_only = self.request.GET.get('tasks_only') == '1'
+        tasks_only = self._tasks_only()
         selected_project = self.request.GET.get('project')
         selected_resource = self.request.GET.get('resource')
         selected_task = self.request.GET.get('task')
@@ -440,15 +469,15 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['selected_task'] = selected_task
 
         report_blocks = TimesheetTaskReportOnline(
-            ctx['start'],
-            ctx['end'],
-            cast('UserType', self.request.user),
-            project=int(selected_project) if selected_project else None,
-            resource=int(selected_resource) if selected_resource else None,
-            task_title=selected_task or None,
+            ctx['start'], ctx['end'], cast('UserType', self.request.user), **self._get_filter_kwargs()
         )
         context['report_blocks'] = report_blocks.report_html(tasks_only=tasks_only)
         context['tasks_only'] = tasks_only
+        # the export link repeats the filters applied to the page
+        export_filters = {'project': selected_project, 'resource': selected_resource, 'task': selected_task}
+        if tasks_only:
+            export_filters['tasks_only'] = '1'
+        context['export_query'] = urlencode({k: v for k, v in export_filters.items() if v})
 
         return context
 
