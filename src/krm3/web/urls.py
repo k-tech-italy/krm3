@@ -6,6 +6,7 @@ from .views import (
     ReportView,
     TaskReportView,
     ReleasesView,
+    SavedFilterDeleteView,
     UserProfileView,
     DocumentListView, ScanQRView,
 )
@@ -25,5 +26,6 @@ urlpatterns = [
     path('releases/', ReleasesView.as_view(), name='releases'),
     path('missions/', include('krm3.missions.urls')),
     path('profile/<int:pk>/', UserProfileView.as_view(), name='user_profile'),
+    path('saved-filters/<int:pk>/delete/', SavedFilterDeleteView.as_view(), name='saved_filter_delete'),
     path('documents/', DocumentListView.as_view(), name='document_list'),
 ]

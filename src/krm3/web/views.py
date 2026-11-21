@@ -19,16 +19,16 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Min
 from django.http import HttpRequest, HttpResponse, HttpResponseBase
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, View
 from django_simple_dms.models import DocumentTag
 
 from krm3.core.forms import UserProfileForm
-from krm3.core.models import Contract, Project, Resource, Task, UserProfile
+from krm3.core.models import Contract, Project, Resource, SavedFilter, Task, UserProfile
 from krm3.core.models.documents import ProtectedDocument as Document
 from krm3.reports.availability import AvailabilityReport
 from krm3.timesheet.report.payslip import TimesheetReportOnline
@@ -129,8 +129,28 @@ class UserProfileView(LoginRequiredMixin, ReportMixin, TemplateView):
         context['profile_picture'] = self.profile.picture or None
         context['vcard_text'] = self.profile.vcard_text or None
         context['read_only'] = self.read_only
+        # saved filters are personal: they are shown only on the user's own profile
+        context['active_tab'] = 'profile' if self.read_only else self.request.GET.get('tab', 'profile')
+        if not self.read_only:
+            saved_filters: dict[str, list[SavedFilter]] = {}
+            for saved_filter in SavedFilter.objects.filter_acl(self.request.user):
+                saved_filters.setdefault(saved_filter.page, []).append(saved_filter)
+            context['saved_filters'] = saved_filters
 
         return context
+
+
+class SavedFilterDeleteView(LoginRequiredMixin, View):
+    """Delete one of the logged-in user's saved filters and go back to the Filters tab of the profile."""
+
+    login_url = '/admin/login/'
+    http_method_names = ['post']
+
+    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
+        saved_filter = get_object_or_404(SavedFilter.objects.filter_acl(request.user), pk=pk)
+        saved_filter.delete()
+        messages.success(request, _('Filter "{name}" deleted.').format(name=saved_filter.name))
+        return redirect(f'{reverse("user_profile", args=[request.user.pk])}?tab=filters')
 
 
 class ScanQRView(TemplateView):
