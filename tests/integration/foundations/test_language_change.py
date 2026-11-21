@@ -16,7 +16,7 @@ def test_user_selects_preferred_language(browser, resource):
     WebDriverWait(browser, 2).until(
         lambda driver: any(cookie['name'] == 'sessionid' for cookie in driver.get_cookies())
     )
-    browser.driver.get(str(browser.live_server_url) + reverse('user_resource', args=[resource.user.id]))
+    browser.driver.get(str(browser.live_server_url) + reverse('user_profile', args=[resource.user.id]))
 
     # Wait for the language dropdown to be present and interactable
     language_dropdown = WebDriverWait(browser, 10).until(
@@ -32,7 +32,7 @@ def test_user_selects_preferred_language(browser, resource):
 
     # Wait for the NEW page to fully load
     WebDriverWait(browser, 5).until(
-        lambda driver: 'user_resource' not in browser.live_server_url
+        lambda driver: 'user_profile' not in browser.live_server_url
     )
     # FIXME: find a way to remove the sleep without breaking the test in headless mode
     time.sleep(0.1)

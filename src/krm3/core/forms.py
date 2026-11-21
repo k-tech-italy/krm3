@@ -15,7 +15,7 @@ from krm3.core.widgets import PrivateMediaFileInput
 if typing.TYPE_CHECKING:
     import datetime
 
-    from krm3.core.models.auth import Resource
+    from krm3.core.models.auth import User, UserProfile
 
 
 class ContractForm(ConcurrentForm):
@@ -91,9 +91,11 @@ class ContractForm(ConcurrentForm):
         }
 
 
-class ResourceForm(forms.Form):
-    first_name = forms.CharField(max_length=50, required=True)
-    last_name = forms.CharField(max_length=50, required=True)
+class UserProfileForm(forms.Form):
+    """Edit the names of a `User` and the preferences stored in its `UserProfile`."""
+
+    first_name = forms.CharField(max_length=150, required=True)
+    last_name = forms.CharField(max_length=150, required=True)
     preferred_language = forms.ChoiceField(
         choices=settings.LANGUAGES,
         required=False,
@@ -105,22 +107,25 @@ class ResourceForm(forms.Form):
         ),
     )
 
-    def __init__(self, resource: 'Resource', *args: typing.Any, **kwargs: typing.Any) -> None:
+    def __init__(self, user: 'User', *args: typing.Any, **kwargs: typing.Any) -> None:
         super().__init__(*args, **kwargs)
-        self.resource = resource
+        self.user = user
+        self.profile = user.profile
 
-        # Populate initial values from resource object
-        self.fields['first_name'].initial = resource.first_name
-        self.fields['last_name'].initial = resource.last_name
-        self.fields['preferred_language'].initial = resource.preferred_language
+        # Populate initial values from the user and its profile
+        self.fields['first_name'].initial = user.first_name
+        self.fields['last_name'].initial = user.last_name
+        self.fields['preferred_language'].initial = self.profile.preferred_language
 
-    def save(self) -> 'Resource':
-        """Save the form data to Resource model."""
-        self.resource.first_name = self.cleaned_data['first_name']
-        self.resource.last_name = self.cleaned_data['last_name']
-        self.resource.preferred_language = self.cleaned_data['preferred_language']
-        self.resource.save()
-        return self.resource
+    def save(self) -> 'UserProfile':
+        """Save the form data to the User and UserProfile models."""
+        self.user.first_name = self.cleaned_data['first_name']
+        self.user.last_name = self.cleaned_data['last_name']
+        self.user.save(update_fields=['first_name', 'last_name'])
+        if self.cleaned_data['preferred_language']:
+            self.profile.preferred_language = self.cleaned_data['preferred_language']
+            self.profile.save(update_fields=['preferred_language'])
+        return self.profile
 
 
 class ProtectedDocumentForm(ModelForm):
