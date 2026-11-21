@@ -1215,5 +1215,14 @@ msgid "Error applying filter. Please check your filter criteria."
 msgstr ""
 "Erreur lors de l'application du filtre. Veuillez vérifier vos critères."
 
+msgid "Row"
+msgstr "Ligne"
+
+msgid "Scheduled"
+msgstr "Prévu"
+
+msgid "Download CSV"
+msgstr "Télécharger CSV"
+
 #~ msgid "Sunday always a holiday"
 #~ msgstr "Dimanche toujours férié"

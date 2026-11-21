@@ -1,7 +1,8 @@
+import csv
 import datetime
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
@@ -12,6 +13,9 @@ from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.numbers import normal
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsWrite
 
 User = get_user_model()
 
@@ -120,6 +124,30 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 self._add_absence_row(block, resources_report_days)
 
         return blocks
+
+    def write_csv(self, stream: 'SupportsWrite[str]', tasks_only: bool = False) -> None:
+        """Write the report as shown online, one CSV line per report row.
+
+        Each line starts with the resource and the row label, followed by the days and hours totals and the value
+        of each day of the period. The first line of each resource holds its scheduled days and hours.
+        """
+        blocks = self.report_html(tasks_only=tasks_only)
+        # the first row of each block holds the scheduled totals followed by the days of the period
+        days = [cell.value.date.isoformat() for cell in blocks[0].rows[0].cells[2:]] if blocks else []
+        writer = csv.writer(stream)
+        writer.writerow([_('Resource'), _('Row'), _('Days'), _('Total HH'), *days])
+
+        for block in blocks:
+            resource = f'{block.resource.last_name} {block.resource.first_name}'
+            scheduled_row, *rows = block.rows
+            writer.writerow(
+                [resource, _('Scheduled'), scheduled_row.cells[0].render(), scheduled_row.cells[1].render()]
+            )
+            if not block.has_tasks:
+                writer.writerow([resource, _('No tasks assigned')])
+                continue
+            for row in rows:
+                writer.writerow([resource, *(str(cell.value) if cell.value else '' for cell in row.cells)])
 
     def _calculate_summary_data(self, resources_report_days: list[Krm3Day]) -> tuple[int, Decimal]:
         """Calculate number of working days and total scheduled hours."""

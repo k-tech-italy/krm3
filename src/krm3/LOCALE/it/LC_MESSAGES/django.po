@@ -1219,6 +1219,15 @@ msgstr ""
 msgid "Error applying filter. Please check your filter criteria."
 msgstr ""
 
+msgid "Row"
+msgstr "Riga"
+
+msgid "Scheduled"
+msgstr "Previsto"
+
+msgid "Download CSV"
+msgstr "Scarica CSV"
+
 #~ msgid "English"
 #~ msgstr "Inglese"
 
