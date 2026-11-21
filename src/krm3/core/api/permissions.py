@@ -4,15 +4,6 @@ from flags.state import flag_enabled
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class ResourceMatch(BasePermission):
-    """Check the resource is matching requesting user."""
-
-    def has_object_permission(self, request, view, obj: object) -> bool:  # noqa: ANN001
-        if request.method in SAFE_METHODS:
-            return True
-        return obj == request.user.resource
-
-
 class FeatureFlagEnabled(BasePermission):
     """Deny access when the django-flags flag named by `view.feature_flag` is disabled.
 

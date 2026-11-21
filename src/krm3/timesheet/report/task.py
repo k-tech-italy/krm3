@@ -1,19 +1,36 @@
 import datetime
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import override
+from typing import TYPE_CHECKING, override
 
+import openpyxl
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange
+from openpyxl.utils import get_column_letter
 
 from krm3.core.models import Resource, Task
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.numbers import normal
+from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsWrite
 
 User = get_user_model()
+
+
+def _excel_value(value: object) -> object:
+    """Return the value to store in a spreadsheet cell: numbers as numbers, the rest as text."""
+    if value in (None, ''):
+        return None
+    try:
+        number = Decimal(str(value))
+    except ArithmeticError:
+        return str(value)
+    return int(number) if number == number.to_integral_value() else float(number)
 
 task_timeentry_key_mapping = {
     'night_shift': _('Night shift'),
@@ -120,6 +137,62 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
                 self._add_absence_row(block, resources_report_days)
 
         return blocks
+
+    def write_excel(self, stream: 'SupportsWrite[bytes]', title: str, tasks_only: bool = False) -> None:
+        """Write the report as an XLSX workbook laid out like the online page.
+
+        Each resource gets a header row (name, scheduled days and hours, one column per day) followed by its rows;
+        non-working days are shaded and numbers are written as numbers.
+        """
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = title
+        ws.column_dimensions['A'].width = 40
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 14
+
+        current_row = 1
+        for block in self.report_html(tasks_only=tasks_only):
+            header_row, *rows = block.rows
+            days, hours, *day_cells = header_row.cells
+            headers = [
+                f'{block.resource.last_name} {block.resource.first_name}',
+                f'{_("Days")} {days.render()}',
+                f'{_("Total HH")} {hours.render()}',
+                *(f'{cell.value.day_of_week_short_i18n}\n{cell.value.date.day}' for cell in day_cells),
+            ]
+            for col, value in enumerate(headers, 1):
+                cell = ws.cell(row=current_row, column=col, value=value)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = thin_border
+                cell.alignment = header_alignment
+            # room for the two-line day headers
+            ws.row_dimensions[current_row].height = 30
+            for col, day_cell in enumerate(day_cells, 4):
+                ws.column_dimensions[get_column_letter(col)].width = 6
+                if day_cell.value.nwd:
+                    ws.cell(row=current_row, column=col).fill = nwd_fill
+            current_row += 1
+
+            if not block.has_tasks:
+                ws.cell(row=current_row, column=1, value=str(_('No tasks assigned'))).border = thin_border
+                current_row += 1
+            else:
+                for row in rows:
+                    for col, report_cell in enumerate(row.cells, 1):
+                        cell = ws.cell(row=current_row, column=col, value=_excel_value(report_cell.value))
+                        cell.border = thin_border
+                        if col > 1:
+                            cell.alignment = centered
+                        if getattr(report_cell, 'nwd', False):
+                            cell.fill = nwd_fill
+                    current_row += 1
+
+            # spacing between resources
+            current_row += 1
+
+        wb.save(stream)
 
     def _calculate_summary_data(self, resources_report_days: list[Krm3Day]) -> tuple[int, Decimal]:
         """Calculate number of working days and total scheduled hours."""

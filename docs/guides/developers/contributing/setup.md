@@ -6,4 +6,5 @@ in sync.
 {%
    include-markdown "../../../../README.md"
    start="<!--docs-setup-start-->"
+   end="<!--docs-setup-end-->"
 %}

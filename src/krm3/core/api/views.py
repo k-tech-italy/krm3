@@ -26,7 +26,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 
-from krm3.core.api.permissions import ResourceMatch
 from krm3.core.api.serializers import (
     ClientSerializer,
     ContactSerializer,
@@ -42,8 +41,10 @@ from krm3.core.models import (
     Country,
     Project,
     Resource,
+    SavedFilter,
     TimesheetSubmission,
     User,
+    UserProfile,
 )
 from krm3.timesheet.api.serializers import TimesheetSubmissionSerializer
 
@@ -201,6 +202,28 @@ class UserAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericVi
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
+    @action(
+        methods=['get', 'patch'],
+        detail=False,
+        url_path='me/preferred-language',
+        url_name='me-preferred-language',
+    )
+    def preferred_language(self, request: Request) -> Response:
+        """Read or change the preferred language of the logged-in user."""
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+        if request.method == 'PATCH':
+            serializer = PreferredLanguageSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            language_code = serializer.validated_data['language_code']
+
+            if profile.preferred_language != language_code:
+                profile.preferred_language = language_code
+                profile.save(update_fields=['preferred_language'])
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(profile.preferred_language, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def logout(self, request: Request) -> Response:
         # invalidate the session data created from the frontend if any
@@ -230,27 +253,6 @@ class ResourceAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, Gener
         active_resources = self.get_queryset().active_between(date_from, date_to)
         serializer = ResourceBriefSerializer(active_resources, many=True)
         return Response(serializer.data)
-
-    @action(methods=['get', 'patch'], detail=True, url_path='preferred-language', url_name='preferred-language')
-    def preferred_language(self, request: Request, pk: str) -> Response:
-        resource = self.get_object()
-
-        if request.method == 'PATCH':
-            language_code = request.data.get('language_code')
-            serializer = PreferredLanguageSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            if resource.preferred_language != language_code:
-                resource.preferred_language = language_code
-                resource.save()
-            return Response(status=status.HTTP_200_OK)
-
-        return Response(resource.preferred_language, status=status.HTTP_200_OK)
-
-    def get_permissions(self) -> list[Any]:
-        if self.action == 'preferred_language':
-            return [IsAuthenticated(), ResourceMatch()]
-        return super().get_permissions()
 
 
 class CitySerializer(serializers.ModelSerializer):
@@ -376,6 +378,67 @@ class ContactAPIViewSet(ModelViewSet):
 
     def perform_create(self, serializer: 'ContactSerializer') -> None:
         serializer.save(user=self.request.user)
+
+
+class SavedFilterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedFilter
+        fields = ('id', 'page', 'name', 'values', 'summary', 'url', 'is_default', 'created', 'modified')
+        read_only_fields = ('id', 'created', 'modified')
+        # saving with the name of an existing filter replaces it (see SavedFilterAPIViewSet.create)
+        validators = []
+
+    def validate_values(self, value: Any) -> dict:
+        """Accept only a mapping of field names to a string or a list of strings."""
+        if not isinstance(value, dict) or not all(
+            isinstance(v, str) or (isinstance(v, list) and all(isinstance(item, str) for item in v))
+            for v in value.values()
+        ):
+            raise serializers.ValidationError('Must map each field to a string or a list of strings.')
+        return value
+
+
+class SavedFilterAPIViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+    """The filters saved by the logged-in user; `?page=` lists those of one page."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = SavedFilterSerializer
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[SavedFilter]:
+        queryset = SavedFilter.objects.filter_acl(self.request.user)
+        if page := self.request.query_params.get('page'):
+            queryset = queryset.filter(page=page)
+        return queryset
+
+    @transaction.atomic
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Save a filter; a filter with the same page and name is replaced.
+
+        Saving a default filter makes it the only default of the page.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        is_default = data.get('is_default', False)
+        if is_default:
+            SavedFilter.objects.filter(user=request.user, page=data['page'], is_default=True).exclude(
+                name=data['name']
+            ).update(is_default=False)
+        saved, created = SavedFilter.objects.update_or_create(
+            user=request.user,
+            page=data['page'],
+            name=data['name'],
+            defaults={
+                'values': data.get('values', {}),
+                'summary': data.get('summary', ''),
+                'url': data.get('url', ''),
+                'is_default': is_default,
+            },
+        )
+        return Response(
+            self.get_serializer(saved).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
 
 
 class TitleChoicesViewSet(ViewSet):

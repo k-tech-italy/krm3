@@ -1,4 +1,8 @@
+from importlib import import_module
+
 import pytest
+from django.apps import apps
+from flags.models import FlagState
 from rest_framework.reverse import reverse
 from testutils.factories import ExpenseFactory, MissionFactory
 
@@ -13,7 +17,7 @@ ENDPOINTS = [
 
 @pytest.fixture
 def missions_disabled(settings):
-    settings.FLAGS = {**settings.FLAGS, 'TRASFERTE_ENABLED': [('boolean', False)]}
+    settings.FLAGS = {**settings.FLAGS, 'MISSIONS_ENABLED': [('boolean', False)]}
 
 
 @pytest.mark.parametrize('url_name', ENDPOINTS)
@@ -50,10 +54,28 @@ def test_expense_check_ts_forbidden_when_flag_disabled(api_client, missions_disa
 def test_missions_api_flag_by_group(api_client, regular_user, settings):
     from testutils.factories import GroupFactory  # noqa: PLC0415
 
-    settings.FLAGS = {**settings.FLAGS, 'TRASFERTE_ENABLED': [('has group', 'missions')]}
+    settings.FLAGS = {**settings.FLAGS, 'MISSIONS_ENABLED': [('has group', 'missions')]}
     url = reverse('missions-api:mission-list')
 
     assert api_client(user=regular_user).get(url).status_code == 403
 
     regular_user.groups.add(GroupFactory(name='missions'))
     assert api_client(user=regular_user).get(url).status_code == 200
+
+
+def test_migration_renames_stored_trasferte_flag(db):
+    migration = import_module('krm3.core.migrations.0005_rename_trasferte_flag')
+    FlagState.objects.create(name='TRASFERTE_ENABLED', condition='in group', value='missions')
+    FlagState.objects.create(name='TIMESHEET_ENABLED', condition='boolean', value='True')
+
+    migration.forwards(apps, None)
+
+    assert set(FlagState.objects.values_list('name', 'condition', 'value')) == {
+        ('MISSIONS_ENABLED', 'in group', 'missions'),
+        ('TIMESHEET_ENABLED', 'boolean', 'True'),
+    }
+
+    migration.backwards(apps, None)
+
+    assert FlagState.objects.filter(name='TRASFERTE_ENABLED').exists()
+    assert not FlagState.objects.filter(name='MISSIONS_ENABLED').exists()

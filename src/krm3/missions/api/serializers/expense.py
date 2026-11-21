@@ -40,11 +40,17 @@ class ExpenseSerializer(metaclass=ModelDefaultSerializerMetaclass):
     document_type = DocumentTypeSerializer()
     payment_type = PaymentCategorySerializer()
     image = PrivateMediaFileField(url_field='image_url', required=False, allow_null=True)
+    mission_title = serializers.CharField(source='mission.title', read_only=True, allow_null=True)
+    resource_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Expense
         fields = '__all__'
         read_only_fields = ['amount_base']
+
+    def get_resource_name(self, obj: Expense) -> str:
+        resource = obj.mission.resource
+        return f'{resource.first_name} {resource.last_name}'
 
 
 class ExpenseCreateSerializer(serializers.ModelSerializer):

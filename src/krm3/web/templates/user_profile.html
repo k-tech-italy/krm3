@@ -27,7 +27,7 @@
                 </div>
             {% endif %}
         </div>
-        <h1>{{ resource.first_name }} {{ resource.last_name }}</h1>
+        <h1>{{ user.first_name }} {{ user.last_name }}</h1>
         <p>{{ user.email }}</p>
     </div>
 
@@ -60,6 +60,63 @@
             </a>
         </div>
     {% else %}
+        <!-- Tabs: the own profile has the Profile and Filters tabs -->
+        <nav class="profile-tabs" aria-label="{% trans "Profile sections" %}">
+            <a href="?tab=profile" class="profile-tab{% if active_tab != 'filters' %} profile-tab-active{% endif %}"
+               {% if active_tab != 'filters' %}aria-current="page"{% endif %}>{% trans "Profile" %}</a>
+            <a href="?tab=filters" class="profile-tab{% if active_tab == 'filters' %} profile-tab-active{% endif %}"
+               {% if active_tab == 'filters' %}aria-current="page"{% endif %}>{% trans "Filters" %}</a>
+        </nav>
+
+        {% if active_tab == 'filters' %}
+        <!-- Saved filters, grouped by the page or table they apply to -->
+        <div class="profile-card" data-testid="saved-filters">
+            {% for page, page_filters in saved_filters.items %}
+                <section class="saved-filter-group">
+                    <h2>{{ page|capfirst }}</h2>
+                    <ul>
+                        {% for saved_filter in page_filters %}
+                            <li class="saved-filter-row">
+                                <div class="saved-filter-details">
+                                    <p class="saved-filter-name">
+                                        {% if saved_filter.url %}
+                                            <a href="{{ saved_filter.url }}" title="{% trans "Open the page with this filter" %}">{{ saved_filter.name }}</a>
+                                        {% else %}
+                                            {{ saved_filter.name }}
+                                        {% endif %}
+                                        {% if saved_filter.is_default %}
+                                            <span class="saved-filter-default">{% trans "Default" %}</span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="saved-filter-values">
+                                        {% if saved_filter.summary %}
+                                            <span>{{ saved_filter.summary }}</span>
+                                        {% else %}
+                                            {% for field, value in saved_filter.display_values %}
+                                                <span>{{ field }}: {{ value }}</span>
+                                            {% empty %}
+                                                <span>{% trans "No conditions" %}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <form method="post" action="{% url 'saved_filter_delete' saved_filter.pk %}"
+                                      onsubmit="return confirm('{% trans "Delete this filter?" %}')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="profile-btn profile-btn-secondary"
+                                            aria-label="{% blocktrans with name=saved_filter.name %}Delete filter {{ name }}{% endblocktrans %}">
+                                        {% trans "Delete" %}
+                                    </button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% empty %}
+                <p class="saved-filter-empty">{% trans "You have no saved filters. Use \"Save as\" in a filter to save one." %}</p>
+            {% endfor %}
+        </div>
+        {% else %}
         <!-- Edit Mode: Show form -->
         <div class="profile-card">
             <form method="post" class="profile-form">
@@ -109,6 +166,7 @@
                 </div>
             </form>
         </div>
+        {% endif %}
     {% endif %}
 </div>
 

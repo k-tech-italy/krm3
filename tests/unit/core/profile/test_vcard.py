@@ -1,5 +1,6 @@
 import pytest
-from testutils.factories import ResourceFactory
+import vobject
+from testutils.factories import UserFactory
 
 
 @pytest.mark.parametrize(
@@ -54,8 +55,8 @@ from testutils.factories import ResourceFactory
         ),
     ],
 )
-def test_resource_vcard_validation(vcard_text, should_be_valid, test_description):
-    """Test vCard validation for the Resource model using vobject.
+def test_user_profile_vcard_validation(vcard_text, should_be_valid, test_description):
+    """Test vCard validation for the UserProfile model using vobject.
 
     vobject is more lenient than strict RFC 2426 validation and supports:
     - vCard 2.1, 3.0, and 4.0 formats
@@ -64,13 +65,47 @@ def test_resource_vcard_validation(vcard_text, should_be_valid, test_description
     """
     from django.core.exceptions import ValidationError  # noqa: PLC0415
 
-    resource = ResourceFactory(vcard_text=vcard_text)
+    profile = UserFactory().profile
+    profile.vcard_text = vcard_text
 
     if should_be_valid:
         # Should not raise ValidationError
-        resource.clean()
+        profile.clean()
     else:
         # Should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
-            resource.clean()
+            profile.clean()
         assert 'vcard_text' in exc_info.value.message_dict
+
+
+@pytest.mark.parametrize(
+    ('raised', 'expected_message'),
+    [
+        pytest.param(
+            vobject.base.ParseError('bad line', 3),
+            'Invalid vCard format: At line 3: bad line',
+            id='parse-error',
+        ),
+        pytest.param(
+            ValueError('unexpected failure'),
+            'Error parsing vCard: unexpected failure',
+            id='other-exception',
+        ),
+    ],
+)
+def test_user_profile_vcard_validation_exceptions(monkeypatch, raised, expected_message):
+    """Each exception raised by vobject is turned into a ValidationError on vcard_text, chained to the original."""
+    from django.core.exceptions import ValidationError  # noqa: PLC0415
+
+    def fake_read_one(_text: str) -> None:
+        raise raised
+
+    monkeypatch.setattr(vobject, 'readOne', fake_read_one)
+    profile = UserFactory().profile
+    profile.vcard_text = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD'
+
+    with pytest.raises(ValidationError) as exc_info:
+        profile.clean()
+
+    assert exc_info.value.message_dict == {'vcard_text': [expected_message]}
+    assert exc_info.value.__cause__ is raised

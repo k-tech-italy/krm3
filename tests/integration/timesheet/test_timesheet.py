@@ -283,11 +283,13 @@ def test_display_multiple_tasks(browser: 'AppTestBrowser', regular_user, freeze_
 
     # check total hours for days
     browser.assert_element(
-        '//div[@data-tooltip-id="tooltip-hours-2025-05-21" and normalize-space()="14h"]'
+        '//div[@data-testid="header-2025-05-21"]//*[@data-testid="header-total-hours" and normalize-space()="14h"]'
     )
     browser.assert_element(
-        '//div[@data-tooltip-id="tooltip-hours-2025-05-22" and normalize-space()="1h"]'
+        '//div[@data-testid="header-2025-05-22"]//*[@data-testid="header-total-hours" and normalize-space()="1h"]'
     )
+    # only daytime hours: no breakdown button
+    browser.assert_element_absent('//div[@data-testid="header-2025-05-21"]//button[@aria-label="Show hours breakdown"]')
 
 
 @freeze_time('2025-07-13')
@@ -319,11 +321,16 @@ def test_add_leave_and_special_leave(browser: 'AppTestBrowser', regular_user, fr
     browser.click(f'//select[@name="specialReason"]/option[text()="{special_leave_reason.title}"]')
 
     browser.click('//button[contains(text(), "Save")]')
-    browser.assert_element('//*[@data-testid = "leave-icon-2025-07-04"]')
     browser.assert_element(
-        '//div[@data-tooltip-id="tooltip-hours-2025-07-04"]'
-        '//*[@data-testid="header-total-hours" and normalize-space()="7h"]'
+        '//div[@data-testid="header-2025-07-04"]//*[@data-testid="header-total-hours" and normalize-space()="7h"]'
     )
+
+    # leave hours show the breakdown button; its tooltip lists them
+    breakdown = '//div[@data-testid="header-2025-07-04"]//button[@aria-label="Show hours breakdown"]'
+    browser.click(breakdown)
+    tooltip = '//*[@id="tooltip-hours-2025-07-04"]'
+    browser.assert_element(f'{tooltip}//div[span[normalize-space()="Leave:"] and span[normalize-space()="2h"]]')
+    browser.assert_element(f'{tooltip}//div[span[normalize-space()="Special Leave:"] and span[normalize-space()="3h"]]')
 
 
 @freeze_time('2025-07-13')

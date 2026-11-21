@@ -3,7 +3,7 @@ from ..environ import env as _env
 __all__ = ['FLAGS']
 
 FLAGS = {
-    'TRASFERTE_ENABLED': [],
+    'MISSIONS_ENABLED': [],
     'TIMESHEET_ENABLED': [],
     'REPORT_ENABLED': [('boolean', True)],
     'CONTACTS_ENABLED': [],

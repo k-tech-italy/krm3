@@ -124,40 +124,36 @@ class ExpenseAdmin(RestrictedReimbursementMixin, ACLMixin, ExtraButtonsMixin, Ad
 
     @admin.display(description='Mission', ordering='mission')
     def mission_st(self, expense: Expense) -> str:
-        txt = '%s'
+        txt = '{}'
         if expense.mission.status == Mission.MissionStatus.DRAFT:
-            txt = '<span style="color: grey;">%s</span>'
+            txt = '<span style="color: grey;">{}</span>'
         elif expense.mission.status == Mission.MissionStatus.CANCELLED:
-            txt = '<span style="color: grey;text-decoration: line-through">%s</span>'
-        return format_html(txt % expense.mission)
+            txt = '<span style="color: grey;text-decoration: line-through">{}</span>'
+        return format_html(txt, expense.mission)
 
     @admin.display(description='Amt. currency', ordering='amount_currency')
     def colored_amount_currency(self, obj: Expense) -> str:
         if obj.payment_type.personal_expense:
-            cell_html = '<span style="color: blue;">%s</span>'
+            cell_html = '<span style="color: blue;">{}</span>'
         else:
-            cell_html = '%s'
-        # for below line, you may consider using 'format_html', instead of python's string formatting
-        return format_html(cell_html % f'{obj.amount_currency} {obj.currency.iso3}')
+            cell_html = '{}'
+        return format_html(cell_html, f'{obj.amount_currency} {obj.currency.iso3}')
 
     @admin.display(description='Amt. reimbursement', ordering='amount_reimbursement')
     def colored_amount_reimbursement(self, obj: Expense) -> str:
         if (value := obj.amount_reimbursement) and obj.amount_reimbursement < decimal.Decimal(0):
-            cell_html = '<span style="color: red;">%s</span>'
+            cell_html = '<span style="color: red;">{}</span>'
             value *= decimal.Decimal(-1)
         else:
-            cell_html = '%s'
-
-        # for below line, you may consider using 'format_html', instead of python's string formatting
-        return format_html(cell_html % value)
+            cell_html = '{}'
+        return format_html(cell_html, value)
 
     def colored_amount_base(self, obj: Expense) -> str:
         if obj.amount_base and obj.amount_base < decimal.Decimal(0):
-            cell_html = '<span style="color: red;">%s</span>'
+            cell_html = '<span style="color: red;">{}</span>'
         else:
-            cell_html = '%s'
-        # for below line, you may consider using 'format_html', instead of python's string formatting
-        return format_html(cell_html % obj.amount_base)
+            cell_html = '{}'
+        return format_html(cell_html, obj.amount_base)
 
     colored_amount_base.short_description = 'Amt. base'
     colored_amount_base.admin_order_field = 'amount_base'

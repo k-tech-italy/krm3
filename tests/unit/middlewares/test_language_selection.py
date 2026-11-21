@@ -17,7 +17,7 @@ def test_preferred_language_persists_across_sessions(django_client_and_auth_reso
     response = client.get('/')
 
     response_language_cookie = response.cookies.get(LANGUAGE_COOKIE_NAME)
-    assert resource.preferred_language == 'en-uk', "Sanity check, ResourceFactory should be setting this."
+    assert resource.user.profile.preferred_language == 'en-uk', "Sanity check, the profile default should be this."
     assert response_language_cookie.coded_value == 'en-uk', "Middleware should set the cookie."
 
     client.logout()
@@ -35,7 +35,7 @@ def test_cookie_takes_priority_over_preferred_language(django_client_and_auth_re
     response = client.get('/')
 
     response_language_cookie = response.cookies.get(LANGUAGE_COOKIE_NAME)
-    assert resource.preferred_language == 'en-uk', "Sanity check, ResourceFactory should be setting this."
+    assert resource.user.profile.preferred_language == 'en-uk', "Sanity check, the profile default should be this."
     assert response_language_cookie.coded_value == 'en-uk', "Middleware should set the cookie."
 
     client.post(

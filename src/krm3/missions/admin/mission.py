@@ -23,7 +23,6 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
-from django.utils.html import format_html
 from django.utils.text import slugify
 from django_tables2.export import TableExport
 
@@ -298,7 +297,7 @@ class MissionAdmin(ACLMixin, ExtraButtonsMixin, AdminFiltersMixin, ModelAdmin):
                 'mission': mission,
                 'reimbursement_breakdown': result_dict,
                 'base': settings.BASE_CURRENCY,
-                'filename': format_html(f'{slugify(str(mission))}.pdf'),
+                'filename': f'{slugify(str(mission))}.pdf',
             }
 
             return TemplateResponse(

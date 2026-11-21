@@ -6,7 +6,8 @@ from .views import (
     ReportView,
     TaskReportView,
     ReleasesView,
-    UserResourceView,
+    SavedFilterDeleteView,
+    UserProfileView,
     DocumentListView, ScanQRView,
 )
 
@@ -21,8 +22,10 @@ urlpatterns = [
     path('report/export/<str:month>/', ReportView.as_view(), {'export': True}, name='export_report'),
     path('task_report/', TaskReportView.as_view(), name='task_report'),
     path('task/<str:month>/', TaskReportView.as_view(), name='task-report-month'),
+    path('task_report/export/<str:month>/', TaskReportView.as_view(), {'export': True}, name='export_task_report'),
     path('releases/', ReleasesView.as_view(), name='releases'),
     path('missions/', include('krm3.missions.urls')),
-    path('resource/<int:pk>/', UserResourceView.as_view(), name='user_resource'),
+    path('profile/<int:pk>/', UserProfileView.as_view(), name='user_profile'),
+    path('saved-filters/<int:pk>/delete/', SavedFilterDeleteView.as_view(), name='saved_filter_delete'),
     path('documents/', DocumentListView.as_view(), name='document_list'),
 ]

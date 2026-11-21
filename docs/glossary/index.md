@@ -26,6 +26,8 @@
 ## R
 - [Reimbursement](terms/Reimbursement.md)
 - [Resource](terms/Resource.md)
+## S
+- [SavedFilter](terms/SavedFilter.md)
 ## T
 - [Task](terms/Task.md)
 - [TaskEntry](terms/TaskEntry.md)

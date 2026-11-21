@@ -13,7 +13,7 @@ from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
 LABEL_TO_FLAG_URL_MAP = [
     {
-        'flag': 'TRASFERTE_ENABLED',
+        'flag': 'MISSIONS_ENABLED',
         'url': 'trasferte',
         'label': 'Missions',
     },

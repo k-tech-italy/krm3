@@ -58,4 +58,5 @@ superusers. Existing reimbursements can still be edited there, e.g. to set `paid
 - *Reimbursement report* (Reimbursement admin action): a summary of the selected
   reimbursements by month, Resource and Mission. See
   [the reimbursement process](../../missions/index.md#reimbursement-report) for how missions
-  are labelled.
+  are labelled. Every selected reimbursement must have at least one expense. If any has no
+  expenses, no report is generated and the admin returns to the reimbursement list with an error message.

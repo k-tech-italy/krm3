@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -12,6 +13,7 @@ from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from krm3.core.api.permissions import FeatureFlagEnabled, IsOwnerOrManager
 from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
 
+from .filters import ExpenseFilter, ListPagination, MissionFilter
 from .serializers.expense import (
     DocumentTypeSerializer,
     ExpenseCategorySerializer,
@@ -23,16 +25,33 @@ from .serializers.expense import (
 from .serializers.mission import MissionCreateSerializer, MissionNestedSerializer
 
 
-class MissionAPIViewSet(ModelViewSet):
+class ListFilterMixin:
+    """Apply the filterset only to the list: detail actions must find any record the user can access."""
+
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = ListPagination
+
+    def filter_queryset(self, queryset: QuerySet) -> QuerySet:
+        if self.action != 'list':
+            return queryset
+        return super().filter_queryset(queryset)
+
+
+class MissionAPIViewSet(ListFilterMixin, ModelViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     owner_field = 'resource.user_id'
     manage_permission = 'core.manage_any_mission'
     serializer_class = MissionNestedSerializer
     queryset = Mission.objects.all()
+    filterset_class = MissionFilter
 
     def get_queryset(self) -> QuerySet[Mission]:
-        return Mission.objects.filter_acl(self.request.user)
+        return (
+            Mission.objects.filter_acl(self.request.user)
+            .select_related('resource', 'city__country', 'project__client')
+            .order_by('-from_date', '-id')
+        )
 
     def get_serializer_class(self) -> type[serializers.BaseSerializer]:
         """Change serializer to MissionCreateSerializer for object creation."""
@@ -56,16 +75,21 @@ class MissionAPIViewSet(ModelViewSet):
         return Response(self.get_serializer(mission).data)
 
 
-class ExpenseAPIViewSet(ModelViewSet):
+class ExpenseAPIViewSet(ListFilterMixin, ModelViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled, IsOwnerOrManager]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     owner_field = 'mission.resource.user_id'
     manage_permission = 'core.manage_any_expense'
     serializer_class = ExpenseSerializer
     queryset = Expense.objects.all()
+    filterset_class = ExpenseFilter
 
     def get_queryset(self) -> QuerySet[Expense]:
-        return Expense.objects.filter_acl(self.request.user)
+        return (
+            Expense.objects.filter_acl(self.request.user)
+            .select_related('mission__resource', 'category', 'document_type', 'payment_type')
+            .order_by('-day', '-id')
+        )
 
     def get_serializer_class(self) -> type[serializers.BaseSerializer]:
         """Change serializer to ExpenseCreateSerializer for object creation."""
@@ -94,20 +118,20 @@ class ExpenseAPIViewSet(ModelViewSet):
 
 class ExpenseCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = ExpenseCategorySerializer
     queryset = ExpenseCategory.objects.all()
 
 
 class PaymentCategoryAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = PaymentCategorySerializer
     queryset = PaymentCategory.objects.all()
 
 
 class DocumentTypeAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, FeatureFlagEnabled]
-    feature_flag = 'TRASFERTE_ENABLED'
+    feature_flag = 'MISSIONS_ENABLED'
     serializer_class = DocumentTypeSerializer
     queryset = DocumentType.objects.filter(active=True)
