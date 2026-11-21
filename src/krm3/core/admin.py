@@ -37,6 +37,7 @@ from krm3.core.models import (
     Phone,
     PhoneInfo,
     Resource,
+    SavedFilter,
     UserProfile,
     Website,
     WebsiteInfo,
@@ -70,6 +71,14 @@ class UserProfileAdmin(ModelAdmin):
 
     avatar.short_description = 'Profile url'
     avatar.allow_tags = True
+
+
+@admin.register(SavedFilter)
+class SavedFilterAdmin(ModelAdmin):
+    list_display = ('name', 'page', 'user', 'modified')
+    list_filter = ('page',)
+    search_fields = ('name', 'user__username')
+    raw_id_fields = ('user',)
 
 
 class CustomUserAdmin(UserAdmin):

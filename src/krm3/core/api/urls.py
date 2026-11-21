@@ -7,6 +7,7 @@ from .views import (
     CountryAPIViewSet,
     ProjectAPIViewSet,
     ResourceAPIViewSet,
+    SavedFilterAPIViewSet,
     TimesheetSubmissionAPIViewSet,
     TitleChoicesViewSet,
     UserAPIViewSet,
@@ -22,5 +23,6 @@ router.register('user', UserAPIViewSet, basename='user')
 router.register('timesheet', TimesheetSubmissionAPIViewSet, basename='api-timesheet-model')
 router.register(r'contacts', ContactAPIViewSet, basename='contacts')
 router.register('titles', TitleChoicesViewSet, basename='titles')
+router.register('saved-filter', SavedFilterAPIViewSet, basename='saved-filter')
 
 urlpatterns = router.urls
