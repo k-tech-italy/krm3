@@ -72,7 +72,7 @@
         {% endif %}
 
         <div class="flex justify-center">
-            <a href="{% url 'export_task_report' current_month %}{% if export_query %}?{{ export_query }}{% endif %}" class="button">{% translate "Download CSV" %}</a>
+            <a href="{% url 'export_task_report' current_month %}{% if export_query %}?{{ export_query }}{% endif %}" class="button">{% translate "Download report" %}</a>
         </div>
         {% for report_block in report_blocks %}
             <div class="report-container">

@@ -1,23 +1,38 @@
-import csv
 import io
 
+import openpyxl
 import pytest
 from django.urls import reverse
 from testutils.date_utils import _dt
 from testutils.factories import ContractFactory, ProjectFactory, ResourceFactory, TaskEntryFactory, TaskFactory
 
+from krm3.web.report_styles import nwd_fill
+
 MONTH = '202506'
 
 
-def _read_csv(response) -> list[list[str]]:
-    content = response.content.decode('utf-8')
-    assert content.startswith('﻿'), 'The BOM tells spreadsheet applications the file is UTF-8'
-    return list(csv.reader(io.StringIO(content.removeprefix('﻿'))))
+def _read_sheet(response) -> openpyxl.worksheet.worksheet.Worksheet:
+    assert response.status_code == 200
+    return openpyxl.load_workbook(io.BytesIO(response.content)).active
 
 
-def _rows_of(rows: list[list[str]], resource) -> list[list[str]]:
-    name = f'{resource.last_name} {resource.first_name}'
-    return [row for row in rows[1:] if row[0] == name]
+def _blocks(ws) -> dict[str, list[tuple]]:
+    """Group the sheet rows by resource: each block starts with a header row and ends with an empty row."""
+    blocks: dict[str, list[tuple]] = {}
+    current = None
+    for row in ws.iter_rows(values_only=True):
+        if all(value is None for value in row):
+            current = None
+        elif current is None:
+            current = blocks.setdefault(row[0], [])
+            current.append(row)
+        else:
+            current.append(row)
+    return blocks
+
+
+def _name(resource) -> str:
+    return f'{resource.last_name} {resource.first_name}'
 
 
 @pytest.fixture
@@ -41,28 +56,46 @@ def report_data():
     return {'r1': r1, 'r2': r2, 'task_1': task_1, 'task_2': task_2}
 
 
-def test_export_returns_the_report_as_csv(admin_client, report_data):
+def test_export_returns_the_report_as_xlsx(admin_client, report_data):
     response = admin_client.get(reverse('export_task_report', args=[MONTH]))
 
-    assert response.status_code == 200
-    assert response['Content-Type'] == 'text/csv; charset=utf-8'
-    assert response['Content-Disposition'] == 'attachment; filename="task_report_202506.csv"'
+    assert response['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    assert response['Content-Disposition'] == 'attachment; filename="task_report_202506.xlsx"'
+    ws = _read_sheet(response)
+    assert ws.title == 'June 2025'
 
-    rows = _read_csv(response)
-    header = rows[0]
-    assert header[:4] == ['Resource', 'Row', 'Days', 'Total HH']
-    assert header[4] == '2025-06-01'
-    assert header[-1] == '2025-06-30'
-    assert len(header) == 4 + 30
+    blocks = _blocks(ws)
+    assert set(blocks) == {_name(report_data['r1']), _name(report_data['r2'])}
 
-    r1_rows = _rows_of(rows, report_data['r1'])
-    assert r1_rows[0][1] == 'Scheduled'
-    task_row = next(row for row in r1_rows if row[1] == str(report_data['task_1']))
-    assert len(task_row) == len(header)
-    assert task_row[header.index('2025-06-16')] == '8'
-    assert task_row[3] == '8'
-    assert any(row[1] == 'Absences' for row in r1_rows)
-    assert _rows_of(rows, report_data['r2'])
+    header, *rows = blocks[_name(report_data['r1'])]
+    # like the page: name, scheduled days and hours, then day of week and day number for each day
+    assert header[1] == 'Days 20'
+    assert header[2] == 'Total HH 160'
+    assert header[3] == 'Sun\n1'
+    assert header[-1] == 'Mon\n30'
+    assert len(header) == 3 + 30
+
+    task_row = next(row for row in rows if row[0] == str(report_data['task_1']))
+    assert task_row[2] == 8, 'numbers are stored as numbers'
+    assert task_row[3 + 15] == 8, 'the hours of June 16th'
+    assert [row[0] for row in rows] == [
+        str(report_data['task_1']),
+        'Total per day',
+        'Night shift',
+        'On call',
+        'Travel',
+        'Absences',
+    ]
+
+
+def test_export_shades_non_working_days(admin_client, report_data):
+    ws = _read_sheet(admin_client.get(reverse('export_task_report', args=[MONTH])))
+
+    # June 1st 2025 is a Sunday, June 2nd a public holiday in Italy, June 3rd a working day
+    assert ws.cell(row=1, column=4).fill.fgColor.rgb == nwd_fill.fgColor.rgb
+    assert ws.cell(row=2, column=4).fill.fgColor.rgb == nwd_fill.fgColor.rgb
+    assert ws.cell(row=2, column=5).fill.fgColor.rgb == nwd_fill.fgColor.rgb
+    assert ws.cell(row=2, column=6).fill.fgColor.rgb != nwd_fill.fgColor.rgb
 
 
 @pytest.mark.parametrize(
@@ -76,9 +109,9 @@ def test_export_returns_the_report_as_csv(admin_client, report_data):
 def test_export_honors_the_filters(admin_client, report_data, filters, included, excluded):
     response = admin_client.get(reverse('export_task_report', args=[MONTH]), filters(report_data))
 
-    rows = _read_csv(response)
-    assert _rows_of(rows, report_data[included])
-    assert not _rows_of(rows, report_data[excluded])
+    blocks = _blocks(_read_sheet(response))
+    assert _name(report_data[included]) in blocks
+    assert _name(report_data[excluded]) not in blocks
 
 
 @pytest.mark.parametrize(
@@ -91,8 +124,8 @@ def test_export_honors_the_filters(admin_client, report_data, filters, included,
 def test_export_honors_tasks_only(admin_client, report_data, query, has_absences):
     response = admin_client.get(reverse('export_task_report', args=[MONTH]), query)
 
-    r1_rows = _rows_of(_read_csv(response), report_data['r1'])
-    assert any(row[1] == 'Absences' for row in r1_rows) is has_absences
+    rows = _blocks(_read_sheet(response))[_name(report_data['r1'])]
+    assert any(row[0] == 'Absences' for row in rows) is has_absences
 
 
 def test_export_marks_resources_without_tasks(admin_client, report_data):
@@ -100,8 +133,8 @@ def test_export_marks_resources_without_tasks(admin_client, report_data):
 
     response = admin_client.get(reverse('export_task_report', args=[MONTH]))
 
-    idle_rows = _rows_of(_read_csv(response), idle)
-    assert [row[1] for row in idle_rows] == ['Scheduled', 'No tasks assigned']
+    _header, *rows = _blocks(_read_sheet(response))[_name(idle)]
+    assert [row[0] for row in rows] == ['No tasks assigned']
 
 
 def test_export_without_permission_contains_only_own_resource(resource_client, report_data):
@@ -112,10 +145,7 @@ def test_export_without_permission_contains_only_own_resource(resource_client, r
     # the filters are ignored for users who cannot see every resource
     response = resource_client.get(reverse('export_task_report', args=[MONTH]), {'resource': report_data['r1'].pk})
 
-    rows = _read_csv(response)
-    assert _rows_of(rows, own)
-    assert not _rows_of(rows, report_data['r1'])
-    assert not _rows_of(rows, report_data['r2'])
+    assert set(_blocks(_read_sheet(response))) == {_name(own)}
 
 
 @pytest.mark.parametrize(

@@ -375,20 +375,18 @@ class TaskReportView(LoginRequiredMixin, ReportMixin, TemplateView):
     ) -> HttpResponse:
         self.month = month
         if export:
-            return self._export_csv()
+            return self._export_excel()
         return super().get(request, *args, **kwargs)
 
-    def _export_csv(self) -> HttpResponse:
-        """Download the report as CSV, with the same filters as the page."""
+    def _export_excel(self) -> HttpResponse:
+        """Download the report as XLSX, with the same filters as the page."""
         ctx = self._get_base_context()
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="task_report_{ctx["current_month"]}.csv"'
-        # the BOM lets spreadsheet applications detect the UTF-8 encoding
-        response.write('\ufeff')
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="task_report_{ctx["current_month"]}.xlsx"'
         report = TimesheetTaskReportOnline(
             ctx['start'], ctx['end'], cast('UserType', self.request.user), **self._get_filter_kwargs()
         )
-        report.write_csv(response, tasks_only=self._tasks_only())
+        report.write_excel(response, str(ctx['title']), tasks_only=self._tasks_only())
         return response
 
     def _get_filter_kwargs(self) -> dict[str, Any]:

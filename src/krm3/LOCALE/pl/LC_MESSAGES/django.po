@@ -1176,15 +1176,6 @@ msgstr ""
 msgid "Error applying filter. Please check your filter criteria."
 msgstr ""
 
-msgid "Row"
-msgstr ""
-
-msgid "Scheduled"
-msgstr ""
-
-msgid "Download CSV"
-msgstr ""
-
 #~ msgid "English"
 #~ msgstr "Angielski"
 

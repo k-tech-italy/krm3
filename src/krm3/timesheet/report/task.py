@@ -1,23 +1,36 @@
-import csv
 import datetime
 from collections.abc import Iterable
 from decimal import Decimal
 from typing import TYPE_CHECKING, override
 
+import openpyxl
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from ktcalendars import KTDateRange
+from openpyxl.utils import get_column_letter
 
 from krm3.core.models import Resource, Task
 from krm3.timesheet.report.base import TimesheetReport
 from krm3.timesheet.report.online import ReportBlock, ReportRow
 from krm3.timesheet.rules import Krm3Day
 from krm3.utils.numbers import normal
+from krm3.web.report_styles import centered, header_alignment, header_fill, header_font, nwd_fill, thin_border
 
 if TYPE_CHECKING:
     from _typeshed import SupportsWrite
 
 User = get_user_model()
+
+
+def _excel_value(value: object) -> object:
+    """Return the value to store in a spreadsheet cell: numbers as numbers, the rest as text."""
+    if value in (None, ''):
+        return None
+    try:
+        number = Decimal(str(value))
+    except ArithmeticError:
+        return str(value)
+    return int(number) if number == number.to_integral_value() else float(number)
 
 task_timeentry_key_mapping = {
     'night_shift': _('Night shift'),
@@ -125,29 +138,61 @@ class TimesheetTaskReportOnline(TimesheetTaskReport):
 
         return blocks
 
-    def write_csv(self, stream: 'SupportsWrite[str]', tasks_only: bool = False) -> None:
-        """Write the report as shown online, one CSV line per report row.
+    def write_excel(self, stream: 'SupportsWrite[bytes]', title: str, tasks_only: bool = False) -> None:
+        """Write the report as an XLSX workbook laid out like the online page.
 
-        Each line starts with the resource and the row label, followed by the days and hours totals and the value
-        of each day of the period. The first line of each resource holds its scheduled days and hours.
+        Each resource gets a header row (name, scheduled days and hours, one column per day) followed by its rows;
+        non-working days are shaded and numbers are written as numbers.
         """
-        blocks = self.report_html(tasks_only=tasks_only)
-        # the first row of each block holds the scheduled totals followed by the days of the period
-        days = [cell.value.date.isoformat() for cell in blocks[0].rows[0].cells[2:]] if blocks else []
-        writer = csv.writer(stream)
-        writer.writerow([_('Resource'), _('Row'), _('Days'), _('Total HH'), *days])
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = title
+        ws.column_dimensions['A'].width = 40
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 14
 
-        for block in blocks:
-            resource = f'{block.resource.last_name} {block.resource.first_name}'
-            scheduled_row, *rows = block.rows
-            writer.writerow(
-                [resource, _('Scheduled'), scheduled_row.cells[0].render(), scheduled_row.cells[1].render()]
-            )
+        current_row = 1
+        for block in self.report_html(tasks_only=tasks_only):
+            header_row, *rows = block.rows
+            days, hours, *day_cells = header_row.cells
+            headers = [
+                f'{block.resource.last_name} {block.resource.first_name}',
+                f'{_("Days")} {days.render()}',
+                f'{_("Total HH")} {hours.render()}',
+                *(f'{cell.value.day_of_week_short_i18n}\n{cell.value.date.day}' for cell in day_cells),
+            ]
+            for col, value in enumerate(headers, 1):
+                cell = ws.cell(row=current_row, column=col, value=value)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = thin_border
+                cell.alignment = header_alignment
+            # room for the two-line day headers
+            ws.row_dimensions[current_row].height = 30
+            for col, day_cell in enumerate(day_cells, 4):
+                ws.column_dimensions[get_column_letter(col)].width = 6
+                if day_cell.value.nwd:
+                    ws.cell(row=current_row, column=col).fill = nwd_fill
+            current_row += 1
+
             if not block.has_tasks:
-                writer.writerow([resource, _('No tasks assigned')])
-                continue
-            for row in rows:
-                writer.writerow([resource, *(str(cell.value) if cell.value else '' for cell in row.cells)])
+                ws.cell(row=current_row, column=1, value=str(_('No tasks assigned'))).border = thin_border
+                current_row += 1
+            else:
+                for row in rows:
+                    for col, report_cell in enumerate(row.cells, 1):
+                        cell = ws.cell(row=current_row, column=col, value=_excel_value(report_cell.value))
+                        cell.border = thin_border
+                        if col > 1:
+                            cell.alignment = centered
+                        if getattr(report_cell, 'nwd', False):
+                            cell.fill = nwd_fill
+                    current_row += 1
+
+            # spacing between resources
+            current_row += 1
+
+        wb.save(stream)
 
     def _calculate_summary_data(self, resources_report_days: list[Krm3Day]) -> tuple[int, Decimal]:
         """Calculate number of working days and total scheduled hours."""
