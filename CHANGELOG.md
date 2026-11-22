@@ -1,3 +1,10 @@
+## 5.6.1 (2026-11-22)
+
+### Fix
+
+- **admin**: list the members of a group with names and links to the users
+- **admin**: list a user's permissions by name with the groups that give them
+
 ## 5.6.0 (2026-11-21)
 
 ### Feat
