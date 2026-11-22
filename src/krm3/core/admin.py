@@ -11,6 +11,7 @@ from concurrency.admin import ConcurrentModelAdmin
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
+from django.contrib.auth.models import Permission
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
@@ -116,6 +117,31 @@ class CustomUserAdmin(UserAdmin):
         'picture',
     )  # Added last_login
     list_filter = (('is_active', admin.BooleanFieldListFilter),)
+
+    @button(label='Permissions')
+    def permissions(self, request: HttpRequest, pk: str) -> HttpResponse:
+        """List the permissions assigned to the user, by name, each with the groups that give it.
+
+        Replaces the smart_admin view, whose links point to auth.User while the user model is core.User.
+        The permissions are read from the assignments, so they are listed for inactive users too.
+        """
+        context = self.get_common_context(request, pk, title='Permissions')
+        user = context['original']
+        direct = set(user.user_permissions.values_list('pk', flat=True))
+        groups: dict[int, list[str]] = {}
+        for permission_id, group_name in (
+            Permission.objects.filter(group__user=user).values_list('pk', 'group__name').order_by('group__name')
+        ):
+            groups.setdefault(permission_id, []).append(group_name)
+        permissions = sorted(
+            Permission.objects.filter(pk__in=direct | groups.keys()).select_related('content_type'),
+            key=lambda permission: (permission.name.lower(), permission.content_type.app_label, permission.codename),
+        )
+        context['permissions'] = [
+            {'permission': permission, 'direct': permission.pk in direct, 'groups': groups.get(permission.pk, [])}
+            for permission in permissions
+        ]
+        return TemplateResponse(request, 'admin/auth/user/permissions_list.html', context)
 
 
 @admin.register(Country)

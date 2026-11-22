@@ -1,0 +1,52 @@
+{% extends "admin_extra_buttons/action_page.html" %}{% load i18n %}
+{% block action-content %}
+    {% if original.is_superuser %}
+        <p>{% translate 'This user is a superuser and has every permission, including those not assigned below.' %}</p>
+    {% endif %}
+    {% if not original.is_active %}
+        <p>{% translate 'This user is not active: the permissions below are assigned but not granted.' %}</p>
+    {% endif %}
+    {% if permissions %}
+        <p>
+            <label for="permissions-search">{% translate 'Search' %}</label>
+            <input type="search" id="permissions-search" size="40" autocomplete="off"
+                   placeholder="{% translate 'Permission or group name' %}">
+            <span id="permissions-count" aria-live="polite"></span>
+        </p>
+        <ul id="permissions-list">
+            {% for item in permissions %}
+                <li data-search="{{ item.permission.name|lower }} {{ item.permission.content_type.app_label }}.{{ item.permission.codename }} {{ item.groups|join:' '|lower }}">
+                    <a href="{% url 'admin:auth_permission_change' item.permission.pk %}"
+                       title="{{ item.permission.content_type.app_label }}.{{ item.permission.codename }}">{{ item.permission.name }}</a>
+                    ({% if item.direct %}<em>{% translate 'assigned directly' %}</em>{% if item.groups %}, {% endif %}{% endif %}{{ item.groups|join:", " }})
+                </li>
+            {% endfor %}
+        </ul>
+        <p id="permissions-no-match" hidden>{% translate 'No permission or group matches the search.' %}</p>
+        <script>
+            (function () {
+                // filters the list as the user types, on the permission name or code and the group names
+                const input = document.getElementById("permissions-search");
+                const items = Array.from(document.querySelectorAll("#permissions-list li"));
+                const count = document.getElementById("permissions-count");
+                const noMatch = document.getElementById("permissions-no-match");
+                function filter() {
+                    const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+                    let shown = 0;
+                    items.forEach(function (item) {
+                        const text = item.dataset.search;
+                        const visible = terms.every(function (term) { return text.includes(term); });
+                        item.hidden = !visible;
+                        if (visible) shown += 1;
+                    });
+                    count.textContent = terms.length ? shown + " / " + items.length : "";
+                    noMatch.hidden = shown > 0;
+                }
+                input.addEventListener("input", filter);
+                filter();
+            })();
+        </script>
+    {% else %}
+        <p>{% translate 'No permissions are assigned to this user, directly or through a group.' %}</p>
+    {% endif %}
+{% endblock %}
