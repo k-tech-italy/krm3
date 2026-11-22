@@ -11,6 +11,8 @@ from concurrency.admin import ConcurrentModelAdmin
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
 from django.contrib.admin.widgets import AdminDateWidget
+from django.contrib.auth.models import Permission
+from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import DateRangeField
 from django.contrib.postgres.forms import RangeWidget
 from django.core.exceptions import ValidationError
@@ -19,7 +21,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
-from smart_admin.smart_auth.admin import UserAdmin
+from smart_admin.smart_auth.admin import GroupAdmin, UserAdmin
 
 from krm3.core.forms import ContractForm, ContractTerminationForm
 from krm3.core.impexp import TimesheetExporter
@@ -47,7 +49,9 @@ from krm3.sentry import capture_exception
 from krm3.styles.buttons import DANGEROUS, NORMAL
 
 if typing.TYPE_CHECKING:
+    from admin_extra_buttons.handlers import BaseExtraHandler
     from django.contrib.admin.options import _ModelT
+    from django.contrib.auth.models import Group
     from django.db.models import QuerySet
     from django.http import HttpRequest
 
@@ -81,6 +85,25 @@ class SavedFilterAdmin(ModelAdmin):
     raw_id_fields = ('user',)
 
 
+def _can_view_group(request: HttpRequest, obj: Group | None, handler: BaseExtraHandler) -> bool:
+    return handler.model_admin.has_view_permission(request, obj)
+
+
+class CustomGroupAdmin(GroupAdmin):
+    # the member list is shown only to who can see the group
+    @button(label='Members', permission=_can_view_group)
+    def members(self, request: HttpRequest, pk: str) -> HttpResponse:
+        """List the users of the group, each linked to its admin page.
+
+        Replaces the smart_admin view, whose link points to auth.User while the user model is core.User.
+        """
+        user_model = get_user_model()
+        context = self.get_common_context(request, pk, title='Members')
+        context['user_opts'] = user_model._meta
+        context['members'] = user_model.objects.filter(groups=context['original']).order_by('username')
+        return TemplateResponse(request, 'admin/auth/group/members_list.html', context)
+
+
 class CustomUserAdmin(UserAdmin):
     list_display = (
         'username',
@@ -94,6 +117,31 @@ class CustomUserAdmin(UserAdmin):
         'picture',
     )  # Added last_login
     list_filter = (('is_active', admin.BooleanFieldListFilter),)
+
+    @button(label='Permissions')
+    def permissions(self, request: HttpRequest, pk: str) -> HttpResponse:
+        """List the permissions assigned to the user, by name, each with the groups that give it.
+
+        Replaces the smart_admin view, whose links point to auth.User while the user model is core.User.
+        The permissions are read from the assignments, so they are listed for inactive users too.
+        """
+        context = self.get_common_context(request, pk, title='Permissions')
+        user = context['original']
+        direct = set(user.user_permissions.values_list('pk', flat=True))
+        groups: dict[int, list[str]] = {}
+        for permission_id, group_name in (
+            Permission.objects.filter(group__user=user).values_list('pk', 'group__name').order_by('group__name')
+        ):
+            groups.setdefault(permission_id, []).append(group_name)
+        permissions = sorted(
+            Permission.objects.filter(pk__in=direct | groups.keys()).select_related('content_type'),
+            key=lambda permission: (permission.name.lower(), permission.content_type.app_label, permission.codename),
+        )
+        context['permissions'] = [
+            {'permission': permission, 'direct': permission.pk in direct, 'groups': groups.get(permission.pk, [])}
+            for permission in permissions
+        ]
+        return TemplateResponse(request, 'admin/auth/user/permissions_list.html', context)
 
 
 @admin.register(Country)

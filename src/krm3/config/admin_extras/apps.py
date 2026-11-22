@@ -35,10 +35,11 @@ class AdminConfig(AppConfig):  # noqa: D101
         from smart_admin.smart_auth.admin import (  # noqa: PLC0415
             ContentTypeAdmin,
             Group,
-            GroupAdmin,
             Permission,
             PermissionAdmin,
         )
+
+        from krm3.core.admin import CustomGroupAdmin  # noqa: PLC0415
 
         from krm3.config.admin_extras.panels import panel_converter  # noqa: PLC0415
 
@@ -55,5 +56,5 @@ class AdminConfig(AppConfig):  # noqa: D101
         site.register_panel(panel_converter)
 
         smart_register(Permission)(PermissionAdmin)
-        smart_register(Group)(GroupAdmin)
+        smart_register(Group)(CustomGroupAdmin)
         smart_register(ContentType)(ContentTypeAdmin)
