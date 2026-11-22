@@ -1,0 +1,25 @@
+{% extends "admin_extra_buttons/action_page.html" %}{% load admin_urls i18n %}
+{% block action-content %}
+    {% if members %}
+        <table id="group-members">
+            <thead>
+            <tr>
+                <th scope="col">{% translate 'Username' %}</th>
+                <th scope="col">{% translate 'First name' %}</th>
+                <th scope="col">{% translate 'Last name' %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for member in members %}
+                <tr>
+                    <td><a href="{% url user_opts|admin_urlname:'change' member.pk %}">{{ member.username }}</a></td>
+                    <td>{{ member.first_name }}</td>
+                    <td>{{ member.last_name }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>{% translate 'No users are assigned to this group.' %}</p>
+    {% endif %}
+{% endblock %}
