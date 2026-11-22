@@ -46,9 +46,16 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
         exclude = ['mission']
 
 
+class MissionTotalsSerializer(serializers.Serializer):
+    refund = serializers.DecimalField(max_digits=12, decimal_places=2)
+    anticipated = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
 class MissionNestedSerializer(serializers.ModelSerializer):
     expenses = MissionExpenseSerializer(many=True, read_only=True)
     resource = ResourceSerializer(many=False, read_only=True)
+    totals = MissionTotalsSerializer(source='expense_totals', read_only=True)
 
     class Meta:
         model = Mission

@@ -26,6 +26,19 @@ A **Mission** is a container for all the activities and expenses related to a sp
 - `city`: The city where the mission takes place.
 - `resource`: The Resource assigned to the mission.
 
+## Expense totals
+
+The mission page shows three totals of the mission's <glossary:Expense>s, in the
+<glossary:BaseCurrency> (also returned by the API as `totals`):
+
+- *Total Refund*: the sum of the expenses' `amount_reimbursement` (positive: owed by the Company to
+  the <glossary:Resource>; negative: owed by the Resource to the Company);
+- *Total Anticipated*: the sum of `amount_base` of the expenses paid with company means;
+- *Totals*: the mission costs, i.e. *Total Anticipated* plus the `amount_reimbursement` of the
+  expenses paid with personal means.
+
+Amounts not yet calculated (missing exchange rate or reimbursement amount) count as zero.
+
 ## Access
 
 | Permission           | Missions of the user's own Resource | Missions of other Resources |
