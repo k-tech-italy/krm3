@@ -39,6 +39,7 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
     document_type = MissionDocumentTypeSerializer()
     payment_type = MissionPaymentCategorySerializer()
     image = PrivateMediaFileField(url_field='image_url', required=False, allow_null=True)
+    currency_symbol = serializers.CharField(source='currency.symbol', read_only=True)
 
     class Meta:
         model = Expense
