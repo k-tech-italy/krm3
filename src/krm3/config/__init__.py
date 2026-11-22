@@ -25,6 +25,7 @@ DEFAULTS = dict(  # noqa: C408
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 30),
     SENTRY_DSN=(str, ''),
+    SENTRY_PROJECT=(str, 'krm'),
     SENTRY_SECURITY_TOKEN=(str, ''),
     SENTRY_SECURITY_TOKEN_HEADER=(str, 'X-Sentry-Token'),
     SENTRY_DEBUG=(bool, False),
