@@ -69,15 +69,18 @@ class TestMissionApiPermissions:
 
 class TestMissionApiCreate:
     @staticmethod
-    def _payload(**overrides):
-        from testutils.factories import CityFactory, ProjectFactory, ResourceFactory  # noqa: PLC0415
+    def _payload(resource=None, **overrides):
+        from testutils.factories import CityFactory, ResourceFactory, TaskFactory  # noqa: PLC0415
 
+        resource = resource or ResourceFactory()
+        # the resource must be involved in the project (open-ended task)
+        task = TaskFactory(resource=resource, contract=True)
         return {
             'fromDate': '2024-01-02',
             'toDate': '2024-01-05',
-            'project': ProjectFactory().id,
+            'project': task.project_id,
             'city': CityFactory().id,
-            'resource': ResourceFactory().id,
+            'resource': resource.id,
         } | overrides
 
     def test_create_mission_is_draft_without_number(self, api_client, admin_user):
@@ -117,7 +120,7 @@ class TestMissionApiCreate:
         target = resource if own_resource else ResourceFactory()
 
         response = api_client(user=user).post(
-            reverse('missions-api:mission-list'), self._payload(resource=target.id), format='json'
+            reverse('missions-api:mission-list'), self._payload(resource=target), format='json'
         )
 
         assert response.status_code == expected, response.data
@@ -135,7 +138,7 @@ class TestMissionApiUpdate:
         ],
     )
     def test_change_resource(self, api_client, regular_user, resource, perms, expected):
-        from testutils.factories import ResourceFactory  # noqa: PLC0415
+        from testutils.factories import ResourceFactory, TaskFactory  # noqa: PLC0415
 
         regular_user.user_permissions.add(*Permission.objects.filter(codename__in=perms))
         user = get_user_model().objects.get(id=regular_user.id)  # invalidate cache
@@ -143,6 +146,7 @@ class TestMissionApiUpdate:
         resource.save()
         mission = MissionFactory(resource=resource, number=None, status='DRAFT')
         other = ResourceFactory()
+        TaskFactory(project=mission.project, resource=other, contract=True)  # other is involved in the project
 
         response = api_client(user=user).patch(
             reverse('missions-api:mission-detail', args=[mission.pk]), {'resource': other.id}, format='json'

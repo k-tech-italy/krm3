@@ -13,6 +13,7 @@ from .auth import Resource
 from .contacts import Client
 
 if TYPE_CHECKING:
+    import datetime
     from decimal import Decimal
 
     from django.db.models.fields.related_descriptors import RelatedManager
@@ -67,6 +68,16 @@ class ProjectManager(NaturalKeyModelManager):
         if user.can_manage_or_view_any_project():
             return self.all()
         return self.filter(mission__resource__profile__user=user)
+
+    def involving(self, resource: Resource | int, on_or_after: datetime.date) -> models.QuerySet[Project]:
+        """Return the projects where the resource has a task ending on or after the given date.
+
+        Covers current and future involvement: a task starting after `on_or_after` counts too.
+        """
+        return self.filter(
+            models.Q(task__period__upper_inf=True) | models.Q(task__period__endswith__gt=on_or_after),
+            task__resource=resource,
+        ).distinct()
 
 
 class Project(PeriodBoundCheckerMixin, NaturalKeyModel):

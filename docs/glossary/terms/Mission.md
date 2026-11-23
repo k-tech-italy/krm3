@@ -86,3 +86,14 @@ Expenses of non-Submitted missions (Draft or Cancelled) cannot be included in a
 - a Draft mission must not have a `number`; a Submitted or Cancelled mission must have one;
 - the pair (`number`, `year`) is unique;
 - `to_date` must not be earlier than `from_date`.
+
+### Project of the mission
+
+When a mission is created through the API (and so from the *Add mission* form), or its `project`
+or `resource` is changed, the <glossary:Project> must be one the <glossary:Resource> is involved
+in **today or later**: the resource must have a <glossary:Task> in that project whose period ends
+today or later (open-ended and future tasks count). Missions created from the admin are not checked.
+
+The *Add mission* form only lists those projects, after the resource is chosen; the resource
+field is an autocomplete (search by first or last name). The list comes from
+`GET /api/v1/core/project/?resource=<id>`.

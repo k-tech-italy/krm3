@@ -3,10 +3,11 @@ from typing import Any
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
+from ktcalendars import KTDay
 from rest_framework import serializers
 
 from krm3.core.api.views import ResourceSerializer
-from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory
+from krm3.core.models import DocumentType, Expense, ExpenseCategory, Mission, PaymentCategory, Project
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass, PrivateMediaFileField
 
 
@@ -69,6 +70,8 @@ class MissionCreateSerializer(serializers.ModelSerializer):
     `number` is read-only: missions are created in DRAFT and the number is
     assigned when they are submitted (see `Mission.submit`).
     Users without `core.manage_any_mission` can only use their own resource.
+    The project must be one the resource is involved in today or later (see `Project.objects.involving`);
+    this is checked on create and when the project or the resource change.
     """
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -83,6 +86,8 @@ class MissionCreateSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError({'resource': [_('You can only use your own resource')]})
 
+        self._validate_project_involvement(attrs)
+
         # validate on a copy, so the model invariants surface as 400 instead of 500
         instance = copy.copy(self.instance) if self.instance else Mission()
         for attr, value in attrs.items():
@@ -92,6 +97,22 @@ class MissionCreateSerializer(serializers.ModelSerializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.messages)
         return attrs
+
+    def _validate_project_involvement(self, attrs: dict[str, Any]) -> None:
+        if self.instance is not None and all(
+            field not in attrs or attrs[field] == getattr(self.instance, field) for field in ('project', 'resource')
+        ):
+            return
+        project = attrs.get('project', getattr(self.instance, 'project', None))
+        resource = attrs.get('resource', getattr(self.instance, 'resource', None))
+        if (
+            project is not None
+            and resource is not None
+            and not Project.objects.involving(resource, KTDay().date).filter(pk=project.pk).exists()
+        ):
+            raise serializers.ValidationError(
+                {'project': [_('The resource has no current or future task in this project')]}
+            )
 
     class Meta:
         model = Mission

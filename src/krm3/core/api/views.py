@@ -286,9 +286,21 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class ProjectAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
+    """Projects; `?resource=<id>` lists only those the resource is involved in today or later (via its tasks)."""
+
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
+
+    @override
+    def get_queryset(self) -> QuerySet[Project]:
+        queryset = super().get_queryset()
+        resource = self.request.query_params.get('resource')
+        if self.action == 'list' and resource is not None:
+            if not resource.isdigit():
+                raise serializers.ValidationError({'resource': ['A valid integer is required.']})
+            queryset = Project.objects.involving(int(resource), KTDay().date).order_by('name')
+        return queryset
 
 
 class ClientAPIViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, GenericViewSet):
