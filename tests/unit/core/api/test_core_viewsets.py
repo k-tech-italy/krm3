@@ -3,7 +3,7 @@ from freezegun import freeze_time
 from ktcalendars import KTDateRange
 from rest_framework import status
 from rest_framework.reverse import reverse
-from testutils.factories import ContractFactory
+from testutils.factories import ContractFactory, ProjectFactory, TaskFactory
 
 
 @freeze_time('2026-09-07')
@@ -66,3 +66,33 @@ def test_can_request_active_resources(  # noqa: PLR0917
         response.data
         == [{'id': resource.id, 'first_name': resource.first_name, 'last_name': resource.last_name}] * expected
     )
+
+
+@freeze_time('2026-09-07')
+@pytest.mark.parametrize(
+    'task_periods, listed',
+    [
+        pytest.param([('2026-01-01', '2026-09-07')], False, id='ended-yesterday'),
+        pytest.param([('2026-01-01', '2026-09-08')], True, id='ends-today'),
+        pytest.param([('2026-01-01', None)], True, id='open-ended'),
+        pytest.param([('2026-10-01', '2026-11-01')], True, id='future'),
+        pytest.param([('2026-01-01', None), ('2026-10-01', None)], True, id='many-tasks-listed-once'),
+    ],
+)
+def test_projects_filtered_by_resource_involvement(task_periods, listed, resource, regular_user, api_client):
+    ContractFactory(resource=resource, period=KTDateRange('2026-01-01', None))
+    project = ProjectFactory(period=KTDateRange('2026-01-01', None))
+    for i, period in enumerate(task_periods):
+        TaskFactory(project=project, resource=resource, title=f'task {i}', period=KTDateRange(*period))
+    TaskFactory(period=KTDateRange('2026-01-01', None), contract=True)  # another resource's project
+
+    response = api_client(user=regular_user).get('/api/v1/core/project/', {'resource': resource.pk})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [p['id'] for p in response.data['results']] == ([project.pk] if listed else [])
+
+
+def test_project_resource_filter_rejects_non_integer(regular_user, api_client):
+    response = api_client(user=regular_user).get('/api/v1/core/project/', {'resource': 'x'})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
