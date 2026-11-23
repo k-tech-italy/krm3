@@ -1,3 +1,10 @@
+## 5.7.0 (2026-11-23)
+
+### Feat
+
+- **missions**: compute the expense totals of a mission
+- **missions**: expose currency symbols for the mission detail page
+
 ## 5.6.1 (2026-11-22)
 
 ### Fix

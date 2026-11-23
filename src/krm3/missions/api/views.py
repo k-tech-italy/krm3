@@ -50,6 +50,9 @@ class MissionAPIViewSet(ListFilterMixin, ModelViewSet):
         return (
             Mission.objects.filter_acl(self.request.user)
             .select_related('resource', 'city__country', 'project__client')
+            .prefetch_related(
+                'expenses__payment_type', 'expenses__currency', 'expenses__category', 'expenses__document_type'
+            )
             .order_by('-from_date', '-id')
         )
 
