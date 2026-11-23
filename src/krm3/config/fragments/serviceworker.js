@@ -1,6 +1,6 @@
 // Base Service Worker implementation.  To use your own Service Worker, set the PWA_SERVICE_WORKER_PATH variable in settings.py
 
-const _version = "5.6.1"
+const _version = "5.7.0"
 
 var staticCacheName = "krm3-v" + _version + "-" + new Date().getTime();
 var filesToCache = [
