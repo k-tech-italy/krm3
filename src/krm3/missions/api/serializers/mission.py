@@ -39,15 +39,23 @@ class MissionExpenseSerializer(serializers.ModelSerializer):
     document_type = MissionDocumentTypeSerializer()
     payment_type = MissionPaymentCategorySerializer()
     image = PrivateMediaFileField(url_field='image_url', required=False, allow_null=True)
+    currency_symbol = serializers.CharField(source='currency.symbol', read_only=True)
 
     class Meta:
         model = Expense
         exclude = ['mission']
 
 
+class MissionTotalsSerializer(serializers.Serializer):
+    refund = serializers.DecimalField(max_digits=12, decimal_places=2)
+    anticipated = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
 class MissionNestedSerializer(serializers.ModelSerializer):
     expenses = MissionExpenseSerializer(many=True, read_only=True)
     resource = ResourceSerializer(many=False, read_only=True)
+    totals = MissionTotalsSerializer(source='expense_totals', read_only=True)
 
     class Meta:
         model = Mission

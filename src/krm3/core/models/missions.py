@@ -183,6 +183,25 @@ class Mission(models.Model):
     def expense_count(self) -> int:
         return self.expenses.count()
 
+    def expense_totals(self) -> dict[str, Decimal]:
+        """Return the expense totals of the mission, in the base currency.
+
+        - `refund`: sum of `amount_reimbursement` (positive: owed to the resource, negative: owed to the company);
+        - `anticipated`: sum of `amount_base` of the expenses paid with company means;
+        - `total`: mission costs, i.e. `anticipated` plus the `amount_reimbursement` of personal expenses.
+
+        Empty amounts (rates or reimbursement not yet calculated) count as zero.
+        """
+        refund = anticipated = personal_refund = Decimal(0)
+        for expense in self.expenses.all():
+            reimbursement = expense.amount_reimbursement or Decimal(0)
+            refund += reimbursement
+            if expense.payment_type.personal_expense:
+                personal_refund += reimbursement
+            else:
+                anticipated += expense.amount_base or Decimal(0)
+        return {'refund': refund, 'anticipated': anticipated, 'total': anticipated + personal_refund}
+
 
 class DocumentType(models.Model):
     title = models.CharField(max_length=50, unique=True)

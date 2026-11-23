@@ -8,6 +8,7 @@ from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
 from krm3.config.environ import env
 from krm3.core.models import Resource, UserProfile
+from krm3.currencies.models import Currency
 from krm3.core.models.auth import User
 from krm3.utils.serializers import ModelDefaultSerializerMetaclass
 
@@ -88,7 +89,12 @@ class UserSerializer(metaclass=ModelDefaultSerializerMetaclass):
                 obj
                 for obj in LABEL_TO_FLAG_URL_MAP
                 if flag_enabled(obj['flag'], request=self.context['request'])  # type: ignore
-            ]
+            ],
+            'base_currency': {
+                'iso3': settings.BASE_CURRENCY,
+                'symbol': Currency.objects.filter(pk=settings.BASE_CURRENCY).values_list('symbol', flat=True).first()
+                or settings.BASE_CURRENCY,
+            },
         }
 
         default = env('DEFAULT_MODULE')
