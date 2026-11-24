@@ -1,3 +1,10 @@
+## 5.8.0 (2026-11-24)
+
+### Feat
+
+- add add_flag and delete_flag management commands
+- **missions**: limit a mission's project to the resource's current projects
+
 ## 5.7.0 (2026-11-23)
 
 ### Feat
