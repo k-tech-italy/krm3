@@ -130,7 +130,7 @@ when either changes. Examples:
   `.showbrowser(`). Never commit `.env` files or secrets.
 - Only commit, push, open PRs or update tickets when the user asks. Stage files explicitly; do
   not include an unrelated `krm3-fe` pointer change.
-- Tickets live in Taiga (project `krm3`); reference them in commits as `Refs: taiga#<ref>`.
+- Tickets live in Taiga (project [`krm3`](https://taiga.singlewave.co.uk/project/krm3))); reference them in commits as `Refs: taiga#<ref>`.
   Describe security issues by class of problem, without step-by-step exploit instructions.
 
 
